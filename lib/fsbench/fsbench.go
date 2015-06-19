@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	O_DIRECT    int = 00040000
-	BUFLEN          = 65536
-	MAX_TO_READ     = 1024 * 1024 * 128
+	O_DIRECT    = 00040000
+	BUFLEN      = 1024 * 1024
+	MAX_TO_READ = 1024 * 1024 * 128
 )
 
 func openDirect(name string, flag int, perm os.FileMode) (file *os.File,
