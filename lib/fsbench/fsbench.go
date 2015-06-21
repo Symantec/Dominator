@@ -63,27 +63,42 @@ func getDevnodeForFile(name string) (devnode string, err error) {
 
 // Compute the maximum read speed (in KiB/s) of a block device, given a file
 // within a file-system mounted on the block device.
-func GetReadSpeed(name string) (speed uint, err error) {
+func GetReadSpeed(name string) (speed uint, blocksize uint, err error) {
+	speed = 0
+	blocksize = 0
 	var devpath string
 	devpath, err = getDevnodeForFile(name)
 	if err != nil {
-		return 0, err
+		return
 	}
 	var file *os.File
 	file, err = openDirect(devpath, os.O_RDONLY, 0)
 	if err != nil {
-		return 0, err
+		return
 	}
-	tread := 0
+	var tread uint = 0
 	buffer := make([]byte, BUFLEN)
+	var rusage_start, rusage_stop syscall.Rusage
+	err = syscall.Getrusage(syscall.RUSAGE_SELF, &rusage_start)
+	if err != nil {
+		return
+	}
 	time_start := time.Now()
 	for tread < MAX_TO_READ {
 		var nread int
 		nread, err = file.Read(buffer)
 		if err != nil {
-			return 0, err
+			return
 		}
-		tread += nread
+		tread += uint(nread)
 	}
-	return uint(float64(tread>>10) / time.Since(time_start).Seconds()), nil
+	speed = uint(float64(tread>>10) / time.Since(time_start).Seconds())
+	err = syscall.Getrusage(syscall.RUSAGE_SELF, &rusage_stop)
+	if err != nil {
+		return
+	}
+	if rusage_stop.Inblock > rusage_start.Inblock {
+		blocksize = uint(tread / uint(rusage_stop.Inblock-rusage_start.Inblock))
+	}
+	return
 }
