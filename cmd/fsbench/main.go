@@ -12,14 +12,14 @@ func main() {
 	if len(os.Args) == 2 {
 		pathname = os.Args[1]
 	}
-	speed, blocksize, err := fsbench.GetReadSpeed(pathname)
+	bytesPerSecond, blocksPerSecond, err := fsbench.GetReadSpeed(pathname)
 	if err != nil {
 		fmt.Printf("Error! %s\n", err)
 		return
 	}
-	fmt.Printf("speed=%d KiB/s\n", speed)
-	if blocksize > 0 {
-		fmt.Printf("Input blocksize=%d B\n", blocksize)
+	fmt.Printf("speed=%d MiB/s ", bytesPerSecond>>20)
+	if blocksPerSecond > 0 {
+		fmt.Printf("%d blocks/s\n", blocksPerSecond)
 	} else {
 		fmt.Println("I/O accounting not available")
 	}
