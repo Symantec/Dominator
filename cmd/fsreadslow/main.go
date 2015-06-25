@@ -44,11 +44,5 @@ func main() {
 		tread += n
 	}
 	bytesPerSecond := uint64(float64(tread) / time.Since(timeStart).Seconds())
-	if bytesPerSecond>>20 > 100 {
-		fmt.Printf("%d MiB/s\n", bytesPerSecond>>20)
-	} else if bytesPerSecond>>10 > 100 {
-		fmt.Printf("%d KiB/s\n", bytesPerSecond>>10)
-	} else {
-		fmt.Printf("%d B/s\n", bytesPerSecond)
-	}
+	fmt.Printf("%s/s\n", fsrateio.FormatBytes(bytesPerSecond))
 }
