@@ -33,15 +33,15 @@ func (ctx *FsRateContext) SetSpeedPercent(percent uint) {
 	ctx.speedPercent = uint64(percent)
 }
 
-func formatBytesPerSecond(bps uint64) string {
-	if bps>>30 > 100 {
-		return fmt.Sprintf("%d GiB/s", bps>>30)
-	} else if bps>>20 > 100 {
-		return fmt.Sprintf("%d MiB/s", bps>>20)
-	} else if bps>>10 > 100 {
-		return fmt.Sprintf("%d KiB/s", bps>>10)
+func FormatBytes(bytes uint64) string {
+	if bytes>>30 > 100 {
+		return fmt.Sprintf("%d GiB", bytes>>30)
+	} else if bytes>>20 > 100 {
+		return fmt.Sprintf("%d MiB", bytes>>20)
+	} else if bytes>>10 > 100 {
+		return fmt.Sprintf("%d KiB", bytes>>10)
 	} else {
-		return fmt.Sprintf("%d B/s", bps)
+		return fmt.Sprintf("%d B", bytes)
 	}
 }
 
@@ -52,10 +52,10 @@ func (ctx *FsRateContext) String() string {
 	} else {
 		blocksString = ""
 	}
-	return fmt.Sprintf("max speed=%s%s limit=%d%% %s(%d blocks/s)",
-		formatBytesPerSecond(ctx.maxBytesPerSecond), blocksString,
+	return fmt.Sprintf("max speed=%s/s%s limit=%d%% %s/s(%d blocks/s)",
+		FormatBytes(ctx.maxBytesPerSecond), blocksString,
 		ctx.speedPercent,
-		formatBytesPerSecond(ctx.maxBytesPerSecond*ctx.speedPercent/100),
+		FormatBytes(ctx.maxBytesPerSecond*ctx.speedPercent/100),
 		ctx.maxBlocksPerSecond*ctx.speedPercent/100)
 }
 
