@@ -84,9 +84,6 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 func (file *File) scan(fileSystem *FileSystem, parentName string) error {
 	myPathName := path.Join(parentName, file.name)
 	if file.inode.stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
-		if len(file.inode.hash) > 0 {
-			return nil
-		}
 		f, err := os.Open(myPathName)
 		if err != nil {
 			return err
