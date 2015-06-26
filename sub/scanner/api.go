@@ -66,3 +66,7 @@ func (file *File) Name() string {
 func (file *File) String() string {
 	return file.name
 }
+
+func Compare(left *FileSystem, right *FileSystem, verbose bool) bool {
+	return compare(left, right, verbose)
+}
