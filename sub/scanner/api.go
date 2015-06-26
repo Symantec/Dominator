@@ -22,7 +22,7 @@ func ScanFileSystem(rootDirectoryName string,
 		return nil, err
 	}
 	fileSystem.InodeTable = make(map[uint64]*Inode)
-	fileSystem.inode = fileSystem.getInode(&stat)
+	fileSystem.inode, _ = fileSystem.getInode(&stat)
 	err = fileSystem.scan(&fileSystem, "")
 	if err != nil {
 		return nil, err
@@ -31,8 +31,9 @@ func ScanFileSystem(rootDirectoryName string,
 }
 
 type Inode struct {
-	stat syscall.Stat_t
-	hash []byte
+	stat    syscall.Stat_t
+	symlink string
+	hash    []byte
 }
 
 func (inode *Inode) Length() uint64 {
@@ -65,4 +66,8 @@ func (file *File) Name() string {
 
 func (file *File) String() string {
 	return file.name
+}
+
+func Compare(left *FileSystem, right *FileSystem, verbose bool) bool {
+	return compare(left, right, verbose)
 }
