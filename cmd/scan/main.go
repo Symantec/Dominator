@@ -54,7 +54,7 @@ func main() {
 			timeStop.Sub(timeStart).Seconds())
 		fmt.Printf("%s/s\n", fsrateio.FormatBytes(bytesPerSecond))
 		if prev_fs != nil {
-			if !scanner.Compare(prev_fs, fs, nil) {
+			if !scanner.Compare(prev_fs, fs, os.Stdout) {
 				fmt.Println("Scan results different from last run")
 			}
 		}
