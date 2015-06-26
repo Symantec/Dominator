@@ -2,22 +2,26 @@ package scanner
 
 import (
 	"crypto/sha512"
+	"errors"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"io"
 	"os"
 	"path"
+	"sort"
 	"syscall"
 )
 
-func (fileSystem *FileSystem) getInode(stat *syscall.Stat_t) *Inode {
+func (fileSystem *FileSystem) getInode(stat *syscall.Stat_t) (*Inode, bool) {
 	inode := fileSystem.InodeTable[stat.Ino]
+	new := false
 	if inode == nil {
 		var _inode Inode
 		inode = &_inode
 		_inode.stat = *stat
 		fileSystem.InodeTable[stat.Ino] = inode
+		new = true
 	}
-	return inode
+	return inode, new
 }
 
 func (directory *Directory) scan(fileSystem *FileSystem,
@@ -32,6 +36,7 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 		return err
 	}
 	file.Close()
+	sort.Strings(names)
 	for _, name := range names {
 		filename := path.Join(myPathName, name)
 		var stat syscall.Stat_t
@@ -42,9 +47,12 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 			}
 			return err
 		}
-		inode := fileSystem.getInode(&stat)
+		inode, isNewInode := fileSystem.getInode(&stat)
 		if stat.Dev == directory.inode.stat.Dev {
 			if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
+				if !isNewInode {
+					return errors.New("Hardlinked directory: " + filename)
+				}
 				var dir Directory
 				dir.name = name
 				dir.inode = inode
@@ -57,12 +65,14 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 				var file File
 				file.name = name
 				file.inode = inode
-				err := file.scan(fileSystem, myPathName)
-				if err != nil {
-					if err == syscall.ENOENT {
-						continue
+				if isNewInode {
+					err := file.scan(fileSystem, myPathName)
+					if err != nil {
+						if err == syscall.ENOENT {
+							continue
+						}
+						return err
 					}
-					return err
 				}
 				directory.FileList = append(directory.FileList, &file)
 			}
@@ -91,7 +101,7 @@ func (file *File) scan(fileSystem *FileSystem, parentName string) error {
 		if err != nil {
 			return err
 		}
-		file.symlink = symlink
+		file.inode.symlink = symlink
 	}
 	return nil
 }
