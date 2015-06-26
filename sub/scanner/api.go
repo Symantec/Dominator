@@ -55,8 +55,9 @@ func (directory *Directory) String() string {
 }
 
 type File struct {
-	name  string
-	inode *Inode
+	name    string
+	inode   *Inode
+	symlink string
 }
 
 func (file *File) Name() string {

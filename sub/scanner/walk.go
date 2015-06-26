@@ -59,6 +59,9 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 				file.inode = inode
 				err := file.scan(fileSystem, myPathName)
 				if err != nil {
+					if err == syscall.ENOENT {
+						continue
+					}
 					return err
 				}
 				directory.FileList = append(directory.FileList, &file)
@@ -70,20 +73,25 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 
 func (file *File) scan(fileSystem *FileSystem, parentName string) error {
 	myPathName := path.Join(parentName, file.name)
-	if file.inode.stat.Mode&syscall.S_IFMT != syscall.S_IFREG {
-		return nil
+	if file.inode.stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
+		if len(file.inode.hash) > 0 {
+			return nil
+		}
+		f, err := os.Open(myPathName)
+		if err != nil {
+			return err
+		}
+		reader := fsrateio.NewReader(f, fileSystem.ctx)
+		hash := sha512.New()
+		io.Copy(hash, reader)
+		f.Close()
+		file.inode.hash = hash.Sum(nil)
+	} else if file.inode.stat.Mode&syscall.S_IFMT == syscall.S_IFLNK {
+		symlink, err := os.Readlink(myPathName)
+		if err != nil {
+			return err
+		}
+		file.symlink = symlink
 	}
-	if len(file.inode.hash) > 0 {
-		return nil
-	}
-	f, err := os.Open(myPathName)
-	if err != nil {
-		return err
-	}
-	reader := fsrateio.NewReader(f, fileSystem.ctx)
-	hash := sha512.New()
-	io.Copy(hash, reader)
-	f.Close()
-	file.inode.hash = hash.Sum(nil)
 	return nil
 }
