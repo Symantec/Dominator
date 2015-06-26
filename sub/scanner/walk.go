@@ -37,6 +37,9 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 		var stat syscall.Stat_t
 		err := syscall.Lstat(filename, &stat)
 		if err != nil {
+			if err == syscall.ENOENT {
+				continue
+			}
 			return err
 		}
 		inode := fileSystem.getInode(&stat)
