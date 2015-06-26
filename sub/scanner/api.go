@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"github.com/Symantec/Dominator/sub/fsrateio"
+	"io"
 	"syscall"
 )
 
@@ -68,6 +69,6 @@ func (file *File) String() string {
 	return file.name
 }
 
-func Compare(left *FileSystem, right *FileSystem, verbose bool) bool {
-	return compare(left, right, verbose)
+func Compare(left *FileSystem, right *FileSystem, logWriter io.Writer) bool {
+	return compare(left, right, logWriter)
 }
