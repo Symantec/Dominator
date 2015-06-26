@@ -19,7 +19,7 @@ func main() {
 	pathname := "/"
 	var numScans int = 1
 	var err error
-	if len(os.Args) == 2 {
+	if len(os.Args) >= 2 {
 		pathname = os.Args[1]
 	}
 	if len(os.Args) == 3 {
