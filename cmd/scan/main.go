@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"os"
@@ -29,11 +30,12 @@ func main() {
 			return
 		}
 	}
-	ctx, err := fsrateio.NewContext(pathname)
+	bytesPerSecond, blocksPerSecond, err := fsbench.GetReadSpeed(pathname)
 	if err != nil {
 		fmt.Printf("Error! %s\n", err)
 		return
 	}
+	ctx := fsrateio.NewContext(bytesPerSecond, blocksPerSecond)
 	fmt.Println(ctx)
 	syscall.Setpriority(syscall.PRIO_PROCESS, 0, 10)
 	var prev_fs *scanner.FileSystem

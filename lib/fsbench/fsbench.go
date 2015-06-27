@@ -19,7 +19,7 @@ func openDirect(name string, flag int, perm os.FileMode) (file *os.File,
 	return os.OpenFile(name, flag|O_DIRECT, perm)
 }
 
-func getDevnumForFile(name string) (devnum uint64, err error) {
+func GetDevnumForFile(name string) (devnum uint64, err error) {
 	var stat syscall.Stat_t
 	err = syscall.Stat(name, &stat)
 	if err != nil {
@@ -39,7 +39,7 @@ func getDevnumForDevice(name string) (devnum uint64, err error) {
 
 func getDevnodeForFile(name string) (devnode string, err error) {
 	var devnum uint64
-	devnum, err = getDevnumForFile(name)
+	devnum, err = GetDevnumForFile(name)
 	fi_list, err := ioutil.ReadDir("/dev")
 	if err != nil {
 		return "", err
