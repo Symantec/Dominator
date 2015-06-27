@@ -2,7 +2,6 @@ package fsrateio
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/fsbench"
 	"io"
 	"syscall"
 	"time"
@@ -59,20 +58,17 @@ func (ctx *FsRateContext) String() string {
 		ctx.maxBlocksPerSecond*ctx.speedPercent/100)
 }
 
-func NewContext(benchFile string) (*FsRateContext, error) {
+func NewContext(maxBytesPerSecond uint64,
+	maxBlocksPerSecond uint64) *FsRateContext {
 	var ctx FsRateContext
+	ctx.maxBytesPerSecond = maxBytesPerSecond
+	ctx.maxBlocksPerSecond = maxBlocksPerSecond
 	ctx.SetSpeedPercent(DEFAULT_SPEED_PERCENT)
-	var err error
-	ctx.maxBytesPerSecond, ctx.maxBlocksPerSecond, err =
-		fsbench.GetReadSpeed(benchFile)
-	if err != nil {
-		return nil, err
-	}
 	var rusage syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
 	ctx.blocksSinceLastPause = uint64(rusage.Inblock)
 	ctx.timeOfLastPause = time.Now()
-	return &ctx, nil
+	return &ctx
 }
 
 type Reader struct {

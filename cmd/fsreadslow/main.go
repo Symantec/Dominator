@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"io"
 	"os"
@@ -15,11 +16,12 @@ func main() {
 	if len(os.Args) == 2 {
 		pathname = os.Args[1]
 	}
-	ctx, err := fsrateio.NewContext(pathname)
+	bytesPerSecond, blocksPerSecond, err := fsbench.GetReadSpeed(pathname)
 	if err != nil {
 		fmt.Printf("Error! %s\n", err)
 		return
 	}
+	ctx := fsrateio.NewContext(bytesPerSecond, blocksPerSecond)
 	fmt.Println(ctx)
 	var file *os.File
 	file, err = os.Open(pathname)
@@ -43,6 +45,6 @@ func main() {
 		}
 		tread += n
 	}
-	bytesPerSecond := uint64(float64(tread) / time.Since(timeStart).Seconds())
+	bytesPerSecond = uint64(float64(tread) / time.Since(timeStart).Seconds())
 	fmt.Printf("%s/s\n", fsrateio.FormatBytes(bytesPerSecond))
 }
