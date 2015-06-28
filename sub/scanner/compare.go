@@ -49,15 +49,14 @@ func compareDirectories(left, right *Directory, logWriter io.Writer) bool {
 			len(left.DirectoryList), len(right.DirectoryList))
 		return false
 	}
-	for index := 0; index < len(left.FileList); index++ {
-		if !compareFiles(left.FileList[index], right.FileList[index],
-			logWriter) {
+	for index, leftFile := range left.FileList {
+		if !compareFiles(leftFile, right.FileList[index], logWriter) {
 			return false
 		}
 	}
-	for index := 0; index < len(left.DirectoryList); index++ {
-		if !compareDirectories(left.DirectoryList[index],
-			right.DirectoryList[index], logWriter) {
+	for index, leftDirectory := range left.DirectoryList {
+		if !compareDirectories(leftDirectory, right.DirectoryList[index],
+			logWriter) {
 			return false
 		}
 	}
