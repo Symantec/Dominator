@@ -15,7 +15,17 @@ func compare(left *FileSystem, right *FileSystem, logWriter io.Writer) bool {
 		}
 		return false
 	}
-	return compareDirectories(&left.Directory, &right.Directory, logWriter)
+	if !compareDirectories(&left.Directory, &right.Directory, logWriter) {
+		return false
+	}
+	if len(left.ObjectCache) != len(right.ObjectCache) {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d objects\n",
+				len(left.ObjectCache), len(right.ObjectCache))
+		}
+		return false
+	}
+	return compareObjects(left.ObjectCache, right.ObjectCache, logWriter)
 }
 
 func compareDirectories(left, right *Directory, logWriter io.Writer) bool {
@@ -138,6 +148,19 @@ func compareInodes(left *Inode, right *Inode, logWriter io.Writer) bool {
 			if logWriter != nil {
 				fmt.Fprintf(logWriter, "symlink: left vs. right: %s vs. %s\n",
 					left.symlink, right.symlink)
+			}
+			return false
+		}
+	}
+	return true
+}
+
+func compareObjects(left [][]byte, right [][]byte, logWriter io.Writer) bool {
+	for index, leftHash := range left {
+		if bytes.Compare(leftHash, right[index]) != 0 {
+			if logWriter != nil {
+				fmt.Fprintf(logWriter, "hash: left vs. right: %x vs. %x\n",
+					leftHash, right[index])
 			}
 			return false
 		}
