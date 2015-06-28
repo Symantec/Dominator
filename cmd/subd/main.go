@@ -7,6 +7,7 @@ import (
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"syscall"
@@ -17,17 +18,18 @@ var (
 		"Name of root of directory tree to manage")
 	subdDir = flag.String("subdDir", "/.subd",
 		"Name of subd private directory. This must be on the same file-system as rootdir")
+	unshare = flag.Bool("unshare", true, "Internal use only.")
 )
 
 func sanityCheck() bool {
 	r_devnum, err := fsbench.GetDevnumForFile(*rootDir)
 	if err != nil {
-		fmt.Printf("Unable to get device number for: %s\t %s\n", *rootDir, err)
+		fmt.Printf("Unable to get device number for: %s\t%s\n", *rootDir, err)
 		return false
 	}
 	s_devnum, err := fsbench.GetDevnumForFile(*subdDir)
 	if err != nil {
-		fmt.Printf("Unable to get device number for: %s\t %s\n", *subdDir, err)
+		fmt.Printf("Unable to get device number for: %s\t%s\n", *subdDir, err)
 		return false
 	}
 	if r_devnum != s_devnum {
@@ -40,7 +42,7 @@ func sanityCheck() bool {
 func createDirectory(dirname string) bool {
 	err := os.MkdirAll(dirname, 0750)
 	if err != nil {
-		fmt.Printf("Unable to create directory: %s\t %s\n", dirname, err)
+		fmt.Printf("Unable to create directory: %s\t%s\n", dirname, err)
 		return false
 	}
 	return true
@@ -50,7 +52,7 @@ func mountTmpfs(dirname string) bool {
 	var statfs syscall.Statfs_t
 	err := syscall.Statfs(dirname, &statfs)
 	if err != nil {
-		fmt.Printf("Unable to create Statfs: %s\t %s\n", dirname, err)
+		fmt.Printf("Unable to create Statfs: %s\t%s\n", dirname, err)
 		return false
 	}
 	if statfs.Type != 0x01021994 {
@@ -59,7 +61,7 @@ func mountTmpfs(dirname string) bool {
 		if err == nil {
 			fmt.Printf("Mounted tmpfs on: %s\n", dirname)
 		} else {
-			fmt.Printf("Unable to mount tmpfs on: %s\t %s\n", dirname, err)
+			fmt.Printf("Unable to mount tmpfs on: %s\t%s\n", dirname, err)
 			return false
 		}
 	}
@@ -67,17 +69,35 @@ func mountTmpfs(dirname string) bool {
 }
 
 func unshareAndBind(workingRootDir string) bool {
-	// TODO(rgooch): The unsharing is not reliable, which leads to bind mounts
-	// being left over and accumulating. Debug this. A re-exec doesn't fix it.
-	// Wrapping the binary in an "unshare -m" command line seems to work!?!
-	err := syscall.Unshare(syscall.CLONE_NEWNS)
-	if err != nil {
-		fmt.Printf("Unable to unshare mount namespace\t %s\n", err)
-		return false
+	if *unshare {
+		// Re-exec myself using the unshare binary as a wrapper. This hack is
+		// required because syscall.Unshare() operates on only one thread in the
+		// process, and Go switches execution between threads randomly. Thus,
+		// the namespace can be suddenly switched for running code. This is an
+		// aspect of Go that was not well thought out.
+		unsharePath, err := exec.LookPath("unshare")
+		if err != nil {
+			fmt.Printf("Unable find unshare utility\t%s\n", err)
+			return false
+		}
+		cmd := make([]string, 0)
+		cmd = append(cmd, unsharePath)
+		cmd = append(cmd, "-m")
+		for _, arg := range os.Args {
+			cmd = append(cmd, arg)
+		}
+		cmd = append(cmd, "-unshare=false")
+		err = syscall.Exec(cmd[0], cmd, os.Environ())
+		if err != nil {
+			fmt.Printf("Unable to Exec:%s\t%s\n", cmd[0], err)
+			return false
+		}
 	}
-	err = syscall.Mount(*rootDir, workingRootDir, "", syscall.MS_BIND, "")
+	// Strip out the "-unshare=false" just in case.
+	os.Args = os.Args[0 : len(os.Args)-1]
+	err := syscall.Mount(*rootDir, workingRootDir, "", syscall.MS_BIND, "")
 	if err != nil {
-		fmt.Printf("Unable to bind mount %s to %s\t %s\n",
+		fmt.Printf("Unable to bind mount %s to %s\t%s\n",
 			*rootDir, workingRootDir, err)
 		return false
 	}
@@ -90,7 +110,7 @@ func getCachedSpeed(workingRootDir string, cacheDirname string) (bytesPerSecond,
 	blocksPerSecond = 0
 	devnum, err := fsbench.GetDevnumForFile(workingRootDir)
 	if err != nil {
-		fmt.Printf("Unable to get device number for: %s\t %s\n",
+		fmt.Printf("Unable to get device number for: %s\t%s\n",
 			workingRootDir, err)
 		return 0, 0, false
 	}
@@ -139,10 +159,10 @@ func main() {
 	if !createDirectory(tmpDir) {
 		os.Exit(1)
 	}
-	if !unshareAndBind(workingRootDir) {
+	if !mountTmpfs(tmpDir) {
 		os.Exit(1)
 	}
-	if !mountTmpfs(tmpDir) {
+	if !unshareAndBind(workingRootDir) {
 		os.Exit(1)
 	}
 	bytesPerSecond, blocksPerSecond, ok := getCachedSpeed(workingRootDir,
@@ -152,9 +172,10 @@ func main() {
 	}
 	ctx := fsrateio.NewContext(bytesPerSecond, blocksPerSecond)
 	fmt.Println(ctx)
-	_, err := scanner.ScanFileSystem(workingRootDir, ctx)
+	fs, err := scanner.ScanFileSystem(workingRootDir, ctx)
 	if err != nil {
 		fmt.Printf("Error! %s\n", err)
 		os.Exit(1)
 	}
+	fmt.Printf("Scanned: %d inodes\n", len(fs.InodeTable))
 }
