@@ -41,7 +41,7 @@ func main() {
 	var prev_fs *scanner.FileSystem
 	for iter := 1; numScans < 0 || iter <= numScans; iter++ {
 		timeStart := time.Now()
-		fs, err := scanner.ScanFileSystem(pathname, ctx)
+		fs, err := scanner.ScanFileSystem(pathname, "", ctx)
 		timeStop := time.Now()
 		if err != nil {
 			fmt.Printf("Error! %s\n", err)

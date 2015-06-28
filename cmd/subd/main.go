@@ -172,10 +172,10 @@ func main() {
 	}
 	ctx := fsrateio.NewContext(bytesPerSecond, blocksPerSecond)
 	fmt.Println(ctx)
-	fs, err := scanner.ScanFileSystem(workingRootDir, ctx)
+	fs, err := scanner.ScanFileSystem(workingRootDir, objectsDir, ctx)
 	if err != nil {
 		fmt.Printf("Error! %s\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Scanned: %d inodes\n", len(fs.InodeTable))
+	fmt.Print(fs)
 }
