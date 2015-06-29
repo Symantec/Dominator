@@ -7,6 +7,35 @@ import (
 	"syscall"
 )
 
+type FileSystemHistory struct {
+	fileSystem      *FileSystem
+	generationCount uint64
+}
+
+func (fsh *FileSystemHistory) Update(newFS *FileSystem) {
+	if fsh.fileSystem == nil {
+		fsh.fileSystem = newFS
+		fsh.generationCount = 1
+	} else {
+		if !Compare(fsh.fileSystem, newFS, nil) {
+			fsh.generationCount++
+			fsh.fileSystem = newFS
+		}
+	}
+}
+
+func (fsh *FileSystemHistory) FileSystem() *FileSystem {
+	return fsh.fileSystem
+}
+
+func (fsh *FileSystemHistory) GenerationCount() uint64 {
+	return fsh.generationCount
+}
+
+func (fsh FileSystemHistory) String() string {
+	return fmt.Sprintf("GenerationCount=%d\n", fsh.generationCount)
+}
+
 type FileSystem struct {
 	ctx         *fsrateio.FsRateContext
 	InodeTable  map[uint64]*Inode
@@ -86,4 +115,9 @@ func (file *File) String() string {
 
 func Compare(left *FileSystem, right *FileSystem, logWriter io.Writer) bool {
 	return compare(left, right, logWriter)
+}
+
+func StartScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
+	ctx *fsrateio.FsRateContext) chan *FileSystem {
+	return startScannerDaemon(rootDirectoryName, cacheDirectoryName, ctx)
 }
