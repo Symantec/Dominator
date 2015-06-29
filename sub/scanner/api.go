@@ -5,23 +5,20 @@ import (
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"io"
 	"syscall"
+	"time"
 )
 
 type FileSystemHistory struct {
-	fileSystem      *FileSystem
-	generationCount uint64
+	fileSystem         *FileSystem
+	scanCount          uint64
+	generationCount    uint64
+	timeOfLastScan     time.Time
+	durationOfLastScan time.Duration
+	timeOfLastChange   time.Time
 }
 
 func (fsh *FileSystemHistory) Update(newFS *FileSystem) {
-	if fsh.fileSystem == nil {
-		fsh.fileSystem = newFS
-		fsh.generationCount = 1
-	} else {
-		if !Compare(fsh.fileSystem, newFS, nil) {
-			fsh.generationCount++
-			fsh.fileSystem = newFS
-		}
-	}
+	fsh.update(newFS)
 }
 
 func (fsh *FileSystemHistory) FileSystem() *FileSystem {
@@ -36,6 +33,10 @@ func (fsh FileSystemHistory) String() string {
 	return fmt.Sprintf("GenerationCount=%d\n", fsh.generationCount)
 }
 
+func (fsh *FileSystemHistory) WriteHtml(writer io.Writer) {
+	fsh.writeHtml(writer)
+}
+
 type FileSystem struct {
 	ctx         *fsrateio.FsRateContext
 	InodeTable  map[uint64]*Inode
@@ -45,29 +46,7 @@ type FileSystem struct {
 
 func ScanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	ctx *fsrateio.FsRateContext) (*FileSystem, error) {
-	var fileSystem FileSystem
-	fileSystem.ctx = ctx
-	fileSystem.name = rootDirectoryName
-	var stat syscall.Stat_t
-	err := syscall.Lstat(rootDirectoryName, &stat)
-	if err != nil {
-		return nil, err
-	}
-	fileSystem.InodeTable = make(map[uint64]*Inode)
-	fileSystem.inode, _ = fileSystem.getInode(&stat)
-	err = fileSystem.scan(&fileSystem, "")
-	if err != nil {
-		return nil, err
-	}
-	if cacheDirectoryName != "" {
-		fileSystem.ObjectCache = make([][]byte, 0, 65536)
-		fileSystem.ObjectCache, err = scanObjectCache(cacheDirectoryName, "",
-			fileSystem.ObjectCache)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &fileSystem, nil
+	return scanFileSystem(rootDirectoryName, cacheDirectoryName, ctx)
 }
 
 func (fs *FileSystem) String() string {
