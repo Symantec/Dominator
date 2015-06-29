@@ -172,20 +172,12 @@ func main() {
 	}
 	ctx := fsrateio.NewContext(bytesPerSecond, blocksPerSecond)
 	fmt.Println(ctx)
-	var prev_fs *scanner.FileSystem
+	var fsh scanner.FileSystemHistory
+	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir, ctx)
 	for iter := 0; true; iter++ {
 		fmt.Printf("Cycle: %d\n", iter)
-		fs, err := scanner.ScanFileSystem(workingRootDir, objectsDir, ctx)
-		if err != nil {
-			fmt.Printf("Error! %s\n", err)
-			os.Exit(1)
-		}
-		fmt.Print(fs)
-		if prev_fs != nil {
-			if !scanner.Compare(prev_fs, fs, os.Stdout) {
-				fmt.Println("Scan results different from last run")
-			}
-		}
-		prev_fs = fs
+		fsh.Update(<-fsChannel)
+		fmt.Print(fsh)
+		fmt.Print(fsh.FileSystem())
 	}
 }
