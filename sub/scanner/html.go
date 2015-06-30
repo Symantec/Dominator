@@ -3,6 +3,7 @@ package scanner
 import (
 	"bufio"
 	"fmt"
+	"github.com/Symantec/Dominator/sub/fsrateio"
 	"io"
 	"time"
 )
@@ -16,6 +17,10 @@ func (fsh *FileSystemHistory) writeHtml(writer io.Writer) {
 		fmt.Fprintf(w, "Last scan completed: %s<br>\n", fsh.timeOfLastScan)
 		fmt.Fprintf(w, "Duration of last scan: %s<br>\n",
 			fsh.durationOfLastScan)
+		tmp := fsrateio.FormatBytes(fsh.fileSystem.totalDataBytes)
+		fmt.Fprintf(w, "Scanned: %s<br>\n", tmp)
+		tmp = fsrateio.FormatBytes(uint64(float64(fsh.fileSystem.totalDataBytes) / fsh.durationOfLastScan.Seconds()))
+		fmt.Fprintf(w, "Scan rate: %s/s<br>\n", tmp)
 	}
 	fmt.Fprintf(w, "Duration of current scan: %s<br>\n",
 		time.Since(fsh.timeOfLastScan))
