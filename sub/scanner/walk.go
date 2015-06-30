@@ -17,7 +17,7 @@ func (fileSystem *FileSystem) getInode(stat *syscall.Stat_t) (*Inode, bool) {
 	if inode == nil {
 		var _inode Inode
 		inode = &_inode
-		_inode.stat = *stat
+		_inode.Stat = *stat
 		fileSystem.InodeTable[stat.Ino] = inode
 		new = true
 	}
@@ -26,7 +26,7 @@ func (fileSystem *FileSystem) getInode(stat *syscall.Stat_t) (*Inode, bool) {
 
 func (directory *Directory) scan(fileSystem *FileSystem,
 	parentName string) error {
-	myPathName := path.Join(parentName, directory.name)
+	myPathName := path.Join(parentName, directory.Name)
 	file, err := os.Open(myPathName)
 	if err != nil {
 		return err
@@ -48,14 +48,14 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 			return err
 		}
 		inode, isNewInode := fileSystem.getInode(&stat)
-		if stat.Dev == directory.inode.stat.Dev {
+		if stat.Dev == directory.Inode.Stat.Dev {
 			if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
 				if !isNewInode {
 					return errors.New("Hardlinked directory: " + filename)
 				}
 				var dir Directory
-				dir.name = name
-				dir.inode = inode
+				dir.Name = name
+				dir.Inode = inode
 				err := dir.scan(fileSystem, myPathName)
 				if err != nil {
 					return err
@@ -63,8 +63,8 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 				directory.DirectoryList = append(directory.DirectoryList, &dir)
 			} else {
 				var file File
-				file.name = name
-				file.inode = inode
+				file.Name = name
+				file.Inode = inode
 				if isNewInode {
 					err := file.scan(fileSystem, myPathName)
 					if err != nil {
@@ -82,8 +82,8 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 }
 
 func (file *File) scan(fileSystem *FileSystem, parentName string) error {
-	myPathName := path.Join(parentName, file.name)
-	if file.inode.stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
+	myPathName := path.Join(parentName, file.Name)
+	if file.Inode.Stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
 		f, err := os.Open(myPathName)
 		if err != nil {
 			return err
@@ -92,13 +92,13 @@ func (file *File) scan(fileSystem *FileSystem, parentName string) error {
 		hash := sha512.New()
 		io.Copy(hash, reader)
 		f.Close()
-		file.inode.hash = hash.Sum(nil)
-	} else if file.inode.stat.Mode&syscall.S_IFMT == syscall.S_IFLNK {
+		file.Inode.Hash = hash.Sum(nil)
+	} else if file.Inode.Stat.Mode&syscall.S_IFMT == syscall.S_IFLNK {
 		symlink, err := os.Readlink(myPathName)
 		if err != nil {
 			return err
 		}
-		file.inode.symlink = symlink
+		file.Inode.Symlink = symlink
 	}
 	return nil
 }

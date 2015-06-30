@@ -40,7 +40,7 @@ func (fsh *FileSystemHistory) WriteHtml(writer io.Writer) {
 type FileSystem struct {
 	ctx            *fsrateio.FsRateContext
 	InodeTable     map[uint64]*Inode
-	totalDataBytes uint64
+	TotalDataBytes uint64
 	ObjectCache    [][]byte
 	Directory
 }
@@ -56,41 +56,33 @@ func (fs *FileSystem) String() string {
 }
 
 type Inode struct {
-	stat    syscall.Stat_t
-	symlink string
-	hash    []byte
+	Stat    syscall.Stat_t
+	Symlink string
+	Hash    []byte
 }
 
 func (inode *Inode) Length() uint64 {
-	return uint64(inode.stat.Size)
+	return uint64(inode.Stat.Size)
 }
 
 type Directory struct {
-	name          string
-	inode         *Inode
+	Name          string
+	Inode         *Inode
 	FileList      []*File
 	DirectoryList []*Directory
 }
 
-func (directory *Directory) Name() string {
-	return directory.name
-}
-
 func (directory *Directory) String() string {
-	return directory.name
+	return directory.Name
 }
 
 type File struct {
-	name  string
-	inode *Inode
-}
-
-func (file *File) Name() string {
-	return file.name
+	Name  string
+	Inode *Inode
 }
 
 func (file *File) String() string {
-	return file.name
+	return file.Name
 }
 
 func Compare(left *FileSystem, right *FileSystem, logWriter io.Writer) bool {
