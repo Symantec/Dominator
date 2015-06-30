@@ -98,7 +98,12 @@ func unshareAndBind(workingRootDir string) bool {
 	}
 	// Strip out the "-unshare=false" just in case.
 	os.Args = os.Args[0 : len(os.Args)-1]
-	err := syscall.Mount(*rootDir, workingRootDir, "", syscall.MS_BIND, "")
+	err := syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, "")
+	if err != nil {
+		fmt.Printf("Unable to set mount sharing to private\t%s\n", err)
+		return false
+	}
+	err = syscall.Mount(*rootDir, workingRootDir, "", syscall.MS_BIND, "")
 	if err != nil {
 		fmt.Printf("Unable to bind mount %s to %s\t%s\n",
 			*rootDir, workingRootDir, err)
