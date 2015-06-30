@@ -38,9 +38,10 @@ func (fsh *FileSystemHistory) WriteHtml(writer io.Writer) {
 }
 
 type FileSystem struct {
-	ctx         *fsrateio.FsRateContext
-	InodeTable  map[uint64]*Inode
-	ObjectCache [][]byte
+	ctx            *fsrateio.FsRateContext
+	InodeTable     map[uint64]*Inode
+	totalDataBytes uint64
+	ObjectCache    [][]byte
 	Directory
 }
 
