@@ -55,6 +55,10 @@ func (fs *FileSystem) String() string {
 		len(fs.InodeTable), len(fs.ObjectCache))
 }
 
+func (fs *FileSystem) DebugWrite(w io.Writer, prefix string) error {
+	return fs.debugWrite(w, prefix)
+}
+
 type Inode struct {
 	Stat    syscall.Stat_t
 	Symlink string
@@ -76,6 +80,10 @@ func (directory *Directory) String() string {
 	return directory.Name
 }
 
+func (directory *Directory) DebugWrite(w io.Writer, prefix string) error {
+	return directory.debugWrite(w, prefix)
+}
+
 type File struct {
 	Name  string
 	Inode *Inode
@@ -83,6 +91,10 @@ type File struct {
 
 func (file *File) String() string {
 	return file.Name
+}
+
+func (file *File) DebugWrite(w io.Writer, prefix string) error {
+	return file.debugWrite(w, prefix)
 }
 
 func Compare(left *FileSystem, right *FileSystem, logWriter io.Writer) bool {

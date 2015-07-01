@@ -2,14 +2,27 @@ package main
 
 import (
 	"encoding/gob"
+	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"net/rpc"
 	"os"
+	"strings"
+)
+
+var (
+	file  = flag.String("file", "", "Name of file to write encoded data to")
+	debug = flag.Bool("debug", false, "Enable debug mode")
 )
 
 func main() {
-	client, err := rpc.DialHTTP("tcp", os.Args[1]+":6969")
+	flag.Parse()
+	args := flag.Args()
+	clientName := args[0]
+	if !strings.Contains(clientName, ":") {
+		clientName = clientName + ":6969"
+	}
+	client, err := rpc.DialHTTP("tcp", clientName)
 	if err != nil {
 		fmt.Printf("Error dialing\t%s\n", err)
 		os.Exit(1)
@@ -21,25 +34,19 @@ func main() {
 		fmt.Printf("Error calling\t%s\n", err)
 		os.Exit(1)
 	}
-	fmt.Print(reply)
-	if len(os.Args) >= 3 {
-		file, err := os.Create(os.Args[2])
-		if err != nil {
-			fmt.Printf("Error creating: %s\t%s\n", os.Args[2], err)
-			os.Exit(1)
-		}
-		encoder := gob.NewEncoder(file)
-		encoder.Encode(reply)
-		file.Close()
+	if *debug {
+		reply.DebugWrite(os.Stdout, "")
+	} else {
+		fmt.Print(reply)
 	}
-	if len(os.Args) >= 4 {
-		file, err := os.Create(os.Args[3])
+	if *file != "" {
+		f, err := os.Create(*file)
 		if err != nil {
-			fmt.Printf("Error creating: %s\t%s\n", os.Args[3], err)
+			fmt.Printf("Error creating: %s\t%s\n", *file, err)
 			os.Exit(1)
 		}
-		encoder := gob.NewEncoder(file)
+		encoder := gob.NewEncoder(f)
 		encoder.Encode(reply)
-		file.Close()
+		f.Close()
 	}
 }
