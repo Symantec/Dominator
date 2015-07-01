@@ -55,6 +55,10 @@ func (fs *FileSystem) String() string {
 		len(fs.InodeTable), len(fs.ObjectCache))
 }
 
+func (fs *FileSystem) WriteHtml(writer io.Writer) {
+	fs.writeHtml(writer)
+}
+
 func (fs *FileSystem) DebugWrite(w io.Writer, prefix string) error {
 	return fs.debugWrite(w, prefix)
 }
