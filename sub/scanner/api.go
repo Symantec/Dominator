@@ -50,9 +50,17 @@ func ScanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	return scanFileSystem(rootDirectoryName, cacheDirectoryName, ctx)
 }
 
+func (fs *FileSystem) RebuildPointers() {
+	fs.rebuildPointers()
+}
+
 func (fs *FileSystem) String() string {
 	return fmt.Sprintf("Tree: %d inodes\nObjectCache: %d objects\n",
 		len(fs.InodeTable), len(fs.ObjectCache))
+}
+
+func (fs *FileSystem) WriteHtml(writer io.Writer) {
+	fs.writeHtml(writer)
 }
 
 func (fs *FileSystem) DebugWrite(w io.Writer, prefix string) error {
@@ -71,9 +79,10 @@ func (inode *Inode) Length() uint64 {
 
 type Directory struct {
 	Name          string
-	Inode         *Inode
+	InodeNumber   uint64
 	FileList      []*File
 	DirectoryList []*Directory
+	inode         *Inode
 }
 
 func (directory *Directory) String() string {
@@ -85,8 +94,9 @@ func (directory *Directory) DebugWrite(w io.Writer, prefix string) error {
 }
 
 type File struct {
-	Name  string
-	Inode *Inode
+	Name        string
+	InodeNumber uint64
+	inode       *Inode
 }
 
 func (file *File) String() string {

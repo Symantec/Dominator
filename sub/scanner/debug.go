@@ -46,7 +46,16 @@ func (directory *Directory) debugWrite(w io.Writer, prefix string) error {
 }
 
 func (file *File) debugWrite(w io.Writer, prefix string) error {
-	_, err := fmt.Fprintf(w, "%s%s\t%x\n", prefix, file.Name, file.Inode.Hash)
+	var data string
+	inode := file.inode
+	if len(inode.Hash) > 0 {
+		data = fmt.Sprintf("%x", inode.Hash)
+	} else if len(inode.Symlink) > 0 {
+		data = inode.Symlink
+	} else {
+		data = ""
+	}
+	_, err := fmt.Fprintf(w, "%s%s\t%s\n", prefix, file.Name, data)
 	if err != nil {
 		return err
 	}

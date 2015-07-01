@@ -1,6 +1,7 @@
 package httpd
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"io"
@@ -41,12 +42,14 @@ func StartServer(portNum uint, fsh *scanner.FileSystemHistory) error {
 }
 
 func onlyHandler(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintln(w, "<title>subd status page</title>")
-	fmt.Fprintln(w, "<body>")
-	fmt.Fprintln(w, "<center>")
-	fmt.Fprintln(w, "<h1>subd status page</h1>")
-	fmt.Fprintln(w, "</center>")
-	fmt.Fprintln(w, "<h3>")
-	onlyHtmler.WriteHtml(w)
-	fmt.Fprintln(w, "</body>")
+	writer := bufio.NewWriter(w)
+	defer writer.Flush()
+	fmt.Fprintln(writer, "<title>subd status page</title>")
+	fmt.Fprintln(writer, "<body>")
+	fmt.Fprintln(writer, "<center>")
+	fmt.Fprintln(writer, "<h1>subd status page</h1>")
+	fmt.Fprintln(writer, "</center>")
+	fmt.Fprintln(writer, "<h3>")
+	onlyHtmler.WriteHtml(writer)
+	fmt.Fprintln(writer, "</body>")
 }

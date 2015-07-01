@@ -16,7 +16,8 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 		return nil, err
 	}
 	fileSystem.InodeTable = make(map[uint64]*Inode)
-	fileSystem.Inode, _ = fileSystem.getInode(&stat)
+	fileSystem.InodeNumber = stat.Ino
+	fileSystem.inode, _ = fileSystem.getInode(&stat)
 	err = fileSystem.scan(&fileSystem, "")
 	if err != nil {
 		return nil, err
