@@ -42,6 +42,7 @@ type FileSystem struct {
 	InodeTable     map[uint64]*Inode
 	TotalDataBytes uint64
 	ObjectCache    [][]byte
+	Dev            uint64
 	Directory
 }
 
@@ -68,13 +69,14 @@ func (fs *FileSystem) DebugWrite(w io.Writer, prefix string) error {
 }
 
 type Inode struct {
-	Stat    syscall.Stat_t
+	Mode    uint32
+	Uid     uint32
+	Gid     uint32
+	Rdev    uint64
+	Size    int64
+	Mtime   syscall.Timespec
 	Symlink string
 	Hash    []byte
-}
-
-func (inode *Inode) Length() uint64 {
-	return uint64(inode.Stat.Size)
 }
 
 type Directory struct {

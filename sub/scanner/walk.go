@@ -17,11 +17,54 @@ func (fileSystem *FileSystem) getInode(stat *syscall.Stat_t) (*Inode, bool) {
 	if inode == nil {
 		var _inode Inode
 		inode = &_inode
-		_inode.Stat = *stat
+		_inode.Mode = stat.Mode
+		_inode.Uid = stat.Uid
+		_inode.Gid = stat.Gid
+		_inode.Rdev = stat.Rdev
+		_inode.Size = stat.Size
+		_inode.Mtime = stat.Mtim
 		fileSystem.InodeTable[stat.Ino] = inode
 		new = true
 	}
 	return inode, new
+}
+
+func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
+	ctx *fsrateio.FsRateContext) (*FileSystem, error) {
+	var fileSystem FileSystem
+	fileSystem.ctx = ctx
+	fileSystem.Name = rootDirectoryName
+	var stat syscall.Stat_t
+	err := syscall.Lstat(rootDirectoryName, &stat)
+	if err != nil {
+		return nil, err
+	}
+	fileSystem.InodeTable = make(map[uint64]*Inode)
+	fileSystem.Dev = stat.Dev
+	fileSystem.InodeNumber = stat.Ino
+	fileSystem.inode, _ = fileSystem.getInode(&stat)
+	err = fileSystem.scan(&fileSystem, "")
+	if err != nil {
+		return nil, err
+	}
+	if cacheDirectoryName != "" {
+		fileSystem.ObjectCache = make([][]byte, 0, 65536)
+		fileSystem.ObjectCache, err = scanObjectCache(cacheDirectoryName, "",
+			fileSystem.ObjectCache)
+		if err != nil {
+			return nil, err
+		}
+	}
+	fileSystem.TotalDataBytes = fileSystem.computeTotalDataBytes()
+	return &fileSystem, nil
+}
+
+func (fs *FileSystem) computeTotalDataBytes() uint64 {
+	var totalBytes uint64 = 0
+	for _, inode := range fs.InodeTable {
+		totalBytes += uint64(inode.Size)
+	}
+	return totalBytes
 }
 
 func (directory *Directory) scan(fileSystem *FileSystem,
@@ -48,7 +91,7 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 			return err
 		}
 		inode, isNewInode := fileSystem.getInode(&stat)
-		if stat.Dev == directory.inode.Stat.Dev {
+		if stat.Dev == fileSystem.Dev {
 			if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
 				if !isNewInode {
 					return errors.New("Hardlinked directory: " + filename)
@@ -85,7 +128,7 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 
 func (file *File) scan(fileSystem *FileSystem, parentName string) error {
 	myPathName := path.Join(parentName, file.Name)
-	if file.inode.Stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
+	if file.inode.Mode&syscall.S_IFMT == syscall.S_IFREG {
 		f, err := os.Open(myPathName)
 		if err != nil {
 			return err
@@ -95,7 +138,7 @@ func (file *File) scan(fileSystem *FileSystem, parentName string) error {
 		io.Copy(hash, reader)
 		f.Close()
 		file.inode.Hash = hash.Sum(nil)
-	} else if file.inode.Stat.Mode&syscall.S_IFMT == syscall.S_IFLNK {
+	} else if file.inode.Mode&syscall.S_IFMT == syscall.S_IFLNK {
 		symlink, err := os.Readlink(myPathName)
 		if err != nil {
 			return err
