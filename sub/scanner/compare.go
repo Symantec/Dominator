@@ -34,7 +34,7 @@ func compareDirectories(left, right *Directory, logWriter io.Writer) bool {
 			left.Name, right.Name)
 		return false
 	}
-	if !compareInodes(left.Inode, right.Inode, logWriter) {
+	if !compareInodes(left.inode, right.inode, logWriter) {
 		return false
 	}
 	if len(left.FileList) != len(right.FileList) {
@@ -69,7 +69,7 @@ func compareFiles(left *File, right *File, logWriter io.Writer) bool {
 			left.Name, right.Name)
 		return false
 	}
-	if !compareInodes(left.Inode, right.Inode, logWriter) {
+	if !compareInodes(left.inode, right.inode, logWriter) {
 		return false
 	}
 	return true

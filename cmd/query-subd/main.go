@@ -34,6 +34,7 @@ func main() {
 		fmt.Printf("Error calling\t%s\n", err)
 		os.Exit(1)
 	}
+	reply.RebuildPointers()
 	if *debug {
 		reply.DebugWrite(os.Stdout, "")
 	} else {

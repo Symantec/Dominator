@@ -48,14 +48,15 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 			return err
 		}
 		inode, isNewInode := fileSystem.getInode(&stat)
-		if stat.Dev == directory.Inode.Stat.Dev {
+		if stat.Dev == directory.inode.Stat.Dev {
 			if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
 				if !isNewInode {
 					return errors.New("Hardlinked directory: " + filename)
 				}
 				var dir Directory
 				dir.Name = name
-				dir.Inode = inode
+				dir.InodeNumber = stat.Ino
+				dir.inode = inode
 				err := dir.scan(fileSystem, myPathName)
 				if err != nil {
 					return err
@@ -64,7 +65,8 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 			} else {
 				var file File
 				file.Name = name
-				file.Inode = inode
+				file.InodeNumber = stat.Ino
+				file.inode = inode
 				if isNewInode {
 					err := file.scan(fileSystem, myPathName)
 					if err != nil {
@@ -83,7 +85,7 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 
 func (file *File) scan(fileSystem *FileSystem, parentName string) error {
 	myPathName := path.Join(parentName, file.Name)
-	if file.Inode.Stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
+	if file.inode.Stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
 		f, err := os.Open(myPathName)
 		if err != nil {
 			return err
@@ -92,13 +94,13 @@ func (file *File) scan(fileSystem *FileSystem, parentName string) error {
 		hash := sha512.New()
 		io.Copy(hash, reader)
 		f.Close()
-		file.Inode.Hash = hash.Sum(nil)
-	} else if file.Inode.Stat.Mode&syscall.S_IFMT == syscall.S_IFLNK {
+		file.inode.Hash = hash.Sum(nil)
+	} else if file.inode.Stat.Mode&syscall.S_IFMT == syscall.S_IFLNK {
 		symlink, err := os.Readlink(myPathName)
 		if err != nil {
 			return err
 		}
-		file.Inode.Symlink = symlink
+		file.inode.Symlink = symlink
 	}
 	return nil
 }
