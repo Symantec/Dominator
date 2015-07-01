@@ -29,12 +29,12 @@ func compare(left *FileSystem, right *FileSystem, logWriter io.Writer) bool {
 }
 
 func compareDirectories(left, right *Directory, logWriter io.Writer) bool {
-	if left.name != right.name {
+	if left.Name != right.Name {
 		fmt.Fprintf(logWriter, "dirname: left vs. right: %s vs. %s\n",
-			left.name, right.name)
+			left.Name, right.Name)
 		return false
 	}
-	if !compareInodes(left.inode, right.inode, logWriter) {
+	if !compareInodes(left.Inode, right.Inode, logWriter) {
 		return false
 	}
 	if len(left.FileList) != len(right.FileList) {
@@ -64,89 +64,89 @@ func compareDirectories(left, right *Directory, logWriter io.Writer) bool {
 }
 
 func compareFiles(left *File, right *File, logWriter io.Writer) bool {
-	if left.name != right.name {
+	if left.Name != right.Name {
 		fmt.Fprintf(logWriter, "filename: left vs. right: %s vs. %s\n",
-			left.name, right.name)
+			left.Name, right.Name)
 		return false
 	}
-	if !compareInodes(left.inode, right.inode, logWriter) {
+	if !compareInodes(left.Inode, right.Inode, logWriter) {
 		return false
 	}
 	return true
 }
 
 func compareInodes(left *Inode, right *Inode, logWriter io.Writer) bool {
-	if left.stat.Dev != right.stat.Dev {
+	if left.Stat.Dev != right.Stat.Dev {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "stat.Dev: left vs. right: %x vs. %x\n",
-				left.stat.Dev, right.stat.Dev)
+				left.Stat.Dev, right.Stat.Dev)
 		}
 		return false
 	}
-	if left.stat.Mode != right.stat.Mode {
+	if left.Stat.Mode != right.Stat.Mode {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "stat.Mode: left vs. right: %x vs. %x\n",
-				left.stat.Mode, right.stat.Mode)
+				left.Stat.Mode, right.Stat.Mode)
 		}
 		return false
 	}
-	if left.stat.Uid != right.stat.Uid {
+	if left.Stat.Uid != right.Stat.Uid {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "stat.Uid: left vs. right: %d vs. %d\n",
-				left.stat.Uid, right.stat.Uid)
+				left.Stat.Uid, right.Stat.Uid)
 		}
 		return false
 	}
-	if left.stat.Gid != right.stat.Gid {
+	if left.Stat.Gid != right.Stat.Gid {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "stat.Gid: left vs. right: %d vs. %d\n",
-				left.stat.Gid, right.stat.Gid)
+				left.Stat.Gid, right.Stat.Gid)
 		}
 		return false
 	}
-	if left.stat.Mode&syscall.S_IFMT != syscall.S_IFDIR {
-		if left.stat.Size != right.stat.Size {
+	if left.Stat.Mode&syscall.S_IFMT != syscall.S_IFDIR {
+		if left.Stat.Size != right.Stat.Size {
 			if logWriter != nil {
 				fmt.Fprintf(logWriter, "stat.Size: left vs. right: %d vs. %d\n",
-					left.stat.Size, right.stat.Size)
+					left.Stat.Size, right.Stat.Size)
 			}
 			return false
 		}
 	}
-	if left.stat.Mode&syscall.S_IFMT != syscall.S_IFDIR &&
-		left.stat.Mode&syscall.S_IFMT != syscall.S_IFLNK {
-		if left.stat.Mtim != right.stat.Mtim {
+	if left.Stat.Mode&syscall.S_IFMT != syscall.S_IFDIR &&
+		left.Stat.Mode&syscall.S_IFMT != syscall.S_IFLNK {
+		if left.Stat.Mtim != right.Stat.Mtim {
 			if logWriter != nil {
 				fmt.Fprintf(logWriter, "stat.Mtim: left vs. right: %d vs. %d\n",
-					left.stat.Mtim, right.stat.Mtim)
+					left.Stat.Mtim, right.Stat.Mtim)
 			}
 			return false
 		}
 	}
-	if left.stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
-		if bytes.Compare(left.hash, right.hash) != 0 {
+	if left.Stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
+		if bytes.Compare(left.Hash, right.Hash) != 0 {
 			if logWriter != nil {
 				fmt.Fprintf(logWriter, "hash: left vs. right: %x vs. %x\n",
-					left.hash, right.hash)
+					left.Hash, right.Hash)
 			}
 			return false
 		}
 	}
-	if left.stat.Mode&syscall.S_IFMT == syscall.S_IFBLK ||
-		left.stat.Mode&syscall.S_IFMT == syscall.S_IFCHR {
-		if left.stat.Rdev != right.stat.Rdev {
+	if left.Stat.Mode&syscall.S_IFMT == syscall.S_IFBLK ||
+		left.Stat.Mode&syscall.S_IFMT == syscall.S_IFCHR {
+		if left.Stat.Rdev != right.Stat.Rdev {
 			if logWriter != nil {
 				fmt.Fprintf(logWriter, "stat.Rdev: left vs. right: %x vs. %x\n",
-					left.stat.Rdev, right.stat.Rdev)
+					left.Stat.Rdev, right.Stat.Rdev)
 			}
 			return false
 		}
 	}
-	if left.stat.Mode&syscall.S_IFMT == syscall.S_IFLNK {
-		if left.symlink != right.symlink {
+	if left.Stat.Mode&syscall.S_IFMT == syscall.S_IFLNK {
+		if left.Symlink != right.Symlink {
 			if logWriter != nil {
 				fmt.Fprintf(logWriter, "symlink: left vs. right: %s vs. %s\n",
-					left.symlink, right.symlink)
+					left.Symlink, right.Symlink)
 			}
 			return false
 		}
