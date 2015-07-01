@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	file = flag.String("file", "", "Name of file to write encoded data to")
+	file  = flag.String("file", "", "Name of file to write encoded data to")
+	debug = flag.Bool("debug", false, "Enable debug mode")
 )
 
 func main() {
@@ -33,7 +34,11 @@ func main() {
 		fmt.Printf("Error calling\t%s\n", err)
 		os.Exit(1)
 	}
-	fmt.Print(reply)
+	if *debug {
+		reply.DebugWrite(os.Stdout, "")
+	} else {
+		fmt.Print(reply)
+	}
 	if *file != "" {
 		f, err := os.Create(*file)
 		if err != nil {
