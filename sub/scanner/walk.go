@@ -21,7 +21,7 @@ func (fileSystem *FileSystem) getInode(stat *syscall.Stat_t) (*Inode, bool) {
 		_inode.Uid = stat.Uid
 		_inode.Gid = stat.Gid
 		_inode.Rdev = stat.Rdev
-		_inode.Size = stat.Size
+		_inode.Size = uint64(stat.Size)
 		_inode.Mtime = stat.Mtim
 		fileSystem.InodeTable[stat.Ino] = inode
 		new = true

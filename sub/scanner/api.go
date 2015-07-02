@@ -73,7 +73,7 @@ type Inode struct {
 	Uid     uint32
 	Gid     uint32
 	Rdev    uint64
-	Size    int64
+	Size    uint64
 	Mtime   syscall.Timespec
 	Symlink string
 	Hash    []byte
