@@ -8,7 +8,9 @@ import (
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"github.com/Symantec/Dominator/sub/scanner"
+	"io"
 	"os"
+	"runtime"
 	"syscall"
 	"time"
 )
@@ -20,6 +22,19 @@ var (
 	rootDir = flag.String("rootDir", "/",
 		"Name of root of directory tree to scan")
 )
+
+func writeNamedStat(writer io.Writer, name string, value uint64) {
+	fmt.Fprintf(writer, "  %s=%s\n", name, fsrateio.FormatBytes(value))
+}
+
+func writeMemoryStats(writer io.Writer) {
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	fmt.Fprintln(writer, "MemStats:")
+	writeNamedStat(writer, "Alloc", memStats.Alloc)
+	writeNamedStat(writer, "TotalAlloc", memStats.TotalAlloc)
+	writeNamedStat(writer, "Sys", memStats.Sys)
+}
 
 func main() {
 	flag.Parse()
@@ -56,6 +71,7 @@ func main() {
 				fmt.Println("Scan results different from last run")
 			}
 		}
+		writeMemoryStats(os.Stdout)
 		prev_fs = fs
 		time.Sleep(sleepDuration)
 	}
