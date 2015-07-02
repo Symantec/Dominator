@@ -48,7 +48,7 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 		return nil, err
 	}
 	if cacheDirectoryName != "" {
-		fileSystem.ObjectCache = make([][]byte, 0, 65536)
+		fileSystem.ObjectCache = make([][]byte, 0, 16)
 		fileSystem.ObjectCache, err = scanObjectCache(cacheDirectoryName, "",
 			fileSystem.ObjectCache)
 		if err != nil {

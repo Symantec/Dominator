@@ -22,6 +22,8 @@ var (
 	interval = flag.Uint("interval", 0, "Seconds to sleep after each scan")
 	numScans = flag.Int("numScans", 1,
 		"The number of scans to run (infinite: < 0)")
+	objectCache = flag.String("objectCache", "",
+		"Name of directory containing the object cache")
 	rootDir = flag.String("rootDir", "/",
 		"Name of root of directory tree to scan")
 )
@@ -54,7 +56,7 @@ func main() {
 	sleepDuration, _ := time.ParseDuration(fmt.Sprintf("%ds", *interval))
 	for iter := 1; *numScans < 0 || iter <= *numScans; iter++ {
 		timeStart := time.Now()
-		fs, err := scanner.ScanFileSystem(*rootDir, "", ctx)
+		fs, err := scanner.ScanFileSystem(*rootDir, *objectCache, ctx)
 		timeStop := time.Now()
 		if err != nil {
 			fmt.Printf("Error! %s\n", err)
