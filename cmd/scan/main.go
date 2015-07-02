@@ -3,6 +3,7 @@ package main
 // Benchmark the scanning of a file-system tree.
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/fsbench"
@@ -16,6 +17,8 @@ import (
 )
 
 var (
+	debugFile = flag.String("debugFile", "",
+		"Name of file to write debugging information to")
 	interval = flag.Uint("interval", 0, "Seconds to sleep after each scan")
 	numScans = flag.Int("numScans", 1,
 		"The number of scans to run (infinite: < 0)")
@@ -72,6 +75,15 @@ func main() {
 			}
 		}
 		writeMemoryStats(os.Stdout)
+		if *debugFile != "" {
+			file, err := os.Create(*debugFile)
+			if err != nil {
+				fmt.Printf("Error! %s\n", err)
+				return
+			}
+			fs.DebugWrite(bufio.NewWriter(file), "")
+			file.Close()
+		}
 		prev_fs = fs
 		time.Sleep(sleepDuration)
 	}
