@@ -41,6 +41,7 @@ type FileSystem struct {
 	ctx            *fsrateio.FsRateContext
 	InodeTable     map[uint64]*Inode
 	TotalDataBytes uint64
+	HashCount      uint64
 	ObjectCache    [][]byte
 	Dev            uint64
 	Directory
@@ -56,8 +57,10 @@ func (fs *FileSystem) RebuildPointers() {
 }
 
 func (fs *FileSystem) String() string {
-	return fmt.Sprintf("Tree: %d inodes\nObjectCache: %d objects\n",
-		len(fs.InodeTable), len(fs.ObjectCache))
+	return fmt.Sprintf("Tree: %d inodes, total file size: %s, number of hashes: %d\nObjectCache: %d objects\n",
+		len(fs.InodeTable), fsrateio.FormatBytes(fs.TotalDataBytes),
+		fs.HashCount,
+		len(fs.ObjectCache))
 }
 
 func (fs *FileSystem) WriteHtml(writer io.Writer) {

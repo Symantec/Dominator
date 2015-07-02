@@ -138,6 +138,7 @@ func (file *File) scan(fileSystem *FileSystem, parentName string) error {
 		io.Copy(hash, reader)
 		f.Close()
 		file.inode.Hash = hash.Sum(nil)
+		fileSystem.HashCount++
 	} else if file.inode.Mode&syscall.S_IFMT == syscall.S_IFLNK {
 		symlink, err := os.Readlink(myPathName)
 		if err != nil {
