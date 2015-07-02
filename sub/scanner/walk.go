@@ -80,6 +80,9 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 	}
 	file.Close()
 	sort.Strings(names)
+	// Create file and directory lists which are guaranteed to be long enough.
+	fileList := make([]*File, 0, len(names))
+	directoryList := make([]*Directory, 0, len(names))
 	for _, name := range names {
 		filename := path.Join(myPathName, name)
 		var stat syscall.Stat_t
@@ -90,39 +93,45 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 			}
 			return err
 		}
+		if stat.Dev != fileSystem.Dev {
+			continue
+		}
 		inode, isNewInode := fileSystem.getInode(&stat)
-		if stat.Dev == fileSystem.Dev {
-			if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
-				if !isNewInode {
-					return errors.New("Hardlinked directory: " + filename)
-				}
-				var dir Directory
-				dir.Name = name
-				dir.InodeNumber = stat.Ino
-				dir.inode = inode
-				err := dir.scan(fileSystem, myPathName)
+		if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
+			if !isNewInode {
+				return errors.New("Hardlinked directory: " + filename)
+			}
+			var dir Directory
+			dir.Name = name
+			dir.InodeNumber = stat.Ino
+			dir.inode = inode
+			err := dir.scan(fileSystem, myPathName)
+			if err != nil {
+				return err
+			}
+			directoryList = append(directoryList, &dir)
+		} else {
+			var file File
+			file.Name = name
+			file.InodeNumber = stat.Ino
+			file.inode = inode
+			if isNewInode {
+				err := file.scan(fileSystem, myPathName)
 				if err != nil {
+					if err == syscall.ENOENT {
+						continue
+					}
 					return err
 				}
-				directory.DirectoryList = append(directory.DirectoryList, &dir)
-			} else {
-				var file File
-				file.Name = name
-				file.InodeNumber = stat.Ino
-				file.inode = inode
-				if isNewInode {
-					err := file.scan(fileSystem, myPathName)
-					if err != nil {
-						if err == syscall.ENOENT {
-							continue
-						}
-						return err
-					}
-				}
-				directory.FileList = append(directory.FileList, &file)
 			}
+			fileList = append(fileList, &file)
 		}
 	}
+	// Save file and directory lists which are exactly the right length.
+	directory.FileList = make([]*File, len(fileList))
+	copy(directory.FileList, fileList)
+	directory.DirectoryList = make([]*Directory, len(directoryList))
+	copy(directory.DirectoryList, directoryList)
 	return nil
 }
 
