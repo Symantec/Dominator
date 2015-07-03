@@ -66,10 +66,10 @@ func scanObjectCache(cacheDirectoryName string, subpath string,
 		return nil, err
 	}
 	names, err := file.Readdirnames(-1)
+	file.Close()
 	if err != nil {
 		return nil, err
 	}
-	file.Close()
 	for _, name := range names {
 		err = cleanPath(cacheDirectoryName, name)
 		if err != nil {

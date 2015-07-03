@@ -8,8 +8,8 @@ import (
 	"github.com/Symantec/Dominator/sub/httpd"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"os"
-	"os/exec"
 	"path"
+	"runtime"
 	"strconv"
 	"syscall"
 )
@@ -73,26 +73,21 @@ func mountTmpfs(dirname string) bool {
 
 func unshareAndBind(workingRootDir string) bool {
 	if *unshare {
-		// Re-exec myself using the unshare binary as a wrapper. This hack is
-		// required because syscall.Unshare() operates on only one thread in the
-		// process, and Go switches execution between threads randomly. Thus,
-		// the namespace can be suddenly switched for running code. This is an
-		// aspect of Go that was not well thought out.
-		unsharePath, err := exec.LookPath("unshare")
+		// Re-exec myself using the unshare syscall while on a locked thread.
+		// This hack is required because syscall.Unshare() operates on only one
+		// thread in the process, and Go switches execution between threads
+		// randomly. Thus, the namespace can be suddenly switched for running
+		// code. This is an aspect of Go that was not well thought out.
+		runtime.LockOSThread()
+		err := syscall.Unshare(syscall.CLONE_NEWNS)
 		if err != nil {
-			fmt.Printf("Unable find unshare utility\t%s\n", err)
+			fmt.Printf("Unable to unshare mount namesace\t%s\n", err)
 			return false
 		}
-		cmd := make([]string, 0)
-		cmd = append(cmd, unsharePath)
-		cmd = append(cmd, "-m")
-		for _, arg := range os.Args {
-			cmd = append(cmd, arg)
-		}
-		cmd = append(cmd, "-unshare=false")
-		err = syscall.Exec(cmd[0], cmd, os.Environ())
+		args := append(os.Args, "-unshare=false")
+		err = syscall.Exec(args[0], args, os.Environ())
 		if err != nil {
-			fmt.Printf("Unable to Exec:%s\t%s\n", cmd[0], err)
+			fmt.Printf("Unable to Exec:%s\t%s\n", args[0], err)
 			return false
 		}
 	}

@@ -1,36 +1,50 @@
 package main
 
 // Benchmark the scanning of a file-system tree.
-// Usage: scan [dirname [numScans]]
-//   dirname:   the top of the directory tree to scan (default=/)
-//   numScans:  the number of scans to run (default=1, infinite: < 0)
 
 import (
+	"bufio"
+	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"github.com/Symantec/Dominator/sub/scanner"
+	"io"
 	"os"
-	"strconv"
+	"runtime"
 	"syscall"
 	"time"
 )
 
+var (
+	debugFile = flag.String("debugFile", "",
+		"Name of file to write debugging information to")
+	interval = flag.Uint("interval", 0, "Seconds to sleep after each scan")
+	numScans = flag.Int("numScans", 1,
+		"The number of scans to run (infinite: < 0)")
+	objectCache = flag.String("objectCache", "",
+		"Name of directory containing the object cache")
+	rootDir = flag.String("rootDir", "/",
+		"Name of root of directory tree to scan")
+)
+
+func writeNamedStat(writer io.Writer, name string, value uint64) {
+	fmt.Fprintf(writer, "  %s=%s\n", name, fsrateio.FormatBytes(value))
+}
+
+func writeMemoryStats(writer io.Writer) {
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	fmt.Fprintln(writer, "MemStats:")
+	writeNamedStat(writer, "Alloc", memStats.Alloc)
+	writeNamedStat(writer, "TotalAlloc", memStats.TotalAlloc)
+	writeNamedStat(writer, "Sys", memStats.Sys)
+}
+
 func main() {
-	pathname := "/"
-	var numScans int = 1
+	flag.Parse()
 	var err error
-	if len(os.Args) >= 2 {
-		pathname = os.Args[1]
-	}
-	if len(os.Args) == 3 {
-		numScans, err = strconv.Atoi(os.Args[2])
-		if err != nil {
-			fmt.Printf("Error! %s\n", err)
-			return
-		}
-	}
-	bytesPerSecond, blocksPerSecond, err := fsbench.GetReadSpeed(pathname)
+	bytesPerSecond, blocksPerSecond, err := fsbench.GetReadSpeed(*rootDir)
 	if err != nil {
 		fmt.Printf("Error! %s\n", err)
 		return
@@ -39,17 +53,19 @@ func main() {
 	fmt.Println(ctx)
 	syscall.Setpriority(syscall.PRIO_PROCESS, 0, 10)
 	var prev_fs *scanner.FileSystem
-	for iter := 1; numScans < 0 || iter <= numScans; iter++ {
+	sleepDuration, _ := time.ParseDuration(fmt.Sprintf("%ds", *interval))
+	for iter := 1; *numScans < 0 || iter <= *numScans; iter++ {
 		timeStart := time.Now()
-		fs, err := scanner.ScanFileSystem(pathname, "", ctx)
+		fs, err := scanner.ScanFileSystem(*rootDir, *objectCache, ctx)
 		timeStop := time.Now()
 		if err != nil {
 			fmt.Printf("Error! %s\n", err)
 			return
 		}
+		fmt.Print(fs)
 		var tread uint64 = 0
 		for _, inode := range fs.InodeTable {
-			tread += inode.Length()
+			tread += inode.Size
 		}
 		fmt.Printf("Total scanned: %s,\t", fsrateio.FormatBytes(tread))
 		bytesPerSecond := uint64(float64(tread) /
@@ -60,6 +76,17 @@ func main() {
 				fmt.Println("Scan results different from last run")
 			}
 		}
+		writeMemoryStats(os.Stdout)
+		if *debugFile != "" {
+			file, err := os.Create(*debugFile)
+			if err != nil {
+				fmt.Printf("Error! %s\n", err)
+				return
+			}
+			fs.DebugWrite(bufio.NewWriter(file), "")
+			file.Close()
+		}
 		prev_fs = fs
+		time.Sleep(sleepDuration)
 	}
 }
