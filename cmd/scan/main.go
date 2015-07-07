@@ -4,6 +4,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/gob"
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/fsbench"
@@ -26,6 +27,8 @@ var (
 		"Name of directory containing the object cache")
 	rootDir = flag.String("rootDir", "/",
 		"Name of root of directory tree to scan")
+	rpcFile = flag.String("rpcFile", "",
+		"Name of file to write encoded data to")
 )
 
 func writeNamedStat(writer io.Writer, name string, value uint64) {
@@ -84,6 +87,16 @@ func main() {
 				return
 			}
 			fs.DebugWrite(bufio.NewWriter(file), "")
+			file.Close()
+		}
+		if *rpcFile != "" {
+			file, err := os.Create(*rpcFile)
+			if err != nil {
+				fmt.Printf("Error creating: %s\t%s\n", *rpcFile, err)
+				os.Exit(1)
+			}
+			encoder := gob.NewEncoder(file)
+			encoder.Encode(fs)
 			file.Close()
 		}
 		prev_fs = fs
