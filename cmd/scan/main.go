@@ -79,6 +79,7 @@ func main() {
 				fmt.Println("Scan results different from last run")
 			}
 		}
+		runtime.GC() // Clean up before showing memory statistics.
 		writeMemoryStats(os.Stdout)
 		if *debugFile != "" {
 			file, err := os.Create(*debugFile)

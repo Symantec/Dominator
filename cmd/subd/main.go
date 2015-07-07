@@ -186,6 +186,7 @@ func main() {
 	for iter := 0; true; iter++ {
 		fmt.Printf("Starting cycle: %d\n", iter)
 		fsh.Update(<-fsChannel)
+		runtime.GC() // An opportune time to take out the garbage.
 		fmt.Print(fsh)
 		fmt.Print(fsh.FileSystem())
 	}
