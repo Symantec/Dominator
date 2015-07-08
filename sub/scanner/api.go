@@ -79,7 +79,7 @@ type Inode struct {
 	Size    uint64
 	Mtime   syscall.Timespec
 	Symlink string
-	Hash    []byte
+	Hash    [64]byte
 }
 
 type Directory struct {

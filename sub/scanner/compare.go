@@ -117,7 +117,7 @@ func compareInodes(left *Inode, right *Inode, logWriter io.Writer) bool {
 		}
 	}
 	if left.Mode&syscall.S_IFMT == syscall.S_IFREG {
-		if bytes.Compare(left.Hash, right.Hash) != 0 {
+		if bytes.Compare(left.Hash[:], right.Hash[:]) != 0 {
 			if logWriter != nil {
 				fmt.Fprintf(logWriter, "hash: left vs. right: %x vs. %x\n",
 					left.Hash, right.Hash)

@@ -43,6 +43,9 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	fileSystem.Dev = stat.Dev
 	fileSystem.InodeNumber = stat.Ino
 	fileSystem.inode, _ = fileSystem.getInode(&stat)
+	if sha512.New().Size() != len(fileSystem.inode.Hash) {
+		return nil, errors.New("Incompatible hash size")
+	}
 	err = fileSystem.scan(&fileSystem, "")
 	if err != nil {
 		return nil, err
@@ -146,7 +149,7 @@ func (file *File) scan(fileSystem *FileSystem, parentName string) error {
 		hash := sha512.New()
 		io.Copy(hash, reader)
 		f.Close()
-		file.inode.Hash = hash.Sum(nil)
+		copy(file.inode.Hash[:], hash.Sum(nil))
 		fileSystem.HashCount++
 	} else if file.inode.Mode&syscall.S_IFMT == syscall.S_IFLNK {
 		symlink, err := os.Readlink(myPathName)

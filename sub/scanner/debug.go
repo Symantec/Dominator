@@ -3,6 +3,7 @@ package scanner
 import (
 	"fmt"
 	"io"
+	"syscall"
 )
 
 func (fs *FileSystem) debugWrite(w io.Writer, prefix string) error {
@@ -48,7 +49,7 @@ func (directory *Directory) debugWrite(w io.Writer, prefix string) error {
 func (file *File) debugWrite(w io.Writer, prefix string) error {
 	var data string
 	inode := file.inode
-	if len(inode.Hash) > 0 {
+	if inode.Mode&syscall.S_IFMT == syscall.S_IFREG {
 		data = fmt.Sprintf("%x", inode.Hash)
 	} else if len(inode.Symlink) > 0 {
 		data = inode.Symlink
