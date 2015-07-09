@@ -10,8 +10,15 @@ import (
 func compare(left *FileSystem, right *FileSystem, logWriter io.Writer) bool {
 	if len(left.InodeTable) != len(right.InodeTable) {
 		if logWriter != nil {
-			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d inodes\n",
+			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d file inodes\n",
 				len(left.InodeTable), len(right.InodeTable))
+		}
+		return false
+	}
+	if len(left.DirectoryInodeList) != len(right.DirectoryInodeList) {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d inodes\n",
+				len(left.DirectoryInodeList), len(right.DirectoryInodeList))
 		}
 		return false
 	}
@@ -34,7 +41,25 @@ func compareDirectories(left, right *Directory, logWriter io.Writer) bool {
 			left.Name, right.Name)
 		return false
 	}
-	if !compareInodes(left.inode, right.inode, logWriter) {
+	if left.Mode != right.Mode {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Mode: left vs. right: %x vs. %x\n",
+				left.Mode, right.Mode)
+		}
+		return false
+	}
+	if left.Uid != right.Uid {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Uid: left vs. right: %d vs. %d\n",
+				left.Uid, right.Uid)
+		}
+		return false
+	}
+	if left.Gid != right.Gid {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Gid: left vs. right: %d vs. %d\n",
+				left.Gid, right.Gid)
+		}
 		return false
 	}
 	if len(left.FileList) != len(right.FileList) {
@@ -97,17 +122,14 @@ func compareInodes(left *Inode, right *Inode, logWriter io.Writer) bool {
 		}
 		return false
 	}
-	if left.Mode&syscall.S_IFMT != syscall.S_IFDIR {
-		if left.Size != right.Size {
-			if logWriter != nil {
-				fmt.Fprintf(logWriter, "Size: left vs. right: %d vs. %d\n",
-					left.Size, right.Size)
-			}
-			return false
+	if left.Size != right.Size {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Size: left vs. right: %d vs. %d\n",
+				left.Size, right.Size)
 		}
+		return false
 	}
-	if left.Mode&syscall.S_IFMT != syscall.S_IFDIR &&
-		left.Mode&syscall.S_IFMT != syscall.S_IFLNK {
+	if left.Mode&syscall.S_IFMT != syscall.S_IFLNK {
 		if left.Mtime != right.Mtime {
 			if logWriter != nil {
 				fmt.Fprintf(logWriter, "Mtime: left vs. right: %d vs. %d\n",

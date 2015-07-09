@@ -39,14 +39,19 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	if err != nil {
 		return nil, err
 	}
-	fileSystem.InodeTable = make(map[uint64]*Inode)
+	fileSystem.InodeTable = make(InodeTable)
+	fileSystem.DirectoryInodeList = make(InodeList)
+	fileSystem.DirectoryInodeList[stat.Ino] = true
 	fileSystem.Dev = stat.Dev
-	fileSystem.InodeNumber = stat.Ino
-	fileSystem.inode, _ = fileSystem.getInode(&stat)
-	if sha512.New().Size() != len(fileSystem.inode.Hash) {
+	fileSystem.Mode = stat.Mode
+	fileSystem.Uid = stat.Uid
+	fileSystem.Gid = stat.Gid
+	var tmpInode Inode
+	if sha512.New().Size() != len(tmpInode.Hash) {
 		return nil, errors.New("Incompatible hash size")
 	}
 	err = fileSystem.scan(&fileSystem, "")
+	fileSystem.DirectoryInodeList = nil
 	if err != nil {
 		return nil, err
 	}
@@ -99,21 +104,23 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 		if stat.Dev != fileSystem.Dev {
 			continue
 		}
-		inode, isNewInode := fileSystem.getInode(&stat)
 		if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
-			if !isNewInode {
+			if fileSystem.DirectoryInodeList[stat.Ino] {
 				return errors.New("Hardlinked directory: " + filename)
 			}
+			fileSystem.DirectoryInodeList[stat.Ino] = true
 			var dir Directory
 			dir.Name = name
-			dir.InodeNumber = stat.Ino
-			dir.inode = inode
+			dir.Mode = stat.Mode
+			dir.Uid = stat.Uid
+			dir.Gid = stat.Gid
 			err := dir.scan(fileSystem, myPathName)
 			if err != nil {
 				return err
 			}
 			directoryList = append(directoryList, &dir)
 		} else {
+			inode, isNewInode := fileSystem.getInode(&stat)
 			var file File
 			file.Name = name
 			file.InodeNumber = stat.Ino

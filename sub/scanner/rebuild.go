@@ -5,7 +5,6 @@ func (fs *FileSystem) rebuildPointers() {
 }
 
 func (directory *Directory) rebuildPointers(fs *FileSystem) {
-	directory.inode = fs.InodeTable[directory.InodeNumber]
 	for _, file := range directory.FileList {
 		file.rebuildPointers(fs)
 	}
