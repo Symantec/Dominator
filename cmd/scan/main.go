@@ -8,9 +8,9 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/fsbench"
+	"github.com/Symantec/Dominator/lib/memstats"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"github.com/Symantec/Dominator/sub/scanner"
-	"io"
 	"os"
 	"runtime"
 	"syscall"
@@ -30,19 +30,6 @@ var (
 	rpcFile = flag.String("rpcFile", "",
 		"Name of file to write encoded data to")
 )
-
-func writeNamedStat(writer io.Writer, name string, value uint64) {
-	fmt.Fprintf(writer, "  %s=%s\n", name, fsrateio.FormatBytes(value))
-}
-
-func writeMemoryStats(writer io.Writer) {
-	var memStats runtime.MemStats
-	runtime.ReadMemStats(&memStats)
-	fmt.Fprintln(writer, "MemStats:")
-	writeNamedStat(writer, "Alloc", memStats.Alloc)
-	writeNamedStat(writer, "TotalAlloc", memStats.TotalAlloc)
-	writeNamedStat(writer, "Sys", memStats.Sys)
-}
 
 func main() {
 	flag.Parse()
@@ -80,7 +67,7 @@ func main() {
 			}
 		}
 		runtime.GC() // Clean up before showing memory statistics.
-		writeMemoryStats(os.Stdout)
+		memstats.WriteMemoryStats(os.Stdout)
 		if *debugFile != "" {
 			file, err := os.Create(*debugFile)
 			if err != nil {
