@@ -89,8 +89,8 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 	file.Close()
 	sort.Strings(names)
 	// Create file and directory lists which are guaranteed to be long enough.
-	fileList := make([]*File, 0, len(names))
-	directoryList := make([]*Directory, 0, len(names))
+	directory.FileList = make([]*File, 0, len(names))
+	directory.DirectoryList = make([]*Directory, 0, len(names))
 	for _, name := range names {
 		filename := path.Join(myPathName, name)
 		var stat syscall.Stat_t
@@ -118,7 +118,7 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 			if err != nil {
 				return err
 			}
-			directoryList = append(directoryList, &dir)
+			directory.DirectoryList = append(directory.DirectoryList, &dir)
 		} else {
 			inode, isNewInode := fileSystem.getInode(&stat)
 			var file File
@@ -134,14 +134,16 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 					return err
 				}
 			}
-			fileList = append(fileList, &file)
+			directory.FileList = append(directory.FileList, &file)
 		}
 	}
 	// Save file and directory lists which are exactly the right length.
-	directory.FileList = make([]*File, len(fileList))
-	copy(directory.FileList, fileList)
-	directory.DirectoryList = make([]*Directory, len(directoryList))
-	copy(directory.DirectoryList, directoryList)
+	fileList := make([]*File, len(directory.FileList))
+	copy(fileList, directory.FileList)
+	directory.FileList = fileList
+	directoryList := make([]*Directory, len(directory.DirectoryList))
+	copy(directoryList, directory.DirectoryList)
+	directory.DirectoryList = directoryList
 	return nil
 }
 
