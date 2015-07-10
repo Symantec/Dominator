@@ -88,7 +88,7 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 
 func (fs *FileSystem) computeTotalDataBytes() uint64 {
 	var totalBytes uint64 = 0
-	for _, inode := range fs.InodeTable {
+	for _, inode := range fs.RegularInodeTable {
 		totalBytes += uint64(inode.Size)
 	}
 	return totalBytes

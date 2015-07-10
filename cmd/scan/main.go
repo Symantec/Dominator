@@ -56,12 +56,9 @@ func main() {
 			return
 		}
 		fmt.Print(fs)
-		var tread uint64 = 0
-		for _, inode := range fs.RegularInodeTable {
-			tread += inode.Size
-		}
-		fmt.Printf("Total scanned: %s,\t", fsrateio.FormatBytes(tread))
-		bytesPerSecond := uint64(float64(tread) /
+		fmt.Printf("Total scanned: %s,\t",
+			fsrateio.FormatBytes(fs.TotalDataBytes))
+		bytesPerSecond := uint64(float64(fs.TotalDataBytes) /
 			timeStop.Sub(timeStart).Seconds())
 		fmt.Printf("%s/s\n", fsrateio.FormatBytes(bytesPerSecond))
 		if prev_fs != nil {
