@@ -8,9 +8,17 @@ import (
 )
 
 func compare(left, right *FileSystem, logWriter io.Writer) bool {
+	if len(left.RegularInodeTable) != len(right.RegularInodeTable) {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter,
+				"left vs. right: %d vs. %d regular file inodes\n",
+				len(left.RegularInodeTable), len(right.RegularInodeTable))
+		}
+		return false
+	}
 	if len(left.InodeTable) != len(right.InodeTable) {
 		if logWriter != nil {
-			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d file inodes\n",
+			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d inodes\n",
 				len(left.InodeTable), len(right.InodeTable))
 		}
 		return false
