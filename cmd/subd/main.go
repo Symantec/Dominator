@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/fsbench"
+	"github.com/Symantec/Dominator/lib/memstats"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"github.com/Symantec/Dominator/sub/httpd"
 	"github.com/Symantec/Dominator/sub/scanner"
@@ -19,6 +20,8 @@ var (
 		"Port number to allocate and listen on for HTTP/RPC")
 	rootDir = flag.String("rootDir", "/",
 		"Name of root of directory tree to manage")
+	showStats = flag.Bool("showStats", false,
+		"If true, show statistics after each cycle")
 	subdDir = flag.String("subdDir", "/.subd",
 		"Name of subd private directory. This must be on the same file-system as rootdir")
 	unshare = flag.Bool("unshare", true, "Internal use only.")
@@ -186,7 +189,11 @@ func main() {
 	for iter := 0; true; iter++ {
 		fmt.Printf("Starting cycle: %d\n", iter)
 		fsh.Update(<-fsChannel)
-		fmt.Print(fsh)
-		fmt.Print(fsh.FileSystem())
+		runtime.GC() // An opportune time to take out the garbage.
+		if *showStats {
+			fmt.Print(fsh)
+			fmt.Print(fsh.FileSystem())
+			memstats.WriteMemoryStats(os.Stdout)
+		}
 	}
 }

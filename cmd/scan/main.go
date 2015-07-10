@@ -4,12 +4,13 @@ package main
 
 import (
 	"bufio"
+	"encoding/gob"
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/fsbench"
+	"github.com/Symantec/Dominator/lib/memstats"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"github.com/Symantec/Dominator/sub/scanner"
-	"io"
 	"os"
 	"runtime"
 	"syscall"
@@ -26,20 +27,9 @@ var (
 		"Name of directory containing the object cache")
 	rootDir = flag.String("rootDir", "/",
 		"Name of root of directory tree to scan")
+	rpcFile = flag.String("rpcFile", "",
+		"Name of file to write encoded data to")
 )
-
-func writeNamedStat(writer io.Writer, name string, value uint64) {
-	fmt.Fprintf(writer, "  %s=%s\n", name, fsrateio.FormatBytes(value))
-}
-
-func writeMemoryStats(writer io.Writer) {
-	var memStats runtime.MemStats
-	runtime.ReadMemStats(&memStats)
-	fmt.Fprintln(writer, "MemStats:")
-	writeNamedStat(writer, "Alloc", memStats.Alloc)
-	writeNamedStat(writer, "TotalAlloc", memStats.TotalAlloc)
-	writeNamedStat(writer, "Sys", memStats.Sys)
-}
 
 func main() {
 	flag.Parse()
@@ -58,17 +48,17 @@ func main() {
 		timeStart := time.Now()
 		fs, err := scanner.ScanFileSystem(*rootDir, *objectCache, ctx)
 		timeStop := time.Now()
+		if iter > 1 {
+			fmt.Println()
+		}
 		if err != nil {
 			fmt.Printf("Error! %s\n", err)
 			return
 		}
 		fmt.Print(fs)
-		var tread uint64 = 0
-		for _, inode := range fs.InodeTable {
-			tread += inode.Size
-		}
-		fmt.Printf("Total scanned: %s,\t", fsrateio.FormatBytes(tread))
-		bytesPerSecond := uint64(float64(tread) /
+		fmt.Printf("Total scanned: %s,\t",
+			fsrateio.FormatBytes(fs.TotalDataBytes))
+		bytesPerSecond := uint64(float64(fs.TotalDataBytes) /
 			timeStop.Sub(timeStart).Seconds())
 		fmt.Printf("%s/s\n", fsrateio.FormatBytes(bytesPerSecond))
 		if prev_fs != nil {
@@ -76,7 +66,8 @@ func main() {
 				fmt.Println("Scan results different from last run")
 			}
 		}
-		writeMemoryStats(os.Stdout)
+		runtime.GC() // Clean up before showing memory statistics.
+		memstats.WriteMemoryStats(os.Stdout)
 		if *debugFile != "" {
 			file, err := os.Create(*debugFile)
 			if err != nil {
@@ -84,6 +75,16 @@ func main() {
 				return
 			}
 			fs.DebugWrite(bufio.NewWriter(file), "")
+			file.Close()
+		}
+		if *rpcFile != "" {
+			file, err := os.Create(*rpcFile)
+			if err != nil {
+				fmt.Printf("Error creating: %s\t%s\n", *rpcFile, err)
+				os.Exit(1)
+			}
+			encoder := gob.NewEncoder(file)
+			encoder.Encode(fs)
 			file.Close()
 		}
 		prev_fs = fs

@@ -3,6 +3,7 @@ package scanner
 import (
 	"fmt"
 	"io"
+	"syscall"
 )
 
 func (fs *FileSystem) debugWrite(w io.Writer, prefix string) error {
@@ -17,6 +18,18 @@ func (directory *Directory) debugWrite(w io.Writer, prefix string) error {
 	_, err := fmt.Fprintf(w, "%s%s\n", prefix, directory.Name)
 	if err != nil {
 		return err
+	}
+	if len(directory.RegularFileList) > 0 {
+		_, err = fmt.Fprintf(w, "%s Regular Files:\n", prefix)
+		if err != nil {
+			return err
+		}
+		for _, file := range directory.RegularFileList {
+			err = file.DebugWrite(w, prefix+"  ")
+			if err != nil {
+				return err
+			}
+		}
 	}
 	if len(directory.FileList) > 0 {
 		_, err = fmt.Fprintf(w, "%s Files:\n", prefix)
@@ -45,12 +58,18 @@ func (directory *Directory) debugWrite(w io.Writer, prefix string) error {
 	return nil
 }
 
+func (file *RegularFile) debugWrite(w io.Writer, prefix string) error {
+	_, err := fmt.Fprintf(w, "%s%s\t%x\n", prefix, file.Name, file.inode.Hash)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (file *File) debugWrite(w io.Writer, prefix string) error {
 	var data string
 	inode := file.inode
-	if len(inode.Hash) > 0 {
-		data = fmt.Sprintf("%x", inode.Hash)
-	} else if len(inode.Symlink) > 0 {
+	if inode.Mode&syscall.S_IFMT == syscall.S_IFLNK {
 		data = inode.Symlink
 	} else {
 		data = ""

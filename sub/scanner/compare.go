@@ -7,11 +7,27 @@ import (
 	"syscall"
 )
 
-func compare(left *FileSystem, right *FileSystem, logWriter io.Writer) bool {
+func compare(left, right *FileSystem, logWriter io.Writer) bool {
+	if len(left.RegularInodeTable) != len(right.RegularInodeTable) {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter,
+				"left vs. right: %d vs. %d regular file inodes\n",
+				len(left.RegularInodeTable), len(right.RegularInodeTable))
+		}
+		return false
+	}
 	if len(left.InodeTable) != len(right.InodeTable) {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d inodes\n",
 				len(left.InodeTable), len(right.InodeTable))
+		}
+		return false
+	}
+	if len(left.DirectoryInodeList) != len(right.DirectoryInodeList) {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter,
+				"left vs. right: %d vs. %d directory inodes\n",
+				len(left.DirectoryInodeList), len(right.DirectoryInodeList))
 		}
 		return false
 	}
@@ -34,48 +50,6 @@ func compareDirectories(left, right *Directory, logWriter io.Writer) bool {
 			left.Name, right.Name)
 		return false
 	}
-	if !compareInodes(left.inode, right.inode, logWriter) {
-		return false
-	}
-	if len(left.FileList) != len(right.FileList) {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d files\n",
-				len(left.FileList), len(right.FileList))
-		}
-		return false
-	}
-	if len(left.DirectoryList) != len(right.DirectoryList) {
-		fmt.Fprintf(logWriter, "left vs. right: %d vs. %d subdirs\n",
-			len(left.DirectoryList), len(right.DirectoryList))
-		return false
-	}
-	for index, leftFile := range left.FileList {
-		if !compareFiles(leftFile, right.FileList[index], logWriter) {
-			return false
-		}
-	}
-	for index, leftDirectory := range left.DirectoryList {
-		if !compareDirectories(leftDirectory, right.DirectoryList[index],
-			logWriter) {
-			return false
-		}
-	}
-	return true
-}
-
-func compareFiles(left *File, right *File, logWriter io.Writer) bool {
-	if left.Name != right.Name {
-		fmt.Fprintf(logWriter, "filename: left vs. right: %s vs. %s\n",
-			left.Name, right.Name)
-		return false
-	}
-	if !compareInodes(left.inode, right.inode, logWriter) {
-		return false
-	}
-	return true
-}
-
-func compareInodes(left *Inode, right *Inode, logWriter io.Writer) bool {
 	if left.Mode != right.Mode {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "Mode: left vs. right: %x vs. %x\n",
@@ -97,30 +71,149 @@ func compareInodes(left *Inode, right *Inode, logWriter io.Writer) bool {
 		}
 		return false
 	}
-	if left.Mode&syscall.S_IFMT != syscall.S_IFDIR {
-		if left.Size != right.Size {
-			if logWriter != nil {
-				fmt.Fprintf(logWriter, "Size: left vs. right: %d vs. %d\n",
-					left.Size, right.Size)
-			}
+	if len(left.RegularFileList) != len(right.RegularFileList) {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d regular files\n",
+				len(left.RegularFileList), len(right.RegularFileList))
+		}
+		return false
+	}
+	if len(left.FileList) != len(right.FileList) {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d files\n",
+				len(left.FileList), len(right.FileList))
+		}
+		return false
+	}
+	if len(left.DirectoryList) != len(right.DirectoryList) {
+		fmt.Fprintf(logWriter, "left vs. right: %d vs. %d subdirs\n",
+			len(left.DirectoryList), len(right.DirectoryList))
+		return false
+	}
+	for index, leftEntry := range left.RegularFileList {
+		if !compareRegularFiles(leftEntry, right.RegularFileList[index],
+			logWriter) {
 			return false
 		}
 	}
-	if left.Mode&syscall.S_IFMT != syscall.S_IFDIR &&
-		left.Mode&syscall.S_IFMT != syscall.S_IFLNK {
+	for index, leftEntry := range left.FileList {
+		if !compareFiles(leftEntry, right.FileList[index], logWriter) {
+			return false
+		}
+	}
+	for index, leftEntry := range left.DirectoryList {
+		if !compareDirectories(leftEntry, right.DirectoryList[index],
+			logWriter) {
+			return false
+		}
+	}
+	return true
+}
+
+func compareRegularFiles(left, right *RegularFile, logWriter io.Writer) bool {
+	if left.Name != right.Name {
+		fmt.Fprintf(logWriter, "filename: left vs. right: %s vs. %s\n",
+			left.Name, right.Name)
+		return false
+	}
+	if !compareRegularInodes(left.inode, right.inode, logWriter) {
+		return false
+	}
+	return true
+}
+
+func compareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
+	if left.Mode != right.Mode {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Mode: left vs. right: %x vs. %x\n",
+				left.Mode, right.Mode)
+		}
+		return false
+	}
+	if left.Uid != right.Uid {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Uid: left vs. right: %d vs. %d\n",
+				left.Uid, right.Uid)
+		}
+		return false
+	}
+	if left.Gid != right.Gid {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Gid: left vs. right: %d vs. %d\n",
+				left.Gid, right.Gid)
+		}
+		return false
+	}
+	if left.Size != right.Size {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Size: left vs. right: %d vs. %d\n",
+				left.Size, right.Size)
+		}
+		return false
+	}
+	if left.Mtime != right.Mtime {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Mtime: left vs. right: %d vs. %d\n",
+				left.Mtime, right.Mtime)
+		}
+		return false
+	}
+	if bytes.Compare(left.Hash[:], right.Hash[:]) != 0 {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "hash: left vs. right: %x vs. %x\n",
+				left.Hash, right.Hash)
+		}
+		return false
+	}
+	return true
+}
+
+func compareFiles(left, right *File, logWriter io.Writer) bool {
+	if left.Name != right.Name {
+		fmt.Fprintf(logWriter, "filename: left vs. right: %s vs. %s\n",
+			left.Name, right.Name)
+		return false
+	}
+	if !compareInodes(left.inode, right.inode, logWriter) {
+		return false
+	}
+	return true
+}
+
+func compareInodes(left, right *Inode, logWriter io.Writer) bool {
+	if left.Mode != right.Mode {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Mode: left vs. right: %x vs. %x\n",
+				left.Mode, right.Mode)
+		}
+		return false
+	}
+	if left.Uid != right.Uid {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Uid: left vs. right: %d vs. %d\n",
+				left.Uid, right.Uid)
+		}
+		return false
+	}
+	if left.Gid != right.Gid {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Gid: left vs. right: %d vs. %d\n",
+				left.Gid, right.Gid)
+		}
+		return false
+	}
+	if left.Size != right.Size {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Size: left vs. right: %d vs. %d\n",
+				left.Size, right.Size)
+		}
+		return false
+	}
+	if left.Mode&syscall.S_IFMT != syscall.S_IFLNK {
 		if left.Mtime != right.Mtime {
 			if logWriter != nil {
 				fmt.Fprintf(logWriter, "Mtime: left vs. right: %d vs. %d\n",
 					left.Mtime, right.Mtime)
-			}
-			return false
-		}
-	}
-	if left.Mode&syscall.S_IFMT == syscall.S_IFREG {
-		if bytes.Compare(left.Hash, right.Hash) != 0 {
-			if logWriter != nil {
-				fmt.Fprintf(logWriter, "hash: left vs. right: %x vs. %x\n",
-					left.Hash, right.Hash)
 			}
 			return false
 		}
