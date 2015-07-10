@@ -37,11 +37,13 @@ func (fsh *FileSystemHistory) WriteHtml(writer io.Writer) {
 	fsh.writeHtml(writer)
 }
 
+type RegularInodeTable map[uint64]*RegularInode
 type InodeTable map[uint64]*Inode
 type InodeList map[uint64]bool
 
 type FileSystem struct {
 	ctx                *fsrateio.FsRateContext
+	RegularInodeTable  RegularInodeTable
 	InodeTable         InodeTable // This excludes directories.
 	DirectoryInodeList InodeList
 	TotalDataBytes     uint64
@@ -62,7 +64,7 @@ func (fs *FileSystem) RebuildPointers() {
 
 func (fs *FileSystem) String() string {
 	return fmt.Sprintf("Tree: %d inodes, total file size: %s, number of hashes: %d\nObjectCache: %d objects\n",
-		len(fs.InodeTable)+len(fs.DirectoryInodeList),
+		len(fs.RegularInodeTable)+len(fs.InodeTable)+len(fs.DirectoryInodeList),
 		fsrateio.FormatBytes(fs.TotalDataBytes),
 		fs.HashCount,
 		len(fs.ObjectCache))
@@ -76,24 +78,14 @@ func (fs *FileSystem) DebugWrite(w io.Writer, prefix string) error {
 	return fs.debugWrite(w, prefix)
 }
 
-type Inode struct {
-	Mode    uint32
-	Uid     uint32
-	Gid     uint32
-	Rdev    uint64
-	Size    uint64
-	Mtime   syscall.Timespec
-	Symlink string
-	Hash    [64]byte
-}
-
 type Directory struct {
-	Name          string
-	FileList      []*File
-	DirectoryList []*Directory
-	Mode          uint32
-	Uid           uint32
-	Gid           uint32
+	Name            string
+	RegularFileList []*RegularFile
+	FileList        []*File
+	DirectoryList   []*Directory
+	Mode            uint32
+	Uid             uint32
+	Gid             uint32
 }
 
 func (directory *Directory) String() string {
@@ -102,6 +94,39 @@ func (directory *Directory) String() string {
 
 func (directory *Directory) DebugWrite(w io.Writer, prefix string) error {
 	return directory.debugWrite(w, prefix)
+}
+
+type RegularInode struct {
+	Mode  uint32
+	Uid   uint32
+	Gid   uint32
+	Size  uint64
+	Mtime syscall.Timespec
+	Hash  [64]byte
+}
+
+type RegularFile struct {
+	Name        string
+	InodeNumber uint64
+	inode       *RegularInode
+}
+
+func (file *RegularFile) String() string {
+	return file.Name
+}
+
+func (file *RegularFile) DebugWrite(w io.Writer, prefix string) error {
+	return file.debugWrite(w, prefix)
+}
+
+type Inode struct {
+	Mode    uint32
+	Uid     uint32
+	Gid     uint32
+	Rdev    uint64
+	Size    uint64
+	Mtime   syscall.Timespec
+	Symlink string
 }
 
 type File struct {

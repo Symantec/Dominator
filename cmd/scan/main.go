@@ -57,7 +57,7 @@ func main() {
 		}
 		fmt.Print(fs)
 		var tread uint64 = 0
-		for _, inode := range fs.InodeTable {
+		for _, inode := range fs.RegularInodeTable {
 			tread += inode.Size
 		}
 		fmt.Printf("Total scanned: %s,\t", fsrateio.FormatBytes(tread))
