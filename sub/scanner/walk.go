@@ -127,6 +127,8 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 			err = directory.addDirectory(fileSystem, name, myPathName, &stat)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
 			err = directory.addRegularFile(fileSystem, name, myPathName, &stat)
+		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFSOCK {
+			continue
 		} else {
 			err = directory.addFile(fileSystem, name, myPathName, &stat)
 		}

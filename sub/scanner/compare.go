@@ -151,14 +151,12 @@ func compareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
 		}
 		return false
 	}
-	if left.Mode&syscall.S_IFMT != syscall.S_IFLNK {
-		if left.Mtime != right.Mtime {
-			if logWriter != nil {
-				fmt.Fprintf(logWriter, "Mtime: left vs. right: %d vs. %d\n",
-					left.Mtime, right.Mtime)
-			}
-			return false
+	if left.Mtime != right.Mtime {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Mtime: left vs. right: %d vs. %d\n",
+				left.Mtime, right.Mtime)
 		}
+		return false
 	}
 	if bytes.Compare(left.Hash[:], right.Hash[:]) != 0 {
 		if logWriter != nil {
