@@ -48,6 +48,9 @@ func main() {
 		timeStart := time.Now()
 		fs, err := scanner.ScanFileSystem(*rootDir, *objectCache, ctx)
 		timeStop := time.Now()
+		if iter > 1 {
+			fmt.Println()
+		}
 		if err != nil {
 			fmt.Printf("Error! %s\n", err)
 			return
