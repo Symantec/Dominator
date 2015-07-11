@@ -177,7 +177,9 @@ func main() {
 		os.Exit(1)
 	}
 	ctx := fsrateio.NewContext(bytesPerSecond, blocksPerSecond)
-	fmt.Println(ctx)
+	if *showStats {
+		fmt.Println(ctx)
+	}
 	var fsh scanner.FileSystemHistory
 	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir, ctx)
 	err := httpd.StartServer(*portNum, &fsh)
@@ -187,7 +189,12 @@ func main() {
 	}
 	fsh.Update(nil)
 	for iter := 0; true; iter++ {
-		fmt.Printf("Starting cycle: %d\n", iter)
+		if *showStats {
+			if iter > 0 {
+				fmt.Println()
+			}
+			fmt.Printf("Starting cycle: %d\n", iter)
+		}
 		fsh.Update(<-fsChannel)
 		runtime.GC() // An opportune time to take out the garbage.
 		if *showStats {
