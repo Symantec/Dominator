@@ -55,7 +55,7 @@ type FileSystem struct {
 
 func ScanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	ctx *fsrateio.FsRateContext) (*FileSystem, error) {
-	return scanFileSystem(rootDirectoryName, cacheDirectoryName, ctx)
+	return scanFileSystem(rootDirectoryName, cacheDirectoryName, ctx, nil)
 }
 
 func (fs *FileSystem) RebuildPointers() {
