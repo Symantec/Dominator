@@ -29,6 +29,21 @@ func (fileSystem *FileSystem) getRegularInode(stat *syscall.Stat_t) (
 	return inode, new
 }
 
+func (fileSystem *FileSystem) getSymlinkInode(stat *syscall.Stat_t) (
+	*SymlinkInode, bool) {
+	inode := fileSystem.SymlinkInodeTable[stat.Ino]
+	new := false
+	if inode == nil {
+		var _inode SymlinkInode
+		inode = &_inode
+		_inode.Uid = stat.Uid
+		_inode.Gid = stat.Gid
+		fileSystem.SymlinkInodeTable[stat.Ino] = inode
+		new = true
+	}
+	return inode, new
+}
+
 func (fileSystem *FileSystem) getInode(stat *syscall.Stat_t) (*Inode, bool) {
 	inode := fileSystem.InodeTable[stat.Ino]
 	new := false
@@ -39,7 +54,6 @@ func (fileSystem *FileSystem) getInode(stat *syscall.Stat_t) (*Inode, bool) {
 		_inode.Uid = stat.Uid
 		_inode.Gid = stat.Gid
 		_inode.Rdev = stat.Rdev
-		_inode.Size = uint64(stat.Size)
 		_inode.Mtime = stat.Mtim
 		fileSystem.InodeTable[stat.Ino] = inode
 		new = true
@@ -58,6 +72,7 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 		return nil, err
 	}
 	fileSystem.RegularInodeTable = make(RegularInodeTable)
+	fileSystem.SymlinkInodeTable = make(SymlinkInodeTable)
 	fileSystem.InodeTable = make(InodeTable)
 	fileSystem.DirectoryInodeList = make(InodeList)
 	fileSystem.DirectoryInodeList[stat.Ino] = true
@@ -130,6 +145,9 @@ func (directory *Directory) scan(fileSystem, oldFS *FileSystem,
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
 			err = directory.addRegularFile(fileSystem, oldFS, name, myPathName,
 				&stat)
+		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFLNK {
+			err = directory.addSymlink(fileSystem, oldFS, name, myPathName,
+				&stat)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFSOCK {
 			continue
 		} else {
@@ -146,6 +164,9 @@ func (directory *Directory) scan(fileSystem, oldFS *FileSystem,
 	regularFileList := make([]*RegularFile, len(directory.RegularFileList))
 	copy(regularFileList, directory.RegularFileList)
 	directory.RegularFileList = regularFileList
+	symlinkList := make([]*Symlink, len(directory.SymlinkList))
+	copy(symlinkList, directory.SymlinkList)
+	directory.SymlinkList = symlinkList
 	fileList := make([]*File, len(directory.FileList))
 	copy(fileList, directory.FileList)
 	directory.FileList = fileList
@@ -201,6 +222,32 @@ func (directory *Directory) addRegularFile(fileSystem, oldFS *FileSystem,
 	return nil
 }
 
+func (directory *Directory) addSymlink(fileSystem, oldFS *FileSystem,
+	name string, directoryPathName string, stat *syscall.Stat_t) error {
+	inode, isNewInode := fileSystem.getSymlinkInode(stat)
+	var symlink Symlink
+	symlink.Name = name
+	symlink.InodeNumber = stat.Ino
+	symlink.inode = inode
+	if isNewInode {
+		err := symlink.scan(fileSystem, directoryPathName)
+		if err != nil {
+			return err
+		}
+		if oldFS != nil && oldFS.SymlinkInodeTable != nil {
+			if oldInode, found := oldFS.SymlinkInodeTable[stat.Ino]; found {
+				if compareSymlinkInodes(inode, oldInode, nil) {
+					inode = oldInode
+					symlink.inode = inode
+					fileSystem.SymlinkInodeTable[stat.Ino] = inode
+				}
+			}
+		}
+	}
+	directory.SymlinkList = append(directory.SymlinkList, &symlink)
+	return nil
+}
+
 func (directory *Directory) addFile(fileSystem, oldFS *FileSystem, name string,
 	directoryPathName string, stat *syscall.Stat_t) error {
 	inode, isNewInode := fileSystem.getInode(stat)
@@ -242,14 +289,16 @@ func (file *RegularFile) scan(fileSystem *FileSystem, parentName string) error {
 	return nil
 }
 
-func (file *File) scan(fileSystem *FileSystem, parentName string) error {
-	if file.inode.Mode&syscall.S_IFMT == syscall.S_IFLNK {
-		myPathName := path.Join(parentName, file.Name)
-		symlink, err := os.Readlink(myPathName)
-		if err != nil {
-			return err
-		}
-		file.inode.Symlink = symlink
+func (symlink *Symlink) scan(fileSystem *FileSystem, parentName string) error {
+	myPathName := path.Join(parentName, symlink.Name)
+	target, err := os.Readlink(myPathName)
+	if err != nil {
+		return err
 	}
+	symlink.inode.Symlink = target
+	return nil
+}
+
+func (file *File) scan(fileSystem *FileSystem, parentName string) error {
 	return nil
 }

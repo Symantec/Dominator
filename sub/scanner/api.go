@@ -38,12 +38,14 @@ func (fsh *FileSystemHistory) WriteHtml(writer io.Writer) {
 }
 
 type RegularInodeTable map[uint64]*RegularInode
+type SymlinkInodeTable map[uint64]*SymlinkInode
 type InodeTable map[uint64]*Inode
 type InodeList map[uint64]bool
 
 type FileSystem struct {
 	ctx                *fsrateio.FsRateContext
 	RegularInodeTable  RegularInodeTable
+	SymlinkInodeTable  SymlinkInodeTable
 	InodeTable         InodeTable // This excludes directories.
 	DirectoryInodeList InodeList
 	TotalDataBytes     uint64
@@ -64,7 +66,8 @@ func (fs *FileSystem) RebuildPointers() {
 
 func (fs *FileSystem) String() string {
 	return fmt.Sprintf("Tree: %d inodes, total file size: %s, number of hashes: %d\nObjectCache: %d objects\n",
-		len(fs.RegularInodeTable)+len(fs.InodeTable)+len(fs.DirectoryInodeList),
+		len(fs.RegularInodeTable)+len(fs.SymlinkInodeTable)+len(fs.InodeTable)+
+			len(fs.DirectoryInodeList),
 		fsrateio.FormatBytes(fs.TotalDataBytes),
 		fs.HashCount,
 		len(fs.ObjectCache))
@@ -81,6 +84,7 @@ func (fs *FileSystem) DebugWrite(w io.Writer, prefix string) error {
 type Directory struct {
 	Name            string
 	RegularFileList []*RegularFile
+	SymlinkList     []*Symlink
 	FileList        []*File
 	DirectoryList   []*Directory
 	Mode            uint32
@@ -119,14 +123,28 @@ func (file *RegularFile) DebugWrite(w io.Writer, prefix string) error {
 	return file.debugWrite(w, prefix)
 }
 
-type Inode struct {
-	Mode    uint32
+type SymlinkInode struct {
 	Uid     uint32
 	Gid     uint32
-	Rdev    uint64
-	Size    uint64
-	Mtime   syscall.Timespec
 	Symlink string
+}
+
+type Symlink struct {
+	Name        string
+	InodeNumber uint64
+	inode       *SymlinkInode
+}
+
+func (symlink *Symlink) DebugWrite(w io.Writer, prefix string) error {
+	return symlink.debugWrite(w, prefix)
+}
+
+type Inode struct {
+	Mode  uint32
+	Uid   uint32
+	Gid   uint32
+	Rdev  uint64
+	Mtime syscall.Timespec
 }
 
 type File struct {

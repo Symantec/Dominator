@@ -5,19 +5,26 @@ func (fs *FileSystem) rebuildPointers() {
 }
 
 func (directory *Directory) rebuildPointers(fs *FileSystem) {
-	for _, file := range directory.RegularFileList {
-		file.rebuildPointers(fs)
+	for _, entry := range directory.RegularFileList {
+		entry.rebuildPointers(fs)
 	}
-	for _, file := range directory.FileList {
-		file.rebuildPointers(fs)
+	for _, entry := range directory.SymlinkList {
+		entry.rebuildPointers(fs)
 	}
-	for _, dir := range directory.DirectoryList {
-		dir.rebuildPointers(fs)
+	for _, entry := range directory.FileList {
+		entry.rebuildPointers(fs)
+	}
+	for _, entry := range directory.DirectoryList {
+		entry.rebuildPointers(fs)
 	}
 }
 
 func (file *RegularFile) rebuildPointers(fs *FileSystem) {
 	file.inode = fs.RegularInodeTable[file.InodeNumber]
+}
+
+func (symlink *Symlink) rebuildPointers(fs *FileSystem) {
+	symlink.inode = fs.SymlinkInodeTable[symlink.InodeNumber]
 }
 
 func (file *File) rebuildPointers(fs *FileSystem) {
