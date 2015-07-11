@@ -111,18 +111,18 @@ func unshareAndBind(workingRootDir string) bool {
 }
 
 func getCachedSpeed(workingRootDir string, cacheDirname string) (bytesPerSecond,
-	blocksPerSecond uint64, ok bool) {
+	blocksPerSecond uint64, computed, ok bool) {
 	bytesPerSecond = 0
 	blocksPerSecond = 0
 	devnum, err := fsbench.GetDevnumForFile(workingRootDir)
 	if err != nil {
 		fmt.Printf("Unable to get device number for: %s\t%s\n",
 			workingRootDir, err)
-		return 0, 0, false
+		return 0, 0, false, false
 	}
 	fsbenchDir := path.Join(cacheDirname, "fsbench")
 	if !createDirectory(fsbenchDir) {
-		return 0, 0, false
+		return 0, 0, false, false
 	}
 	cacheFilename := path.Join(fsbenchDir, strconv.FormatUint(devnum, 16))
 	file, err := os.Open(cacheFilename)
@@ -130,22 +130,22 @@ func getCachedSpeed(workingRootDir string, cacheDirname string) (bytesPerSecond,
 		n, err := fmt.Fscanf(file, "%d %d", &bytesPerSecond, &blocksPerSecond)
 		file.Close()
 		if n == 2 || err == nil {
-			return bytesPerSecond, blocksPerSecond, true
+			return bytesPerSecond, blocksPerSecond, false, true
 		}
 	}
 	bytesPerSecond, blocksPerSecond, err = fsbench.GetReadSpeed(workingRootDir)
 	if err != nil {
 		fmt.Printf("Unable to measure read speed\t%s\n", err)
-		return 0, 0, false
+		return 0, 0, true, false
 	}
 	file, err = os.Create(cacheFilename)
 	if err != nil {
 		fmt.Printf("Unable to open: %s for write\t%s\n", cacheFilename, err)
-		return 0, 0, false
+		return 0, 0, true, false
 	}
 	fmt.Fprintf(file, "%d %d\n", bytesPerSecond, blocksPerSecond)
 	file.Close()
-	return bytesPerSecond, blocksPerSecond, true
+	return bytesPerSecond, blocksPerSecond, true, true
 }
 
 func main() {
@@ -171,12 +171,16 @@ func main() {
 	if !unshareAndBind(workingRootDir) {
 		os.Exit(1)
 	}
-	bytesPerSecond, blocksPerSecond, ok := getCachedSpeed(workingRootDir,
-		tmpDir)
+	bytesPerSecond, blocksPerSecond, firstScan, ok := getCachedSpeed(
+		workingRootDir, tmpDir)
 	if !ok {
 		os.Exit(1)
 	}
 	ctx := fsrateio.NewContext(bytesPerSecond, blocksPerSecond)
+	defaultSpeed := ctx.SpeedPercent()
+	if firstScan {
+		ctx.SetSpeedPercent(100)
+	}
 	if *showStats {
 		fmt.Println(ctx)
 	}
@@ -190,9 +194,6 @@ func main() {
 	fsh.Update(nil)
 	for iter := 0; true; iter++ {
 		if *showStats {
-			if iter > 0 {
-				fmt.Println()
-			}
 			fmt.Printf("Starting cycle: %d\n", iter)
 		}
 		fsh.Update(<-fsChannel)
@@ -201,6 +202,14 @@ func main() {
 			fmt.Print(fsh)
 			fmt.Print(fsh.FileSystem())
 			memstats.WriteMemoryStats(os.Stdout)
+			fmt.Println()
+		}
+		if firstScan {
+			ctx.SetSpeedPercent(defaultSpeed)
+			firstScan = false
+			if *showStats {
+				fmt.Println(ctx)
+			}
 		}
 	}
 }

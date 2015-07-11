@@ -29,6 +29,7 @@ func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 			fmt.Printf("Error scanning\t%s\n", err)
 		} else {
 			oldFS.RegularInodeTable = fs.RegularInodeTable
+			oldFS.SymlinkInodeTable = fs.SymlinkInodeTable
 			oldFS.InodeTable = fs.InodeTable
 			fsChannel <- fs
 			if !loweredPriority {

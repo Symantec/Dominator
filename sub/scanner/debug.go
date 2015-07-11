@@ -3,7 +3,6 @@ package scanner
 import (
 	"fmt"
 	"io"
-	"syscall"
 )
 
 func (fs *FileSystem) debugWrite(w io.Writer, prefix string) error {
@@ -26,6 +25,18 @@ func (directory *Directory) debugWrite(w io.Writer, prefix string) error {
 		}
 		for _, file := range directory.RegularFileList {
 			err = file.DebugWrite(w, prefix+"  ")
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if len(directory.SymlinkList) > 0 {
+		_, err = fmt.Fprintf(w, "%s Symlinks:\n", prefix)
+		if err != nil {
+			return err
+		}
+		for _, symlink := range directory.SymlinkList {
+			err = symlink.DebugWrite(w, prefix+"  ")
 			if err != nil {
 				return err
 			}
@@ -66,14 +77,18 @@ func (file *RegularFile) debugWrite(w io.Writer, prefix string) error {
 	return nil
 }
 
+func (symlink *Symlink) debugWrite(w io.Writer, prefix string) error {
+	_, err := fmt.Fprintf(w, "%s%s\t%s\n", prefix, symlink.Name,
+		symlink.inode.Symlink)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (file *File) debugWrite(w io.Writer, prefix string) error {
 	var data string
-	inode := file.inode
-	if inode.Mode&syscall.S_IFMT == syscall.S_IFLNK {
-		data = inode.Symlink
-	} else {
-		data = ""
-	}
+	data = ""
 	_, err := fmt.Fprintf(w, "%s%s\t%s\n", prefix, file.Name, data)
 	if err != nil {
 		return err

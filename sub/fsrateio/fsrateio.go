@@ -30,6 +30,10 @@ func (ctx *FsRateContext) SetSpeedPercent(percent uint) {
 		percent = 100
 	}
 	ctx.speedPercent = uint64(percent)
+	var rusage syscall.Rusage
+	syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
+	ctx.blocksSinceLastPause = uint64(rusage.Inblock)
+	ctx.timeOfLastPause = time.Now()
 }
 
 func FormatBytes(bytes uint64) string {
@@ -64,10 +68,6 @@ func NewContext(maxBytesPerSecond uint64,
 	ctx.maxBytesPerSecond = maxBytesPerSecond
 	ctx.maxBlocksPerSecond = maxBlocksPerSecond
 	ctx.SetSpeedPercent(DEFAULT_SPEED_PERCENT)
-	var rusage syscall.Rusage
-	syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
-	ctx.blocksSinceLastPause = uint64(rusage.Inblock)
-	ctx.timeOfLastPause = time.Now()
 	return &ctx
 }
 
