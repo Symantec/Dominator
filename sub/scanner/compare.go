@@ -160,10 +160,15 @@ func compareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
 		}
 		return false
 	}
-	if left.Mtime != right.Mtime {
+	var leftMtime, rightMtime syscall.Timespec
+	leftMtime.Sec = left.MtimeSeconds
+	leftMtime.Nsec = int64(left.MtimeNanoSeconds)
+	rightMtime.Sec = right.MtimeSeconds
+	rightMtime.Nsec = int64(right.MtimeNanoSeconds)
+	if leftMtime != rightMtime {
 		if logWriter != nil {
-			fmt.Fprintf(logWriter, "Mtime: left vs. right: %d vs. %d\n",
-				left.Mtime, right.Mtime)
+			fmt.Fprintf(logWriter, "Mtime: left vs. right: %v vs. %v\n",
+				leftMtime, rightMtime)
 		}
 		return false
 	}
@@ -242,10 +247,15 @@ func compareInodes(left, right *Inode, logWriter io.Writer) bool {
 		}
 		return false
 	}
-	if left.Mtime != right.Mtime {
+	var leftMtime, rightMtime syscall.Timespec
+	leftMtime.Sec = left.MtimeSeconds
+	leftMtime.Nsec = int64(left.MtimeNanoSeconds)
+	rightMtime.Sec = right.MtimeSeconds
+	rightMtime.Nsec = int64(right.MtimeNanoSeconds)
+	if leftMtime != rightMtime {
 		if logWriter != nil {
-			fmt.Fprintf(logWriter, "Mtime: left vs. right: %d vs. %d\n",
-				left.Mtime, right.Mtime)
+			fmt.Fprintf(logWriter, "Mtime: left vs. right: %v vs. %v\n",
+				leftMtime, rightMtime)
 		}
 		return false
 	}

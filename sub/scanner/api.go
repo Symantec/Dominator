@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"io"
-	"syscall"
 	"time"
 )
 
@@ -101,12 +100,13 @@ func (directory *Directory) DebugWrite(w io.Writer, prefix string) error {
 }
 
 type RegularInode struct {
-	Mode  uint32
-	Uid   uint32
-	Gid   uint32
-	Size  uint64
-	Mtime syscall.Timespec
-	Hash  [64]byte
+	Mode             uint32
+	Uid              uint32
+	Gid              uint32
+	MtimeNanoSeconds int32
+	MtimeSeconds     int64
+	Size             uint64
+	Hash             [64]byte
 }
 
 type RegularFile struct {
@@ -140,11 +140,12 @@ func (symlink *Symlink) DebugWrite(w io.Writer, prefix string) error {
 }
 
 type Inode struct {
-	Mode  uint32
-	Uid   uint32
-	Gid   uint32
-	Rdev  uint64
-	Mtime syscall.Timespec
+	Mode             uint32
+	Uid              uint32
+	Gid              uint32
+	MtimeNanoSeconds int32
+	MtimeSeconds     int64
+	Rdev             uint64
 }
 
 type File struct {

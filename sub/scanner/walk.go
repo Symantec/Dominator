@@ -21,8 +21,9 @@ func (fileSystem *FileSystem) getRegularInode(stat *syscall.Stat_t) (
 		_inode.Mode = stat.Mode
 		_inode.Uid = stat.Uid
 		_inode.Gid = stat.Gid
+		_inode.MtimeSeconds = stat.Mtim.Sec
+		_inode.MtimeNanoSeconds = int32(stat.Mtim.Nsec)
 		_inode.Size = uint64(stat.Size)
-		_inode.Mtime = stat.Mtim
 		fileSystem.RegularInodeTable[stat.Ino] = inode
 		new = true
 	}
@@ -53,8 +54,9 @@ func (fileSystem *FileSystem) getInode(stat *syscall.Stat_t) (*Inode, bool) {
 		_inode.Mode = stat.Mode
 		_inode.Uid = stat.Uid
 		_inode.Gid = stat.Gid
+		_inode.MtimeSeconds = stat.Mtim.Sec
+		_inode.MtimeNanoSeconds = int32(stat.Mtim.Nsec)
 		_inode.Rdev = stat.Rdev
-		_inode.Mtime = stat.Mtim
 		fileSystem.InodeTable[stat.Ino] = inode
 		new = true
 	}
