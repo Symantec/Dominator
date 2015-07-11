@@ -48,7 +48,7 @@ func (fileSystem *FileSystem) getInode(stat *syscall.Stat_t) (*Inode, bool) {
 }
 
 func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
-	ctx *fsrateio.FsRateContext) (*FileSystem, error) {
+	ctx *fsrateio.FsRateContext, oldFS *FileSystem) (*FileSystem, error) {
 	var fileSystem FileSystem
 	fileSystem.ctx = ctx
 	fileSystem.Name = rootDirectoryName
@@ -69,7 +69,8 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	if sha512.New().Size() != len(tmpInode.Hash) {
 		return nil, errors.New("Incompatible hash size")
 	}
-	err = fileSystem.scan(&fileSystem, "")
+	err = fileSystem.scan(&fileSystem, oldFS, "")
+	oldFS = nil
 	fileSystem.DirectoryInodeList = nil
 	if err != nil {
 		return nil, err
@@ -94,7 +95,7 @@ func (fs *FileSystem) computeTotalDataBytes() uint64 {
 	return totalBytes
 }
 
-func (directory *Directory) scan(fileSystem *FileSystem,
+func (directory *Directory) scan(fileSystem, oldFS *FileSystem,
 	parentName string) error {
 	myPathName := path.Join(parentName, directory.Name)
 	file, err := os.Open(myPathName)
@@ -124,13 +125,15 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 			continue
 		}
 		if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
-			err = directory.addDirectory(fileSystem, name, myPathName, &stat)
+			err = directory.addDirectory(fileSystem, oldFS, name, myPathName,
+				&stat)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
-			err = directory.addRegularFile(fileSystem, name, myPathName, &stat)
+			err = directory.addRegularFile(fileSystem, oldFS, name, myPathName,
+				&stat)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFSOCK {
 			continue
 		} else {
-			err = directory.addFile(fileSystem, name, myPathName, &stat)
+			err = directory.addFile(fileSystem, oldFS, name, myPathName, &stat)
 		}
 		if err != nil {
 			if err == syscall.ENOENT {
@@ -152,8 +155,8 @@ func (directory *Directory) scan(fileSystem *FileSystem,
 	return nil
 }
 
-func (directory *Directory) addDirectory(fileSystem *FileSystem, name string,
-	directoryPathName string, stat *syscall.Stat_t) error {
+func (directory *Directory) addDirectory(fileSystem, oldFS *FileSystem,
+	name string, directoryPathName string, stat *syscall.Stat_t) error {
 	myPathName := path.Join(directoryPathName, name)
 	if fileSystem.DirectoryInodeList[stat.Ino] {
 		return errors.New("Hardlinked directory: " + myPathName)
@@ -164,7 +167,7 @@ func (directory *Directory) addDirectory(fileSystem *FileSystem, name string,
 	dir.Mode = stat.Mode
 	dir.Uid = stat.Uid
 	dir.Gid = stat.Gid
-	err := dir.scan(fileSystem, directoryPathName)
+	err := dir.scan(fileSystem, oldFS, directoryPathName)
 	if err != nil {
 		return err
 	}
@@ -172,8 +175,8 @@ func (directory *Directory) addDirectory(fileSystem *FileSystem, name string,
 	return nil
 }
 
-func (directory *Directory) addRegularFile(fileSystem *FileSystem, name string,
-	directoryPathName string, stat *syscall.Stat_t) error {
+func (directory *Directory) addRegularFile(fileSystem, oldFS *FileSystem,
+	name string, directoryPathName string, stat *syscall.Stat_t) error {
 	inode, isNewInode := fileSystem.getRegularInode(stat)
 	var file RegularFile
 	file.Name = name
@@ -184,12 +187,21 @@ func (directory *Directory) addRegularFile(fileSystem *FileSystem, name string,
 		if err != nil {
 			return err
 		}
+		if oldFS != nil && oldFS.RegularInodeTable != nil {
+			if oldInode, found := oldFS.RegularInodeTable[stat.Ino]; found {
+				if compareRegularInodes(inode, oldInode, nil) {
+					inode = oldInode
+					file.inode = inode
+					fileSystem.RegularInodeTable[stat.Ino] = inode
+				}
+			}
+		}
 	}
 	directory.RegularFileList = append(directory.RegularFileList, &file)
 	return nil
 }
 
-func (directory *Directory) addFile(fileSystem *FileSystem, name string,
+func (directory *Directory) addFile(fileSystem, oldFS *FileSystem, name string,
 	directoryPathName string, stat *syscall.Stat_t) error {
 	inode, isNewInode := fileSystem.getInode(stat)
 	var file File
@@ -200,6 +212,15 @@ func (directory *Directory) addFile(fileSystem *FileSystem, name string,
 		err := file.scan(fileSystem, directoryPathName)
 		if err != nil {
 			return err
+		}
+		if oldFS != nil && oldFS.InodeTable != nil {
+			if oldInode, found := oldFS.InodeTable[stat.Ino]; found {
+				if compareInodes(inode, oldInode, nil) {
+					inode = oldInode
+					file.inode = inode
+					fileSystem.InodeTable[stat.Ino] = inode
+				}
+			}
 		}
 	}
 	directory.FileList = append(directory.FileList, &file)

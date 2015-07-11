@@ -21,11 +21,15 @@ func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 	}
 	runtime.LockOSThread()
 	loweredPriority := false
+	var oldFS FileSystem
 	for {
-		fs, err := ScanFileSystem(rootDirectoryName, cacheDirectoryName, ctx)
+		fs, err := scanFileSystem(rootDirectoryName, cacheDirectoryName, ctx,
+			&oldFS)
 		if err != nil {
 			fmt.Printf("Error scanning\t%s\n", err)
 		} else {
+			oldFS.RegularInodeTable = fs.RegularInodeTable
+			oldFS.InodeTable = fs.InodeTable
 			fsChannel <- fs
 			if !loweredPriority {
 				syscall.Setpriority(syscall.PRIO_PROCESS, 0, 10)
