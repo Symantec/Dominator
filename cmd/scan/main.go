@@ -29,6 +29,8 @@ var (
 		"Name of root of directory tree to scan")
 	rpcFile = flag.String("rpcFile", "",
 		"Name of file to write encoded data to")
+	scanSpeed = flag.Uint("scanSpeed", 0,
+		"Scan speed in percent of maximum (0: default)")
 )
 
 func main() {
@@ -40,6 +42,9 @@ func main() {
 		return
 	}
 	ctx := fsrateio.NewContext(bytesPerSecond, blocksPerSecond)
+	if *scanSpeed != 0 {
+		ctx.SetSpeedPercent(*scanSpeed)
+	}
 	fmt.Println(ctx)
 	syscall.Setpriority(syscall.PRIO_PROCESS, 0, 10)
 	var prev_fs *scanner.FileSystem
