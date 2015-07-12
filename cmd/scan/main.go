@@ -79,7 +79,9 @@ func main() {
 				fmt.Printf("Error! %s\n", err)
 				return
 			}
-			fs.DebugWrite(bufio.NewWriter(file), "")
+			w := bufio.NewWriter(file)
+			fs.DebugWrite(w, "")
+			w.Flush()
 			file.Close()
 		}
 		if *rpcFile != "" {
