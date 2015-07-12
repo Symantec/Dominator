@@ -20,8 +20,9 @@ var onlyFsh *scanner.FileSystemHistory
 type Subd int
 
 func (t *Subd) Poll(generation uint64, reply *scanner.FileSystem) error {
-	if onlyFsh.FileSystem() != nil {
-		*reply = *onlyFsh.FileSystem()
+	fs := onlyFsh.FileSystem()
+	if fs != nil && generation != onlyFsh.GenerationCount() {
+		*reply = *fs
 	}
 	return nil
 }
