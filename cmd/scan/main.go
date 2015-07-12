@@ -79,7 +79,7 @@ func main() {
 				fmt.Printf("Error! %s\n", err)
 				return
 			}
-			w = bufio.NewWriter(file)
+			w := bufio.NewWriter(file)
 			fs.DebugWrite(w, "")
 			w.Flush()
 			file.Close()
