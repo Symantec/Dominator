@@ -60,10 +60,6 @@ func compare(oldMdb, newMdb *Mdb) bool {
 	return true
 }
 
-func (mdb *Mdb) Len() int {
-	return len(mdb.Machines)
-}
-
 func (mdb *Mdb) Less(left, right int) bool {
 	if mdb.Machines[left].Hostname < mdb.Machines[right].Hostname {
 		return true
