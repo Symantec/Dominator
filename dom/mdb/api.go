@@ -10,6 +10,10 @@ type Mdb struct {
 	Machines []Machine
 }
 
+func (mdb *Mdb) Len() int {
+	return len(mdb.Machines)
+}
+
 func StartMdbDaemon(mdbDir string) chan *Mdb {
 	return startMdbDaemon(mdbDir)
 }
