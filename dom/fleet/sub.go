@@ -32,4 +32,8 @@ func (fleet *Fleet) scanNextSub() {
 	reply.RebuildPointers()
 	//sub.generationCount = reply.GenerationCount()
 	fmt.Printf("Scanned: %s\n", sub.hostname)
+	// Close connection so that the sub does not leak memory. There seems to be
+	// a memory leak in the RPC/gob encoder code.
+	sub.connection.Close()
+	sub.connection = nil
 }
