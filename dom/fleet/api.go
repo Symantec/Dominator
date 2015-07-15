@@ -15,7 +15,7 @@ type Sub struct {
 
 type Fleet struct {
 	nextSubToScan uint
-	subs          []Sub
+	subs          []*Sub
 }
 
 func (fleet *Fleet) MdbUpdate(mdb *mdb.Mdb) {
