@@ -5,7 +5,7 @@ import (
 )
 
 func (fleet *Fleet) mdbUpdate(mdb *mdb.Mdb) {
-	fleet.nextSubToScan = 0
+	fleet.nextSubToPoll = 0
 	fleet.subs = make([]*Sub, 0, mdb.Len())
 	for _, machine := range mdb.Machines {
 		var sub Sub

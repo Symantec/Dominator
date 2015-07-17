@@ -4,7 +4,7 @@ import (
 	"encoding/gob"
 	"flag"
 	"fmt"
-	"github.com/Symantec/Dominator/sub/scanner"
+	"github.com/Symantec/Dominator/sub/httpd"
 	"net/rpc"
 	"os"
 	"strings"
@@ -43,7 +43,7 @@ func main() {
 			}
 		}
 		arg := new(uint64)
-		var reply *scanner.FileSystem
+		var reply *httpd.FileSystemHistory
 		err = client.Call("Subd.Poll", arg, &reply)
 		if err != nil {
 			fmt.Printf("Error calling\t%s\n", err)
@@ -53,21 +53,26 @@ func main() {
 			client.Close()
 			client = nil
 		}
-		reply.RebuildPointers()
-		if *debug {
-			reply.DebugWrite(os.Stdout, "")
+		fs := reply.FileSystem
+		if fs == nil {
+			fmt.Println("No FileSystem pointer")
 		} else {
-			fmt.Print(reply)
-		}
-		if *file != "" {
-			f, err := os.Create(*file)
-			if err != nil {
-				fmt.Printf("Error creating: %s\t%s\n", *file, err)
-				os.Exit(1)
+			fs.RebuildPointers()
+			if *debug {
+				fs.DebugWrite(os.Stdout, "")
+			} else {
+				fmt.Print(fs)
 			}
-			encoder := gob.NewEncoder(f)
-			encoder.Encode(reply)
-			f.Close()
+			if *file != "" {
+				f, err := os.Create(*file)
+				if err != nil {
+					fmt.Printf("Error creating: %s\t%s\n", *file, err)
+					os.Exit(1)
+				}
+				encoder := gob.NewEncoder(f)
+				encoder.Encode(fs)
+				f.Close()
+			}
 		}
 	}
 }

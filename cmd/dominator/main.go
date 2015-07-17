@@ -43,7 +43,7 @@ func main() {
 			}
 		default:
 			// Do work.
-			fleet.ScanNextSub()
+			fleet.PollNextSub()
 		}
 		fmt.Print(".")
 		runtime.GC() // An opportune time to take out the garbage.

@@ -14,7 +14,7 @@ type Sub struct {
 }
 
 type Fleet struct {
-	nextSubToScan uint
+	nextSubToPoll uint
 	subs          []*Sub
 }
 
@@ -22,6 +22,6 @@ func (fleet *Fleet) MdbUpdate(mdb *mdb.Mdb) {
 	fleet.mdbUpdate(mdb)
 }
 
-func (fleet *Fleet) ScanNextSub() {
-	fleet.scanNextSub()
+func (fleet *Fleet) PollNextSub() {
+	fleet.pollNextSub()
 }
