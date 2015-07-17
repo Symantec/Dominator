@@ -14,15 +14,23 @@ type HtmlWriter interface {
 	WriteHtml(writer io.Writer)
 }
 
+type FileSystemHistory struct {
+	GenerationCount uint64
+	FileSystem      *scanner.FileSystem
+}
+
 var onlyHtmler HtmlWriter
 var onlyFsh *scanner.FileSystemHistory
 
 type Subd int
 
-func (t *Subd) Poll(generation uint64, reply *scanner.FileSystem) error {
+func (t *Subd) Poll(generation uint64, reply *FileSystemHistory) error {
 	fs := onlyFsh.FileSystem()
 	if fs != nil && generation != onlyFsh.GenerationCount() {
-		*reply = *fs
+		var fsh FileSystemHistory
+		fsh.GenerationCount = onlyFsh.GenerationCount()
+		fsh.FileSystem = fs
+		*reply = fsh
 	}
 	return nil
 }
