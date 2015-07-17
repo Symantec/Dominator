@@ -49,11 +49,11 @@ func main() {
 	syscall.Setpriority(syscall.PRIO_PROCESS, 0, 10)
 	var prev_fs *scanner.FileSystem
 	sleepDuration, _ := time.ParseDuration(fmt.Sprintf("%ds", *interval))
-	for iter := 1; *numScans < 0 || iter <= *numScans; iter++ {
+	for iter := 0; *numScans < 0 || iter < *numScans; iter++ {
 		timeStart := time.Now()
 		fs, err := scanner.ScanFileSystem(*rootDir, *objectCache, ctx)
 		timeStop := time.Now()
-		if iter > 1 {
+		if iter > 0 {
 			fmt.Println()
 		}
 		if err != nil {
