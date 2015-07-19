@@ -1,4 +1,4 @@
-package fleet
+package herd
 
 import (
 	"fmt"
@@ -7,13 +7,13 @@ import (
 	"strings"
 )
 
-func (fleet *Fleet) pollNextSub() {
-	if fleet.nextSubToPoll >= uint(len(fleet.subs)) {
-		fleet.nextSubToPoll = 0
+func (herd *Herd) pollNextSub() {
+	if herd.nextSubToPoll >= uint(len(herd.subs)) {
+		herd.nextSubToPoll = 0
 		return
 	}
-	sub := fleet.subs[fleet.nextSubToPoll]
-	fleet.nextSubToPoll++
+	sub := herd.subs[herd.nextSubToPoll]
+	herd.nextSubToPoll++
 	if sub.connection == nil {
 		hostname := strings.SplitN(sub.hostname, "*", 2)[0]
 		var err error

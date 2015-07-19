@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/Symantec/Dominator/dom/fleet"
+	"github.com/Symantec/Dominator/dom/herd"
 	"github.com/Symantec/Dominator/dom/mdb"
 	"os"
 	"path"
@@ -27,12 +27,12 @@ func main() {
 	flag.Parse()
 	mdbChannel := mdb.StartMdbDaemon(path.Join(*stateDir, "mdb"))
 	interval, _ := time.ParseDuration(fmt.Sprintf("%ds", *minInterval))
-	var fleet fleet.Fleet
+	var herd herd.Herd
 	for {
 		minCycleStopTime := time.Now().Add(interval)
 		select {
 		case mdb := <-mdbChannel:
-			fleet.MdbUpdate(mdb)
+			herd.MdbUpdate(mdb)
 			if *debug {
 				b, _ := json.Marshal(mdb)
 				var out bytes.Buffer
@@ -43,7 +43,7 @@ func main() {
 			}
 		default:
 			// Do work.
-			fleet.PollNextSub()
+			herd.PollNextSub()
 		}
 		fmt.Print(".")
 		runtime.GC() // An opportune time to take out the garbage.

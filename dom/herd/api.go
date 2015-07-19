@@ -1,4 +1,4 @@
-package fleet
+package herd
 
 import (
 	"github.com/Symantec/Dominator/dom/mdb"
@@ -13,15 +13,15 @@ type Sub struct {
 	generationCount uint64
 }
 
-type Fleet struct {
+type Herd struct {
 	nextSubToPoll uint
 	subs          []*Sub
 }
 
-func (fleet *Fleet) MdbUpdate(mdb *mdb.Mdb) {
-	fleet.mdbUpdate(mdb)
+func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {
+	herd.mdbUpdate(mdb)
 }
 
-func (fleet *Fleet) PollNextSub() {
-	fleet.pollNextSub()
+func (herd *Herd) PollNextSub() {
+	herd.pollNextSub()
 }
