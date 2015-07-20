@@ -23,6 +23,15 @@ var (
 		"Name of dominator state directory.")
 )
 
+func showMdb(mdb *mdb.Mdb) {
+	b, _ := json.Marshal(mdb)
+	var out bytes.Buffer
+	json.Indent(&out, b, "", "    ")
+	fmt.Println()
+	out.WriteTo(os.Stdout)
+	fmt.Println()
+}
+
 func main() {
 	flag.Parse()
 	if os.Geteuid() == 0 {
@@ -47,18 +56,15 @@ func main() {
 		case mdb := <-mdbChannel:
 			herd.MdbUpdate(mdb)
 			if *debug {
-				b, _ := json.Marshal(mdb)
-				var out bytes.Buffer
-				json.Indent(&out, b, "", "    ")
-				fmt.Println()
-				out.WriteTo(os.Stdout)
-				fmt.Println()
+				showMdb(mdb)
 			}
 		default:
 			// Do work.
 			herd.PollNextSub()
 		}
-		fmt.Print(".")
+		if *debug {
+			fmt.Print(".")
+		}
 		runtime.GC() // An opportune time to take out the garbage.
 		time.Sleep(minCycleStopTime.Sub(time.Now()))
 	}
