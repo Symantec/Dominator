@@ -25,6 +25,10 @@ var (
 
 func main() {
 	flag.Parse()
+	if os.Geteuid() == 0 {
+		fmt.Println("Do not run the Dominator as root")
+		os.Exit(1)
+	}
 	fi, err := os.Lstat(*stateDir)
 	if err != nil {
 		fmt.Printf("Cannot stat: %s\t%s\n", *stateDir, err)
