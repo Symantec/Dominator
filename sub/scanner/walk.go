@@ -3,6 +3,7 @@ package scanner
 import (
 	"crypto/sha512"
 	"errors"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"io"
 	"os"
@@ -93,9 +94,8 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 		return nil, err
 	}
 	if cacheDirectoryName != "" {
-		fileSystem.ObjectCache = make([][]byte, 0, 16)
-		fileSystem.ObjectCache, err = scanObjectCache(cacheDirectoryName, "",
-			fileSystem.ObjectCache)
+		fileSystem.ObjectCache, err = objectcache.ScanObjectCache(
+			cacheDirectoryName)
 		if err != nil {
 			return nil, err
 		}
