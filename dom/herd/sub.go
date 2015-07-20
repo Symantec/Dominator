@@ -8,11 +8,11 @@ import (
 )
 
 func (herd *Herd) pollNextSub() {
-	if herd.nextSubToPoll >= uint(len(herd.subs)) {
+	if herd.nextSubToPoll >= uint(len(herd.subsByIndex)) {
 		herd.nextSubToPoll = 0
 		return
 	}
-	sub := herd.subs[herd.nextSubToPoll]
+	sub := herd.subsByIndex[herd.nextSubToPoll]
 	herd.nextSubToPoll++
 	if sub.connection == nil {
 		hostname := strings.SplitN(sub.hostname, "*", 2)[0]

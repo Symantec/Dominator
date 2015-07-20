@@ -15,7 +15,8 @@ type Sub struct {
 
 type Herd struct {
 	nextSubToPoll uint
-	subs          []*Sub
+	subsByName    map[string]*Sub
+	subsByIndex   []*Sub
 }
 
 func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {
