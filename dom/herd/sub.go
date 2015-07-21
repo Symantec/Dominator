@@ -32,6 +32,7 @@ func (herd *Herd) pollNextSub() {
 	fs := reply.FileSystem
 	if fs != nil {
 		fs.RebuildPointers()
+		sub.fileSystem = fs
 		sub.generationCount = reply.GenerationCount
 		fmt.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)

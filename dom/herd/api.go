@@ -2,6 +2,7 @@ package herd
 
 import (
 	"github.com/Symantec/Dominator/dom/mdb"
+	"github.com/Symantec/Dominator/sub/scanner"
 	"net/rpc"
 )
 
@@ -10,6 +11,7 @@ type Sub struct {
 	requiredImage   string
 	plannedImage    string
 	connection      *rpc.Client
+	fileSystem      *scanner.FileSystem
 	generationCount uint64
 }
 
