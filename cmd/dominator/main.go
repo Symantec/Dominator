@@ -50,22 +50,25 @@ func main() {
 	mdbChannel := mdb.StartMdbDaemon(path.Join(*stateDir, "mdb"))
 	interval, _ := time.ParseDuration(fmt.Sprintf("%ds", *minInterval))
 	var herd herd.Herd
+	nextCycleStopTime := time.Now().Add(interval)
 	for {
-		minCycleStopTime := time.Now().Add(interval)
 		select {
 		case mdb := <-mdbChannel:
 			herd.MdbUpdate(mdb)
 			if *debug {
 				showMdb(mdb)
 			}
+			runtime.GC() // An opportune time to take out the garbage.
 		default:
 			// Do work.
-			herd.PollNextSub()
+			if herd.PollNextSub() {
+				if *debug {
+					fmt.Print(".")
+				}
+				time.Sleep(nextCycleStopTime.Sub(time.Now()))
+				nextCycleStopTime = time.Now().Add(interval)
+				runtime.GC() // An opportune time to take out the garbage.
+			}
 		}
-		if *debug {
-			fmt.Print(".")
-		}
-		runtime.GC() // An opportune time to take out the garbage.
-		time.Sleep(minCycleStopTime.Sub(time.Now()))
 	}
 }

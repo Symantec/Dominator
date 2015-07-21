@@ -7,10 +7,10 @@ import (
 	"strings"
 )
 
-func (herd *Herd) pollNextSub() {
+func (herd *Herd) pollNextSub() bool {
 	if herd.nextSubToPoll >= uint(len(herd.subsByIndex)) {
 		herd.nextSubToPoll = 0
-		return
+		return true
 	}
 	sub := herd.subsByIndex[herd.nextSubToPoll]
 	herd.nextSubToPoll++
@@ -20,14 +20,14 @@ func (herd *Herd) pollNextSub() {
 		sub.connection, err = rpc.DialHTTP("tcp", hostname+":6969")
 		if err != nil {
 			fmt.Printf("Error dialing\t%s\n", err)
-			return
+			return false
 		}
 	}
 	var reply *httpd.FileSystemHistory
 	err := sub.connection.Call("Subd.Poll", sub.generationCount, &reply)
 	if err != nil {
 		fmt.Printf("Error calling\t%s\n", err)
-		return
+		return false
 	}
 	fs := reply.FileSystem
 	if fs != nil {
@@ -37,4 +37,5 @@ func (herd *Herd) pollNextSub() {
 		fmt.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)
 	}
+	return false
 }

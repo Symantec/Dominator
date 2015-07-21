@@ -25,6 +25,6 @@ func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {
 	herd.mdbUpdate(mdb)
 }
 
-func (herd *Herd) PollNextSub() {
-	herd.pollNextSub()
+func (herd *Herd) PollNextSub() bool {
+	return herd.pollNextSub()
 }
