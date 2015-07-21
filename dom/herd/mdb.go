@@ -26,6 +26,11 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 	for hostname, sub := range herd.subsByName {
 		if sub.hostname == "" {
 			subsToDelete = append(subsToDelete, hostname)
+			if sub.connection != nil {
+				// Destroying a Client doesn't free up all the memory, so call
+				// the Close() method to free up the memory.
+				sub.connection.Close()
+			}
 		}
 	}
 	for _, hostname := range subsToDelete {
