@@ -4,12 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/imageserver/scanner"
+	"github.com/Symantec/Dominator/lib/constants"
 	"os"
 )
 
 var (
 	debug   = flag.Bool("debug", false, "If true, show debugging output")
-	portNum = flag.Uint("portNum", 6971,
+	portNum = flag.Uint("portNum", constants.ImageServerPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
 	dataDir = flag.String("stateDir", "/var/lib/imageserver",
 		"Name of image server data directory.")

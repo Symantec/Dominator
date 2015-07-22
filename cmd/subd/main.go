@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/memstats"
 	"github.com/Symantec/Dominator/sub/fsrateio"
@@ -16,7 +17,7 @@ import (
 )
 
 var (
-	portNum = flag.Uint("portNum", 6969,
+	portNum = flag.Uint("portNum", constants.SubPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
 	rootDir = flag.String("rootDir", "/",
 		"Name of root of directory tree to manage")

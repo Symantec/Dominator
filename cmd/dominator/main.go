@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/dom/herd"
 	"github.com/Symantec/Dominator/dom/mdb"
+	"github.com/Symantec/Dominator/lib/constants"
 	"os"
 	"path"
 	"runtime"
@@ -17,7 +18,7 @@ var (
 	debug       = flag.Bool("debug", false, "If true, show debugging output")
 	minInterval = flag.Uint("minInterval", 1,
 		"Minimum interval between loops (in seconds)")
-	portNum = flag.Uint("portNum", 6970,
+	portNum = flag.Uint("portNum", constants.DomPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
 	stateDir = flag.String("stateDir", "/var/lib/Dominator",
 		"Name of dominator state directory.")
