@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/Symantec/Dominator/imageserver/scanner"
 	"os"
 )
 
@@ -29,4 +30,10 @@ func main() {
 		fmt.Printf("%s is not a directory\n", *dataDir)
 		os.Exit(1)
 	}
+	imdb, err := scanner.LoadImageDataBase(*dataDir)
+	if err != nil {
+		fmt.Printf("Cannot load image database\t%s\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(imdb)
 }
