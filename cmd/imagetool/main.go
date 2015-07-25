@@ -17,6 +17,17 @@ var (
 		"Port number of image server")
 )
 
+func printUsage() {
+	fmt.Fprintln(os.Stderr,
+		"Usage: imagetool [flags...] add|delete|list [args...]")
+	fmt.Fprintln(os.Stderr, "Common flags:")
+	flag.PrintDefaults()
+	fmt.Fprintln(os.Stderr, "Commands:")
+	fmt.Fprintln(os.Stderr, "  add    name imagefile filterfile")
+	fmt.Fprintln(os.Stderr, "  delete name")
+	fmt.Fprintln(os.Stderr, "  list")
+}
+
 func addImage(name, imageFilename, filterFilename string) error {
 	imageFile, err := os.Open(imageFilename)
 	if err != nil {
@@ -32,16 +43,16 @@ func addImage(name, imageFilename, filterFilename string) error {
 }
 
 func main() {
+	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {
-		fmt.Println("Missing command")
+		printUsage()
 		os.Exit(2)
 	}
 	switch {
 	case flag.Arg(0) == "add":
 		if flag.NArg() != 4 {
-			fmt.Println(
-				"Usage: imagetool [flags...] add name imagefile filterfile")
+			printUsage()
 			os.Exit(2)
 		}
 		err := addImage(flag.Arg(1), flag.Arg(2), flag.Arg(3))
@@ -51,16 +62,16 @@ func main() {
 		}
 	case flag.Arg(0) == "delete":
 		if flag.NArg() != 2 {
-			fmt.Println("Usage: imagetool [flags...] delete imagename")
+			printUsage()
 			os.Exit(2)
 		}
 	case flag.Arg(0) == "list":
 		if flag.NArg() != 1 {
-			fmt.Println("Usage: imagetool [flags...] list")
+			printUsage()
 			os.Exit(2)
 		}
 	default:
-		fmt.Println("Usage: imagetool [flags...] add|delete|list")
+		printUsage()
 		os.Exit(2)
 	}
 }
