@@ -2,6 +2,7 @@ package herd
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/sub/httpd"
 	"net/rpc"
 	"strings"
@@ -17,7 +18,8 @@ func (herd *Herd) pollNextSub() bool {
 	if sub.connection == nil {
 		hostname := strings.SplitN(sub.hostname, "*", 2)[0]
 		var err error
-		sub.connection, err = rpc.DialHTTP("tcp", hostname+":6969")
+		sub.connection, err = rpc.DialHTTP("tcp",
+			fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber))
 		if err != nil {
 			fmt.Printf("Error dialing\t%s\n", err)
 			return false
