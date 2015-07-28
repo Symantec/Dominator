@@ -39,7 +39,7 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
-	{"add", 4, addImageSubcommand},
+	{"add", 3, addImageSubcommand},
 	{"check", 1, checkImageSubcommand},
 	{"delete", 1, deleteImageSubcommand},
 	{"list", 0, listImagesSubcommand},
@@ -61,7 +61,7 @@ func main() {
 	}
 	for _, subcommand := range subcommands {
 		if flag.Arg(0) == subcommand.command {
-			if flag.NArg() != subcommand.numArgs {
+			if flag.NArg()-1 != subcommand.numArgs {
 				printUsage()
 				os.Exit(2)
 			}
