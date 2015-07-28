@@ -37,5 +37,5 @@ type ListRequest struct {
 }
 
 type ListResponse struct {
-	ImageNames [][]string
+	ImageNames []string
 }

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	_ "github.com/Symantec/Dominator/proto/imageserver"
+	"github.com/Symantec/Dominator/proto/imageserver"
 	"net/rpc"
 	"os"
 )
@@ -17,5 +17,14 @@ func listImagesSubcommand(client *rpc.Client, args []string) {
 }
 
 func listImages(client *rpc.Client) error {
+	var request imageserver.ListRequest
+	var reply imageserver.ListResponse
+	err := client.Call("Imageserver.ListImages", request, &reply)
+	if err != nil {
+		return err
+	}
+	for _, name := range reply.ImageNames {
+		fmt.Println(name)
+	}
 	return nil
 }
