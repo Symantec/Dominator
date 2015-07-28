@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
+	"net/rpc"
 	"os"
 )
 
@@ -19,27 +20,29 @@ var (
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr,
-		"Usage: imagetool [flags...] add|delete|list [args...]")
+		"Usage: imagetool [flags...] add|check|delete|list [args...]")
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  add    name imagefile filterfile")
+	fmt.Fprintln(os.Stderr, "  check  name")
 	fmt.Fprintln(os.Stderr, "  delete name")
 	fmt.Fprintln(os.Stderr, "  list")
 }
 
-func addImage(name, imageFilename, filterFilename string) error {
-	imageFile, err := os.Open(imageFilename)
-	if err != nil {
-		return err
-	}
-	defer imageFile.Close()
-	filterFile, err := os.Open(filterFilename)
-	if err != nil {
-		return err
-	}
-	defer filterFile.Close()
-	return nil
+type commandFunc func(*rpc.Client, []string)
+
+type subcommand struct {
+	command string
+	numArgs int
+	cmdFunc commandFunc
+}
+
+var subcommands = []subcommand{
+	{"add", 4, addImageSubcommand},
+	{"check", 1, checkImageSubcommand},
+	{"delete", 1, deleteImageSubcommand},
+	{"list", 0, listImagesSubcommand},
 }
 
 func main() {
@@ -49,29 +52,23 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
-	switch {
-	case flag.Arg(0) == "add":
-		if flag.NArg() != 4 {
-			printUsage()
-			os.Exit(2)
-		}
-		err := addImage(flag.Arg(1), flag.Arg(2), flag.Arg(3))
-		if err != nil {
-			fmt.Printf("Error adding image\t%s\n", err)
-			os.Exit(1)
-		}
-	case flag.Arg(0) == "delete":
-		if flag.NArg() != 2 {
-			printUsage()
-			os.Exit(2)
-		}
-	case flag.Arg(0) == "list":
-		if flag.NArg() != 1 {
-			printUsage()
-			os.Exit(2)
-		}
-	default:
-		printUsage()
-		os.Exit(2)
+	clientName := fmt.Sprintf("%s:%d",
+		*imageServerHostname, *imageServerPortNum)
+	client, err := rpc.DialHTTP("tcp", clientName)
+	if err != nil {
+		fmt.Printf("Error dialing\t%s\n", err)
+		os.Exit(1)
 	}
+	for _, subcommand := range subcommands {
+		if flag.Arg(0) == subcommand.command {
+			if flag.NArg() != subcommand.numArgs {
+				printUsage()
+				os.Exit(2)
+			}
+			subcommand.cmdFunc(client, flag.Args()[1:])
+			os.Exit(3)
+		}
+	}
+	printUsage()
+	os.Exit(2)
 }
