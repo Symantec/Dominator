@@ -5,9 +5,16 @@ type StatusResponse struct {
 	ErrorString string
 }
 
+const (
+	UNCOMPRESSED = iota
+	GZIP
+)
+
 type AddRequest struct {
-	Name   string
-	Filter [][]string
+	Name            string
+	Filter          [][]string
+	DataSize        uint64
+	CompressionType uint
 }
 
 type AddResponse StatusResponse
