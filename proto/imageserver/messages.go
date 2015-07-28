@@ -11,7 +11,7 @@ const (
 )
 
 type AddRequest struct {
-	Name            string
+	ImageName       string
 	Filter          [][]string
 	DataSize        uint64
 	CompressionType uint
@@ -20,7 +20,7 @@ type AddRequest struct {
 type AddResponse StatusResponse
 
 type CheckRequest struct {
-	Name string
+	ImageName string
 }
 
 type CheckResponse struct {
@@ -28,7 +28,7 @@ type CheckResponse struct {
 }
 
 type DeleteRequest struct {
-	Name string
+	ImageName string
 }
 
 type DeleteResponse StatusResponse
