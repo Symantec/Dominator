@@ -1,8 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	_ "github.com/Symantec/Dominator/proto/imageserver"
+	"github.com/Symantec/Dominator/proto/imageserver"
 	"net/rpc"
 	"os"
 )
@@ -17,5 +18,15 @@ func deleteImageSubcommand(client *rpc.Client, args []string) {
 }
 
 func deleteImage(client *rpc.Client, name string) error {
-	return nil
+	var request imageserver.DeleteRequest
+	request.ImageName = name
+	var reply imageserver.DeleteResponse
+	err := client.Call("Imageserver.DeleteImage", request, &reply)
+	if err != nil {
+		return err
+	}
+	if reply.Success {
+		return nil
+	}
+	return errors.New(reply.ErrorString)
 }
