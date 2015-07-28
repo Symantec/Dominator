@@ -3,6 +3,7 @@ package httpd
 import (
 	"bufio"
 	"fmt"
+	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"io"
 	"net"
@@ -14,23 +15,18 @@ type HtmlWriter interface {
 	WriteHtml(writer io.Writer)
 }
 
-type FileSystemHistory struct {
-	GenerationCount uint64
-	FileSystem      *scanner.FileSystem
-}
-
 var onlyHtmler HtmlWriter
 var onlyFsh *scanner.FileSystemHistory
 
 type Subd int
 
-func (t *Subd) Poll(generation uint64, reply *FileSystemHistory) error {
+func (t *Subd) Poll(request sub.PollRequest, reply *sub.PollResponse) error {
 	fs := onlyFsh.FileSystem()
-	if fs != nil && generation != onlyFsh.GenerationCount() {
-		var fsh FileSystemHistory
-		fsh.GenerationCount = onlyFsh.GenerationCount()
-		fsh.FileSystem = fs
-		*reply = fsh
+	if fs != nil && request.HaveGeneration != onlyFsh.GenerationCount() {
+		var response sub.PollResponse
+		response.GenerationCount = onlyFsh.GenerationCount()
+		response.FileSystem = fs
+		*reply = response
 	}
 	return nil
 }

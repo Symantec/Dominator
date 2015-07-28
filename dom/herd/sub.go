@@ -3,7 +3,7 @@ package herd
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/sub/httpd"
+	subproto "github.com/Symantec/Dominator/proto/sub"
 	"net/rpc"
 	"strings"
 )
@@ -25,8 +25,10 @@ func (herd *Herd) pollNextSub() bool {
 			return false
 		}
 	}
-	var reply *httpd.FileSystemHistory
-	err := sub.connection.Call("Subd.Poll", sub.generationCount, &reply)
+	var request subproto.PollRequest
+	request.HaveGeneration = sub.generationCount
+	var reply subproto.PollResponse
+	err := sub.connection.Call("Subd.Poll", request, &reply)
 	if err != nil {
 		fmt.Printf("Error calling\t%s\n", err)
 		return false

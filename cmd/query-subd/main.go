@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/sub/httpd"
+	"github.com/Symantec/Dominator/proto/sub"
 	"net/rpc"
 	"os"
 	"time"
@@ -52,9 +52,9 @@ func main() {
 				os.Exit(1)
 			}
 		}
-		arg := new(uint64)
-		var reply *httpd.FileSystemHistory
-		err = client.Call("Subd.Poll", arg, &reply)
+		var request sub.PollRequest
+		var reply sub.PollResponse
+		err = client.Call("Subd.Poll", request, &reply)
 		if err != nil {
 			fmt.Printf("Error calling\t%s\n", err)
 			os.Exit(1)
