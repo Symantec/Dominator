@@ -1,9 +1,8 @@
 package imageserver
 
-type StatusResponse struct {
-	Success     bool
-	ErrorString string
-}
+import (
+	"github.com/Symantec/Dominator/proto/common"
+)
 
 const (
 	UNCOMPRESSED = iota
@@ -17,7 +16,7 @@ type AddRequest struct {
 	CompressionType uint
 }
 
-type AddResponse StatusResponse
+type AddResponse common.StatusResponse
 
 type CheckRequest struct {
 	ImageName string
@@ -31,7 +30,7 @@ type DeleteRequest struct {
 	ImageName string
 }
 
-type DeleteResponse StatusResponse
+type DeleteResponse common.StatusResponse
 
 type ListRequest struct {
 }
