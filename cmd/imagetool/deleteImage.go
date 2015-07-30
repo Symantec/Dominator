@@ -18,9 +18,9 @@ func deleteImageSubcommand(client *rpc.Client, args []string) {
 }
 
 func deleteImage(client *rpc.Client, name string) error {
-	var request imageserver.DeleteRequest
+	var request imageserver.DeleteImageRequest
 	request.ImageName = name
-	var reply imageserver.DeleteResponse
+	var reply imageserver.DeleteImageResponse
 	err := client.Call("Imageserver.DeleteImage", request, &reply)
 	if err != nil {
 		return err

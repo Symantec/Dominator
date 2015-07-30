@@ -17,8 +17,8 @@ func listImagesSubcommand(client *rpc.Client, args []string) {
 }
 
 func listImages(client *rpc.Client) error {
-	var request imageserver.ListRequest
-	var reply imageserver.ListResponse
+	var request imageserver.ListImagesRequest
+	var reply imageserver.ListImagesResponse
 	err := client.Call("Imageserver.ListImages", request, &reply)
 	if err != nil {
 		return err

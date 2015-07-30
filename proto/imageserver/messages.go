@@ -9,32 +9,44 @@ const (
 	GZIP
 )
 
-type AddRequest struct {
+type AddImageRequest struct {
 	ImageName       string
 	Filter          [][]string
 	DataSize        uint64
 	CompressionType uint
 }
 
-type AddResponse common.StatusResponse
+type AddImageResponse common.StatusResponse
 
-type CheckRequest struct {
+type CheckImageRequest struct {
 	ImageName string
 }
 
-type CheckResponse struct {
+type CheckImageResponse struct {
 	ImageExists bool
 }
 
-type DeleteRequest struct {
+type DeleteImageRequest struct {
 	ImageName string
 }
 
-type DeleteResponse common.StatusResponse
+type DeleteImageResponse common.StatusResponse
 
-type ListRequest struct {
+type GetFilesRequest struct {
+	Objects []common.Hash
 }
 
-type ListResponse struct {
+type GetFilesResponse struct {
+	ObjectSizes []uint64
+}
+
+type GetImageRequest struct {
+	ImageName string
+}
+
+type ListImagesRequest struct {
+}
+
+type ListImagesResponse struct {
 	ImageNames []string
 }
