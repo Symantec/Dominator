@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/memstats"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"github.com/Symantec/Dominator/sub/httpd"
+	"github.com/Symantec/Dominator/sub/rpcd"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"os"
 	"path"
@@ -187,6 +188,7 @@ func main() {
 	}
 	var fsh scanner.FileSystemHistory
 	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir, ctx)
+	rpcd.Setup(&fsh)
 	err := httpd.StartServer(*portNum, &fsh)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)
