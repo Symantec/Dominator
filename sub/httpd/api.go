@@ -2,7 +2,6 @@ package httpd
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/sub/scanner"
 	"io"
 	"net"
 	"net/http"
@@ -14,12 +13,12 @@ type HtmlWriter interface {
 
 var onlyHtmler HtmlWriter
 
-func StartServer(portNum uint, fsh *scanner.FileSystemHistory) error {
+func StartServer(portNum uint, htmlWriter HtmlWriter) error {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", portNum))
 	if err != nil {
 		return err
 	}
-	onlyHtmler = fsh
+	onlyHtmler = htmlWriter
 	http.HandleFunc("/", statusHandler)
 	go http.Serve(listener, nil)
 	return nil
