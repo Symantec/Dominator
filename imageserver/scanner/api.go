@@ -1,5 +1,9 @@
 package scanner
 
+import (
+	"io"
+)
+
 type FilterEntry string
 
 type Filter []FilterEntry
@@ -25,4 +29,8 @@ type ImageDataBase struct {
 
 func LoadImageDataBase(baseDir string) (*ImageDataBase, error) {
 	return loadImageDataBase(baseDir)
+}
+
+func (imdb *ImageDataBase) WriteHtml(writer io.Writer) {
+	//imdb.writeHtml(writer)
 }

@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/Symantec/Dominator/imageserver/httpd"
+	"github.com/Symantec/Dominator/imageserver/rpcd"
 	"github.com/Symantec/Dominator/imageserver/scanner"
 	"github.com/Symantec/Dominator/lib/constants"
 	"os"
@@ -34,6 +36,12 @@ func main() {
 	imdb, err := scanner.LoadImageDataBase(*dataDir)
 	if err != nil {
 		fmt.Printf("Cannot load image database\t%s\n", err)
+		os.Exit(1)
+	}
+	rpcd.Setup()
+	err = httpd.StartServer(*portNum, imdb)
+	if err != nil {
+		fmt.Printf("Unable to create http server\t%s\n", err)
 		os.Exit(1)
 	}
 	fmt.Println(imdb)
