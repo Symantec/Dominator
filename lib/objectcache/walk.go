@@ -1,4 +1,4 @@
-package scanner
+package objectcache
 
 import (
 	"os"
@@ -45,13 +45,13 @@ func filenameToBytes(fileName string) ([]byte, error) {
 	return bytes, nil
 }
 
-func addCacheEntry(fileName string, cache [][]byte) ([][]byte, error) {
+func addCacheEntry(fileName string, cache ObjectCache) (ObjectCache, error) {
 	bytes, err := filenameToBytes(fileName)
 	if err != nil {
 		return nil, err
 	}
 	if len(cache) >= cap(cache) {
-		newCache := make([][]byte, 0, cap(cache)*2)
+		newCache := make(ObjectCache, 0, cap(cache)*2)
 		copy(newCache, cache)
 		cache = newCache
 	}
@@ -59,7 +59,7 @@ func addCacheEntry(fileName string, cache [][]byte) ([][]byte, error) {
 }
 
 func scanObjectCache(cacheDirectoryName string, subpath string,
-	cache [][]byte) ([][]byte, error) {
+	cache ObjectCache) (ObjectCache, error) {
 	myPathName := path.Join(cacheDirectoryName, subpath)
 	file, err := os.Open(myPathName)
 	if err != nil {

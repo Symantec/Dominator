@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"io"
 	"time"
@@ -49,7 +50,7 @@ type FileSystem struct {
 	DirectoryInodeList InodeList
 	TotalDataBytes     uint64
 	HashCount          uint64
-	ObjectCache        [][]byte
+	ObjectCache        objectcache.ObjectCache
 	Dev                uint64
 	Directory
 }

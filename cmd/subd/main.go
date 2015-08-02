@@ -3,10 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/memstats"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"github.com/Symantec/Dominator/sub/httpd"
+	"github.com/Symantec/Dominator/sub/rpcd"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"os"
 	"path"
@@ -16,7 +18,7 @@ import (
 )
 
 var (
-	portNum = flag.Uint("portNum", 6969,
+	portNum = flag.Uint("portNum", constants.SubPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
 	rootDir = flag.String("rootDir", "/",
 		"Name of root of directory tree to manage")
@@ -186,6 +188,7 @@ func main() {
 	}
 	var fsh scanner.FileSystemHistory
 	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir, ctx)
+	rpcd.Setup(&fsh)
 	err := httpd.StartServer(*portNum, &fsh)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)

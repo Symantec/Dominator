@@ -22,7 +22,7 @@ func watchDaemon(mdbFileName string, mdbChannel chan *Mdb) {
 		var stat syscall.Stat_t
 		err := syscall.Stat(mdbFileName, &stat)
 		if err != nil {
-			fmt.Printf("Error stating file\t%s\n", err)
+			fmt.Printf("Error stating file: %s\t%s\n", mdbFileName, err)
 			continue
 		}
 		if stat != lastStat {

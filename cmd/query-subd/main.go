@@ -4,30 +4,40 @@ import (
 	"encoding/gob"
 	"flag"
 	"fmt"
-	"github.com/Symantec/Dominator/sub/httpd"
+	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/proto/sub"
 	"net/rpc"
 	"os"
-	"strings"
 	"time"
 )
 
 var (
-	file     = flag.String("file", "", "Name of file to write encoded data to")
-	debug    = flag.Bool("debug", false, "Enable debug mode")
-	interval = flag.Uint("interval", 1, "Seconds to sleep between Polls")
-	numPolls = flag.Int("numPolls", 1,
-		"The number of polls to run (infinite: < 0)")
+	debug         = flag.Bool("debug", false, "Enable debug mode")
+	file          = flag.String("file", "", "Name of file to write encoded data to")
+	interval      = flag.Uint("interval", 1, "Seconds to sleep between Polls")
 	newConnection = flag.Bool("newConnection", false,
 		"If true, (re)open a connection for each Poll")
+	numPolls = flag.Int("numPolls", 1,
+		"The number of polls to run (infinite: < 0)")
+	subPortNum = flag.Uint("subPortNum", constants.SubPortNumber,
+		"Port number of sub")
 )
 
+func printUsage() {
+	fmt.Fprintln(os.Stderr,
+		"Usage: query-subd [flags...] hostname")
+	flag.PrintDefaults()
+}
+
 func main() {
+	flag.Usage = printUsage
 	flag.Parse()
-	args := flag.Args()
-	clientName := args[0]
-	if !strings.Contains(clientName, ":") {
-		clientName = clientName + ":6969"
+	if flag.NArg() != 1 {
+		printUsage()
+		os.Exit(2)
 	}
+	args := flag.Args()
+	clientName := fmt.Sprintf("%s:%d", args[0], *subPortNum)
 	var client *rpc.Client
 	var err error
 	sleepDuration, _ := time.ParseDuration(fmt.Sprintf("%ds", *interval))
@@ -42,9 +52,9 @@ func main() {
 				os.Exit(1)
 			}
 		}
-		arg := new(uint64)
-		var reply *httpd.FileSystemHistory
-		err = client.Call("Subd.Poll", arg, &reply)
+		var request sub.PollRequest
+		var reply sub.PollResponse
+		err = client.Call("Subd.Poll", request, &reply)
 		if err != nil {
 			fmt.Printf("Error calling\t%s\n", err)
 			os.Exit(1)
