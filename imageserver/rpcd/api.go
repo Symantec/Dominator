@@ -1,13 +1,16 @@
 package rpcd
 
 import (
+	"github.com/Symantec/Dominator/imageserver/scanner"
 	"net/rpc"
 )
 
-type Imageserver int
+type ImageServer int
 
-func Setup() {
-	imageserver := new(Imageserver)
-	rpc.Register(imageserver)
+var imageDataBase *scanner.ImageDataBase
+
+func Setup(imdb *scanner.ImageDataBase) {
+	imageDataBase = imdb
+	rpc.Register(new(ImageServer))
 	rpc.HandleHTTP()
 }
