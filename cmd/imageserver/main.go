@@ -39,10 +39,9 @@ func main() {
 		os.Exit(1)
 	}
 	rpcd.Setup(imdb)
-	err = httpd.StartServer(*portNum, imdb)
+	err = httpd.StartServer(*portNum, imdb, false)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)
 		os.Exit(1)
 	}
-	fmt.Println(imdb)
 }
