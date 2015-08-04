@@ -11,7 +11,6 @@ type Subd int
 
 func Setup(fsh *scanner.FileSystemHistory) {
 	onlyFsh = fsh
-	subd := new(Subd)
-	rpc.Register(subd)
+	rpc.Register(new(Subd))
 	rpc.HandleHTTP()
 }
