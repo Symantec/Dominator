@@ -23,7 +23,7 @@ func checkImage(client *rpc.Client, name string) (bool, error) {
 	var request imageserver.CheckImageRequest
 	request.ImageName = name
 	var reply imageserver.CheckImageResponse
-	err := client.Call("Imageserver.CheckImage", request, &reply)
+	err := client.Call("ImageServer.CheckImage", request, &reply)
 	if err != nil {
 		return false, err
 	}
