@@ -21,7 +21,7 @@ func setConfig(client *rpc.Client) error {
 	var request sub.SetConfigurationRequest
 	request.ScanSpeedPercent = *scanSpeedPercent
 	var reply sub.SetConfigurationResponse
-	err := client.Call("Sub.SetConfiguration", request, &reply)
+	err := client.Call("Subd.SetConfiguration", request, &reply)
 	if err != nil {
 		return err
 	}

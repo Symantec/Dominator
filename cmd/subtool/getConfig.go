@@ -19,7 +19,7 @@ func getConfigSubcommand(client *rpc.Client, args []string) {
 func getConfig(client *rpc.Client) error {
 	var request sub.GetConfigurationRequest
 	var reply sub.GetConfigurationResponse
-	err := client.Call("Sub.GetConfiguration", request, &reply)
+	err := client.Call("Subd.GetConfiguration", request, &reply)
 	if err != nil {
 		return err
 	}
