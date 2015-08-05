@@ -23,6 +23,6 @@ func getConfig(client *rpc.Client) error {
 	if err != nil {
 		return err
 	}
-	fmt.Print(reply)
+	fmt.Println(reply)
 	return nil
 }
