@@ -60,6 +60,10 @@ func ScanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	return scanFileSystem(rootDirectoryName, cacheDirectoryName, ctx, nil)
 }
 
+func (fs *FileSystem) FsRateContext() *fsrateio.FsRateContext {
+	return fs.ctx
+}
+
 func (fs *FileSystem) RebuildPointers() {
 	fs.rebuildPointers()
 }
