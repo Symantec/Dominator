@@ -5,12 +5,12 @@ import (
 	"net/rpc"
 )
 
-var onlyFsh *scanner.FileSystemHistory
+var fileSystemHistory *scanner.FileSystemHistory
 
 type Subd int
 
 func Setup(fsh *scanner.FileSystemHistory) {
-	onlyFsh = fsh
+	fileSystemHistory = fsh
 	rpc.Register(new(Subd))
 	rpc.HandleHTTP()
 }

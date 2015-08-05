@@ -5,10 +5,11 @@ import (
 )
 
 func (t *Subd) Poll(request sub.PollRequest, reply *sub.PollResponse) error {
-	fs := onlyFsh.FileSystem()
-	if fs != nil && request.HaveGeneration != onlyFsh.GenerationCount() {
+	fs := fileSystemHistory.FileSystem()
+	if fs != nil &&
+		request.HaveGeneration != fileSystemHistory.GenerationCount() {
 		var response sub.PollResponse
-		response.GenerationCount = onlyFsh.GenerationCount()
+		response.GenerationCount = fileSystemHistory.GenerationCount()
 		response.FileSystem = fs
 		*reply = response
 	}
