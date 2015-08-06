@@ -159,7 +159,7 @@ func (directory *Directory) scan(fileSystem, oldFS *FileSystem,
 			if err == syscall.ENOENT {
 				continue
 			}
-			return nil
+			return err
 		}
 	}
 	// Save file and directory lists which are exactly the right length.
