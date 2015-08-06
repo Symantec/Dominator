@@ -178,16 +178,19 @@ func main() {
 	if !ok {
 		os.Exit(1)
 	}
-	ctx := fsrateio.NewContext(bytesPerSecond, blocksPerSecond)
-	defaultSpeed := ctx.SpeedPercent()
+	var configuration scanner.Configuration
+	configuration.FsScanContext = fsrateio.NewContext(bytesPerSecond,
+		blocksPerSecond)
+	defaultSpeed := configuration.FsScanContext.SpeedPercent()
 	if firstScan {
-		ctx.SetSpeedPercent(100)
+		configuration.FsScanContext.SetSpeedPercent(100)
 	}
 	if *showStats {
-		fmt.Println(ctx)
+		fmt.Println(configuration.FsScanContext)
 	}
 	var fsh scanner.FileSystemHistory
-	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir, ctx)
+	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir,
+		&configuration)
 	rpcd.Setup(&fsh)
 	err := httpd.StartServer(*portNum, &fsh)
 	if err != nil {
@@ -208,10 +211,10 @@ func main() {
 			fmt.Println()
 		}
 		if firstScan {
-			ctx.SetSpeedPercent(defaultSpeed)
+			configuration.FsScanContext.SetSpeedPercent(defaultSpeed)
 			firstScan = false
 			if *showStats {
-				fmt.Println(ctx)
+				fmt.Println(configuration.FsScanContext)
 			}
 		}
 	}

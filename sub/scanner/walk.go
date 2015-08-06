@@ -65,9 +65,9 @@ func (fileSystem *FileSystem) getInode(stat *syscall.Stat_t) (*Inode, bool) {
 }
 
 func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
-	ctx *fsrateio.FsRateContext, oldFS *FileSystem) (*FileSystem, error) {
+	configuration *Configuration, oldFS *FileSystem) (*FileSystem, error) {
 	var fileSystem FileSystem
-	fileSystem.ctx = ctx
+	fileSystem.configuration = configuration
 	fileSystem.Name = rootDirectoryName
 	var stat syscall.Stat_t
 	err := syscall.Lstat(rootDirectoryName, &stat)
@@ -282,7 +282,7 @@ func (file *RegularFile) scan(fileSystem *FileSystem, parentName string) error {
 	if err != nil {
 		return err
 	}
-	reader := fsrateio.NewReader(f, fileSystem.ctx)
+	reader := fsrateio.NewReader(f, fileSystem.configuration.FsScanContext)
 	hash := sha512.New()
 	io.Copy(hash, reader)
 	f.Close()

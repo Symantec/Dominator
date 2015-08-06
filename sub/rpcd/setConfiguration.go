@@ -12,7 +12,7 @@ func (t *Subd) SetConfiguration(request sub.SetConfigurationRequest,
 	if fs == nil {
 		return errors.New("No file-system history yet")
 	}
-	fs.FsRateContext().SetSpeedPercent(request.ScanSpeedPercent)
+	fs.Configuration().FsScanContext.SetSpeedPercent(request.ScanSpeedPercent)
 	response.Success = true
 	*reply = response
 	return nil

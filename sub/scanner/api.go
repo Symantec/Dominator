@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+type Configuration struct {
+	FsScanContext *fsrateio.FsRateContext
+}
+
 type FileSystemHistory struct {
 	fileSystem         *FileSystem
 	scanCount          uint64
@@ -43,7 +47,7 @@ type InodeTable map[uint64]*Inode
 type InodeList map[uint64]bool
 
 type FileSystem struct {
-	ctx                *fsrateio.FsRateContext
+	configuration      *Configuration
 	RegularInodeTable  RegularInodeTable
 	SymlinkInodeTable  SymlinkInodeTable
 	InodeTable         InodeTable // This excludes directories.
@@ -56,12 +60,13 @@ type FileSystem struct {
 }
 
 func ScanFileSystem(rootDirectoryName string, cacheDirectoryName string,
-	ctx *fsrateio.FsRateContext) (*FileSystem, error) {
-	return scanFileSystem(rootDirectoryName, cacheDirectoryName, ctx, nil)
+	configuration *Configuration) (*FileSystem, error) {
+	return scanFileSystem(rootDirectoryName, cacheDirectoryName, configuration,
+		nil)
 }
 
-func (fs *FileSystem) FsRateContext() *fsrateio.FsRateContext {
-	return fs.ctx
+func (fs *FileSystem) Configuration() *Configuration {
+	return fs.configuration
 }
 
 func (fs *FileSystem) RebuildPointers() {
@@ -172,6 +177,7 @@ func Compare(left *FileSystem, right *FileSystem, logWriter io.Writer) bool {
 }
 
 func StartScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
-	ctx *fsrateio.FsRateContext) chan *FileSystem {
-	return startScannerDaemon(rootDirectoryName, cacheDirectoryName, ctx)
+	configuration *Configuration) chan *FileSystem {
+	return startScannerDaemon(rootDirectoryName, cacheDirectoryName,
+		configuration)
 }
