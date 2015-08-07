@@ -16,7 +16,7 @@ func (t *Subd) SetConfiguration(request sub.SetConfigurationRequest,
 	configuration.FsScanContext.SetSpeedPercent(request.ScanSpeedPercent)
 	err := configuration.SetExclusionList(request.ScanExclusionList)
 	if err != nil {
-		return nil
+		return err
 	}
 	response.Success = true
 	*reply = response
