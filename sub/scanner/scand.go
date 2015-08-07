@@ -2,20 +2,20 @@ package scanner
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/sub/fsrateio"
 	"runtime"
 	"syscall"
 )
 
 func startScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
-	ctx *fsrateio.FsRateContext) chan *FileSystem {
+	configuration *Configuration) chan *FileSystem {
 	fsChannel := make(chan *FileSystem)
-	go scannerDaemon(rootDirectoryName, cacheDirectoryName, ctx, fsChannel)
+	go scannerDaemon(rootDirectoryName, cacheDirectoryName, configuration,
+		fsChannel)
 	return fsChannel
 }
 
 func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
-	ctx *fsrateio.FsRateContext, fsChannel chan *FileSystem) {
+	configuration *Configuration, fsChannel chan *FileSystem) {
 	if runtime.GOMAXPROCS(0) < 2 {
 		runtime.GOMAXPROCS(2)
 	}
@@ -23,8 +23,8 @@ func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 	loweredPriority := false
 	var oldFS FileSystem
 	for {
-		fs, err := scanFileSystem(rootDirectoryName, cacheDirectoryName, ctx,
-			&oldFS)
+		fs, err := scanFileSystem(rootDirectoryName, cacheDirectoryName,
+			configuration, &oldFS)
 		if err != nil {
 			fmt.Printf("Error scanning\t%s\n", err)
 		} else {

@@ -41,17 +41,20 @@ func main() {
 		fmt.Printf("Error! %s\n", err)
 		return
 	}
-	ctx := fsrateio.NewContext(bytesPerSecond, blocksPerSecond)
+	var configuration scanner.Configuration
+	configuration.FsScanContext = fsrateio.NewContext(bytesPerSecond,
+		blocksPerSecond)
 	if *scanSpeed != 0 {
-		ctx.SetSpeedPercent(*scanSpeed)
+		configuration.FsScanContext.SetSpeedPercent(*scanSpeed)
 	}
-	fmt.Println(ctx)
+	fmt.Println(configuration.FsScanContext)
 	syscall.Setpriority(syscall.PRIO_PROCESS, 0, 10)
 	var prev_fs *scanner.FileSystem
 	sleepDuration, _ := time.ParseDuration(fmt.Sprintf("%ds", *interval))
 	for iter := 0; *numScans < 0 || iter < *numScans; iter++ {
 		timeStart := time.Now()
-		fs, err := scanner.ScanFileSystem(*rootDir, *objectCache, ctx)
+		fs, err := scanner.ScanFileSystem(*rootDir, *objectCache,
+			&configuration)
 		timeStop := time.Now()
 		if iter > 0 {
 			fmt.Println()

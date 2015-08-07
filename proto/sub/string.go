@@ -5,7 +5,15 @@ import (
 )
 
 func (configuration Configuration) String() string {
-	return fmt.Sprintf("ScanSpeedPercent: %d", configuration.ScanSpeedPercent)
+	retval := fmt.Sprintf("ScanSpeedPercent: %d",
+		configuration.ScanSpeedPercent)
+	if len(configuration.ScanExclusionList) > 0 {
+		retval += "\n" + "ScanExclusionList:"
+		for _, exclusion := range configuration.ScanExclusionList {
+			retval += "\n  " + exclusion
+		}
+	}
+	return retval
 }
 
 func (configuration GetConfigurationResponse) String() string {

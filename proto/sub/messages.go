@@ -6,7 +6,8 @@ import (
 )
 
 type Configuration struct {
-	ScanSpeedPercent uint
+	ScanSpeedPercent  uint
+	ScanExclusionList []string
 }
 
 type FetchRequest struct {
