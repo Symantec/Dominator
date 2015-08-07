@@ -5,3 +5,8 @@ const (
 	DomPortNumber         = 6970
 	ImageServerPortNumber = 6971
 )
+
+var ScanExcludeList = []string{
+	"/tmp/.*",
+	"/var/log/.*",
+	"/var/tmp/.*"}

@@ -179,11 +179,11 @@ func main() {
 		os.Exit(1)
 	}
 	var configuration scanner.Configuration
-	// TODO(rgooch): Clean up setting the default exclusion list.
-	configuration.SetExclusionList([]string{
-		"/tmp/.*",
-		"/var/log/.*",
-		"/var/tmp/.*"})
+	err := configuration.SetExclusionList(constants.ScanExcludeList)
+	if err != nil {
+		fmt.Printf("Unable to set default scan exclusions\t%s\n", err)
+		os.Exit(1)
+	}
 	configuration.FsScanContext = fsrateio.NewContext(bytesPerSecond,
 		blocksPerSecond)
 	defaultSpeed := configuration.FsScanContext.SpeedPercent()
@@ -197,7 +197,7 @@ func main() {
 	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir,
 		&configuration)
 	rpcd.Setup(&fsh)
-	err := httpd.StartServer(*portNum, &fsh)
+	err = httpd.StartServer(*portNum, &fsh)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)
 		os.Exit(1)
