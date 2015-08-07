@@ -179,6 +179,11 @@ func main() {
 		os.Exit(1)
 	}
 	var configuration scanner.Configuration
+	// TODO(rgooch): Clean up setting the default exclusion list.
+	configuration.SetExclusionList([]string{
+		"/tmp/.*",
+		"/var/log/.*",
+		"/var/tmp/.*"})
 	configuration.FsScanContext = fsrateio.NewContext(bytesPerSecond,
 		blocksPerSecond)
 	defaultSpeed := configuration.FsScanContext.SpeedPercent()

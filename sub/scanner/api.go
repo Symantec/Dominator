@@ -5,11 +5,17 @@ import (
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/sub/fsrateio"
 	"io"
+	"regexp"
 	"time"
 )
 
 type Configuration struct {
 	FsScanContext *fsrateio.FsRateContext
+	ExclusionList []*regexp.Regexp
+}
+
+func (configuration *Configuration) SetExclusionList(reList []string) error {
+	return configuration.setExclusionList(reList)
 }
 
 type FileSystemHistory struct {
@@ -48,6 +54,7 @@ type InodeList map[uint64]bool
 
 type FileSystem struct {
 	configuration      *Configuration
+	rootDirectoryName  string
 	RegularInodeTable  RegularInodeTable
 	SymlinkInodeTable  SymlinkInodeTable
 	InodeTable         InodeTable // This excludes directories.

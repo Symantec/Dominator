@@ -68,7 +68,8 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	configuration *Configuration, oldFS *FileSystem) (*FileSystem, error) {
 	var fileSystem FileSystem
 	fileSystem.configuration = configuration
-	fileSystem.Name = rootDirectoryName
+	fileSystem.rootDirectoryName = rootDirectoryName
+	fileSystem.Name = "/"
 	var stat syscall.Stat_t
 	err := syscall.Lstat(rootDirectoryName, &stat)
 	if err != nil {
@@ -115,7 +116,7 @@ func (fs *FileSystem) computeTotalDataBytes() uint64 {
 func (directory *Directory) scan(fileSystem, oldFS *FileSystem,
 	parentName string) error {
 	myPathName := path.Join(parentName, directory.Name)
-	file, err := os.Open(myPathName)
+	file, err := os.Open(path.Join(fileSystem.rootDirectoryName, myPathName))
 	if err != nil {
 		return err
 	}
@@ -130,8 +131,19 @@ func (directory *Directory) scan(fileSystem, oldFS *FileSystem,
 	directory.DirectoryList = make([]*Directory, 0, len(names))
 	for _, name := range names {
 		filename := path.Join(myPathName, name)
+		skip := false
+		for _, regex := range fileSystem.configuration.ExclusionList {
+			if regex.MatchString(filename) {
+				skip = true
+				continue
+			}
+		}
+		if skip {
+			continue
+		}
 		var stat syscall.Stat_t
-		err := syscall.Lstat(filename, &stat)
+		err := syscall.Lstat(path.Join(fileSystem.rootDirectoryName, filename),
+			&stat)
 		if err != nil {
 			if err == syscall.ENOENT {
 				continue
@@ -278,7 +290,7 @@ func (directory *Directory) addFile(fileSystem, oldFS *FileSystem, name string,
 
 func (file *RegularFile) scan(fileSystem *FileSystem, parentName string) error {
 	myPathName := path.Join(parentName, file.Name)
-	f, err := os.Open(myPathName)
+	f, err := os.Open(path.Join(fileSystem.rootDirectoryName, myPathName))
 	if err != nil {
 		return err
 	}
@@ -293,7 +305,8 @@ func (file *RegularFile) scan(fileSystem *FileSystem, parentName string) error {
 
 func (symlink *Symlink) scan(fileSystem *FileSystem, parentName string) error {
 	myPathName := path.Join(parentName, symlink.Name)
-	target, err := os.Readlink(myPathName)
+	target, err := os.Readlink(path.Join(fileSystem.rootDirectoryName,
+		myPathName))
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"regexp"
 	"time"
 )
 
@@ -24,4 +25,17 @@ func (fsh *FileSystemHistory) update(newFS *FileSystem) {
 			fsh.timeOfLastChange = fsh.timeOfLastScan
 		}
 	}
+}
+
+func (configuration *Configuration) setExclusionList(reList []string) error {
+	exclusionList := make([]*regexp.Regexp, len(reList))
+	for index, reEntry := range reList {
+		var err error
+		exclusionList[index], err = regexp.Compile("^" + reEntry)
+		if err != nil {
+			return err
+		}
+	}
+	configuration.ExclusionList = exclusionList
+	return nil
 }
