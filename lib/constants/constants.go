@@ -9,4 +9,7 @@ const (
 var ScanExcludeList = []string{
 	"/tmp/.*",
 	"/var/log/.*",
-	"/var/tmp/.*"}
+	"/var/mail/.*",
+	"/var/spool/.*",
+	"/var/tmp/.*",
+}
