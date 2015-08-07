@@ -16,6 +16,9 @@ var (
 		"If true, (re)open a connection for each Poll")
 	numPolls = flag.Int("numPolls", 1,
 		"The number of polls to run (infinite: < 0)")
+	scanExcludeList = flag.String("scanExcludeList",
+		"/tmp/.*,/var/log/.*,/var/tmp/.*",
+		"Comma separated list of patterns to exclude from scanning")
 	scanSpeedPercent = flag.Uint("scanSpeedPercent", 2,
 		"Scan speed as percentage of capacity")
 	subHostname = flag.String("imageServerHostname", "localhost",

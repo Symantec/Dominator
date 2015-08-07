@@ -12,7 +12,13 @@ func (t *Subd) GetConfiguration(request sub.GetConfigurationRequest,
 	if fs == nil {
 		return errors.New("No file-system history yet")
 	}
-	response.ScanSpeedPercent = fs.Configuration().FsScanContext.SpeedPercent()
+	configuration := fs.Configuration()
+	response.ScanSpeedPercent = configuration.FsScanContext.SpeedPercent()
+	response.ScanExclusionList = make([]string,
+		len(configuration.ExclusionList))
+	for index, regex := range configuration.ExclusionList {
+		response.ScanExclusionList[index] = regex.String()[1:]
+	}
 	*reply = response
 	return nil
 }

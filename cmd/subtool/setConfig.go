@@ -6,6 +6,7 @@ import (
 	"github.com/Symantec/Dominator/proto/sub"
 	"net/rpc"
 	"os"
+	"strings"
 )
 
 func setConfigSubcommand(client *rpc.Client, args []string) {
@@ -20,6 +21,7 @@ func setConfigSubcommand(client *rpc.Client, args []string) {
 func setConfig(client *rpc.Client) error {
 	var request sub.SetConfigurationRequest
 	request.ScanSpeedPercent = *scanSpeedPercent
+	request.ScanExclusionList = strings.Split(*scanExcludeList, ",")
 	var reply sub.SetConfigurationResponse
 	err := client.Call("Subd.SetConfiguration", request, &reply)
 	if err != nil {
