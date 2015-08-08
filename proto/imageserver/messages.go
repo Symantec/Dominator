@@ -9,11 +9,17 @@ const (
 	GZIP
 )
 
+type DataStreamer interface {
+	Size() uint64
+	Read(p []byte) (n int, err error)
+	Write(p []byte) (n int, err error)
+}
+
 type AddImageRequest struct {
 	ImageName       string
-	Filter          [][]string
-	DataSize        uint64
+	Filter          []string
 	CompressionType uint
+	ImageData       DataStreamer
 }
 
 type AddImageResponse common.StatusResponse
