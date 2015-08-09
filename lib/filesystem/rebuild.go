@@ -1,4 +1,4 @@
-package scanner
+package filesystem
 
 func (fs *FileSystem) rebuildPointers() {
 	fs.Directory.rebuildPointers(fs)

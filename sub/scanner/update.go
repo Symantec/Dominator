@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"regexp"
 	"time"
 )
@@ -19,7 +20,8 @@ func (fsh *FileSystemHistory) update(newFS *FileSystem) {
 		fsh.generationCount = 1
 		fsh.timeOfLastChange = fsh.timeOfLastScan
 	} else {
-		if !Compare(fsh.fileSystem, newFS, nil) {
+		if !filesystem.CompareFileSystems(&fsh.fileSystem.FileSystem,
+			&newFS.FileSystem, nil) {
 			fsh.generationCount++
 			fsh.fileSystem = newFS
 			fsh.timeOfLastChange = fsh.timeOfLastScan
