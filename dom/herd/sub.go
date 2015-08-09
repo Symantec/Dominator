@@ -15,6 +15,11 @@ func (herd *Herd) pollNextSub() bool {
 	}
 	sub := herd.subsByIndex[herd.nextSubToPoll]
 	herd.nextSubToPoll++
+	sub.poll()
+	return false
+}
+
+func (sub *Sub) poll() {
 	if sub.connection == nil {
 		hostname := strings.SplitN(sub.hostname, "*", 2)[0]
 		var err error
@@ -22,7 +27,7 @@ func (herd *Herd) pollNextSub() bool {
 			fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber))
 		if err != nil {
 			fmt.Printf("Error dialing\t%s\n", err)
-			return false
+			return
 		}
 	}
 	var request subproto.PollRequest
@@ -31,7 +36,7 @@ func (herd *Herd) pollNextSub() bool {
 	err := sub.connection.Call("Subd.Poll", request, &reply)
 	if err != nil {
 		fmt.Printf("Error calling\t%s\n", err)
-		return false
+		return
 	}
 	fs := reply.FileSystem
 	if fs != nil {
@@ -41,5 +46,4 @@ func (herd *Herd) pollNextSub() bool {
 		fmt.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)
 	}
-	return false
 }
