@@ -22,7 +22,8 @@ func (objSrv *FileSystemObjectServer) GetObjectReader(hash hash.Hash) (uint64,
 	return objSrv.getObjectReader(hash)
 }
 
-func (objSrv *FileSystemObjectServer) PutObject(size uint64, data []byte) (
+func (objSrv *FileSystemObjectServer) PutObject(data []byte,
+	expectedHash *hash.Hash) (
 	hash.Hash, error) {
-	return objSrv.putObject(size, data)
+	return objSrv.putObject(data, expectedHash)
 }

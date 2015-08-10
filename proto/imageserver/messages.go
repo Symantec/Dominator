@@ -6,8 +6,13 @@ import (
 	"github.com/Symantec/Dominator/proto/common"
 )
 
+type addFile struct {
+	ObjectData   []byte
+	ExpectedHash *hash.Hash
+}
+
 type AddFilesRequest struct {
-	Objects [][]byte
+	ObjectsToAdd []*addFile
 }
 
 type AddFilesResponse struct {

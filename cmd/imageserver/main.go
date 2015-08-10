@@ -45,7 +45,7 @@ func main() {
 		fmt.Printf("Cannot load image database\t%s\n", err)
 		os.Exit(1)
 	}
-	rpcd.Setup(imdb)
+	rpcd.Setup(imdb, objSrv)
 	err = httpd.StartServer(*portNum, imdb, false)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)
