@@ -16,7 +16,6 @@ type AddFilesResponse struct {
 
 type AddImageRequest struct {
 	ImageName string
-	Filter    []string
 	Image     *image.Image
 }
 

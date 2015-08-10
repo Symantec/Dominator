@@ -4,11 +4,11 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 )
 
-type FilterEntry string
-
-type Filter []FilterEntry
+type Filter struct {
+	FilterLines []string
+}
 
 type Image struct {
-	Filter     Filter
+	Filter     *Filter
 	FileSystem *filesystem.FileSystem
 }

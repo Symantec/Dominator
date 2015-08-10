@@ -57,7 +57,7 @@ func addImage(client *rpc.Client,
 		return errors.New("image exists")
 	}
 	request.ImageName = name
-	request.Filter, err = readLines(filterFile)
+	request.Image.Filter.FilterLines, err = readLines(filterFile)
 	if err != nil {
 		return err
 	}
