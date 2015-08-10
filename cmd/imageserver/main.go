@@ -7,7 +7,9 @@ import (
 	"github.com/Symantec/Dominator/imageserver/rpcd"
 	"github.com/Symantec/Dominator/imageserver/scanner"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/objectserver/filesystem"
 	"os"
+	"path"
 )
 
 var (
@@ -33,7 +35,12 @@ func main() {
 		fmt.Printf("%s is not a directory\n", *dataDir)
 		os.Exit(1)
 	}
-	imdb, err := scanner.LoadImageDataBase(*dataDir)
+	objSrv, err := filesystem.NewObjectServer(path.Join(*dataDir, "objects"))
+	if err != nil {
+		fmt.Printf("Cannot create ObjectServer\t%s\n", err)
+		os.Exit(1)
+	}
+	imdb, err := scanner.LoadImageDataBase(*dataDir, objSrv)
 	if err != nil {
 		fmt.Printf("Cannot load image database\t%s\n", err)
 		os.Exit(1)

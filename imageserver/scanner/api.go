@@ -3,6 +3,7 @@ package scanner
 import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/objectserver"
 	"io"
 	"sync"
 )
@@ -15,13 +16,15 @@ type Object struct {
 }
 
 type ImageDataBase struct {
-	imageMap  map[string]*image.Image
-	objectMap map[hash.Hash]*Object
+	imageMap     map[string]*image.Image
+	objectMap    map[hash.Hash]*Object
+	objectServer objectserver.ObjectServer
 	sync.RWMutex
 }
 
-func LoadImageDataBase(baseDir string) (*ImageDataBase, error) {
-	return loadImageDataBase(baseDir)
+func LoadImageDataBase(baseDir string, objSrv objectserver.ObjectServer) (
+	*ImageDataBase, error) {
+	return loadImageDataBase(baseDir, objSrv)
 }
 
 func (imdb *ImageDataBase) WriteHtml(writer io.Writer) {
