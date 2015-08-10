@@ -15,3 +15,11 @@ func ScanObjectCache(cacheDirectoryName string) (ObjectCache, error) {
 func CompareObjects(left, right ObjectCache, logWriter io.Writer) bool {
 	return compareObjects(left, right, logWriter)
 }
+
+func FilenameToHash(fileName string) (hash.Hash, error) {
+	return filenameToHash(fileName)
+}
+
+func HashToFilename(hash hash.Hash) string {
+	return hashToFilename(hash)
+}

@@ -1,7 +1,6 @@
 package objectcache
 
 import (
-	"github.com/Symantec/Dominator/lib/hash"
 	"os"
 	"path"
 	"sort"
@@ -24,32 +23,8 @@ func cleanPath(directoryName string, fileName string) error {
 	return nil
 }
 
-func filenameToBytes(fileName string) (hash.Hash, error) {
-	var bytes hash.Hash
-	var prev_nibble byte = 16
-	index := 0
-	for _, char := range fileName {
-		var nibble byte = 16
-		if char >= '0' && char <= '9' {
-			nibble = byte(char) - '0'
-		} else if char >= 'a' && char <= 'f' {
-			nibble = byte(char) - 'a' + 10
-		} else {
-			continue
-		}
-		if prev_nibble < 16 {
-			bytes[index] = nibble | prev_nibble<<4
-			index++
-			prev_nibble = 16
-		} else {
-			prev_nibble = nibble
-		}
-	}
-	return bytes, nil
-}
-
 func addCacheEntry(fileName string, cache ObjectCache) (ObjectCache, error) {
-	bytes, err := filenameToBytes(fileName)
+	hash, err := filenameToHash(fileName)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +33,7 @@ func addCacheEntry(fileName string, cache ObjectCache) (ObjectCache, error) {
 		copy(newCache, cache)
 		cache = newCache
 	}
-	return append(cache, bytes), nil
+	return append(cache, hash), nil
 }
 
 func scanObjectCache(cacheDirectoryName string, subpath string,
