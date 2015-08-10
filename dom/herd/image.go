@@ -8,10 +8,10 @@ import (
 )
 
 func (herd *Herd) getImage(name string) *image.Image {
-	if herd.imageByName == nil {
-		herd.imageByName = make(map[string]*image.Image)
+	if herd.imagesByName == nil {
+		herd.imagesByName = make(map[string]*image.Image)
 	}
-	image := herd.imageByName[name]
+	image := herd.imagesByName[name]
 	if image != nil {
 		return image
 	}
@@ -33,6 +33,6 @@ func (herd *Herd) getImage(name string) *image.Image {
 	if reply.Image != nil {
 		fmt.Printf("Got image: %s\n", name)
 	}
-	herd.imageByName[name] = reply.Image
+	herd.imagesByName[name] = reply.Image
 	return reply.Image
 }

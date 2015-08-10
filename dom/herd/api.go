@@ -21,7 +21,7 @@ type Herd struct {
 	nextSubToPoll      uint
 	subsByName         map[string]*Sub
 	subsByIndex        []*Sub
-	imageByName        map[string]*image.Image
+	imagesByName       map[string]*image.Image
 }
 
 func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {
