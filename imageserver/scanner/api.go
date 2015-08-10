@@ -35,6 +35,10 @@ func (imdb *ImageDataBase) AddImage(image *image.Image, name string) error {
 	return imdb.addImage(image, name)
 }
 
+func (imdb *ImageDataBase) CheckObject(hash hash.Hash) bool {
+	return imdb.checkObject(hash)
+}
+
 func (imdb *ImageDataBase) CheckImage(name string) bool {
 	return imdb.checkImage(name)
 }

@@ -2,7 +2,7 @@ package main
 
 import (
 	"bufio"
-	"encoding/gob"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/proto/imageserver"
@@ -25,18 +25,25 @@ func addImage(client *rpc.Client,
 	name, imageFilename, filterFilename string) error {
 	var request imageserver.AddImageRequest
 	var reply imageserver.AddImageResponse
-	if strings.HasSuffix(imageFilename, ".tar") {
-		request.CompressionType = imageserver.UNCOMPRESSED
-	} else if strings.HasSuffix(imageFilename, ".tar.gz") {
-		request.CompressionType = imageserver.GZIP
-	} else {
-		return errors.New("Unrecognised image type")
-	}
 	imageFile, err := os.Open(imageFilename)
 	if err != nil {
 		return err
 	}
 	defer imageFile.Close()
+	var imageReader io.Reader
+	if strings.HasSuffix(imageFilename, ".tar") {
+		imageReader = imageFile
+	} else if strings.HasSuffix(imageFilename, ".tar.gz") ||
+		strings.HasSuffix(imageFilename, ".tgz") {
+		gzipReader, err := gzip.NewReader(imageFile)
+		if err != nil {
+			return err
+		}
+		defer gzipReader.Close()
+		imageReader = gzipReader
+	} else {
+		return errors.New("Unrecognised image type")
+	}
 	filterFile, err := os.Open(filterFilename)
 	if err != nil {
 		return err
@@ -54,16 +61,12 @@ func addImage(client *rpc.Client,
 	if err != nil {
 		return err
 	}
-	request.ImageData, err = newDataStreamer(imageFile)
-	if err != nil {
-		return err
-	}
+	// TODO(rgooch): Decode image, Call AddFiles() RPC in batches, finally call
+	//               AddImage() RPC.
+	_ = imageReader
 	err = client.Call("ImageServer.AddImage", request, &reply)
 	if err != nil {
 		return err
-	}
-	if !reply.Success {
-		return errors.New(reply.ErrorString)
 	}
 	return nil
 }
@@ -85,42 +88,4 @@ func readLines(reader io.Reader) ([]string, error) {
 		return lines, err
 	}
 	return lines, nil
-}
-
-type fileStreamer struct {
-	size   uint64
-	reader io.Reader
-}
-
-func init() {
-	var fs fileStreamer
-	gob.Register(fs)
-}
-
-func (s *fileStreamer) GobEncode() ([]byte, error) {
-	return nil, nil
-}
-
-func newDataStreamer(file *os.File) (*fileStreamer, error) {
-	var streamer fileStreamer
-	fi, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-	streamer.size = uint64(fi.Size())
-	streamer.reader = bufio.NewReader(file)
-	return &streamer, nil
-}
-
-func (s *fileStreamer) Size() uint64 {
-	return s.size
-}
-
-func (s *fileStreamer) Read(p []byte) (n int, err error) {
-	return 0, nil
-}
-
-func (s *fileStreamer) Write(p []byte) (n int, err error) {
-	panic("fileStreamer.Write() called")
-	return 0, nil
 }

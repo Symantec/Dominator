@@ -6,17 +6,6 @@ import (
 	"github.com/Symantec/Dominator/proto/common"
 )
 
-const (
-	UNCOMPRESSED = iota
-	GZIP
-)
-
-type DataStreamer interface {
-	Size() uint64
-	Read(p []byte) (n int, err error)
-	Write(p []byte) (n int, err error)
-}
-
 type AddFilesRequest struct {
 	Objects [][]byte
 }
@@ -26,13 +15,13 @@ type AddFilesResponse struct {
 }
 
 type AddImageRequest struct {
-	ImageName       string
-	Filter          []string
-	CompressionType uint
-	ImageData       DataStreamer
+	ImageName string
+	Filter    []string
+	Image     *image.Image
 }
 
-type AddImageResponse common.StatusResponse
+type AddImageResponse struct {
+}
 
 type CheckImageRequest struct {
 	ImageName string
