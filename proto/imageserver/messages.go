@@ -1,6 +1,7 @@
 package imageserver
 
 import (
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/proto/common"
 )
 
@@ -48,6 +49,10 @@ type GetFilesResponse struct {
 
 type GetImageRequest struct {
 	ImageName string
+}
+
+type GetImageResponse struct {
+	Image *image.Image
 }
 
 type ListImagesRequest struct {

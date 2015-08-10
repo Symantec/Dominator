@@ -2,9 +2,10 @@ package scanner
 
 import (
 	"errors"
+	"github.com/Symantec/Dominator/lib/image"
 )
 
-func (imdb *ImageDataBase) addImage(image *Image, name string) error {
+func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
 	imdb.Lock()
 	defer imdb.Unlock()
 	if _, ok := imdb.imageMap[name]; ok {
@@ -33,7 +34,7 @@ func (imdb *ImageDataBase) deleteImage(name string) error {
 	}
 }
 
-func (imdb *ImageDataBase) getImage(name string) *Image {
+func (imdb *ImageDataBase) getImage(name string) *image.Image {
 	imdb.RLock()
 	defer imdb.RUnlock()
 	return imdb.imageMap[name]
