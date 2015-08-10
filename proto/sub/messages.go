@@ -1,6 +1,7 @@
 package sub
 
 import (
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/proto/common"
 	"github.com/Symantec/Dominator/sub/scanner"
 )
@@ -13,7 +14,7 @@ type Configuration struct {
 type FetchRequest struct {
 	ServerHostname   string
 	ServerPortNumber uint
-	Objects          []common.Hash
+	Objects          []hash.Hash
 }
 
 type FetchResponse common.StatusResponse

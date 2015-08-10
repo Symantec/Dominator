@@ -1,6 +1,7 @@
 package imageserver
 
 import (
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/proto/common"
 )
@@ -14,6 +15,14 @@ type DataStreamer interface {
 	Size() uint64
 	Read(p []byte) (n int, err error)
 	Write(p []byte) (n int, err error)
+}
+
+type AddFilesRequest struct {
+	Objects [][]byte
+}
+
+type AddFilesResponse struct {
+	Hashes []hash.Hash
 }
 
 type AddImageRequest struct {
@@ -40,7 +49,7 @@ type DeleteImageRequest struct {
 type DeleteImageResponse common.StatusResponse
 
 type GetFilesRequest struct {
-	Objects []common.Hash
+	Objects []hash.Hash
 }
 
 type GetFilesResponse struct {
