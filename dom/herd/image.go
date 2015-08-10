@@ -1,0 +1,38 @@
+package herd
+
+import (
+	"fmt"
+	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/proto/imageserver"
+	"net/rpc"
+)
+
+func (herd *Herd) getImage(name string) *image.Image {
+	if herd.imageByName == nil {
+		herd.imageByName = make(map[string]*image.Image)
+	}
+	image := herd.imageByName[name]
+	if image != nil {
+		return image
+	}
+	connection, err := rpc.DialHTTP("tcp", herd.ImageServerAddress)
+	if err != nil {
+		fmt.Printf("Error dialing\t%s\n", err)
+		return nil
+	}
+	var request imageserver.GetImageRequest
+	request.ImageName = name
+	var reply imageserver.GetImageResponse
+	err = connection.Call("ImageServer.GetImage", request, &reply)
+	if err != nil {
+		fmt.Printf("Error calling\t%s\n", err)
+		return nil
+	}
+	connection.Close()
+	// TODO(rgooch): Delete debugging output.
+	if reply.Image != nil {
+		fmt.Printf("Got image: %s\n", name)
+	}
+	herd.imageByName[name] = reply.Image
+	return reply.Image
+}

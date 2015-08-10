@@ -15,11 +15,11 @@ func (herd *Herd) pollNextSub() bool {
 	}
 	sub := herd.subsByIndex[herd.nextSubToPoll]
 	herd.nextSubToPoll++
-	sub.poll()
+	sub.poll(herd)
 	return false
 }
 
-func (sub *Sub) poll() {
+func (sub *Sub) poll(herd *Herd) {
 	if sub.connection == nil {
 		hostname := strings.SplitN(sub.hostname, "*", 2)[0]
 		var err error
@@ -45,5 +45,10 @@ func (sub *Sub) poll() {
 		sub.generationCount = reply.GenerationCount
 		fmt.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)
+	}
+	if sub.requiredImage != "" {
+		herd.getImage(sub.requiredImage)
+		// TODO(rgooch): Compare required image with polled image and send RPCs
+		//               to fetch files and later update sub.
 	}
 }
