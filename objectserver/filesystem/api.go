@@ -6,6 +6,7 @@ import (
 )
 
 type FileSystemObjectServer struct {
+	// TODO(rgooch): Add caching to speed up CheckObject().
 	topDirectory string
 }
 

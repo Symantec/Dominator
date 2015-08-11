@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/objectserver"
 	"io"
@@ -16,10 +15,11 @@ type Object struct {
 }
 
 type ImageDataBase struct {
-	imageMap     map[string]*image.Image
-	objectMap    map[hash.Hash]*Object
-	objectServer objectserver.ObjectServer
 	sync.RWMutex
+	// Protected by lock.
+	imageMap map[string]*image.Image
+	// Unprotected by lock.
+	objectServer objectserver.ObjectServer
 }
 
 func LoadImageDataBase(baseDir string, objSrv objectserver.ObjectServer) (
@@ -33,10 +33,6 @@ func (imdb *ImageDataBase) WriteHtml(writer io.Writer) {
 
 func (imdb *ImageDataBase) AddImage(image *image.Image, name string) error {
 	return imdb.addImage(image, name)
-}
-
-func (imdb *ImageDataBase) CheckObject(hash hash.Hash) bool {
-	return imdb.checkObject(hash)
 }
 
 func (imdb *ImageDataBase) CheckImage(name string) bool {
@@ -53,4 +49,8 @@ func (imdb *ImageDataBase) GetImage(name string) *image.Image {
 
 func (imdb *ImageDataBase) ListImages() []string {
 	return imdb.listImages()
+}
+
+func (imdb *ImageDataBase) ObjectServer() objectserver.ObjectServer {
+	return imdb.objectServer
 }

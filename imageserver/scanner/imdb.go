@@ -2,7 +2,6 @@ package scanner
 
 import (
 	"errors"
-	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 )
 
@@ -22,13 +21,6 @@ func (imdb *ImageDataBase) checkImage(name string) bool {
 	imdb.RLock()
 	defer imdb.RUnlock()
 	_, ok := imdb.imageMap[name]
-	return ok
-}
-
-func (imdb *ImageDataBase) checkObject(hash hash.Hash) bool {
-	imdb.RLock()
-	defer imdb.RUnlock()
-	_, ok := imdb.objectMap[hash]
 	return ok
 }
 
