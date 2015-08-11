@@ -9,6 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/objectserver/filesystem"
 	objectserverRpcd "github.com/Symantec/Dominator/objectserver/rpcd"
+	"net/rpc"
 	"os"
 	"path"
 )
@@ -48,6 +49,7 @@ func main() {
 	}
 	imageserverRpcd.Setup(imdb)
 	objectserverRpcd.Setup(objSrv)
+	rpc.HandleHTTP()
 	err = httpd.StartServer(*portNum, imdb, false)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)

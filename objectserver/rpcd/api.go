@@ -12,5 +12,4 @@ var objectServer objectserver.ObjectServer
 func Setup(objSrv objectserver.ObjectServer) {
 	objectServer = objSrv
 	rpc.RegisterName("ObjectServer", new(rpcType))
-	rpc.HandleHTTP()
 }

@@ -12,5 +12,4 @@ var imageDataBase *scanner.ImageDataBase
 func Setup(imdb *scanner.ImageDataBase) {
 	imageDataBase = imdb
 	rpc.Register(new(ImageServer))
-	rpc.HandleHTTP()
 }
