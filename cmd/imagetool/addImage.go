@@ -117,7 +117,9 @@ func buildImage(client *rpc.Client, tarReader *tar.Reader) (
 		if err != nil {
 			return nil, err
 		}
-		if header.Typeflag == tar.TypeReg || header.Typeflag == tar.TypeRegA {
+		if (header.Typeflag == tar.TypeReg ||
+			header.Typeflag == tar.TypeRegA) &&
+			header.Size > 0 {
 			err := objQ.Add(uint64(header.Size), tarReader)
 			if err != nil {
 				return nil, errors.New("error sending image data for: " +
