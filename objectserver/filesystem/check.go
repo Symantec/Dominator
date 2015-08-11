@@ -8,10 +8,17 @@ import (
 )
 
 func (objSrv *FileSystemObjectServer) checkObject(hash hash.Hash) bool {
+	if objSrv.checkMap[hash] {
+		return true
+	}
 	filename := path.Join(objSrv.topDirectory, objectcache.HashToFilename(hash))
 	fi, err := os.Lstat(filename)
 	if err != nil {
 		return false
 	}
-	return fi.Mode().IsRegular()
+	if fi.Mode().IsRegular() {
+		objSrv.checkMap[hash] = true
+		return true
+	}
+	return false
 }

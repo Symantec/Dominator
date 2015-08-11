@@ -6,12 +6,12 @@ import (
 )
 
 type FileSystemObjectServer struct {
-	// TODO(rgooch): Add caching to speed up CheckObject().
 	topDirectory string
+	checkMap     map[hash.Hash]bool // Only set if object is known.
 }
 
 func NewObjectServer(topDirectory string) (*FileSystemObjectServer, error) {
-	return &FileSystemObjectServer{topDirectory}, nil
+	return newObjectServer(topDirectory)
 }
 
 func (objSrv *FileSystemObjectServer) CheckObject(hash hash.Hash) bool {
