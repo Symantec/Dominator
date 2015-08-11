@@ -30,5 +30,5 @@ func filenameToHash(fileName string) (hash.Hash, error) {
 }
 
 func hashToFilename(hash hash.Hash) string {
-	return fmt.Sprintf("%x/%x/%x", hash[0], hash[1], hash[2:])
+	return fmt.Sprintf("%02x/%02x/%0x", hash[0], hash[1], hash[2:])
 }
