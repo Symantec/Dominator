@@ -51,6 +51,8 @@ func (objSrv *FileSystemObjectServer) putObject(data []byte,
 		// No collision and no error: it's the same object. Go home early.
 		return hash, nil
 	}
+	// TODO(rgooch): Remove debugging output.
+	fmt.Printf("Writing object: %x\n", hash)
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0660)
 	if err != nil {
 		return hash, err
@@ -77,7 +79,11 @@ func collisionCheck(data []byte, filename string, size int64) error {
 	reader := bufio.NewReader(file)
 	buffer := make([]byte, 0, buflen)
 	for len(data) > 0 {
-		buf := buffer[:len(data)]
+		numToRead := len(data)
+		if numToRead > cap(buffer) {
+			numToRead = cap(buffer)
+		}
+		buf := buffer[:numToRead]
 		nread, err := reader.Read(buf)
 		if err != nil {
 			return err
