@@ -1,23 +1,9 @@
 package imageserver
 
 import (
-	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/proto/common"
 )
-
-type addFile struct {
-	ObjectData   []byte
-	ExpectedHash *hash.Hash
-}
-
-type AddFilesRequest struct {
-	ObjectsToAdd []*addFile
-}
-
-type AddFilesResponse struct {
-	Hashes []hash.Hash
-}
 
 type AddImageRequest struct {
 	ImageName string
@@ -40,14 +26,6 @@ type DeleteImageRequest struct {
 }
 
 type DeleteImageResponse common.StatusResponse
-
-type GetFilesRequest struct {
-	Objects []hash.Hash
-}
-
-type GetFilesResponse struct {
-	ObjectSizes []uint64
-}
 
 type GetImageRequest struct {
 	ImageName string

@@ -1,12 +1,12 @@
 package rpcd
 
 import (
-	"github.com/Symantec/Dominator/proto/imageserver"
+	"github.com/Symantec/Dominator/proto/objectserver"
 )
 
-func (t *ImageServer) AddFiles(request imageserver.AddFilesRequest,
-	reply *imageserver.AddFilesResponse) error {
-	var response imageserver.AddFilesResponse
+func (t *rpcType) AddFiles(request objectserver.AddFilesRequest,
+	reply *objectserver.AddFilesResponse) error {
+	var response objectserver.AddFilesResponse
 	for _, objectToAdd := range request.ObjectsToAdd {
 		hash, err := objectServer.PutObject(objectToAdd.ObjectData,
 			objectToAdd.ExpectedHash)
