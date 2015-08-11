@@ -44,17 +44,14 @@ func (objSrv *FileSystemObjectServer) putObject(data []byte,
 		if !fi.Mode().IsRegular() {
 			return hash, errors.New("Existing non-file: " + filename)
 		}
-		collision, err := collisionCheck(data, filename)
-		if collision {
-			return hash, errors.New("Collision detected: " + err.Error())
-		}
+		err := collisionCheck(data, filename, fi.Size())
 		if err != nil {
-			return hash, err
+			return hash, errors.New("Collision detected: " + err.Error())
 		}
 		// No collision and no error: it's the same object. Go home early.
 		return hash, nil
 	}
-	file, err := os.OpenFile(filename, os.O_WRONLY, 0660)
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0660)
 	if err != nil {
 		return hash, err
 	}
@@ -66,20 +63,16 @@ func (objSrv *FileSystemObjectServer) putObject(data []byte,
 	return hash, nil
 }
 
-func collisionCheck(data []byte, filename string) (bool, error) {
+func collisionCheck(data []byte, filename string, size int64) error {
 	file, err := os.Open(filename)
 	if err != nil {
-		return false, nil
+		return err
 	}
 	defer file.Close()
-	fi, err := file.Stat()
-	if err != nil {
-		return false, err
-	}
-	if int64(len(data)) != fi.Size() {
-		return true, errors.New(fmt.Sprintf(
+	if int64(len(data)) != size {
+		return errors.New(fmt.Sprintf(
 			"length mismatch. Data=%d, existing object=%d",
-			len(data), fi.Size()))
+			len(data), size))
 	}
 	reader := bufio.NewReader(file)
 	buffer := make([]byte, 0, buflen)
@@ -87,12 +80,12 @@ func collisionCheck(data []byte, filename string) (bool, error) {
 		buf := buffer[:len(data)]
 		nread, err := reader.Read(buf)
 		if err != nil {
-			return true, err
+			return err
 		}
 		if bytes.Compare(data[:nread], buf[:nread]) != 0 {
-			return true, errors.New("content mismatch")
+			return errors.New("content mismatch")
 		}
 		data = data[nread:]
 	}
-	return false, nil
+	return nil
 }
