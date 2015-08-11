@@ -4,7 +4,7 @@ import (
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
-func (t *Subd) Poll(request sub.PollRequest, reply *sub.PollResponse) error {
+func (t *rpcType) Poll(request sub.PollRequest, reply *sub.PollResponse) error {
 	fs := fileSystemHistory.FileSystem()
 	if fs != nil &&
 		request.HaveGeneration != fileSystemHistory.GenerationCount() {
