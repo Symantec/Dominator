@@ -6,7 +6,7 @@ import (
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
 
-func (t *ImageServer) AddImage(request imageserver.AddImageRequest,
+func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 	reply *imageserver.AddImageResponse) error {
 	if imageDataBase.CheckImage(request.ImageName) {
 		return errors.New("image already exists")
