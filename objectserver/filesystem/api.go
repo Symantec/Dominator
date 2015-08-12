@@ -25,6 +25,6 @@ func (objSrv *FileSystemObjectServer) CheckObject(hash hash.Hash) bool {
 }
 
 func (objSrv *FileSystemObjectServer) GetObjectReader(hash hash.Hash) (uint64,
-	io.Reader, error) {
+	io.ReadCloser, error) {
 	return objSrv.getObjectReader(hash)
 }

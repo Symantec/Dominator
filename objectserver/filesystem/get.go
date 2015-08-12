@@ -9,7 +9,7 @@ import (
 )
 
 func (objSrv *FileSystemObjectServer) getObjectReader(hash hash.Hash) (uint64,
-	io.Reader, error) {
+	io.ReadCloser, error) {
 	filename := path.Join(objSrv.baseDir, objectcache.HashToFilename(hash))
 	file, err := os.Open(filename)
 	if err != nil {

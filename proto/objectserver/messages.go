@@ -31,4 +31,5 @@ type GetObjectsRequest struct {
 
 type GetObjectsResponse struct {
 	ObjectSizes []uint64
+	Objects     [][]byte
 }
