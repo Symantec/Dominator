@@ -17,6 +17,7 @@ type Object struct {
 type ImageDataBase struct {
 	sync.RWMutex
 	// Protected by lock.
+	baseDir  string
 	imageMap map[string]*image.Image
 	// Unprotected by lock.
 	objectServer objectserver.ObjectServer

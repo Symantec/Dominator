@@ -6,8 +6,8 @@ import (
 )
 
 type FileSystemObjectServer struct {
-	topDirectory string
-	checkMap     map[hash.Hash]bool // Only set if object is known.
+	baseDir  string
+	checkMap map[hash.Hash]bool // Only set if object is known.
 }
 
 func NewObjectServer(topDirectory string) (*FileSystemObjectServer, error) {

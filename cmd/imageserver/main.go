@@ -11,15 +11,16 @@ import (
 	objectserverRpcd "github.com/Symantec/Dominator/objectserver/rpcd"
 	"net/rpc"
 	"os"
-	"path"
 )
 
 var (
-	debug   = flag.Bool("debug", false, "If true, show debugging output")
+	debug    = flag.Bool("debug", false, "If true, show debugging output")
+	imageDir = flag.String("imageDir", "/var/lib/imageserver",
+		"Name of image server data directory.")
+	objectDir = flag.String("objectDir", "/var/lib/objectserver",
+		"Name of image server data directory.")
 	portNum = flag.Uint("portNum", constants.ImageServerPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
-	dataDir = flag.String("stateDir", "/var/lib/imageserver",
-		"Name of image server data directory.")
 )
 
 func main() {
@@ -28,21 +29,12 @@ func main() {
 		fmt.Println("Do not run the Image Server as root")
 		os.Exit(1)
 	}
-	fi, err := os.Lstat(*dataDir)
-	if err != nil {
-		fmt.Printf("Cannot stat: %s\t%s\n", *dataDir, err)
-		os.Exit(1)
-	}
-	if !fi.IsDir() {
-		fmt.Printf("%s is not a directory\n", *dataDir)
-		os.Exit(1)
-	}
-	objSrv, err := filesystem.NewObjectServer(path.Join(*dataDir, "objects"))
+	objSrv, err := filesystem.NewObjectServer(*objectDir)
 	if err != nil {
 		fmt.Printf("Cannot create ObjectServer\t%s\n", err)
 		os.Exit(1)
 	}
-	imdb, err := scanner.LoadImageDataBase(*dataDir, objSrv)
+	imdb, err := scanner.LoadImageDataBase(*imageDir, objSrv)
 	if err != nil {
 		fmt.Printf("Cannot load image database\t%s\n", err)
 		os.Exit(1)

@@ -11,7 +11,7 @@ func (objSrv *FileSystemObjectServer) checkObject(hash hash.Hash) bool {
 	if objSrv.checkMap[hash] {
 		return true
 	}
-	filename := path.Join(objSrv.topDirectory, objectcache.HashToFilename(hash))
+	filename := path.Join(objSrv.baseDir, objectcache.HashToFilename(hash))
 	fi, err := os.Lstat(filename)
 	if err != nil {
 		return false

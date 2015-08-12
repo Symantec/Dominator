@@ -33,7 +33,7 @@ func (objSrv *FileSystemObjectServer) putObject(data []byte,
 				"Hash mismatch. Computed=%x, expected=%x", hash, *expectedHash))
 		}
 	}
-	filename := path.Join(objSrv.topDirectory, objectcache.HashToFilename(hash))
+	filename := path.Join(objSrv.baseDir, objectcache.HashToFilename(hash))
 	err = os.MkdirAll(path.Dir(filename), 0755)
 	if err != nil {
 		return hash, err

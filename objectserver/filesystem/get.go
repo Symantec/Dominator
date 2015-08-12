@@ -10,7 +10,7 @@ import (
 
 func (objSrv *FileSystemObjectServer) getObjectReader(hash hash.Hash) (uint64,
 	io.Reader, error) {
-	filename := path.Join(objSrv.topDirectory, objectcache.HashToFilename(hash))
+	filename := path.Join(objSrv.baseDir, objectcache.HashToFilename(hash))
 	file, err := os.Open(filename)
 	if err != nil {
 		return 0, nil, err
