@@ -28,11 +28,6 @@ func addCacheEntry(fileName string, cache ObjectCache) (ObjectCache, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(cache) >= cap(cache) {
-		newCache := make(ObjectCache, 0, cap(cache)*2)
-		copy(newCache, cache)
-		cache = newCache
-	}
 	return append(cache, hash), nil
 }
 
