@@ -122,17 +122,19 @@ func buildImage(client *rpc.Client, tarReader *tar.Reader) (
 			header.Size > 0 {
 			err := objQ.Add(uint64(header.Size), tarReader)
 			if err != nil {
-				return nil, errors.New("error sending image data for: " +
-					header.Name + ": " + err.Error())
+				return nil, errors.New(
+					"error sending image data: " + err.Error())
 			}
+		}
+		err = addHeader(&fs, header)
+		if err != nil {
+			return nil, err
 		}
 	}
 	err := objQ.Flush()
 	if err != nil {
 		return nil, err
 	}
-	// TODO(rgooch): Decode image, Call AddFiles() RPC in batches, finally call
-	//               AddImage() RPC.
 	return &fs, nil
 }
 
@@ -186,5 +188,10 @@ func (objQ *objectQueue) Flush() error {
 	}
 	objQ.numBytes = 0
 	objQ.objects = nil
+	return nil
+}
+
+func addHeader(fs *filesystem.FileSystem, header *tar.Header) error {
+	// TODO(rgooch): Decode header and add to fs.
 	return nil
 }
