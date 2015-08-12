@@ -15,9 +15,9 @@ func (objSrv *FileSystemObjectServer) getObjectReader(hash hash.Hash) (uint64,
 	if err != nil {
 		return 0, nil, err
 	}
-	defer file.Close()
 	fi, err := file.Stat()
 	if err != nil {
+		file.Close()
 		return 0, nil, err
 	}
 	return uint64(fi.Size()), file, nil
