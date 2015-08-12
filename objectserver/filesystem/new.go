@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"os"
 )
 
@@ -19,5 +20,12 @@ func newObjectServer(baseDir string) (*FileSystemObjectServer, error) {
 	var objSrv FileSystemObjectServer
 	objSrv.baseDir = baseDir
 	objSrv.checkMap = make(map[hash.Hash]bool)
+	cache, err := objectcache.ScanObjectCache(baseDir)
+	if err != nil {
+		return nil, err
+	}
+	for _, hash := range cache {
+		objSrv.checkMap[hash] = true
+	}
 	return &objSrv, nil
 }

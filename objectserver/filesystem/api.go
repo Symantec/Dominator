@@ -10,8 +10,8 @@ type FileSystemObjectServer struct {
 	checkMap map[hash.Hash]bool // Only set if object is known.
 }
 
-func NewObjectServer(topDirectory string) (*FileSystemObjectServer, error) {
-	return newObjectServer(topDirectory)
+func NewObjectServer(baseDir string) (*FileSystemObjectServer, error) {
+	return newObjectServer(baseDir)
 }
 
 func (objSrv *FileSystemObjectServer) CheckObject(hash hash.Hash) bool {

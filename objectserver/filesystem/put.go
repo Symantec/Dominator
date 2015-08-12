@@ -15,8 +15,7 @@ import (
 const buflen = 65536
 
 func (objSrv *FileSystemObjectServer) putObject(data []byte,
-	expectedHash *hash.Hash) (
-	hash.Hash, error) {
+	expectedHash *hash.Hash) (hash.Hash, error) {
 	var hash hash.Hash
 	hasher := sha512.New()
 	if hasher.Size() != len(hash) {
@@ -62,6 +61,7 @@ func (objSrv *FileSystemObjectServer) putObject(data []byte,
 	if err != nil {
 		return hash, err
 	}
+	objSrv.checkMap[hash] = true
 	return hash, nil
 }
 
