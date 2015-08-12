@@ -9,18 +9,26 @@ type AddObjectSubrequest struct {
 	ExpectedHash *hash.Hash
 }
 
-type AddFilesRequest struct {
+type AddObjectsRequest struct {
 	ObjectsToAdd []*AddObjectSubrequest
 }
 
-type AddFilesResponse struct {
+type AddObjectsResponse struct {
 	Hashes []hash.Hash
 }
 
-type GetFilesRequest struct {
+type CheckObjectsRequest struct {
 	Objects []hash.Hash
 }
 
-type GetFilesResponse struct {
+type CheckObjectsResponse struct {
+	ObjectsPresent []bool
+}
+
+type GetObjectsRequest struct {
+	Objects []hash.Hash
+}
+
+type GetObjectsResponse struct {
 	ObjectSizes []uint64
 }

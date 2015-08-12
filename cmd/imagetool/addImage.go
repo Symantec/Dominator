@@ -177,14 +177,14 @@ func (objQ *objectQueue) Add(size uint64, reader io.Reader) error {
 }
 
 func (objQ *objectQueue) Flush() error {
-	var request objectserver.AddFilesRequest
-	var reply objectserver.AddFilesResponse
+	var request objectserver.AddObjectsRequest
+	var reply objectserver.AddObjectsResponse
 	request.ObjectsToAdd = objQ.objects
 	// TODO(rgooch): Remove debugging output.
 	fmt.Printf("Flushing: %d objects\n", len(request.ObjectsToAdd))
-	err := objQ.client.Call("ObjectServer.AddFiles", request, &reply)
+	err := objQ.client.Call("ObjectServer.AddObjects", request, &reply)
 	if err != nil {
-		return errors.New("error adding files, remote error: " + err.Error())
+		return errors.New("error adding objects, remote error: " + err.Error())
 	}
 	objQ.numBytes = 0
 	objQ.objects = nil

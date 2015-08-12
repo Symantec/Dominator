@@ -5,11 +5,11 @@ import (
 	"runtime"
 )
 
-func (t *rpcType) AddFiles(request objectserver.AddFilesRequest,
-	reply *objectserver.AddFilesResponse) error {
-	var response objectserver.AddFilesResponse
+func (t *rpcType) AddObjects(request objectserver.AddObjectsRequest,
+	reply *objectserver.AddObjectsResponse) error {
+	var response objectserver.AddObjectsResponse
 	for _, objectToAdd := range request.ObjectsToAdd {
-		hash, err := objectServer.PutObject(objectToAdd.ObjectData,
+		hash, err := objectServer.AddObject(objectToAdd.ObjectData,
 			objectToAdd.ExpectedHash)
 		if err != nil {
 			return err

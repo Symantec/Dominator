@@ -14,6 +14,12 @@ func NewObjectServer(baseDir string) (*FileSystemObjectServer, error) {
 	return newObjectServer(baseDir)
 }
 
+func (objSrv *FileSystemObjectServer) AddObject(data []byte,
+	expectedHash *hash.Hash) (
+	hash.Hash, error) {
+	return objSrv.addObject(data, expectedHash)
+}
+
 func (objSrv *FileSystemObjectServer) CheckObject(hash hash.Hash) bool {
 	return objSrv.checkObject(hash)
 }
@@ -21,10 +27,4 @@ func (objSrv *FileSystemObjectServer) CheckObject(hash hash.Hash) bool {
 func (objSrv *FileSystemObjectServer) GetObjectReader(hash hash.Hash) (uint64,
 	io.Reader, error) {
 	return objSrv.getObjectReader(hash)
-}
-
-func (objSrv *FileSystemObjectServer) PutObject(data []byte,
-	expectedHash *hash.Hash) (
-	hash.Hash, error) {
-	return objSrv.putObject(data, expectedHash)
 }
