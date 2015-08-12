@@ -33,10 +33,6 @@ func (objSrv *FileSystemObjectServer) putObject(data []byte,
 		}
 	}
 	filename := path.Join(objSrv.baseDir, objectcache.HashToFilename(hash))
-	err = os.MkdirAll(path.Dir(filename), 0755)
-	if err != nil {
-		return hash, err
-	}
 	// Check for existing object and collision.
 	fi, err := os.Lstat(filename)
 	if err == nil {
@@ -49,6 +45,10 @@ func (objSrv *FileSystemObjectServer) putObject(data []byte,
 		}
 		// No collision and no error: it's the same object. Go home early.
 		return hash, nil
+	}
+	err = os.MkdirAll(path.Dir(filename), 0755)
+	if err != nil {
+		return hash, err
 	}
 	// TODO(rgooch): Remove debugging output.
 	fmt.Printf("Writing object: %x\n", hash)
