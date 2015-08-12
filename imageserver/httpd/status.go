@@ -15,6 +15,7 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "<h1>imageserver status page</h1>")
 	fmt.Fprintln(writer, "</center>")
 	fmt.Fprintln(writer, "<h3>")
-	onlyHtmler.WriteHtml(writer)
+	writeLinks(writer)
+	imageDataBase.WriteHtml(writer)
 	fmt.Fprintln(writer, "</body>")
 }

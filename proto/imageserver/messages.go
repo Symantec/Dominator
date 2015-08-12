@@ -1,22 +1,17 @@
 package imageserver
 
 import (
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/proto/common"
 )
 
-const (
-	UNCOMPRESSED = iota
-	GZIP
-)
-
 type AddImageRequest struct {
-	ImageName       string
-	Filter          [][]string
-	DataSize        uint64
-	CompressionType uint
+	ImageName string
+	Image     *image.Image
 }
 
-type AddImageResponse common.StatusResponse
+type AddImageResponse struct {
+}
 
 type CheckImageRequest struct {
 	ImageName string
@@ -32,16 +27,12 @@ type DeleteImageRequest struct {
 
 type DeleteImageResponse common.StatusResponse
 
-type GetFilesRequest struct {
-	Objects []common.Hash
-}
-
-type GetFilesResponse struct {
-	ObjectSizes []uint64
-}
-
 type GetImageRequest struct {
 	ImageName string
+}
+
+type GetImageResponse struct {
+	Image *image.Image
 }
 
 type ListImagesRequest struct {

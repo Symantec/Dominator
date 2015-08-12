@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/dom/herd"
@@ -15,7 +13,13 @@ import (
 )
 
 var (
-	debug       = flag.Bool("debug", false, "If true, show debugging output")
+	debug = flag.Bool("debug", false,
+		"If true, show debugging output")
+	imageServerHostname = flag.String("imageServerHostname", "localhost",
+		"Hostname of image server")
+	imageServerPortNum = flag.Uint("imageServerPortNum",
+		constants.ImageServerPortNumber,
+		"Port number of image server")
 	minInterval = flag.Uint("minInterval", 1,
 		"Minimum interval between loops (in seconds)")
 	portNum = flag.Uint("portNum", constants.DomPortNumber,
@@ -25,11 +29,8 @@ var (
 )
 
 func showMdb(mdb *mdb.Mdb) {
-	b, _ := json.Marshal(mdb)
-	var out bytes.Buffer
-	json.Indent(&out, b, "", "    ")
 	fmt.Println()
-	out.WriteTo(os.Stdout)
+	mdb.DebugWrite(os.Stdout)
 	fmt.Println()
 }
 
@@ -51,6 +52,8 @@ func main() {
 	mdbChannel := mdb.StartMdbDaemon(path.Join(*stateDir, "mdb"))
 	interval, _ := time.ParseDuration(fmt.Sprintf("%ds", *minInterval))
 	var herd herd.Herd
+	herd.ImageServerAddress = fmt.Sprintf("%s:%d", *imageServerHostname,
+		*imageServerPortNum)
 	nextCycleStopTime := time.Now().Add(interval)
 	for {
 		select {

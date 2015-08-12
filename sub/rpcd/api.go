@@ -7,10 +7,10 @@ import (
 
 var fileSystemHistory *scanner.FileSystemHistory
 
-type Subd int
+type rpcType int
 
 func Setup(fsh *scanner.FileSystemHistory) {
 	fileSystemHistory = fsh
-	rpc.Register(new(Subd))
+	rpc.RegisterName("Subd", new(rpcType))
 	rpc.HandleHTTP()
 }

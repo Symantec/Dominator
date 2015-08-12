@@ -1,6 +1,8 @@
 package scanner
 
 import (
+	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/objectserver"
 	"io"
 	"sync"
 )
@@ -8,39 +10,29 @@ import (
 // TODO: the types should probably be moved into a separate package, leaving
 //       behind the scanner code.
 
-type FilterEntry string
-
-type Filter []FilterEntry
-
-type Directory struct {
-}
-
-type Image struct {
-	filter       Filter
-	topDirectory *Directory
-}
-
-type Hash [64]byte
-
 type Object struct {
 	length uint64
 }
 
 type ImageDataBase struct {
-	imageMap  map[string]*Image
-	objectMap map[Hash]*Object
 	sync.RWMutex
+	// Protected by lock.
+	baseDir  string
+	imageMap map[string]*image.Image
+	// Unprotected by lock.
+	objectServer objectserver.ObjectServer
 }
 
-func LoadImageDataBase(baseDir string) (*ImageDataBase, error) {
-	return loadImageDataBase(baseDir)
+func LoadImageDataBase(baseDir string, objSrv objectserver.ObjectServer) (
+	*ImageDataBase, error) {
+	return loadImageDataBase(baseDir, objSrv)
 }
 
 func (imdb *ImageDataBase) WriteHtml(writer io.Writer) {
 	imdb.writeHtml(writer)
 }
 
-func (imdb *ImageDataBase) AddImage(image *Image, name string) error {
+func (imdb *ImageDataBase) AddImage(image *image.Image, name string) error {
 	return imdb.addImage(image, name)
 }
 
@@ -52,10 +44,14 @@ func (imdb *ImageDataBase) DeleteImage(name string) error {
 	return imdb.deleteImage(name)
 }
 
-func (imdb *ImageDataBase) GetImage(name string) *Image {
+func (imdb *ImageDataBase) GetImage(name string) *image.Image {
 	return imdb.getImage(name)
 }
 
 func (imdb *ImageDataBase) ListImages() []string {
 	return imdb.listImages()
+}
+
+func (imdb *ImageDataBase) ObjectServer() objectserver.ObjectServer {
+	return imdb.objectServer
 }

@@ -10,7 +10,7 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 		herd.subsByName = make(map[string]*Sub)
 	}
 	for _, sub := range herd.subsByName {
-		sub.hostname = ""
+		sub.hostname = "" // Flag sub as potentially not in the new MDB.
 	}
 	for _, machine := range mdb.Machines {
 		sub := herd.subsByName[machine.Hostname]
@@ -18,10 +18,11 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 			sub = new(Sub)
 			herd.subsByName[machine.Hostname] = sub
 		}
-		sub.hostname = machine.Hostname
+		sub.hostname = machine.Hostname // Flag sub as being in the new MDB.
 		sub.requiredImage = machine.RequiredImage
 		sub.plannedImage = machine.PlannedImage
 	}
+	// Delete unflagged subs (those not in the new MDB).
 	subsToDelete := make([]string, 0)
 	for hostname, sub := range herd.subsByName {
 		if sub.hostname == "" {
@@ -37,7 +38,16 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 		delete(herd.subsByName, hostname)
 	}
 	herd.subsByIndex = make([]*Sub, 0, len(herd.subsByName))
+	imageUseMap := make(map[string]bool) // Unreferenced by default.
 	for _, sub := range herd.subsByName {
 		herd.subsByIndex = append(herd.subsByIndex, sub)
+		imageUseMap[sub.requiredImage] = true
+		imageUseMap[sub.plannedImage] = true
+	}
+	// Clean up unreferenced images.
+	for name, used := range imageUseMap {
+		if !used {
+			delete(herd.imagesByName, name)
+		}
 	}
 }

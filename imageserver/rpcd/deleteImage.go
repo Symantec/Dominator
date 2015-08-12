@@ -4,7 +4,7 @@ import (
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
 
-func (t *ImageServer) DeleteImage(request imageserver.DeleteImageRequest,
+func (t *rpcType) DeleteImage(request imageserver.DeleteImageRequest,
 	reply *imageserver.DeleteImageResponse) error {
 	var response imageserver.DeleteImageResponse
 	err := imageDataBase.DeleteImage(request.ImageName)

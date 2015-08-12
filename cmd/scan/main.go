@@ -1,6 +1,6 @@
 package main
 
-// Benchmark the scanning of a file-system tree.
+// Scan a file-system similar to subd.
 
 import (
 	"bufio"
@@ -70,7 +70,7 @@ func main() {
 			timeStop.Sub(timeStart).Seconds())
 		fmt.Printf("%s/s\n", fsrateio.FormatBytes(bytesPerSecond))
 		if prev_fs != nil {
-			if !scanner.Compare(prev_fs, fs, os.Stdout) {
+			if !scanner.CompareFileSystems(prev_fs, fs, os.Stdout) {
 				fmt.Println("Scan results different from last run")
 			}
 		}

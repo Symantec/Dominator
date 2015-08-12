@@ -23,39 +23,12 @@ func cleanPath(directoryName string, fileName string) error {
 	return nil
 }
 
-func filenameToBytes(fileName string) ([]byte, error) {
-	bytes := make([]byte, 0, 64)
-	var prev_nibble byte = 16
-	for _, char := range fileName {
-		var nibble byte = 16
-		if char >= '0' && char <= '9' {
-			nibble = byte(char) - '0'
-		} else if char >= 'a' && char <= 'f' {
-			nibble = byte(char) - 'a' + 10
-		} else {
-			continue
-		}
-		if prev_nibble < 16 {
-			bytes = append(bytes, nibble|prev_nibble<<4)
-			prev_nibble = 16
-		} else {
-			prev_nibble = nibble
-		}
-	}
-	return bytes, nil
-}
-
 func addCacheEntry(fileName string, cache ObjectCache) (ObjectCache, error) {
-	bytes, err := filenameToBytes(fileName)
+	hash, err := filenameToHash(fileName)
 	if err != nil {
 		return nil, err
 	}
-	if len(cache) >= cap(cache) {
-		newCache := make(ObjectCache, 0, cap(cache)*2)
-		copy(newCache, cache)
-		cache = newCache
-	}
-	return append(cache, bytes), nil
+	return append(cache, hash), nil
 }
 
 func scanObjectCache(cacheDirectoryName string, subpath string,

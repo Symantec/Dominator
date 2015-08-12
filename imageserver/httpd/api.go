@@ -2,6 +2,7 @@ package httpd
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/imageserver/scanner"
 	"io"
 	"net"
 	"net/http"
@@ -11,15 +12,16 @@ type HtmlWriter interface {
 	WriteHtml(writer io.Writer)
 }
 
-var onlyHtmler HtmlWriter
+var imageDataBase *scanner.ImageDataBase
 
-func StartServer(portNum uint, htmlWriter HtmlWriter, daemon bool) error {
+func StartServer(portNum uint, imdb *scanner.ImageDataBase, daemon bool) error {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", portNum))
 	if err != nil {
 		return err
 	}
-	onlyHtmler = htmlWriter
+	imageDataBase = imdb
 	http.HandleFunc("/", statusHandler)
+	http.HandleFunc("/listImages.html", listImagesHandler)
 	if daemon {
 		go http.Serve(listener, nil)
 	} else {

@@ -5,7 +5,7 @@ import (
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
-func (t *Subd) GetConfiguration(request sub.GetConfigurationRequest,
+func (t *rpcType) GetConfiguration(request sub.GetConfigurationRequest,
 	reply *sub.GetConfigurationResponse) error {
 	var response sub.GetConfigurationResponse
 	fs := fileSystemHistory.FileSystem()
