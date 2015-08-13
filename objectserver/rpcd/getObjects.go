@@ -13,7 +13,11 @@ func (t *rpcType) GetObjects(request objectserver.GetObjectsRequest,
 	var response objectserver.GetObjectsResponse
 	// First a quick check for existence. If any objects missing, fail request.
 	for _, hash := range request.Objects {
-		if !objectServer.CheckObject(hash) {
+		found, err := objectServer.CheckObject(hash)
+		if err != nil {
+			return err
+		}
+		if !found {
 			return errors.New(fmt.Sprintf("unknown object: %x", hash))
 		}
 	}

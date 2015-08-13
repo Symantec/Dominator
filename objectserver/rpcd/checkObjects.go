@@ -9,7 +9,11 @@ func (t *rpcType) CheckObjects(request objectserver.CheckObjectsRequest,
 	var response objectserver.CheckObjectsResponse
 	response.ObjectsPresent = make([]bool, len(request.Objects))
 	for index, hash := range request.Objects {
-		response.ObjectsPresent[index] = objectServer.CheckObject(hash)
+		var err error
+		response.ObjectsPresent[index], err = objectServer.CheckObject(hash)
+		if err != nil {
+			return err
+		}
 	}
 	*reply = response
 	return nil

@@ -7,18 +7,19 @@ import (
 	"path"
 )
 
-func (objSrv *FileSystemObjectServer) checkObject(hash hash.Hash) bool {
+func (objSrv *FileSystemObjectServer) checkObject(hash hash.Hash) (
+	bool, error) {
 	if objSrv.checkMap[hash] {
-		return true
+		return true, nil
 	}
 	filename := path.Join(objSrv.baseDir, objectcache.HashToFilename(hash))
 	fi, err := os.Lstat(filename)
 	if err != nil {
-		return false
+		return false, nil
 	}
 	if fi.Mode().IsRegular() {
 		objSrv.checkMap[hash] = true
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
