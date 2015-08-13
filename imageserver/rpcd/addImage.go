@@ -14,7 +14,11 @@ func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 	// Verify all objects are available.
 	objectServer := imageDataBase.ObjectServer()
 	for _, inode := range request.Image.FileSystem.RegularInodeTable {
-		if !objectServer.CheckObject(inode.Hash) {
+		found, err := objectServer.CheckObject(inode.Hash)
+		if err != nil {
+			return err
+		}
+		if !found {
 			return errors.New(fmt.Sprintf("object: %x is not available",
 				inode.Hash))
 		}
