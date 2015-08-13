@@ -22,7 +22,7 @@ var (
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr,
-		"Usage: imagetool [flags...] check|delete|list [args...]")
+		"Usage: objecttool [flags...] check|delete|list [args...]")
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
