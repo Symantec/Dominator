@@ -8,11 +8,7 @@ import (
 )
 
 type myReadCloser struct {
-	reader io.Reader
-}
-
-func (reader *myReadCloser) Read(b []byte) (int, error) {
-	return reader.Read(b)
+	io.Reader
 }
 
 func (reader *myReadCloser) Close() error {
