@@ -15,13 +15,13 @@ func (reader *myReadCloser) Close() error {
 	return nil
 }
 
-func (objSrv *ObjectClient) getObjectReader(hashVal hash.Hash) (uint64,
+func (objClient *ObjectClient) getObjectReader(hashVal hash.Hash) (uint64,
 	io.ReadCloser, error) {
 	var request objectserver.GetObjectsRequest
 	request.Objects = make([]hash.Hash, 1)
 	request.Objects[0] = hashVal
 	var reply objectserver.GetObjectsResponse
-	err := objSrv.client.Call("ObjectServer.GetObjects", request, &reply)
+	err := objClient.client.Call("ObjectServer.GetObjects", request, &reply)
 	if err != nil {
 		return 0, nil, err
 	}

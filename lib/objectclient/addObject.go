@@ -5,14 +5,14 @@ import (
 	"github.com/Symantec/Dominator/proto/objectserver"
 )
 
-func (objSrv *ObjectClient) addObject(data []byte, expectedHash *hash.Hash) (
+func (objClient *ObjectClient) addObject(data []byte, expectedHash *hash.Hash) (
 	hash.Hash, error) {
 	var request objectserver.AddObjectsRequest
 	request.ObjectsToAdd = make([]*objectserver.AddObjectSubrequest, 1)
 	request.ObjectsToAdd[0].ObjectData = data
 	request.ObjectsToAdd[0].ExpectedHash = expectedHash
 	var reply objectserver.AddObjectsResponse
-	err := objSrv.client.Call("ObjectServer.AddObjects", request, &reply)
+	err := objClient.client.Call("ObjectServer.AddObjects", request, &reply)
 	if err != nil {
 		return reply.Hashes[0], err
 	}

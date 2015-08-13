@@ -5,12 +5,12 @@ import (
 	"github.com/Symantec/Dominator/proto/objectserver"
 )
 
-func (objSrv *ObjectClient) checkObject(hashVal hash.Hash) (bool, error) {
+func (objClient *ObjectClient) checkObject(hashVal hash.Hash) (bool, error) {
 	var request objectserver.CheckObjectsRequest
 	request.Objects = make([]hash.Hash, 1)
 	request.Objects[0] = hashVal
 	var reply objectserver.CheckObjectsResponse
-	err := objSrv.client.Call("ObjectServer.CheckObjects", request, &reply)
+	err := objClient.client.Call("ObjectServer.CheckObjects", request, &reply)
 	if err != nil {
 		return false, err
 	}

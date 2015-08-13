@@ -14,16 +14,16 @@ func NewObjectClient(client *rpc.Client) *ObjectClient {
 	return &ObjectClient{client}
 }
 
-func (objSrv *ObjectClient) AddObject(data []byte, expectedHash *hash.Hash) (
+func (objClient *ObjectClient) AddObject(data []byte, expectedHash *hash.Hash) (
 	hash.Hash, error) {
-	return objSrv.addObject(data, expectedHash)
+	return objClient.addObject(data, expectedHash)
 }
 
-func (objSrv *ObjectClient) CheckObject(hash hash.Hash) (bool, error) {
-	return objSrv.checkObject(hash)
+func (objClient *ObjectClient) CheckObject(hash hash.Hash) (bool, error) {
+	return objClient.checkObject(hash)
 }
 
-func (objSrv *ObjectClient) GetObjectReader(hash hash.Hash) (uint64,
+func (objClient *ObjectClient) GetObjectReader(hash hash.Hash) (uint64,
 	io.ReadCloser, error) {
-	return objSrv.getObjectReader(hash)
+	return objClient.getObjectReader(hash)
 }
