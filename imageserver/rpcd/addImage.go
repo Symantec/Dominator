@@ -23,6 +23,7 @@ func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 				inode.Hash))
 		}
 	}
-	fmt.Printf("AddImage(%s)\n", request.ImageName) // HACK
+	// TODO(rgooch): Remove debugging output.
+	fmt.Printf("AddImage(%s)\n", request.ImageName)
 	return imageDataBase.AddImage(request.Image, request.ImageName)
 }
