@@ -14,7 +14,7 @@ import (
 
 const buflen = 65536
 
-func (objSrv *FileSystemObjectServer) putObject(data []byte,
+func (objSrv *FileSystemObjectServer) addObject(data []byte,
 	expectedHash *hash.Hash) (hash.Hash, error) {
 	var hash hash.Hash
 	hasher := sha512.New()
