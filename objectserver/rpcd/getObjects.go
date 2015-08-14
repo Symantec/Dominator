@@ -12,19 +12,23 @@ func (t *rpcType) GetObjects(request objectserver.GetObjectsRequest,
 	reply *objectserver.GetObjectsResponse) error {
 	var response objectserver.GetObjectsResponse
 	// First a quick check for existence. If any objects missing, fail request.
-	for _, hash := range request.Objects {
-		found, err := objectServer.CheckObject(hash)
-		if err != nil {
-			return err
-		}
-		if !found {
+	objectsPresent, err := objectServer.CheckObjects(request.Hashes)
+	if err != nil {
+		return err
+	}
+	for index, hash := range request.Hashes {
+		if !objectsPresent[index] {
 			return errors.New(fmt.Sprintf("unknown object: %x", hash))
 		}
 	}
-	response.ObjectSizes = make([]uint64, len(request.Objects))
-	response.Objects = make([][]byte, len(request.Objects))
-	for index, hash := range request.Objects {
-		size, reader, err := objectServer.GetObjectReader(hash)
+	response.ObjectSizes = make([]uint64, len(request.Hashes))
+	response.Objects = make([][]byte, len(request.Hashes))
+	objectsReader, err := objectServer.GetObjects(request.Hashes)
+	if err != nil {
+		return err
+	}
+	for index := range request.Hashes {
+		size, reader, err := objectsReader.NextObject()
 		if err != nil {
 			return err
 		}

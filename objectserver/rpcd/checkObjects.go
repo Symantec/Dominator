@@ -7,13 +7,10 @@ import (
 func (t *rpcType) CheckObjects(request objectserver.CheckObjectsRequest,
 	reply *objectserver.CheckObjectsResponse) error {
 	var response objectserver.CheckObjectsResponse
-	response.ObjectsPresent = make([]bool, len(request.Objects))
-	for index, hash := range request.Objects {
-		var err error
-		response.ObjectsPresent[index], err = objectServer.CheckObject(hash)
-		if err != nil {
-			return err
-		}
+	var err error
+	response.ObjectsPresent, err = objectServer.CheckObjects(request.Hashes)
+	if err != nil {
+		return err
 	}
 	*reply = response
 	return nil
