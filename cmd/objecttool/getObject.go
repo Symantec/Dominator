@@ -24,14 +24,20 @@ func getObjectSubcommand(objSrv objectserver.ObjectServer, args []string) {
 	os.Exit(0)
 }
 
-func getObject(objSrv objectserver.ObjectServer, hash hash.Hash,
+func getObject(objSrv objectserver.ObjectServer, hashVal hash.Hash,
 	baseOutputFilename string) error {
-	size, reader, err := objSrv.GetObjectReader(hash)
+	hashes := make([]hash.Hash, 1)
+	hashes[0] = hashVal
+	objectsReader, err := objSrv.GetObjects(hashes)
+	if err != nil {
+		return err
+	}
+	size, reader, err := objectsReader.NextObject()
 	if err != nil {
 		return err
 	}
 	defer reader.Close()
-	filename := fmt.Sprintf("%s.%x", baseOutputFilename, hash)
+	filename := fmt.Sprintf("%s.%x", baseOutputFilename, hashVal)
 	file, err := os.Create(filename)
 	if err != nil {
 		return err

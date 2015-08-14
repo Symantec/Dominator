@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/objectserver"
 	"io"
 )
 
@@ -23,7 +24,17 @@ func (objSrv *ObjectServer) CheckObjects(hashes []hash.Hash) ([]bool, error) {
 	return objSrv.checkObjects(hashes)
 }
 
-func (objSrv *ObjectServer) GetObjectReader(hash hash.Hash) (
-	uint64, io.ReadCloser, error) {
-	return objSrv.getObjectReader(hash)
+func (objSrv *ObjectServer) GetObjects(hashes []hash.Hash) (
+	objectserver.ObjectsReader, error) {
+	return objSrv.getObjects(hashes)
+}
+
+type ObjectsReader struct {
+	objectServer *ObjectServer
+	hashes       []hash.Hash
+	nextIndex    int64
+}
+
+func (or *ObjectsReader) NextObject() (uint64, io.ReadCloser, error) {
+	return or.nextObject()
 }

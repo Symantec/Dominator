@@ -2,6 +2,7 @@ package objectclient
 
 import (
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/objectserver"
 	"io"
 	"net/rpc"
 )
@@ -24,9 +25,19 @@ func (objClient *ObjectClient) CheckObjects(hashes []hash.Hash) (
 	return objClient.checkObjects(hashes)
 }
 
-func (objClient *ObjectClient) GetObjectReader(hash hash.Hash) (uint64,
-	io.ReadCloser, error) {
-	return objClient.getObjectReader(hash)
+func (objClient *ObjectClient) GetObjects(hashes []hash.Hash) (
+	objectserver.ObjectsReader, error) {
+	return objClient.getObjects(hashes)
+}
+
+type ObjectsReader struct {
+	sizes     []uint64
+	datas     [][]byte
+	nextIndex int64
+}
+
+func (or *ObjectsReader) NextObject() (uint64, io.ReadCloser, error) {
+	return or.nextObject()
 }
 
 type ObjectAdderQueue struct {

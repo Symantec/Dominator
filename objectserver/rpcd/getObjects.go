@@ -23,8 +23,12 @@ func (t *rpcType) GetObjects(request objectserver.GetObjectsRequest,
 	}
 	response.ObjectSizes = make([]uint64, len(request.Hashes))
 	response.Objects = make([][]byte, len(request.Hashes))
-	for index, hash := range request.Hashes {
-		size, reader, err := objectServer.GetObjectReader(hash)
+	objectsReader, err := objectServer.GetObjects(request.Hashes)
+	if err != nil {
+		return err
+	}
+	for index := range request.Hashes {
+		size, reader, err := objectsReader.NextObject()
 		if err != nil {
 			return err
 		}
