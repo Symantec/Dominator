@@ -4,11 +4,9 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
-	"crypto/sha512"
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/proto/imageserver"
@@ -106,9 +104,8 @@ func readLines(reader io.Reader) ([]string, error) {
 func buildImage(client *rpc.Client, tarReader *tar.Reader) (
 	*filesystem.FileSystem, error) {
 	var fs filesystem.FileSystem
-	var objQ objectQueue
-	objQ.maxBytes = 1024 * 1024 * 128
-	objQ.client = objectclient.NewObjectClient(client)
+	objQ := objectclient.NewObjectAdderQueue(
+		objectclient.NewObjectClient(client), 1024*1024*128)
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -120,7 +117,16 @@ func buildImage(client *rpc.Client, tarReader *tar.Reader) (
 		if (header.Typeflag == tar.TypeReg ||
 			header.Typeflag == tar.TypeRegA) &&
 			header.Size > 0 {
-			err := objQ.Add(uint64(header.Size), tarReader)
+			data, err := ioutil.ReadAll(tarReader)
+			if err != nil {
+				return nil, errors.New("error reading file data" + err.Error())
+			}
+			if int64(len(data)) != header.Size {
+				return nil, errors.New(fmt.Sprintf(
+					"failed to read file data, wanted: %d, got: %d bytes",
+					header.Size, len(data)))
+			}
+			err = objQ.Add(data)
 			if err != nil {
 				return nil, errors.New(
 					"error sending image data: " + err.Error())
@@ -136,56 +142,6 @@ func buildImage(client *rpc.Client, tarReader *tar.Reader) (
 		return nil, err
 	}
 	return &fs, nil
-}
-
-type objectQueue struct {
-	numBytes       uint64
-	maxBytes       uint64
-	client         *objectclient.ObjectClient
-	datas          [][]byte
-	expectedHashes []*hash.Hash
-}
-
-func (objQ *objectQueue) Add(size uint64, reader io.Reader) error {
-	if size+objQ.numBytes > objQ.maxBytes {
-		err := objQ.Flush()
-		if err != nil {
-			return err
-		}
-	}
-	data, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return errors.New("error reading file data" + err.Error())
-	}
-	if uint64(len(data)) != size {
-		return errors.New(fmt.Sprintf(
-			"failed to read file data, wanted: %d, got: %d bytes", size,
-			len(data)))
-	}
-	var hash hash.Hash
-	hasher := sha512.New()
-	_, err = hasher.Write(data)
-	if err != nil {
-		return err
-	}
-	copy(hash[:], hasher.Sum(nil))
-	objQ.datas = append(objQ.datas, data)
-	objQ.expectedHashes = append(objQ.expectedHashes, &hash)
-	objQ.numBytes += size
-	return nil
-}
-
-func (objQ *objectQueue) Flush() error {
-	// TODO(rgooch): Remove debugging output.
-	fmt.Printf("Flushing: %d objects\n", len(objQ.datas))
-	_, err := objQ.client.AddObjects(objQ.datas, objQ.expectedHashes)
-	if err != nil {
-		return errors.New("error adding objects, remote error: " + err.Error())
-	}
-	objQ.numBytes = 0
-	objQ.datas = nil
-	objQ.expectedHashes = nil
-	return nil
 }
 
 func addHeader(fs *filesystem.FileSystem, header *tar.Header) error {
