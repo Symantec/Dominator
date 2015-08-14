@@ -18,8 +18,8 @@ func (reader *myReadCloser) Close() error {
 func (objClient *ObjectClient) getObjectReader(hashVal hash.Hash) (uint64,
 	io.ReadCloser, error) {
 	var request objectserver.GetObjectsRequest
-	request.Objects = make([]hash.Hash, 1)
-	request.Objects[0] = hashVal
+	request.Hashes = make([]hash.Hash, 1)
+	request.Hashes[0] = hashVal
 	var reply objectserver.GetObjectsResponse
 	err := objClient.client.Call("ObjectServer.GetObjects", request, &reply)
 	if err != nil {

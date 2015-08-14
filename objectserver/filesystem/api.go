@@ -14,14 +14,14 @@ func NewObjectServer(baseDir string) (*FileSystemObjectServer, error) {
 	return newObjectServer(baseDir)
 }
 
-func (objSrv *FileSystemObjectServer) AddObject(data []byte,
-	expectedHash *hash.Hash) (hash.Hash, error) {
-	return objSrv.addObject(data, expectedHash)
+func (objSrv *FileSystemObjectServer) AddObjects(datas [][]byte,
+	expectedHashes []*hash.Hash) ([]hash.Hash, error) {
+	return objSrv.addObjects(datas, expectedHashes)
 }
 
-func (objSrv *FileSystemObjectServer) CheckObject(hash hash.Hash) (
-	bool, error) {
-	return objSrv.checkObject(hash)
+func (objSrv *FileSystemObjectServer) CheckObjects(hashes []hash.Hash) (
+	[]bool, error) {
+	return objSrv.checkObjects(hashes)
 }
 
 func (objSrv *FileSystemObjectServer) GetObjectReader(hash hash.Hash) (

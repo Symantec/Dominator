@@ -10,8 +10,8 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/proto/imageserver"
-	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
 	"io/ioutil"
 	"net/rpc"
@@ -108,7 +108,7 @@ func buildImage(client *rpc.Client, tarReader *tar.Reader) (
 	var fs filesystem.FileSystem
 	var objQ objectQueue
 	objQ.maxBytes = 1024 * 1024 * 128
-	objQ.client = client
+	objQ.client = objectclient.NewObjectClient(client)
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -139,10 +139,11 @@ func buildImage(client *rpc.Client, tarReader *tar.Reader) (
 }
 
 type objectQueue struct {
-	numBytes uint64
-	maxBytes uint64
-	client   *rpc.Client
-	objects  []*objectserver.AddObjectSubrequest
+	numBytes       uint64
+	maxBytes       uint64
+	client         *objectclient.ObjectClient
+	datas          [][]byte
+	expectedHashes []*hash.Hash
 }
 
 func (objQ *objectQueue) Add(size uint64, reader io.Reader) error {
@@ -152,42 +153,38 @@ func (objQ *objectQueue) Add(size uint64, reader io.Reader) error {
 			return err
 		}
 	}
-	var hash hash.Hash
-	var object objectserver.AddObjectSubrequest
-	object.ExpectedHash = &hash
-	var err error
-	object.ObjectData, err = ioutil.ReadAll(reader)
+	data, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return errors.New("error reading file data" + err.Error())
 	}
-	if uint64(len(object.ObjectData)) != size {
+	if uint64(len(data)) != size {
 		return errors.New(fmt.Sprintf(
 			"failed to read file data, wanted: %d, got: %d bytes", size,
-			len(object.ObjectData)))
+			len(data)))
 	}
+	var hash hash.Hash
 	hasher := sha512.New()
-	_, err = hasher.Write(object.ObjectData)
+	_, err = hasher.Write(data)
 	if err != nil {
 		return err
 	}
 	copy(hash[:], hasher.Sum(nil))
-	objQ.objects = append(objQ.objects, &object)
+	objQ.datas = append(objQ.datas, data)
+	objQ.expectedHashes = append(objQ.expectedHashes, &hash)
 	objQ.numBytes += size
 	return nil
 }
 
 func (objQ *objectQueue) Flush() error {
-	var request objectserver.AddObjectsRequest
-	var reply objectserver.AddObjectsResponse
-	request.ObjectsToAdd = objQ.objects
 	// TODO(rgooch): Remove debugging output.
-	fmt.Printf("Flushing: %d objects\n", len(request.ObjectsToAdd))
-	err := objQ.client.Call("ObjectServer.AddObjects", request, &reply)
+	fmt.Printf("Flushing: %d objects\n", len(objQ.datas))
+	_, err := objQ.client.AddObjects(objQ.datas, objQ.expectedHashes)
 	if err != nil {
 		return errors.New("error adding objects, remote error: " + err.Error())
 	}
 	objQ.numBytes = 0
-	objQ.objects = nil
+	objQ.datas = nil
+	objQ.expectedHashes = nil
 	return nil
 }
 

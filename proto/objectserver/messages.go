@@ -4,13 +4,9 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 )
 
-type AddObjectSubrequest struct {
-	ObjectData   []byte
-	ExpectedHash *hash.Hash
-}
-
 type AddObjectsRequest struct {
-	ObjectsToAdd []*AddObjectSubrequest
+	ObjectDatas    [][]byte
+	ExpectedHashes []*hash.Hash
 }
 
 type AddObjectsResponse struct {
@@ -18,7 +14,7 @@ type AddObjectsResponse struct {
 }
 
 type CheckObjectsRequest struct {
-	Objects []hash.Hash
+	Hashes []hash.Hash
 }
 
 type CheckObjectsResponse struct {
@@ -26,7 +22,7 @@ type CheckObjectsResponse struct {
 }
 
 type GetObjectsRequest struct {
-	Objects []hash.Hash
+	Hashes []hash.Hash
 }
 
 type GetObjectsResponse struct {
