@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func newObjectServer(baseDir string) (*FileSystemObjectServer, error) {
+func newObjectServer(baseDir string) (*ObjectServer, error) {
 	fi, err := os.Stat(baseDir)
 	if err != nil {
 		return nil, errors.New(
@@ -17,7 +17,7 @@ func newObjectServer(baseDir string) (*FileSystemObjectServer, error) {
 	if !fi.IsDir() {
 		return nil, errors.New(fmt.Sprintf("%s is not a directory\n", baseDir))
 	}
-	var objSrv FileSystemObjectServer
+	var objSrv ObjectServer
 	objSrv.baseDir = baseDir
 	objSrv.checkMap = make(map[hash.Hash]bool)
 	cache, err := objectcache.ScanObjectCache(baseDir)

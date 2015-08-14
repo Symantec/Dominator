@@ -8,7 +8,7 @@ import (
 	"path"
 )
 
-func (objSrv *FileSystemObjectServer) getObjectReader(hash hash.Hash) (uint64,
+func (objSrv *ObjectServer) getObjectReader(hash hash.Hash) (uint64,
 	io.ReadCloser, error) {
 	filename := path.Join(objSrv.baseDir, objectcache.HashToFilename(hash))
 	file, err := os.Open(filename)

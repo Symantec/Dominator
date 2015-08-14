@@ -14,7 +14,7 @@ import (
 
 const buflen = 65536
 
-func (objSrv *FileSystemObjectServer) addObjects(datas [][]byte,
+func (objSrv *ObjectServer) addObjects(datas [][]byte,
 	expectedHashes []*hash.Hash) ([]hash.Hash, error) {
 	hashes := make([]hash.Hash, len(datas))
 	for index, data := range datas {
@@ -27,8 +27,8 @@ func (objSrv *FileSystemObjectServer) addObjects(datas [][]byte,
 	return hashes, nil
 }
 
-func (objSrv *FileSystemObjectServer) addObject(data []byte,
-	expectedHash *hash.Hash) (hash.Hash, error) {
+func (objSrv *ObjectServer) addObject(data []byte, expectedHash *hash.Hash) (
+	hash.Hash, error) {
 	var hash hash.Hash
 	hasher := sha512.New()
 	if hasher.Size() != len(hash) {
