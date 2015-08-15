@@ -3,6 +3,7 @@ package scanner
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
@@ -73,7 +74,7 @@ func (fs *FileSystem) String() string {
 	return fmt.Sprintf("Tree: %d inodes, total file size: %s, number of hashes: %d\nObjectCache: %d objects\n",
 		len(fs.RegularInodeTable)+len(fs.SymlinkInodeTable)+len(fs.InodeTable)+
 			int(fs.DirectoryCount),
-		fsrateio.FormatBytes(fs.TotalDataBytes),
+		format.FormatBytes(fs.TotalDataBytes),
 		fs.HashCount,
 		len(fs.ObjectCache))
 }

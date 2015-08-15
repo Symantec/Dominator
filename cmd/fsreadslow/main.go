@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"io"
@@ -46,5 +47,5 @@ func main() {
 		tread += n
 	}
 	bytesPerSecond = uint64(float64(tread) / time.Since(timeStart).Seconds())
-	fmt.Printf("%s/s\n", fsrateio.FormatBytes(bytesPerSecond))
+	fmt.Printf("%s/s\n", format.FormatBytes(bytesPerSecond))
 }

@@ -2,6 +2,7 @@ package fsrateio
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/lib/format"
 	"io"
 	"syscall"
 	"time"
@@ -36,18 +37,6 @@ func (ctx *FsRateContext) SetSpeedPercent(percent uint) {
 	ctx.timeOfLastPause = time.Now()
 }
 
-func FormatBytes(bytes uint64) string {
-	if bytes>>30 > 100 {
-		return fmt.Sprintf("%d GiB", bytes>>30)
-	} else if bytes>>20 > 100 {
-		return fmt.Sprintf("%d MiB", bytes>>20)
-	} else if bytes>>10 > 100 {
-		return fmt.Sprintf("%d KiB", bytes>>10)
-	} else {
-		return fmt.Sprintf("%d B", bytes)
-	}
-}
-
 func (ctx *FsRateContext) String() string {
 	var blocksString string
 	if ctx.maxBlocksPerSecond > 0 {
@@ -56,9 +45,9 @@ func (ctx *FsRateContext) String() string {
 		blocksString = ""
 	}
 	return fmt.Sprintf("max speed=%s/s%s limit=%d%% %s/s(%d blocks/s)",
-		FormatBytes(ctx.maxBytesPerSecond), blocksString,
+		format.FormatBytes(ctx.maxBytesPerSecond), blocksString,
 		ctx.speedPercent,
-		FormatBytes(ctx.maxBytesPerSecond*ctx.speedPercent/100),
+		format.FormatBytes(ctx.maxBytesPerSecond*ctx.speedPercent/100),
 		ctx.maxBlocksPerSecond*ctx.speedPercent/100)
 }
 

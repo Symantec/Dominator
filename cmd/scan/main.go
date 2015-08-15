@@ -7,6 +7,7 @@ import (
 	"encoding/gob"
 	"flag"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/memstats"
@@ -65,10 +66,10 @@ func main() {
 		}
 		fmt.Print(fs)
 		fmt.Printf("Total scanned: %s,\t",
-			fsrateio.FormatBytes(fs.TotalDataBytes))
+			format.FormatBytes(fs.TotalDataBytes))
 		bytesPerSecond := uint64(float64(fs.TotalDataBytes) /
 			timeStop.Sub(timeStart).Seconds())
-		fmt.Printf("%s/s\n", fsrateio.FormatBytes(bytesPerSecond))
+		fmt.Printf("%s/s\n", format.FormatBytes(bytesPerSecond))
 		if prev_fs != nil {
 			if !scanner.CompareFileSystems(prev_fs, fs, os.Stdout) {
 				fmt.Println("Scan results different from last run")
