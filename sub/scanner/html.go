@@ -2,7 +2,7 @@ package scanner
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/sub/fsrateio"
+	"github.com/Symantec/Dominator/lib/fsrateio"
 	"io"
 	"time"
 )

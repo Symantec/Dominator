@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/fsbench"
-	"github.com/Symantec/Dominator/sub/fsrateio"
+	"github.com/Symantec/Dominator/lib/fsrateio"
 	"io"
 	"os"
 	"time"

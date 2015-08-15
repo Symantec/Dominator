@@ -3,8 +3,8 @@ package scanner
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/objectcache"
-	"github.com/Symantec/Dominator/sub/fsrateio"
 	"io"
 	"regexp"
 	"time"
