@@ -22,9 +22,8 @@ var (
 		"Comma separated list of patterns to exclude from scanning")
 	scanSpeedPercent = flag.Uint("scanSpeedPercent", 2,
 		"Scan speed as percentage of capacity")
-	subHostname = flag.String("imageServerHostname", "localhost",
-		"Hostname of sub")
-	subPortNum = flag.Uint("subPortNum", constants.SubPortNumber,
+	subHostname = flag.String("subHostname", "localhost", "Hostname of sub")
+	subPortNum  = flag.Uint("subPortNum", constants.SubPortNumber,
 		"Port number of sub")
 )
 
