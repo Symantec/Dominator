@@ -7,11 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filesystem/untar"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"io"
-	"io/ioutil"
 	"net/rpc"
 	"os"
 	"strings"
@@ -101,50 +101,30 @@ func readLines(reader io.Reader) ([]string, error) {
 	return lines, nil
 }
 
+type dataHandler struct {
+	objQ *objectclient.ObjectAdderQueue
+}
+
+func (dh *dataHandler) HandleData(data []byte) error {
+	err := dh.objQ.Add(data)
+	if err != nil {
+		return errors.New("error sending image data: " + err.Error())
+	}
+	return nil
+}
+
 func buildImage(client *rpc.Client, tarReader *tar.Reader) (
 	*filesystem.FileSystem, error) {
-	var fs filesystem.FileSystem
-	objQ := objectclient.NewObjectAdderQueue(
+	var dh dataHandler
+	dh.objQ = objectclient.NewObjectAdderQueue(
 		objectclient.NewObjectClient(client), 1024*1024*128)
-	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		if (header.Typeflag == tar.TypeReg ||
-			header.Typeflag == tar.TypeRegA) &&
-			header.Size > 0 {
-			data, err := ioutil.ReadAll(tarReader)
-			if err != nil {
-				return nil, errors.New("error reading file data" + err.Error())
-			}
-			if int64(len(data)) != header.Size {
-				return nil, errors.New(fmt.Sprintf(
-					"failed to read file data, wanted: %d, got: %d bytes",
-					header.Size, len(data)))
-			}
-			err = objQ.Add(data)
-			if err != nil {
-				return nil, errors.New(
-					"error sending image data: " + err.Error())
-			}
-		}
-		err = addHeader(&fs, header)
-		if err != nil {
-			return nil, err
-		}
-	}
-	err := objQ.Flush()
+	fs, err := untar.Decode(tarReader, &dh)
 	if err != nil {
 		return nil, err
 	}
-	return &fs, nil
-}
-
-func addHeader(fs *filesystem.FileSystem, header *tar.Header) error {
-	// TODO(rgooch): Decode header and add to fs.
-	return nil
+	err = dh.objQ.Flush()
+	if err != nil {
+		return nil, err
+	}
+	return fs, nil
 }
