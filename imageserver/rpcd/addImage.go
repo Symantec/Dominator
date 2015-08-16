@@ -32,8 +32,8 @@ func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 	}
 	for index, present := range objectsPresent {
 		if !present {
-			return errors.New(fmt.Sprintf("object: %d %x is not available",
-				index, hashes[index]))
+			return errors.New(fmt.Sprintf("object: %x is not available",
+				hashes[index]))
 		}
 	}
 	// TODO(rgooch): Remove debugging output.
