@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filesystem/untar"
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/proto/imageserver"
@@ -105,12 +106,12 @@ type dataHandler struct {
 	objQ *objectclient.ObjectAdderQueue
 }
 
-func (dh *dataHandler) HandleData(data []byte) error {
-	err := dh.objQ.Add(data)
+func (dh *dataHandler) HandleData(data []byte) (hash.Hash, error) {
+	hash, err := dh.objQ.Add(data)
 	if err != nil {
-		return errors.New("error sending image data: " + err.Error())
+		return hash, errors.New("error sending image data: " + err.Error())
 	}
-	return nil
+	return hash, nil
 }
 
 func buildImage(client *rpc.Client, tarReader *tar.Reader) (
