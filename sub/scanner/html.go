@@ -2,7 +2,7 @@ package scanner
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/sub/fsrateio"
+	"github.com/Symantec/Dominator/lib/format"
 	"io"
 	"time"
 )
@@ -15,7 +15,7 @@ func (fsh *FileSystemHistory) writeHtml(writer io.Writer) {
 		fmt.Fprintf(writer, "Duration of last scan: %s<br>\n",
 			fsh.durationOfLastScan)
 		fsh.fileSystem.WriteHtml(writer)
-		tmp := fsrateio.FormatBytes(uint64(float64(
+		tmp := format.FormatBytes(uint64(float64(
 			fsh.fileSystem.TotalDataBytes) / fsh.durationOfLastScan.Seconds()))
 		fmt.Fprintf(writer, "Scan rate: %s/s<br>\n", tmp)
 	}
@@ -28,5 +28,5 @@ func (fsh *FileSystemHistory) writeHtml(writer io.Writer) {
 
 func (fs *FileSystem) writeHtml(writer io.Writer) {
 	fmt.Fprintf(writer, "Scanned: %s<br>\n",
-		fsrateio.FormatBytes(fs.TotalDataBytes))
+		format.FormatBytes(fs.TotalDataBytes))
 }

@@ -12,10 +12,19 @@ func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 	if imageDataBase.CheckImage(request.ImageName) {
 		return errors.New("image already exists")
 	}
+	if request.Image == nil {
+		return errors.New("nil image")
+	}
+	if request.Image.FileSystem == nil {
+		return errors.New("nil file-system")
+	}
 	// Verify all objects are available.
-	hashes := make([]hash.Hash, len(request.Image.FileSystem.RegularInodeTable))
-	for index, inode := range request.Image.FileSystem.RegularInodeTable {
-		hashes[index] = inode.Hash
+	hashes := make([]hash.Hash, 0,
+		len(request.Image.FileSystem.RegularInodeTable))
+	for _, inode := range request.Image.FileSystem.RegularInodeTable {
+		if inode.Size > 0 {
+			hashes = append(hashes, inode.Hash)
+		}
 	}
 	objectsPresent, err := imageDataBase.ObjectServer().CheckObjects(hashes)
 	if err != nil {

@@ -6,10 +6,6 @@ import (
 )
 
 func (fs *FileSystem) debugWrite(w io.Writer, prefix string) error {
-	_, err := fmt.Fprint(w, fs)
-	if err != nil {
-		return err
-	}
 	return fs.Directory.debugWrite(w, prefix)
 }
 
