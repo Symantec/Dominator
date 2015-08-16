@@ -21,7 +21,7 @@ func (objClient *ObjectClient) AddObjects(datas [][]byte,
 }
 
 func (objClient *ObjectClient) CheckObjects(hashes []hash.Hash) (
-	[]bool, error) {
+	[]uint64, error) {
 	return objClient.checkObjects(hashes)
 }
 

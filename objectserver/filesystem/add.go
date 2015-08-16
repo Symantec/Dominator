@@ -77,7 +77,7 @@ func (objSrv *ObjectServer) addObject(data []byte, expectedHash *hash.Hash) (
 	if err != nil {
 		return hash, err
 	}
-	objSrv.checkMap[hash] = true
+	objSrv.sizesMap[hash] = uint64(len(data))
 	return hash, nil
 }
 

@@ -16,12 +16,12 @@ func checkObjectSubcommand(objSrv objectserver.ObjectServer, args []string) {
 		fmt.Printf("Error parsing hash\t%s\n", err)
 		os.Exit(2)
 	}
-	objectsPresent, err := objSrv.CheckObjects(hashes)
+	objectSizes, err := objSrv.CheckObjects(hashes)
 	if err != nil {
 		fmt.Printf("Error checking object\t%s\n", err)
 		os.Exit(2)
 	}
-	if objectsPresent[0] {
+	if objectSizes[0] > 0 {
 		os.Exit(0)
 	} else {
 		os.Exit(1)

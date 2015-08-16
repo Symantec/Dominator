@@ -26,12 +26,12 @@ func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 			hashes = append(hashes, inode.Hash)
 		}
 	}
-	objectsPresent, err := imageDataBase.ObjectServer().CheckObjects(hashes)
+	objectSizes, err := imageDataBase.ObjectServer().CheckObjects(hashes)
 	if err != nil {
 		return err
 	}
-	for index, present := range objectsPresent {
-		if !present {
+	for index, size := range objectSizes {
+		if size < 1 {
 			return errors.New(fmt.Sprintf("object: %x is not available",
 				hashes[index]))
 		}
