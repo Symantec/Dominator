@@ -12,9 +12,8 @@ type Configuration struct {
 }
 
 type FetchRequest struct {
-	ServerHostname   string
-	ServerPortNumber uint
-	Objects          []hash.Hash
+	ServerAddress string
+	Objects       []hash.Hash
 }
 
 type FetchResponse common.StatusResponse

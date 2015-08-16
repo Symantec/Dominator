@@ -3,6 +3,7 @@ package herd
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/hash"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"net/rpc"
 	"strings"
@@ -45,10 +46,50 @@ func (sub *Sub) poll(herd *Herd) {
 		sub.generationCount = reply.GenerationCount
 		fmt.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)
+		sub.fetchMissingObjects(herd, sub.requiredImage)
 	}
-	if sub.requiredImage != "" {
-		herd.getImage(sub.requiredImage)
-		// TODO(rgooch): Compare required image with polled image and send RPCs
-		//               to fetch files and later update sub.
+	// TODO(rgooch): Compare required image with polled image and send RPCs
+	//               to fetch files and later update sub.
+}
+
+// Returns true if all required objects are available.
+func (sub *Sub) fetchMissingObjects(herd *Herd, imageName string) bool {
+	if imageName == "" {
+		return false
 	}
+	image := herd.getImage(imageName)
+	if image == nil {
+		return false
+	}
+	missingObjects := make(map[hash.Hash]bool)
+	for _, inode := range image.FileSystem.RegularInodeTable {
+		if inode.Size > 0 {
+			missingObjects[inode.Hash] = true
+		}
+	}
+	for _, hash := range sub.fileSystem.ObjectCache {
+		delete(missingObjects, hash)
+	}
+	for _, inode := range sub.fileSystem.RegularInodeTable {
+		if inode.Size > 0 {
+			delete(missingObjects, inode.Hash)
+		}
+	}
+	if len(missingObjects) < 1 {
+		return true
+	}
+	// TODO(rgooch): Remove debugging output.
+	fmt.Printf("Objects needing to be fetched: %d\n", len(missingObjects))
+	var request subproto.FetchRequest
+	var reply subproto.FetchResponse
+	request.ServerAddress = herd.ImageServerAddress
+	for hash, _ := range missingObjects {
+		request.Objects = append(request.Objects, hash)
+	}
+	err := sub.connection.Call("Subd.Fetch", request, &reply)
+	if err != nil {
+		fmt.Printf("Error calling\t%s\n", err)
+		return false
+	}
+	return false
 }
