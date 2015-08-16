@@ -71,11 +71,11 @@ func (fs *FileSystem) Configuration() *Configuration {
 }
 
 func (fs *FileSystem) String() string {
-	return fmt.Sprintf("Tree: %d inodes, total file size: %s, number of hashes: %d\nObjectCache: %d objects\n",
+	return fmt.Sprintf("Tree: %d inodes, total file size: %s, number of regular inodes: %d\nObjectCache: %d objects\n",
 		len(fs.RegularInodeTable)+len(fs.SymlinkInodeTable)+len(fs.InodeTable)+
 			int(fs.DirectoryCount),
 		format.FormatBytes(fs.TotalDataBytes),
-		fs.HashCount,
+		len(fs.RegularInodeTable),
 		len(fs.ObjectCache))
 }
 

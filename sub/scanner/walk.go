@@ -304,7 +304,6 @@ func scanRegularFile(file *filesystem.RegularFile, fileSystem *FileSystem,
 	io.Copy(hash, reader)
 	f.Close()
 	copy(file.Inode().Hash[:], hash.Sum(nil))
-	fileSystem.HashCount++
 	return nil
 }
 
