@@ -30,6 +30,9 @@ func (objSrv *ObjectServer) addObjects(datas [][]byte,
 func (objSrv *ObjectServer) addObject(data []byte, expectedHash *hash.Hash) (
 	hash.Hash, error) {
 	var hash hash.Hash
+	if len(data) < 1 {
+		return hash, errors.New("zero length object cannot be added")
+	}
 	hasher := sha512.New()
 	if hasher.Size() != len(hash) {
 		return hash, errors.New("Incompatible hash size")
