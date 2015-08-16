@@ -94,7 +94,7 @@ func (sub *Sub) fetchMissingObjects(herd *Herd, imageName string) bool {
 	var reply subproto.FetchResponse
 	request.ServerAddress = herd.ImageServerAddress
 	for hash, _ := range missingObjects {
-		request.Objects = append(request.Objects, hash)
+		request.Hashes = append(request.Hashes, hash)
 	}
 	err := sub.connection.Call("Subd.Fetch", request, &reply)
 	if err != nil {

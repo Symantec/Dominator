@@ -13,7 +13,7 @@ type Configuration struct {
 
 type FetchRequest struct {
 	ServerAddress string
-	Objects       []hash.Hash
+	Hashes        []hash.Hash
 }
 
 type FetchResponse common.StatusResponse
