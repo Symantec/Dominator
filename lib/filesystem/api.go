@@ -14,13 +14,16 @@ type FileSystem struct {
 	SymlinkInodeTable SymlinkInodeTable
 	InodeTable        InodeTable
 	TotalDataBytes    uint64
-	HashCount         uint64
 	DirectoryCount    uint64
 	Directory
 }
 
 func (fs *FileSystem) RebuildPointers() {
 	fs.rebuildPointers()
+}
+
+func (fs *FileSystem) ComputeTotalDataBytes() {
+	fs.computeTotalDataBytes()
 }
 
 func (fs *FileSystem) DebugWrite(w io.Writer, prefix string) error {

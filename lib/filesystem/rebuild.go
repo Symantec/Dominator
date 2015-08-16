@@ -30,3 +30,10 @@ func (symlink *Symlink) rebuildPointers(fs *FileSystem) {
 func (file *File) rebuildPointers(fs *FileSystem) {
 	file.inode = fs.InodeTable[file.InodeNumber]
 }
+
+func (fs *FileSystem) computeTotalDataBytes() {
+	fs.TotalDataBytes = 0
+	for _, inode := range fs.RegularInodeTable {
+		fs.TotalDataBytes += uint64(inode.Size)
+	}
+}
