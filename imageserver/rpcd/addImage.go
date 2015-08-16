@@ -19,9 +19,12 @@ func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 		return errors.New("nil file-system")
 	}
 	// Verify all objects are available.
-	hashes := make([]hash.Hash, len(request.Image.FileSystem.RegularInodeTable))
-	for index, inode := range request.Image.FileSystem.RegularInodeTable {
-		hashes[index] = inode.Hash
+	hashes := make([]hash.Hash, 0,
+		len(request.Image.FileSystem.RegularInodeTable))
+	for _, inode := range request.Image.FileSystem.RegularInodeTable {
+		if inode.Size > 0 {
+			hashes = append(hashes, inode.Hash)
+		}
 	}
 	objectsPresent, err := imageDataBase.ObjectServer().CheckObjects(hashes)
 	if err != nil {
@@ -29,8 +32,8 @@ func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 	}
 	for index, present := range objectsPresent {
 		if !present {
-			return errors.New(fmt.Sprintf("object: %x is not available",
-				hashes[index]))
+			return errors.New(fmt.Sprintf("object: %d %x is not available",
+				index, hashes[index]))
 		}
 	}
 	// TODO(rgooch): Remove debugging output.
