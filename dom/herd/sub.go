@@ -50,6 +50,9 @@ func (sub *Sub) poll(herd *Herd) {
 	if reply.FetchInProgress || reply.UpdateInProgress {
 		return
 	}
+	if sub.generationCountAtChangeStart == sub.generationCount {
+		return
+	}
 	if !sub.fetchMissingObjects(herd, sub.requiredImage) {
 		return
 	}
@@ -101,9 +104,11 @@ func (sub *Sub) fetchMissingObjects(herd *Herd, imageName string) bool {
 		fmt.Printf("Error calling\t%s\n", err)
 		return false
 	}
+	sub.generationCountAtChangeStart = sub.generationCount
 	return false
 }
 
+// Returns true if no update needs to be performed.
 func (sub *Sub) sendUpdate(herd *Herd) bool {
 	// TODO(rgooch): Implement this.
 	return false

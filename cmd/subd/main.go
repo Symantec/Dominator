@@ -196,7 +196,7 @@ func main() {
 	var fsh scanner.FileSystemHistory
 	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir,
 		&configuration)
-	rpcd.Setup(&fsh)
+	rpcd.Setup(&fsh, objectsDir)
 	err = httpd.StartServer(*portNum, &fsh)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)

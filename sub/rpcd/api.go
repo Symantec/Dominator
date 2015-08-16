@@ -7,11 +7,13 @@ import (
 )
 
 var fileSystemHistory *scanner.FileSystemHistory
+var objectsDir string
 
 type rpcType int
 
-func Setup(fsh *scanner.FileSystemHistory) {
+func Setup(fsh *scanner.FileSystemHistory, objectsDirname string) {
 	fileSystemHistory = fsh
+	objectsDir = objectsDirname
 	rpc.RegisterName("Subd", new(rpcType))
 	rpc.HandleHTTP()
 }
