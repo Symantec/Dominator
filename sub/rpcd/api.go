@@ -8,14 +8,17 @@ import (
 
 var fileSystemHistory *scanner.FileSystemHistory
 var objectsDir string
+var rescanObjectCacheChannel chan bool
 
 type rpcType int
 
-func Setup(fsh *scanner.FileSystemHistory, objectsDirname string) {
+func Setup(fsh *scanner.FileSystemHistory, objectsDirname string) chan bool {
 	fileSystemHistory = fsh
 	objectsDir = objectsDirname
 	rpc.RegisterName("Subd", new(rpcType))
 	rpc.HandleHTTP()
+	rescanObjectCacheChannel = make(chan bool)
+	return rescanObjectCacheChannel
 }
 
 var (

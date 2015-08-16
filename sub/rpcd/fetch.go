@@ -55,8 +55,8 @@ func doFetch(request sub.FetchRequest) {
 			return
 		}
 	}
-	// TODO(rgooch): Find some way to invalidate object cache and splice a new
-	//               one into the current FS state and affect the current scan.
+	rescanObjectCacheChannel <- true
+	// TODO(rgooch): Find some way to affect the current scan.
 }
 
 func readOne(hash hash.Hash, reader io.ReadCloser) error {

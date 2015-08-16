@@ -196,31 +196,37 @@ func main() {
 	var fsh scanner.FileSystemHistory
 	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir,
 		&configuration)
-	rpcd.Setup(&fsh, objectsDir)
+	rescanObjectCacheChannel := rpcd.Setup(&fsh, objectsDir)
 	err = httpd.StartServer(*portNum, &fsh)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)
 		os.Exit(1)
 	}
 	fsh.Update(nil)
-	for iter := 0; true; iter++ {
-		if *showStats {
-			fmt.Printf("Starting cycle: %d\n", iter)
-		}
-		fsh.Update(<-fsChannel)
-		runtime.GC() // An opportune time to take out the garbage.
-		if *showStats {
-			fmt.Print(fsh)
-			fmt.Print(fsh.FileSystem())
-			memstats.WriteMemoryStats(os.Stdout)
-			fmt.Println()
-		}
-		if firstScan {
-			configuration.FsScanContext.SetSpeedPercent(defaultSpeed)
-			firstScan = false
+	for iter := 0; true; {
+		select {
+		case fs := <-fsChannel:
 			if *showStats {
-				fmt.Println(configuration.FsScanContext)
+				fmt.Printf("Completed cycle: %d\n", iter)
 			}
+			fsh.Update(fs)
+			iter++
+			runtime.GC() // An opportune time to take out the garbage.
+			if *showStats {
+				fmt.Print(fsh)
+				fmt.Print(fsh.FileSystem())
+				memstats.WriteMemoryStats(os.Stdout)
+				fmt.Println()
+			}
+			if firstScan {
+				configuration.FsScanContext.SetSpeedPercent(defaultSpeed)
+				firstScan = false
+				if *showStats {
+					fmt.Println(configuration.FsScanContext)
+				}
+			}
+		case <-rescanObjectCacheChannel:
+			fsh.UpdateObjectCacheOnly()
 		}
 	}
 }
