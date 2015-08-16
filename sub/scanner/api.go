@@ -33,6 +33,10 @@ func (fsh *FileSystemHistory) Update(newFS *FileSystem) {
 	fsh.update(newFS)
 }
 
+func (fsh *FileSystemHistory) UpdateObjectCacheOnly() error {
+	return fsh.updateObjectCacheOnly()
+}
+
 func (fsh *FileSystemHistory) FileSystem() *FileSystem {
 	return fsh.fileSystem
 }
@@ -57,6 +61,7 @@ type FileSystem struct {
 	directoryInodeList directoryInodeList
 	dev                uint64
 	filesystem.FileSystem
+	cacheDirectoryName string
 	objectcache.ObjectCache
 }
 

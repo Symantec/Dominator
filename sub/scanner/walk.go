@@ -71,6 +71,7 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	var fileSystem FileSystem
 	fileSystem.configuration = configuration
 	fileSystem.rootDirectoryName = rootDirectoryName
+	fileSystem.cacheDirectoryName = cacheDirectoryName
 	fileSystem.Name = "/"
 	var stat syscall.Stat_t
 	err := syscall.Lstat(rootDirectoryName, &stat)
@@ -98,15 +99,21 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	if err != nil {
 		return nil, err
 	}
-	if cacheDirectoryName != "" {
-		fileSystem.ObjectCache, err = objectcache.ScanObjectCache(
-			cacheDirectoryName)
-		if err != nil {
-			return nil, err
-		}
+	err = fileSystem.scanObjectCache()
+	if err != nil {
+		return nil, err
 	}
 	fileSystem.ComputeTotalDataBytes()
 	return &fileSystem, nil
+}
+
+func (fs *FileSystem) scanObjectCache() error {
+	if fs.cacheDirectoryName == "" {
+		return nil
+	}
+	var err error
+	fs.ObjectCache, err = objectcache.ScanObjectCache(fs.cacheDirectoryName)
+	return err
 }
 
 func scanDirectory(directory *filesystem.Directory,
@@ -123,6 +130,9 @@ func scanDirectory(directory *filesystem.Directory,
 	}
 	sort.Strings(names)
 	for _, name := range names {
+		if directory == &fileSystem.Directory && name == ".subd" {
+			continue
+		}
 		filename := path.Join(myPathName, name)
 		skip := false
 		for _, regex := range fileSystem.configuration.ExclusionList {

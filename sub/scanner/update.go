@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"github.com/Symantec/Dominator/lib/filesystem"
 	"regexp"
 	"time"
 )
@@ -20,13 +19,24 @@ func (fsh *FileSystemHistory) update(newFS *FileSystem) {
 		fsh.generationCount = 1
 		fsh.timeOfLastChange = fsh.timeOfLastScan
 	} else {
-		if !filesystem.CompareFileSystems(&fsh.fileSystem.FileSystem,
-			&newFS.FileSystem, nil) {
+		if !CompareFileSystems(fsh.fileSystem, newFS, nil) {
 			fsh.generationCount++
 			fsh.fileSystem = newFS
 			fsh.timeOfLastChange = fsh.timeOfLastScan
 		}
 	}
+}
+
+func (fsh *FileSystemHistory) updateObjectCacheOnly() error {
+	if fsh.fileSystem == nil {
+		return nil
+	}
+	err := fsh.fileSystem.scanObjectCache()
+	if err != nil {
+		return err
+	}
+	fsh.generationCount++
+	return nil
 }
 
 func (configuration *Configuration) setExclusionList(reList []string) error {
