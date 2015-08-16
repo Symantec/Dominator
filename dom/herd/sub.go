@@ -46,14 +46,24 @@ func (sub *Sub) poll(herd *Herd) {
 		sub.generationCount = reply.GenerationCount
 		fmt.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)
-		sub.fetchMissingObjects(herd, sub.requiredImage)
 	}
-	// TODO(rgooch): Compare required image with polled image and send RPCs
-	//               to fetch files and later update sub.
+	if reply.FetchInProgress || reply.UpdateInProgress {
+		return
+	}
+	if !sub.fetchMissingObjects(herd, sub.requiredImage) {
+		return
+	}
+	if !sub.sendUpdate(herd) {
+		return
+	}
+	sub.fetchMissingObjects(herd, sub.plannedImage)
 }
 
 // Returns true if all required objects are available.
 func (sub *Sub) fetchMissingObjects(herd *Herd, imageName string) bool {
+	if sub.fileSystem == nil {
+		return false
+	}
 	if imageName == "" {
 		return false
 	}
@@ -91,5 +101,10 @@ func (sub *Sub) fetchMissingObjects(herd *Herd, imageName string) bool {
 		fmt.Printf("Error calling\t%s\n", err)
 		return false
 	}
+	return false
+}
+
+func (sub *Sub) sendUpdate(herd *Herd) bool {
+	// TODO(rgooch): Implement this.
 	return false
 }

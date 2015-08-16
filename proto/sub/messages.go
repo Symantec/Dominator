@@ -28,8 +28,10 @@ type PollRequest struct {
 }
 
 type PollResponse struct {
-	GenerationCount uint64
-	FileSystem      *scanner.FileSystem
+	FetchInProgress  bool // Fetch() and Update() are mutually exclusive.
+	UpdateInProgress bool
+	GenerationCount  uint64
+	FileSystem       *scanner.FileSystem
 }
 
 type SetConfigurationRequest Configuration
