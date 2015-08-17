@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"regexp"
 	"time"
 )
@@ -31,11 +32,15 @@ func (fsh *FileSystemHistory) updateObjectCacheOnly() error {
 	if fsh.fileSystem == nil {
 		return nil
 	}
-	err := fsh.fileSystem.scanObjectCache()
+	oldObjectCache := fsh.fileSystem.ObjectCache
+	err := fsh.fileSystem.ScanObjectCache()
 	if err != nil {
 		return err
 	}
-	fsh.generationCount++
+	if !objectcache.CompareObjects(oldObjectCache, fsh.fileSystem.ObjectCache,
+		nil) {
+		fsh.generationCount++
+	}
 	return nil
 }
 

@@ -71,6 +71,10 @@ func ScanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 		nil)
 }
 
+func (fs *FileSystem) ScanObjectCache() error {
+	return fs.scanObjectCache()
+}
+
 func (fs *FileSystem) Configuration() *Configuration {
 	return fs.configuration
 }

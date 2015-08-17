@@ -203,11 +203,16 @@ func main() {
 		os.Exit(1)
 	}
 	fsh.Update(nil)
+	invalidateNextScanObjectCache := false
 	for iter := 0; true; {
 		select {
 		case fs := <-fsChannel:
 			if *showStats {
 				fmt.Printf("Completed cycle: %d\n", iter)
+			}
+			if invalidateNextScanObjectCache {
+				fs.ScanObjectCache()
+				invalidateNextScanObjectCache = false
 			}
 			fsh.Update(fs)
 			iter++
@@ -226,6 +231,7 @@ func main() {
 				}
 			}
 		case <-rescanObjectCacheChannel:
+			invalidateNextScanObjectCache = true
 			fsh.UpdateObjectCacheOnly()
 		}
 	}

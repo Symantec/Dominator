@@ -56,7 +56,6 @@ func doFetch(request sub.FetchRequest) {
 		}
 	}
 	rescanObjectCacheChannel <- true
-	// TODO(rgooch): Find some way to affect the current scan.
 }
 
 func readOne(hash hash.Hash, reader io.ReadCloser) error {
