@@ -76,6 +76,7 @@ func (imdb *ImageDataBase) loadFile(filename string) error {
 	if err != nil {
 		return err
 	}
+	image.FileSystem.RebuildPointers()
 	imdb.imageMap[filename] = &image
 	return nil
 }

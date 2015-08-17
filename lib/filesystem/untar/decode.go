@@ -51,6 +51,7 @@ func decode(tarReader *tar.Reader, dataHandler DataHandler) (
 	sortDirectory(&fileSystem.Directory)
 	fileSystem.DirectoryCount = uint64(len(decoderData.directoryTable))
 	fileSystem.RebuildPointers()
+	fileSystem.ComputeTotalDataBytes()
 	return fileSystem, nil
 }
 

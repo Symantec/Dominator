@@ -8,7 +8,7 @@ import (
 
 type ObjectServer struct {
 	baseDir  string
-	checkMap map[hash.Hash]bool // Only set if object is known.
+	sizesMap map[hash.Hash]uint64 // Only set if object is known.
 }
 
 func NewObjectServer(baseDir string) (*ObjectServer, error) {
@@ -20,7 +20,7 @@ func (objSrv *ObjectServer) AddObjects(datas [][]byte,
 	return objSrv.addObjects(datas, expectedHashes)
 }
 
-func (objSrv *ObjectServer) CheckObjects(hashes []hash.Hash) ([]bool, error) {
+func (objSrv *ObjectServer) CheckObjects(hashes []hash.Hash) ([]uint64, error) {
 	return objSrv.checkObjects(hashes)
 }
 

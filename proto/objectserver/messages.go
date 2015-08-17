@@ -18,7 +18,7 @@ type CheckObjectsRequest struct {
 }
 
 type CheckObjectsResponse struct {
-	ObjectsPresent []bool
+	ObjectSizes []uint64 // size == 0: object not found.
 }
 
 type GetObjectsRequest struct {

@@ -33,6 +33,10 @@ func (fsh *FileSystemHistory) Update(newFS *FileSystem) {
 	fsh.update(newFS)
 }
 
+func (fsh *FileSystemHistory) UpdateObjectCacheOnly() error {
+	return fsh.updateObjectCacheOnly()
+}
+
 func (fsh *FileSystemHistory) FileSystem() *FileSystem {
 	return fsh.fileSystem
 }
@@ -57,6 +61,7 @@ type FileSystem struct {
 	directoryInodeList directoryInodeList
 	dev                uint64
 	filesystem.FileSystem
+	cacheDirectoryName string
 	objectcache.ObjectCache
 }
 
@@ -71,11 +76,11 @@ func (fs *FileSystem) Configuration() *Configuration {
 }
 
 func (fs *FileSystem) String() string {
-	return fmt.Sprintf("Tree: %d inodes, total file size: %s, number of hashes: %d\nObjectCache: %d objects\n",
+	return fmt.Sprintf("Tree: %d inodes, total file size: %s, number of regular inodes: %d\nObjectCache: %d objects\n",
 		len(fs.RegularInodeTable)+len(fs.SymlinkInodeTable)+len(fs.InodeTable)+
 			int(fs.DirectoryCount),
 		format.FormatBytes(fs.TotalDataBytes),
-		fs.HashCount,
+		len(fs.RegularInodeTable),
 		len(fs.ObjectCache))
 }
 

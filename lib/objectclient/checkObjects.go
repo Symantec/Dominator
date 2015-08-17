@@ -6,7 +6,7 @@ import (
 )
 
 func (objClient *ObjectClient) checkObjects(hashes []hash.Hash) (
-	[]bool, error) {
+	[]uint64, error) {
 	var request objectserver.CheckObjectsRequest
 	request.Hashes = hashes
 	var reply objectserver.CheckObjectsResponse
@@ -14,5 +14,5 @@ func (objClient *ObjectClient) checkObjects(hashes []hash.Hash) (
 	if err != nil {
 		return nil, err
 	}
-	return reply.ObjectsPresent, nil
+	return reply.ObjectSizes, nil
 }

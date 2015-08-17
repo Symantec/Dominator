@@ -21,6 +21,8 @@ func StartServer(portNum uint, imdb *scanner.ImageDataBase, daemon bool) error {
 	}
 	imageDataBase = imdb
 	http.HandleFunc("/", statusHandler)
+	http.HandleFunc("/listFilter", listFilterHandler)
+	http.HandleFunc("/listImage", listImageHandler)
 	http.HandleFunc("/listImages.html", listImagesHandler)
 	if daemon {
 		go http.Serve(listener, nil)

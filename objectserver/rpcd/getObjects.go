@@ -12,12 +12,12 @@ func (t *rpcType) GetObjects(request objectserver.GetObjectsRequest,
 	reply *objectserver.GetObjectsResponse) error {
 	var response objectserver.GetObjectsResponse
 	// First a quick check for existence. If any objects missing, fail request.
-	objectsPresent, err := objectServer.CheckObjects(request.Hashes)
+	objectSizes, err := objectServer.CheckObjects(request.Hashes)
 	if err != nil {
 		return err
 	}
 	for index, hash := range request.Hashes {
-		if !objectsPresent[index] {
+		if objectSizes[index] < 1 {
 			return errors.New(fmt.Sprintf("unknown object: %x", hash))
 		}
 	}

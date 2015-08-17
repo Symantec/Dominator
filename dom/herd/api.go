@@ -8,12 +8,13 @@ import (
 )
 
 type Sub struct {
-	hostname        string
-	requiredImage   string
-	plannedImage    string
-	connection      *rpc.Client
-	fileSystem      *scanner.FileSystem
-	generationCount uint64
+	hostname                     string
+	requiredImage                string
+	plannedImage                 string
+	connection                   *rpc.Client
+	fileSystem                   *scanner.FileSystem
+	generationCount              uint64
+	generationCountAtChangeStart uint64
 }
 
 type Herd struct {
