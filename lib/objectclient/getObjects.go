@@ -6,15 +6,8 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
+	"io/ioutil"
 )
-
-type myReadCloser struct {
-	io.Reader
-}
-
-func (reader *myReadCloser) Close() error {
-	return nil
-}
 
 func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (
 	*ObjectsReader, error) {
@@ -37,6 +30,6 @@ func (or *ObjectsReader) nextObject() (uint64, io.ReadCloser, error) {
 	if or.nextIndex >= int64(len(or.sizes)) {
 		return 0, nil, errors.New("all objects have been consumed")
 	}
-	reader := &myReadCloser{bytes.NewReader(or.datas[or.nextIndex])}
+	reader := ioutil.NopCloser(bytes.NewReader(or.datas[or.nextIndex]))
 	return or.sizes[or.nextIndex], reader, nil
 }
