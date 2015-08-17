@@ -14,17 +14,22 @@ func listImagesHandler(w http.ResponseWriter, req *http.Request) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
 	fmt.Fprintln(writer, "<title>imageserver images</title>")
+	fmt.Fprintln(writer, `<style>
+                          table, th, td {
+                          border-collapse: collapse;
+                          }
+                          </style>`)
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<h3>")
 	writeLinks(writer)
 	imageNames := imageDataBase.ListImages()
 	sort.Strings(imageNames)
-	fmt.Fprintln(writer, "<table>")
+	fmt.Fprintln(writer, `<table border="1" style="width:100%">`)
 	fmt.Fprintln(writer, "  <tr>")
-	fmt.Fprintln(writer, "    <td><b>Name</b></td>")
-	fmt.Fprintln(writer, "    <td><b>Data Size</b></td>")
-	fmt.Fprintln(writer, "    <td><b>Data Inodes</b></td>")
-	fmt.Fprintln(writer, "    <td><b>Filter Lines</b></td>")
+	fmt.Fprintln(writer, "    <th>Name</b></th>")
+	fmt.Fprintln(writer, "    <th>Data Size</b></th>")
+	fmt.Fprintln(writer, "    <th>Data Inodes</b></th>")
+	fmt.Fprintln(writer, "    <th>Filter Lines</b></th>")
 	fmt.Fprintln(writer, "  </tr>")
 	for _, name := range imageNames {
 		showImage(writer, name, imageDataBase.GetImage(name))
