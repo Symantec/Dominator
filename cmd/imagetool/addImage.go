@@ -63,18 +63,23 @@ func addImage(client *rpc.Client,
 	if imageExists {
 		return errors.New("image exists")
 	}
+	filterLines, err := readLines(filterFile)
+	if err != nil {
+		return errors.New("error reading filter: " + err.Error())
+	}
 	var newImage image.Image
-	var filter filter.Filter
-	newImage.Filter = &filter
+	newImage.Filter, err = filter.NewFilter(filterLines)
+	if err != nil {
+		return err
+	}
 	request.ImageName = name
 	request.Image = &newImage
-	filter.FilterLines, err = readLines(filterFile)
-	filter.Compile()
 	if err != nil {
 		return errors.New("error reading filter: " + err.Error())
 	}
 	tarReader := tar.NewReader(imageReader)
-	request.Image.FileSystem, err = buildImage(client, tarReader, &filter)
+	request.Image.FileSystem, err = buildImage(client, tarReader,
+		newImage.Filter)
 	if err != nil {
 		return errors.New("error building image: " + err.Error())
 	}

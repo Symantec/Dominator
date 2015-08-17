@@ -134,14 +134,7 @@ func scanDirectory(directory *filesystem.Directory,
 			continue
 		}
 		filename := path.Join(myPathName, name)
-		skip := false
-		for _, regex := range fileSystem.configuration.ExclusionList {
-			if regex.MatchString(filename) {
-				skip = true
-				continue
-			}
-		}
-		if skip {
+		if fileSystem.configuration.Filter.Match(filename) {
 			continue
 		}
 		var stat syscall.Stat_t

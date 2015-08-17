@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/memstats"
@@ -179,7 +180,8 @@ func main() {
 		os.Exit(1)
 	}
 	var configuration scanner.Configuration
-	err := configuration.SetExclusionList(constants.ScanExcludeList)
+	var err error
+	configuration.Filter, err = filter.NewFilter(constants.ScanExcludeList)
 	if err != nil {
 		fmt.Printf("Unable to set default scan exclusions\t%s\n", err)
 		os.Exit(1)

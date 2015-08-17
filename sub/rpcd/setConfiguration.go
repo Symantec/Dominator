@@ -2,6 +2,7 @@ package rpcd
 
 import (
 	"errors"
+	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
@@ -14,10 +15,11 @@ func (t *rpcType) SetConfiguration(request sub.SetConfigurationRequest,
 	}
 	configuration := fs.Configuration()
 	configuration.FsScanContext.SetSpeedPercent(request.ScanSpeedPercent)
-	err := configuration.SetExclusionList(request.ScanExclusionList)
+	newFilter, err := filter.NewFilter(request.ScanExclusionList)
 	if err != nil {
 		return err
 	}
+	configuration.Filter = newFilter
 	response.Success = true
 	*reply = response
 	return nil
