@@ -2,13 +2,10 @@ package image
 
 import (
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filter"
 )
 
-type Filter struct {
-	FilterLines []string
-}
-
 type Image struct {
-	Filter     *Filter
+	Filter     *filter.Filter
 	FileSystem *filesystem.FileSystem
 }
