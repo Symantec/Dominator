@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filesystem/untar"
+	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectclient"
@@ -63,16 +64,17 @@ func addImage(client *rpc.Client,
 		return errors.New("image exists")
 	}
 	var newImage image.Image
-	var filter image.Filter
+	var filter filter.Filter
 	newImage.Filter = &filter
 	request.ImageName = name
 	request.Image = &newImage
 	filter.FilterLines, err = readLines(filterFile)
+	filter.Compile()
 	if err != nil {
 		return errors.New("error reading filter: " + err.Error())
 	}
 	tarReader := tar.NewReader(imageReader)
-	request.Image.FileSystem, err = buildImage(client, tarReader)
+	request.Image.FileSystem, err = buildImage(client, tarReader, &filter)
 	if err != nil {
 		return errors.New("error building image: " + err.Error())
 	}
@@ -114,12 +116,12 @@ func (dh *dataHandler) HandleData(data []byte) (hash.Hash, error) {
 	return hash, nil
 }
 
-func buildImage(client *rpc.Client, tarReader *tar.Reader) (
-	*filesystem.FileSystem, error) {
+func buildImage(client *rpc.Client, tarReader *tar.Reader,
+	filter *filter.Filter) (*filesystem.FileSystem, error) {
 	var dh dataHandler
 	dh.objQ = objectclient.NewObjectAdderQueue(
 		objectclient.NewObjectClient(client), 1024*1024*128)
-	fs, err := untar.Decode(tarReader, &dh)
+	fs, err := untar.Decode(tarReader, &dh, filter)
 	if err != nil {
 		return nil, err
 	}

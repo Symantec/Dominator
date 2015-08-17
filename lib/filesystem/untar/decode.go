@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filter"
 	"io"
 	"io/ioutil"
 	"path"
@@ -20,8 +21,8 @@ type decoderData struct {
 	directoryTable    map[string]*filesystem.Directory
 }
 
-func decode(tarReader *tar.Reader, dataHandler DataHandler) (
-	*filesystem.FileSystem, error) {
+func decode(tarReader *tar.Reader, dataHandler DataHandler,
+	filter *filter.Filter) (*filesystem.FileSystem, error) {
 	var decoderData decoderData
 	decoderData.regularInodeTable = make(map[string]uint64)
 	decoderData.symlinkInodeTable = make(map[string]uint64)
@@ -41,6 +42,10 @@ func decode(tarReader *tar.Reader, dataHandler DataHandler) (
 		}
 		if err != nil {
 			return nil, err
+		}
+		header.Name = normaliseFilename(header.Name)
+		if filter.Match(header.Name) {
+			continue
 		}
 		err = decoderData.addHeader(tarReader, dataHandler, header)
 		if err != nil {
@@ -70,7 +75,6 @@ func normaliseFilename(filename string) string {
 
 func (decoderData *decoderData) addHeader(tarReader *tar.Reader,
 	dataHandler DataHandler, header *tar.Header) error {
-	header.Name = normaliseFilename(header.Name)
 	parentDir, ok := decoderData.directoryTable[path.Dir(header.Name)]
 	if !ok {
 		return errors.New(fmt.Sprintf(
