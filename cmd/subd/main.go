@@ -186,11 +186,11 @@ func main() {
 		fmt.Printf("Unable to set default scan exclusions\t%s\n", err)
 		os.Exit(1)
 	}
-	configuration.FsScanContext = fsrateio.NewContext(bytesPerSecond,
-		blocksPerSecond)
-	defaultSpeed := configuration.FsScanContext.SpeedPercent()
+	configuration.FsScanContext = fsrateio.NewReaderContext(bytesPerSecond,
+		blocksPerSecond, 0)
+	defaultSpeed := configuration.FsScanContext.GetContext().SpeedPercent()
 	if firstScan {
-		configuration.FsScanContext.SetSpeedPercent(100)
+		configuration.FsScanContext.GetContext().SetSpeedPercent(100)
 	}
 	if *showStats {
 		fmt.Println(configuration.FsScanContext)
@@ -226,7 +226,8 @@ func main() {
 				fmt.Println()
 			}
 			if firstScan {
-				configuration.FsScanContext.SetSpeedPercent(defaultSpeed)
+				configuration.FsScanContext.GetContext().SetSpeedPercent(
+					defaultSpeed)
 				firstScan = false
 				if *showStats {
 					fmt.Println(configuration.FsScanContext)

@@ -4,7 +4,6 @@ import (
 	"crypto/sha512"
 	"errors"
 	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
 	"os"
@@ -294,7 +293,7 @@ func scanRegularFile(file *filesystem.RegularFile, fileSystem *FileSystem,
 	if err != nil {
 		return err
 	}
-	reader := fsrateio.NewReader(f, fileSystem.configuration.FsScanContext)
+	reader := fileSystem.configuration.FsScanContext.NewReader(f)
 	hash := sha512.New()
 	io.Copy(hash, reader)
 	f.Close()

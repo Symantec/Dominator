@@ -14,7 +14,8 @@ func (t *rpcType) SetConfiguration(request sub.SetConfigurationRequest,
 		return errors.New("No file-system history yet")
 	}
 	configuration := fs.Configuration()
-	configuration.FsScanContext.SetSpeedPercent(request.ScanSpeedPercent)
+	configuration.FsScanContext.GetContext().SetSpeedPercent(
+		request.ScanSpeedPercent)
 	newFilter, err := filter.NewFilter(request.ScanExclusionList)
 	if err != nil {
 		return err

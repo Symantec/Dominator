@@ -12,7 +12,7 @@ import (
 )
 
 type Configuration struct {
-	FsScanContext *fsrateio.FsRateContext
+	FsScanContext *fsrateio.ReaderContext
 	Filter        *filter.Filter
 }
 

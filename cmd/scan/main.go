@@ -43,10 +43,10 @@ func main() {
 		return
 	}
 	var configuration scanner.Configuration
-	configuration.FsScanContext = fsrateio.NewContext(bytesPerSecond,
-		blocksPerSecond)
+	configuration.FsScanContext = fsrateio.NewReaderContext(bytesPerSecond,
+		blocksPerSecond, 0)
 	if *scanSpeed != 0 {
-		configuration.FsScanContext.SetSpeedPercent(*scanSpeed)
+		configuration.FsScanContext.GetContext().SetSpeedPercent(*scanSpeed)
 	}
 	fmt.Println(configuration.FsScanContext)
 	syscall.Setpriority(syscall.PRIO_PROCESS, 0, 10)

@@ -22,7 +22,7 @@ func main() {
 		fmt.Printf("Error! %s\n", err)
 		return
 	}
-	ctx := fsrateio.NewContext(bytesPerSecond, blocksPerSecond)
+	ctx := fsrateio.NewReaderContext(bytesPerSecond, blocksPerSecond, 0)
 	fmt.Println(ctx)
 	var file *os.File
 	file, err = os.Open(pathname)
@@ -30,7 +30,7 @@ func main() {
 		fmt.Printf("Error! %s\n", err)
 		return
 	}
-	rd := bufio.NewReader(fsrateio.NewReader(file, ctx))
+	rd := bufio.NewReader(ctx.NewReader(file))
 	buffer := make([]byte, 65536)
 	timeStart := time.Now()
 	tread := 0

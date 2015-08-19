@@ -13,7 +13,8 @@ func (t *rpcType) GetConfiguration(request sub.GetConfigurationRequest,
 		return errors.New("No file-system history yet")
 	}
 	configuration := fs.Configuration()
-	response.ScanSpeedPercent = configuration.FsScanContext.SpeedPercent()
+	response.ScanSpeedPercent =
+		configuration.FsScanContext.GetContext().SpeedPercent()
 	response.ScanExclusionList = make([]string,
 		len(configuration.Filter.FilterLines))
 	for index, line := range configuration.Filter.FilterLines {
