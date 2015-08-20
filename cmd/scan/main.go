@@ -7,6 +7,7 @@ import (
 	"encoding/gob"
 	"flag"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/fsrateio"
@@ -43,6 +44,11 @@ func main() {
 		return
 	}
 	var configuration scanner.Configuration
+	configuration.Filter, err = filter.NewFilter(nil)
+	if err != nil {
+		fmt.Printf("Unable to create empty filter\t%s\n", err)
+		os.Exit(1)
+	}
 	configuration.FsScanContext = fsrateio.NewReaderContext(bytesPerSecond,
 		blocksPerSecond, 0)
 	if *scanSpeed != 0 {
