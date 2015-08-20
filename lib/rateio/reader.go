@@ -63,7 +63,7 @@ func (rd *Reader) read(b []byte) (n int, err error) {
 			return 0, err
 		}
 		desiredDuration := time.Duration(uint64(time.Second) *
-			uint64(readSinceLastPause) / desiredPerSecond)
+			readSinceLastPause / desiredPerSecond)
 		targetTime := rd.ctx.timeOfLastPause.Add(desiredDuration)
 		time.Sleep(targetTime.Sub(time.Now()))
 		rd.ctx.bytesSinceLastPause = 0
