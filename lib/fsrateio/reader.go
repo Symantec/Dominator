@@ -41,7 +41,7 @@ func newReaderContext(maxBytesPerSecond uint64, maxBlocksPerSecond uint64,
 	ctx.maxBytesPerSecond = maxBytesPerSecond
 	ctx.maxBlocksPerSecond = maxBlocksPerSecond
 	if maxBlocksPerSecond > 0 {
-		ctx.ctx = rateio.NewReaderContext(maxBytesPerSecond, speedPercent,
+		ctx.ctx = rateio.NewReaderContext(maxBlocksPerSecond, speedPercent,
 			newReadMeasurer())
 	} else {
 		ctx.ctx = rateio.NewReaderContext(maxBytesPerSecond, speedPercent,
