@@ -22,6 +22,8 @@ import (
 var (
 	debugFile = flag.String("debugFile", "",
 		"Name of file to write debugging information to")
+	gobFile = flag.String("gobFile", "",
+		"Name of file to write encoded data to")
 	interval = flag.Uint("interval", 0, "Seconds to sleep after each scan")
 	numScans = flag.Int("numScans", 1,
 		"The number of scans to run (infinite: < 0)")
@@ -29,8 +31,6 @@ var (
 		"Name of directory containing the object cache")
 	rootDir = flag.String("rootDir", "/",
 		"Name of root of directory tree to scan")
-	rpcFile = flag.String("rpcFile", "",
-		"Name of file to write encoded data to")
 	scanSpeed = flag.Uint("scanSpeed", 0,
 		"Scan speed in percent of maximum (0: default)")
 )
@@ -94,14 +94,16 @@ func main() {
 			w.Flush()
 			file.Close()
 		}
-		if *rpcFile != "" {
-			file, err := os.Create(*rpcFile)
+		if *gobFile != "" {
+			file, err := os.Create(*gobFile)
 			if err != nil {
-				fmt.Printf("Error creating: %s\t%s\n", *rpcFile, err)
+				fmt.Printf("Error creating: %s\t%s\n", *gobFile, err)
 				os.Exit(1)
 			}
 			encoder := gob.NewEncoder(file)
+			encoderStartTime := time.Now()
 			encoder.Encode(fs)
+			fmt.Printf("Encoder time: %s\n", time.Since(encoderStartTime))
 			file.Close()
 		}
 		prev_fs = fs
