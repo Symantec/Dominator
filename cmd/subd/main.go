@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/memstats"
+	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/sub/httpd"
 	"github.com/Symantec/Dominator/sub/rpcd"
 	"github.com/Symantec/Dominator/sub/scanner"
@@ -198,7 +199,12 @@ func main() {
 	var fsh scanner.FileSystemHistory
 	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir,
 		&configuration)
-	rescanObjectCacheChannel := rpcd.Setup(&fsh, objectsDir)
+	// TODO(rgooch): Try to benchmark network link speed.
+	networkBytesPerSecond := uint64(1e9)
+	networkReaderContext := rateio.NewReaderContext(networkBytesPerSecond,
+		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
+	rescanObjectCacheChannel := rpcd.Setup(&fsh, objectsDir,
+		networkReaderContext)
 	err = httpd.StartServer(*portNum, &fsh)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)

@@ -1,6 +1,7 @@
 package rpcd
 
 import (
+	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"net/rpc"
 	"sync"
@@ -8,16 +9,19 @@ import (
 
 var fileSystemHistory *scanner.FileSystemHistory
 var objectsDir string
+var networkReaderContext *rateio.ReaderContext
 var rescanObjectCacheChannel chan bool
 
 type rpcType int
 
-func Setup(fsh *scanner.FileSystemHistory, objectsDirname string) chan bool {
+func Setup(fsh *scanner.FileSystemHistory, objectsDirname string,
+	netReaderContext *rateio.ReaderContext) chan bool {
 	fileSystemHistory = fsh
 	objectsDir = objectsDirname
+	networkReaderContext = netReaderContext
+	rescanObjectCacheChannel = make(chan bool)
 	rpc.RegisterName("Subd", new(rpcType))
 	rpc.HandleHTTP()
-	rescanObjectCacheChannel = make(chan bool)
 	return rescanObjectCacheChannel
 }
 
