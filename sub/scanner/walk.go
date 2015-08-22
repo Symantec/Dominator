@@ -4,7 +4,6 @@ import (
 	"crypto/sha512"
 	"errors"
 	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
 	"os"
@@ -134,14 +133,7 @@ func scanDirectory(directory *filesystem.Directory,
 			continue
 		}
 		filename := path.Join(myPathName, name)
-		skip := false
-		for _, regex := range fileSystem.configuration.ExclusionList {
-			if regex.MatchString(filename) {
-				skip = true
-				continue
-			}
-		}
-		if skip {
+		if fileSystem.configuration.Filter.Match(filename) {
 			continue
 		}
 		var stat syscall.Stat_t
@@ -301,7 +293,7 @@ func scanRegularFile(file *filesystem.RegularFile, fileSystem *FileSystem,
 	if err != nil {
 		return err
 	}
-	reader := fsrateio.NewReader(f, fileSystem.configuration.FsScanContext)
+	reader := fileSystem.configuration.FsScanContext.NewReader(f)
 	hash := sha512.New()
 	io.Copy(hash, reader)
 	f.Close()

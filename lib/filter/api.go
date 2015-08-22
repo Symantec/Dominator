@@ -9,6 +9,10 @@ type Filter struct {
 	filterExpressions []*regexp.Regexp
 }
 
+func NewFilter(filterLines []string) (*Filter, error) {
+	return newFilter(filterLines)
+}
+
 func (filter *Filter) Compile() error {
 	return filter.compile()
 }

@@ -2,7 +2,6 @@ package scanner
 
 import (
 	"github.com/Symantec/Dominator/lib/objectcache"
-	"regexp"
 	"time"
 )
 
@@ -41,18 +40,5 @@ func (fsh *FileSystemHistory) updateObjectCacheOnly() error {
 		nil) {
 		fsh.generationCount++
 	}
-	return nil
-}
-
-func (configuration *Configuration) setExclusionList(reList []string) error {
-	exclusionList := make([]*regexp.Regexp, len(reList))
-	for index, reEntry := range reList {
-		var err error
-		exclusionList[index], err = regexp.Compile("^" + reEntry)
-		if err != nil {
-			return err
-		}
-	}
-	configuration.ExclusionList = exclusionList
 	return nil
 }

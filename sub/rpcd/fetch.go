@@ -49,7 +49,10 @@ func doFetch(request sub.FetchRequest) {
 			fmt.Println(err)
 			return
 		}
+		// TODO(rgooch): Wrap reader with networkReaderContext.NewReader() once
+		//               streaming RPCs are implemented.
 		err = readOne(hash, reader)
+		reader.Close()
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -58,7 +61,7 @@ func doFetch(request sub.FetchRequest) {
 	rescanObjectCacheChannel <- true
 }
 
-func readOne(hash hash.Hash, reader io.ReadCloser) error {
+func readOne(hash hash.Hash, reader io.Reader) error {
 	fmt.Printf("Reading: %x\n", hash) // TODO(rgooch): Remove debugging output.
 	filename := path.Join(objectsDir, objectcache.HashToFilename(hash))
 	dirname := path.Dir(filename)

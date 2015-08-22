@@ -3,21 +3,17 @@ package scanner
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
-	"regexp"
 	"time"
 )
 
 type Configuration struct {
-	FsScanContext *fsrateio.FsRateContext
-	ExclusionList []*regexp.Regexp
-}
-
-func (configuration *Configuration) SetExclusionList(reList []string) error {
-	return configuration.setExclusionList(reList)
+	FsScanContext *fsrateio.ReaderContext
+	Filter        *filter.Filter
 }
 
 type FileSystemHistory struct {
