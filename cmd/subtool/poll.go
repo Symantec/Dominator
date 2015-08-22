@@ -26,7 +26,9 @@ func pollSubcommand(client *rpc.Client, args []string) {
 		}
 		var request sub.PollRequest
 		var reply sub.PollResponse
+		pollStartTime := time.Now()
 		err = client.Call("Subd.Poll", request, &reply)
+		fmt.Printf("Poll duration: %s\n", time.Since(pollStartTime))
 		if err != nil {
 			fmt.Printf("Error calling\t%s\n", err)
 			os.Exit(1)
