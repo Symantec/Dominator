@@ -59,4 +59,6 @@ func pollSubcommand(client *rpc.Client, args []string) {
 			}
 		}
 	}
+	sleepDuration, _ = time.ParseDuration(fmt.Sprintf("%ds", *wait))
+	time.Sleep(sleepDuration)
 }
