@@ -50,7 +50,7 @@ func main() {
 		os.Exit(1)
 	}
 	mdbChannel := mdb.StartMdbDaemon(path.Join(*stateDir, "mdb"))
-	interval, _ := time.ParseDuration(fmt.Sprintf("%ds", *minInterval))
+	interval := time.Duration(*minInterval) * time.Second
 	var herd herd.Herd
 	herd.ImageServerAddress = fmt.Sprintf("%s:%d", *imageServerHostname,
 		*imageServerPortNum)

@@ -18,7 +18,7 @@ func startMdbDaemon(mdbFileName string) chan *Mdb {
 func watchDaemon(mdbFileName string, mdbChannel chan *Mdb) {
 	var lastStat syscall.Stat_t
 	var lastMdb *Mdb
-	for interval, _ := time.ParseDuration("1s"); ; time.Sleep(interval) {
+	for ; ; time.Sleep(time.Second) {
 		var stat syscall.Stat_t
 		err := syscall.Stat(mdbFileName, &stat)
 		if err != nil {

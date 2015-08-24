@@ -12,10 +12,9 @@ import (
 func pollSubcommand(client *rpc.Client, args []string) {
 	var err error
 	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
-	sleepDuration, _ := time.ParseDuration(fmt.Sprintf("%ds", *interval))
 	for iter := 0; *numPolls < 0 || iter < *numPolls; iter++ {
 		if iter > 0 {
-			time.Sleep(sleepDuration)
+			time.Sleep(time.Duration(*interval) * time.Second)
 		}
 		if client == nil {
 			client, err = rpc.DialHTTP("tcp", clientName)
@@ -26,7 +25,9 @@ func pollSubcommand(client *rpc.Client, args []string) {
 		}
 		var request sub.PollRequest
 		var reply sub.PollResponse
+		pollStartTime := time.Now()
 		err = client.Call("Subd.Poll", request, &reply)
+		fmt.Printf("Poll duration: %s\n", time.Since(pollStartTime))
 		if err != nil {
 			fmt.Printf("Error calling\t%s\n", err)
 			os.Exit(1)
@@ -57,4 +58,5 @@ func pollSubcommand(client *rpc.Client, args []string) {
 			}
 		}
 	}
+	time.Sleep(time.Duration(*wait) * time.Second)
 }

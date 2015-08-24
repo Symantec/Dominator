@@ -25,6 +25,7 @@ var (
 	subHostname = flag.String("subHostname", "localhost", "Hostname of sub")
 	subPortNum  = flag.Uint("subPortNum", constants.SubPortNumber,
 		"Port number of sub")
+	wait = flag.Uint("wait", 0, "Seconds to sleep after last Poll")
 )
 
 func printUsage() {

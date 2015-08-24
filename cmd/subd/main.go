@@ -27,7 +27,7 @@ var (
 	showStats = flag.Bool("showStats", false,
 		"If true, show statistics after each cycle")
 	subdDir = flag.String("subdDir", "/.subd",
-		"Name of subd private directory. This must be on the same file-system as rootdir")
+		"Name of subd private directory. This must be on the same file-system as rootDir")
 	unshare = flag.Bool("unshare", true, "Internal use only.")
 )
 
