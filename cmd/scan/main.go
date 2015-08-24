@@ -57,7 +57,6 @@ func main() {
 	fmt.Println(configuration.FsScanContext)
 	syscall.Setpriority(syscall.PRIO_PROCESS, 0, 10)
 	var prev_fs *scanner.FileSystem
-	sleepDuration, _ := time.ParseDuration(fmt.Sprintf("%ds", *interval))
 	for iter := 0; *numScans < 0 || iter < *numScans; iter++ {
 		timeStart := time.Now()
 		fs, err := scanner.ScanFileSystem(*rootDir, *objectCache,
@@ -107,6 +106,6 @@ func main() {
 			file.Close()
 		}
 		prev_fs = fs
-		time.Sleep(sleepDuration)
+		time.Sleep(time.Duration(*interval) * time.Second)
 	}
 }
