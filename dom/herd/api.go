@@ -18,11 +18,15 @@ type Sub struct {
 }
 
 type Herd struct {
-	ImageServerAddress string
+	imageServerAddress string
 	nextSubToPoll      uint
 	subsByName         map[string]*Sub
 	subsByIndex        []*Sub
 	imagesByName       map[string]*image.Image
+}
+
+func NewHerd(imageServerAddress string) *Herd {
+	return &Herd{imageServerAddress: imageServerAddress}
 }
 
 func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {

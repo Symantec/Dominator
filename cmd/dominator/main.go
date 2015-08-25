@@ -51,9 +51,8 @@ func main() {
 	}
 	mdbChannel := mdb.StartMdbDaemon(path.Join(*stateDir, "mdb"))
 	interval := time.Duration(*minInterval) * time.Second
-	var herd herd.Herd
-	herd.ImageServerAddress = fmt.Sprintf("%s:%d", *imageServerHostname,
-		*imageServerPortNum)
+	herd := herd.NewHerd(fmt.Sprintf("%s:%d", *imageServerHostname,
+		*imageServerPortNum))
 	nextCycleStopTime := time.Now().Add(interval)
 	for {
 		select {
