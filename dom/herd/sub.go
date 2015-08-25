@@ -9,28 +9,27 @@ import (
 	"strings"
 )
 
-func (herd *Herd) pollNextSub() bool {
-	if herd.nextSubToPoll >= uint(len(herd.subsByIndex)) {
-		herd.nextSubToPoll = 0
-		return true
+func (sub *Sub) connect() {
+	if sub.connection != nil {
+		return
 	}
-	sub := herd.subsByIndex[herd.nextSubToPoll]
-	herd.nextSubToPoll++
-	sub.poll(herd)
-	return false
+	hostname := strings.SplitN(sub.hostname, "*", 2)[0]
+	var err error
+	sub.connection, err = rpc.DialHTTP("tcp",
+		fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber))
+	if err != nil {
+		fmt.Printf("Error dialing\t%s\n", err)
+		return
+	}
 }
 
-func (sub *Sub) poll(herd *Herd) {
-	if sub.connection == nil {
-		hostname := strings.SplitN(sub.hostname, "*", 2)[0]
-		var err error
-		sub.connection, err = rpc.DialHTTP("tcp",
-			fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber))
-		if err != nil {
-			fmt.Printf("Error dialing\t%s\n", err)
-			return
-		}
-	}
+func (sub *Sub) disconnect() {
+	sub.connection.Close()
+	sub.connection = nil
+}
+
+func (sub *Sub) poll() {
+	defer sub.disconnect()
 	var request subproto.PollRequest
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
@@ -53,24 +52,24 @@ func (sub *Sub) poll(herd *Herd) {
 	if sub.generationCountAtChangeStart == sub.generationCount {
 		return
 	}
-	if !sub.fetchMissingObjects(herd, sub.requiredImage) {
+	if !sub.fetchMissingObjects(sub.requiredImage) {
 		return
 	}
-	if !sub.sendUpdate(herd) {
+	if !sub.sendUpdate() {
 		return
 	}
-	sub.fetchMissingObjects(herd, sub.plannedImage)
+	sub.fetchMissingObjects(sub.plannedImage)
 }
 
 // Returns true if all required objects are available.
-func (sub *Sub) fetchMissingObjects(herd *Herd, imageName string) bool {
+func (sub *Sub) fetchMissingObjects(imageName string) bool {
 	if sub.fileSystem == nil {
 		return false
 	}
 	if imageName == "" {
 		return false
 	}
-	image := herd.getImage(imageName)
+	image := sub.herd.getImage(imageName)
 	if image == nil {
 		return false
 	}
@@ -95,7 +94,7 @@ func (sub *Sub) fetchMissingObjects(herd *Herd, imageName string) bool {
 	fmt.Printf("Objects needing to be fetched: %d\n", len(missingObjects))
 	var request subproto.FetchRequest
 	var reply subproto.FetchResponse
-	request.ServerAddress = herd.imageServerAddress
+	request.ServerAddress = sub.herd.imageServerAddress
 	for hash, _ := range missingObjects {
 		request.Hashes = append(request.Hashes, hash)
 	}
@@ -109,7 +108,7 @@ func (sub *Sub) fetchMissingObjects(herd *Herd, imageName string) bool {
 }
 
 // Returns true if no update needs to be performed.
-func (sub *Sub) sendUpdate(herd *Herd) bool {
+func (sub *Sub) sendUpdate() bool {
 	// TODO(rgooch): Implement this.
 	return false
 }

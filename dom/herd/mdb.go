@@ -5,6 +5,7 @@ import (
 )
 
 func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
+	herd.waitForCompletion()
 	herd.subsByIndex = nil
 	if herd.subsByName == nil {
 		herd.subsByName = make(map[string]*Sub)
@@ -16,6 +17,7 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 		sub := herd.subsByName[machine.Hostname]
 		if sub == nil {
 			sub = new(Sub)
+			sub.herd = herd
 			herd.subsByName[machine.Hostname] = sub
 		}
 		sub.hostname = machine.Hostname // Flag sub as being in the new MDB.

@@ -8,6 +8,7 @@ import (
 )
 
 type Sub struct {
+	herd                         *Herd
 	hostname                     string
 	requiredImage                string
 	plannedImage                 string
@@ -18,15 +19,17 @@ type Sub struct {
 }
 
 type Herd struct {
-	imageServerAddress string
-	nextSubToPoll      uint
-	subsByName         map[string]*Sub
-	subsByIndex        []*Sub
-	imagesByName       map[string]*image.Image
+	imageServerAddress      string
+	nextSubToPoll           uint
+	subsByName              map[string]*Sub
+	subsByIndex             []*Sub
+	imagesByName            map[string]*image.Image
+	makeConnectionSemaphore chan bool
+	pollSemaphore           chan bool
 }
 
 func NewHerd(imageServerAddress string) *Herd {
-	return &Herd{imageServerAddress: imageServerAddress}
+	return newHerd(imageServerAddress)
 }
 
 func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {
