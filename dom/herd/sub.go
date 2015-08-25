@@ -9,6 +9,22 @@ import (
 	"strings"
 )
 
+func (sub *Sub) tryMakeBusy() bool {
+	sub.busyMutex.Lock()
+	defer sub.busyMutex.Unlock()
+	if sub.busy {
+		return false
+	}
+	sub.busy = true
+	return true
+}
+
+func (sub *Sub) makeUnbusy() {
+	sub.busyMutex.Lock()
+	defer sub.busyMutex.Unlock()
+	sub.busy = false
+}
+
 func (sub *Sub) connect() {
 	if sub.connection != nil {
 		return

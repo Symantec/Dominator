@@ -5,6 +5,7 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"net/rpc"
+	"sync"
 )
 
 type Sub struct {
@@ -12,6 +13,8 @@ type Sub struct {
 	hostname                     string
 	requiredImage                string
 	plannedImage                 string
+	busyMutex                    sync.Mutex
+	busy                         bool
 	connection                   *rpc.Client
 	fileSystem                   *scanner.FileSystem
 	generationCount              uint64
