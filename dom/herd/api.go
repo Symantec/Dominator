@@ -4,7 +4,6 @@ import (
 	"github.com/Symantec/Dominator/dom/mdb"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/sub/scanner"
-	"net/rpc"
 	"sync"
 )
 
@@ -15,7 +14,6 @@ type Sub struct {
 	plannedImage                 string
 	busyMutex                    sync.Mutex
 	busy                         bool
-	connection                   *rpc.Client
 	fileSystem                   *scanner.FileSystem
 	generationCount              uint64
 	generationCountAtChangeStart uint64

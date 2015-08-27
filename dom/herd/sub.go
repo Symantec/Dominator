@@ -25,31 +25,26 @@ func (sub *Sub) makeUnbusy() {
 	sub.busy = false
 }
 
-func (sub *Sub) disconnect() {
-	sub.connection.Close()
-	sub.connection = nil
-}
-
 func (sub *Sub) connectAndPoll() {
 	hostname := strings.SplitN(sub.hostname, "*", 2)[0]
 	var err error
-	sub.connection, err = rpc.DialHTTP("tcp",
+	connection, err := rpc.DialHTTP("tcp",
 		fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber))
 	if err != nil {
 		fmt.Printf("Error dialing\t%s\n", err)
 		return
 	}
-	defer sub.disconnect()
+	defer connection.Close()
 	sub.herd.pollSemaphore <- true
-	sub.poll()
+	sub.poll(connection)
 	<-sub.herd.pollSemaphore
 }
 
-func (sub *Sub) poll() {
+func (sub *Sub) poll(connection *rpc.Client) {
 	var request subproto.PollRequest
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
-	err := sub.connection.Call("Subd.Poll", request, &reply)
+	err := connection.Call("Subd.Poll", request, &reply)
 	if err != nil {
 		fmt.Printf("Error calling\t%s\n", err)
 		return
@@ -68,17 +63,18 @@ func (sub *Sub) poll() {
 	if sub.generationCountAtChangeStart == sub.generationCount {
 		return
 	}
-	if !sub.fetchMissingObjects(sub.requiredImage) {
+	if !sub.fetchMissingObjects(connection, sub.requiredImage) {
 		return
 	}
-	if !sub.sendUpdate() {
+	if !sub.sendUpdate(connection) {
 		return
 	}
-	sub.fetchMissingObjects(sub.plannedImage)
+	sub.fetchMissingObjects(connection, sub.plannedImage)
 }
 
 // Returns true if all required objects are available.
-func (sub *Sub) fetchMissingObjects(imageName string) bool {
+func (sub *Sub) fetchMissingObjects(connection *rpc.Client,
+	imageName string) bool {
 	if sub.fileSystem == nil {
 		return false
 	}
@@ -114,7 +110,7 @@ func (sub *Sub) fetchMissingObjects(imageName string) bool {
 	for hash, _ := range missingObjects {
 		request.Hashes = append(request.Hashes, hash)
 	}
-	err := sub.connection.Call("Subd.Fetch", request, &reply)
+	err := connection.Call("Subd.Fetch", request, &reply)
 	if err != nil {
 		fmt.Printf("Error calling\t%s\n", err)
 		return false
@@ -124,7 +120,7 @@ func (sub *Sub) fetchMissingObjects(imageName string) bool {
 }
 
 // Returns true if no update needs to be performed.
-func (sub *Sub) sendUpdate() bool {
+func (sub *Sub) sendUpdate(connection *rpc.Client) bool {
 	// TODO(rgooch): Implement this.
 	return false
 }
