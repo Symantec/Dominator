@@ -15,7 +15,7 @@ func (herd *Herd) getImage(name string) *image.Image {
 	if image != nil {
 		return image
 	}
-	connection, err := rpc.DialHTTP("tcp", herd.ImageServerAddress)
+	connection, err := rpc.DialHTTP("tcp", herd.imageServerAddress)
 	if err != nil {
 		fmt.Printf("Error dialing\t%s\n", err)
 		return nil
