@@ -25,10 +25,12 @@ func (sub *Sub) makeUnbusy() {
 	sub.busy = false
 }
 
-func (sub *Sub) connect() {
-	if sub.connection != nil {
-		return
-	}
+func (sub *Sub) disconnect() {
+	sub.connection.Close()
+	sub.connection = nil
+}
+
+func (sub *Sub) connectAndPoll() {
 	hostname := strings.SplitN(sub.hostname, "*", 2)[0]
 	var err error
 	sub.connection, err = rpc.DialHTTP("tcp",
@@ -37,15 +39,13 @@ func (sub *Sub) connect() {
 		fmt.Printf("Error dialing\t%s\n", err)
 		return
 	}
-}
-
-func (sub *Sub) disconnect() {
-	sub.connection.Close()
-	sub.connection = nil
+	defer sub.disconnect()
+	sub.herd.pollSemaphore <- true
+	sub.poll()
+	<-sub.herd.pollSemaphore
 }
 
 func (sub *Sub) poll() {
-	defer sub.disconnect()
 	var request subproto.PollRequest
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse

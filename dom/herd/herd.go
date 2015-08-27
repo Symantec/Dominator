@@ -41,12 +41,7 @@ func (herd *Herd) pollNextSub() bool {
 		if !sub.tryMakeBusy() {
 			return
 		}
-		sub.connect()
-		if sub.connection != nil {
-			herd.pollSemaphore <- true
-			sub.poll()
-			<-herd.pollSemaphore
-		}
+		sub.connectAndPoll()
 		sub.makeUnbusy()
 	}()
 	return false
