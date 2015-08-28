@@ -5,6 +5,7 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"sync"
+	"time"
 )
 
 type Sub struct {
@@ -28,6 +29,8 @@ type Herd struct {
 	imagesByName            map[string]*image.Image
 	makeConnectionSemaphore chan bool
 	pollSemaphore           chan bool
+	previousScanStartTime   time.Time
+	currentScanStartTime    time.Time
 }
 
 func NewHerd(imageServerAddress string) *Herd {

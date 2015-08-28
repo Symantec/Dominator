@@ -2,6 +2,7 @@ package herd
 
 import (
 	"runtime"
+	"time"
 )
 
 func newHerd(imageServerAddress string) *Herd {
@@ -9,6 +10,8 @@ func newHerd(imageServerAddress string) *Herd {
 	herd.imageServerAddress = imageServerAddress
 	herd.makeConnectionSemaphore = make(chan bool, 1000)
 	herd.pollSemaphore = make(chan bool, runtime.NumCPU()*2)
+	herd.previousScanStartTime = time.Now()
+	herd.currentScanStartTime = time.Now()
 	return &herd
 }
 
@@ -28,6 +31,8 @@ func (herd *Herd) waitForCompletion() {
 func (herd *Herd) pollNextSub() bool {
 	if herd.nextSubToPoll >= uint(len(herd.subsByIndex)) {
 		herd.nextSubToPoll = 0
+		herd.previousScanStartTime = herd.currentScanStartTime
+		herd.currentScanStartTime = time.Now()
 		return true
 	}
 	sub := herd.subsByIndex[herd.nextSubToPoll]
