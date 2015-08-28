@@ -2,7 +2,9 @@ package html
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/lib/format"
 	"io"
+	"runtime"
 	"syscall"
 	"time"
 )
@@ -18,4 +20,8 @@ func writeHeader(writer io.Writer) {
 	cpuTime := rusage.Utime.Sec + rusage.Stime.Sec
 	fmt.Fprintf(writer, "CPU Time: %d%%<br>\n",
 		cpuTime*100/int64(uptime.Seconds()))
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	fmt.Fprintf(writer, "Allocated memory: %s<br>\n",
+		format.FormatBytes(memStats.Alloc))
 }
