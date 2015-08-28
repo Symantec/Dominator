@@ -8,6 +8,8 @@ import (
 )
 
 func (herd *Herd) getImage(name string) *image.Image {
+	herd.Lock()
+	defer herd.Unlock()
 	if herd.imagesByName == nil {
 		herd.imagesByName = make(map[string]*image.Image)
 	}

@@ -6,6 +6,8 @@ import (
 
 func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 	herd.waitForCompletion()
+	herd.Lock()
+	defer herd.Unlock()
 	herd.subsByIndex = nil
 	if herd.subsByName == nil {
 		herd.subsByName = make(map[string]*Sub)

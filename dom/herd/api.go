@@ -20,6 +20,7 @@ type Sub struct {
 }
 
 type Herd struct {
+	sync.RWMutex            // Protect map and slice mutations.
 	imageServerAddress      string
 	nextSubToPoll           uint
 	subsByName              map[string]*Sub
