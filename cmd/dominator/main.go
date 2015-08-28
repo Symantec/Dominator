@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/dom/herd"
-	"github.com/Symantec/Dominator/dom/httpd"
 	"github.com/Symantec/Dominator/dom/mdb"
 	"github.com/Symantec/Dominator/lib/constants"
 	"os"
@@ -54,7 +53,7 @@ func main() {
 	interval := time.Duration(*minInterval) * time.Second
 	herd := herd.NewHerd(fmt.Sprintf("%s:%d", *imageServerHostname,
 		*imageServerPortNum))
-	err = httpd.StartServer(*portNum, true)
+	err = herd.StartServer(*portNum, true)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)
 		os.Exit(1)

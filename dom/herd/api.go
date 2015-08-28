@@ -40,3 +40,7 @@ func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {
 func (herd *Herd) PollNextSub() bool {
 	return herd.pollNextSub()
 }
+
+func (herd *Herd) StartServer(portNum uint, daemon bool) error {
+	return herd.startServer(portNum, daemon)
+}

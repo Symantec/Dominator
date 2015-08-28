@@ -1,4 +1,4 @@
-package httpd
+package herd
 
 import (
 	"fmt"
@@ -6,11 +6,14 @@ import (
 	"net/http"
 )
 
-func StartServer(portNum uint, daemon bool) error {
+var httpdHerd *Herd
+
+func (herd *Herd) startServer(portNum uint, daemon bool) error {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", portNum))
 	if err != nil {
 		return err
 	}
+	httpdHerd = herd
 	http.HandleFunc("/", statusHandler)
 	if daemon {
 		go http.Serve(listener, nil)
