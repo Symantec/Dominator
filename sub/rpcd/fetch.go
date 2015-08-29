@@ -37,6 +37,7 @@ func doFetch(request sub.FetchRequest) {
 		fmt.Printf("Error dialing\t%s\n", err)
 		return
 	}
+	defer client.Close()
 	objectServer := objectclient.NewObjectClient(client)
 	objectsReader, err := objectServer.GetObjects(request.Hashes)
 	if err != nil {
