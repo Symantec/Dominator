@@ -26,16 +26,19 @@ func (sub *Sub) makeUnbusy() {
 }
 
 func (sub *Sub) connectAndPoll() {
+	sub.status = statusConnecting
 	hostname := strings.SplitN(sub.hostname, "*", 2)[0]
 	var err error
 	connection, err := rpc.DialHTTP("tcp",
 		fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber))
 	if err != nil {
-		fmt.Printf("Error dialing\t%s\n", err)
+		sub.status = statusFailedToConnect
 		return
 	}
 	defer connection.Close()
+	sub.status = statusWaitingToPoll
 	sub.herd.pollSemaphore <- true
+	sub.status = statusPolling
 	sub.poll(connection)
 	<-sub.herd.pollSemaphore
 }
@@ -46,6 +49,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	var reply subproto.PollResponse
 	err := connection.Call("Subd.Poll", request, &reply)
 	if err != nil {
+		sub.status = statusFailedToPoll
 		fmt.Printf("Error calling\t%s\n", err)
 		return
 	}
@@ -54,13 +58,20 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		fs.RebuildPointers()
 		sub.fileSystem = fs
 		sub.generationCount = reply.GenerationCount
+		// TODO(rgooch): Remove debugging output.
 		fmt.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)
 	}
-	if reply.FetchInProgress || reply.UpdateInProgress {
+	if reply.FetchInProgress {
+		sub.status = statusFetching
+		return
+	}
+	if reply.UpdateInProgress {
+		sub.status = statusUpdating
 		return
 	}
 	if sub.generationCountAtChangeStart == sub.generationCount {
+		sub.status = statusWaitingForNextPoll
 		return
 	}
 	if !sub.fetchMissingObjects(connection, sub.requiredImage) {
@@ -69,12 +80,16 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	if !sub.sendUpdate(connection) {
 		return
 	}
-	sub.fetchMissingObjects(connection, sub.plannedImage)
+	if !sub.fetchMissingObjects(connection, sub.plannedImage) {
+		return
+	}
+	sub.status = statusSynced
 }
 
 // Returns true if all required objects are available.
 func (sub *Sub) fetchMissingObjects(connection *rpc.Client,
 	imageName string) bool {
+	sub.status = statusImageNotReady
 	if sub.fileSystem == nil {
 		return false
 	}
@@ -110,8 +125,10 @@ func (sub *Sub) fetchMissingObjects(connection *rpc.Client,
 	for hash, _ := range missingObjects {
 		request.Hashes = append(request.Hashes, hash)
 	}
+	sub.status = statusFetching
 	err := connection.Call("Subd.Fetch", request, &reply)
 	if err != nil {
+		sub.status = statusFailedToFetch
 		fmt.Printf("Error calling\t%s\n", err)
 		return false
 	}
@@ -122,5 +139,6 @@ func (sub *Sub) fetchMissingObjects(connection *rpc.Client,
 // Returns true if no update needs to be performed.
 func (sub *Sub) sendUpdate(connection *rpc.Client) bool {
 	// TODO(rgooch): Implement this.
+	sub.status = statusUpdating
 	return false
 }

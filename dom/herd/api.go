@@ -8,6 +8,22 @@ import (
 	"time"
 )
 
+const (
+	statusUnknown = iota
+	statusConnecting
+	statusFailedToConnect
+	statusWaitingToPoll
+	statusPolling
+	statusFailedToPoll
+	statusImageNotReady
+	statusFetching
+	statusFailedToFetch
+	statusWaitingForNextPoll
+	statusUpdating
+	statusFailedToUpdate
+	statusSynced
+)
+
 type Sub struct {
 	herd                         *Herd
 	hostname                     string
@@ -18,6 +34,7 @@ type Sub struct {
 	fileSystem                   *scanner.FileSystem
 	generationCount              uint64
 	generationCountAtChangeStart uint64
+	status                       uint
 }
 
 type Herd struct {
