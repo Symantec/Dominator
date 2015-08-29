@@ -5,6 +5,24 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"sync"
+	"time"
+)
+
+const (
+	statusUnknown = iota
+	statusConnecting
+	statusFailedToConnect
+	statusWaitingToPoll
+	statusPolling
+	statusFailedToPoll
+	statusSubNotReady
+	statusImageNotReady
+	statusFetching
+	statusFailedToFetch
+	statusWaitingForNextPoll
+	statusUpdating
+	statusFailedToUpdate
+	statusSynced
 )
 
 type Sub struct {
@@ -17,9 +35,12 @@ type Sub struct {
 	fileSystem                   *scanner.FileSystem
 	generationCount              uint64
 	generationCountAtChangeStart uint64
+	status                       uint
+	lastSuccessfulPoll           time.Time
 }
 
 type Herd struct {
+	sync.RWMutex            // Protect map and slice mutations.
 	imageServerAddress      string
 	nextSubToPoll           uint
 	subsByName              map[string]*Sub
@@ -27,6 +48,8 @@ type Herd struct {
 	imagesByName            map[string]*image.Image
 	makeConnectionSemaphore chan bool
 	pollSemaphore           chan bool
+	previousScanStartTime   time.Time
+	currentScanStartTime    time.Time
 }
 
 func NewHerd(imageServerAddress string) *Herd {
@@ -39,4 +62,8 @@ func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {
 
 func (herd *Herd) PollNextSub() bool {
 	return herd.pollNextSub()
+}
+
+func (herd *Herd) StartServer(portNum uint, daemon bool) error {
+	return herd.startServer(portNum, daemon)
 }

@@ -53,6 +53,11 @@ func main() {
 	interval := time.Duration(*minInterval) * time.Second
 	herd := herd.NewHerd(fmt.Sprintf("%s:%d", *imageServerHostname,
 		*imageServerPortNum))
+	err = herd.StartServer(*portNum, true)
+	if err != nil {
+		fmt.Printf("Unable to create http server\t%s\n", err)
+		os.Exit(1)
+	}
 	nextCycleStopTime := time.Now().Add(interval)
 	for {
 		select {

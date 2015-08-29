@@ -8,6 +8,8 @@ import (
 )
 
 func (herd *Herd) getImage(name string) *image.Image {
+	herd.Lock()
+	defer herd.Unlock()
 	if herd.imagesByName == nil {
 		herd.imagesByName = make(map[string]*image.Image)
 	}
@@ -20,6 +22,7 @@ func (herd *Herd) getImage(name string) *image.Image {
 		fmt.Printf("Error dialing\t%s\n", err)
 		return nil
 	}
+	defer connection.Close()
 	var request imageserver.GetImageRequest
 	request.ImageName = name
 	var reply imageserver.GetImageResponse
@@ -28,7 +31,6 @@ func (herd *Herd) getImage(name string) *image.Image {
 		fmt.Printf("Error calling\t%s\n", err)
 		return nil
 	}
-	connection.Close()
 	// TODO(rgooch): Delete debugging output.
 	if reply.Image != nil {
 		fmt.Printf("Got image: %s\n", name)
