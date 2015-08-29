@@ -19,24 +19,28 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "</center>")
 	html.WriteHeader(writer)
 	fmt.Fprintln(writer, "<h3>")
-	writeStatus(writer)
+	writeStatus(writer, httpdHerd)
 	fmt.Fprintln(writer, "</h3>")
 	fmt.Fprintln(writer, "<hr>")
 	html.WriteFooter(writer)
 	fmt.Fprintln(writer, "</body>")
 }
 
-func writeStatus(writer io.Writer) {
+func writeStatus(writer io.Writer, herd *Herd) {
 	fmt.Fprintf(writer, "Duration of current scan cycle: %s<br>\n",
-		time.Since(httpdHerd.currentScanStartTime))
+		time.Since(herd.currentScanStartTime))
 	fmt.Fprintf(writer, "Duration of previous scan cycle: %s<br>\n",
-		httpdHerd.currentScanStartTime.Sub(httpdHerd.previousScanStartTime))
+		herd.currentScanStartTime.Sub(herd.previousScanStartTime))
 	fmt.Fprintf(writer, "Image server: <a href=\"http://%s/\">%s</a><br>\n",
-		httpdHerd.imageServerAddress, httpdHerd.imageServerAddress)
-	httpdHerd.RLock()
-	numSubs := len(httpdHerd.subsByName)
-	httpdHerd.RUnlock()
+		herd.imageServerAddress, herd.imageServerAddress)
+	herd.RLock()
+	numSubs := len(herd.subsByName)
+	herd.RUnlock()
 	fmt.Fprintf(writer,
 		"Number of <a href=\"listSubs\">subs</a>: <a href=\"showSubs\">%d</a><br>\n",
 		numSubs)
+	fmt.Fprintf(writer, "Connection slots: %d out of %d<br>\n",
+		len(herd.makeConnectionSemaphore), cap(herd.makeConnectionSemaphore))
+	fmt.Fprintf(writer, "RPC slots: %d out of %d<br>\n",
+		len(herd.pollSemaphore), cap(herd.pollSemaphore))
 }
