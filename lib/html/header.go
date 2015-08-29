@@ -20,8 +20,14 @@ func writeHeader(writer io.Writer) {
 	cpuTime := rusage.Utime.Sec + rusage.Stime.Sec
 	fmt.Fprintf(writer, "CPU Time: %d%%<br>\n",
 		cpuTime*100/int64(uptime.Seconds()))
-	var memStats runtime.MemStats
-	runtime.ReadMemStats(&memStats)
-	fmt.Fprintf(writer, "Allocated memory: %s<br>\n",
-		format.FormatBytes(memStats.Alloc))
+	var memStatsBeforeGC, memStatsAfterGC runtime.MemStats
+	runtime.ReadMemStats(&memStatsBeforeGC)
+	runtime.GC()
+	runtime.ReadMemStats(&memStatsAfterGC)
+	fmt.Fprintf(writer, "Allocated memory: %s (%s after GC)<br>\n",
+		format.FormatBytes(memStatsBeforeGC.Alloc),
+		format.FormatBytes(memStatsAfterGC.Alloc))
+	fmt.Fprintf(writer, "System memory: %s (%s after GC)<br>\n",
+		format.FormatBytes(memStatsBeforeGC.Sys),
+		format.FormatBytes(memStatsAfterGC.Sys))
 }
