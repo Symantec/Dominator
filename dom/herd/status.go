@@ -37,5 +37,6 @@ func writeStatus(writer io.Writer) {
 	numSubs := len(httpdHerd.subsByName)
 	httpdHerd.RUnlock()
 	fmt.Fprintf(writer,
-		"Number of subs: <a href=\"listSubs\">%d</a><br>\n", numSubs)
+		"Number of <a href=\"listSubs\">subs</a>: <a href=\"showSubs\">%d</a><br>\n",
+		numSubs)
 }

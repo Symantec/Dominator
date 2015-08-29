@@ -2,6 +2,7 @@ package herd
 
 import (
 	"runtime"
+	"sort"
 	"time"
 )
 
@@ -50,4 +51,19 @@ func (herd *Herd) pollNextSub() bool {
 		sub.makeUnbusy()
 	}()
 	return false
+}
+
+func (herd *Herd) getSortedSubs() []*Sub {
+	httpdHerd.RLock()
+	defer httpdHerd.RUnlock()
+	subNames := make([]string, 0, len(httpdHerd.subsByName))
+	subs := make([]*Sub, 0, len(httpdHerd.subsByName))
+	for name, _ := range httpdHerd.subsByName {
+		subNames = append(subNames, name)
+	}
+	sort.Strings(subNames)
+	for _, name := range subNames {
+		subs = append(subs, httpdHerd.subsByName[name])
+	}
+	return subs
 }
