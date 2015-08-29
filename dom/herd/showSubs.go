@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func showSubsHandler(w http.ResponseWriter, req *http.Request) {
@@ -27,6 +28,7 @@ func showSubsHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "    <th>Planned Image</b></th>")
 	fmt.Fprintln(writer, "    <th>Busy</b></th>")
 	fmt.Fprintln(writer, "    <th>Status</b></th>")
+	fmt.Fprintln(writer, "    <th>Staleness</b></th>")
 	fmt.Fprintln(writer, "  </tr>")
 	subs := httpdHerd.getSortedSubs()
 	for _, sub := range subs {
@@ -57,6 +59,8 @@ func showSub(writer io.Writer, sub *Sub) {
 		status = "polling"
 	case sub.status == statusFailedToPoll:
 		status = "poll failed"
+	case sub.status == statusSubNotReady:
+		status = "sub not ready"
 	case sub.status == statusImageNotReady:
 		status = "image not ready"
 	case sub.status == statusFetching:
@@ -73,5 +77,11 @@ func showSub(writer io.Writer, sub *Sub) {
 		status = "synced"
 	}
 	fmt.Fprintf(writer, "    <td>%s</td>\n", status)
+	if sub.lastSuccessfulPoll.IsZero() {
+		fmt.Fprintf(writer, "    <td></td>\n")
+	} else {
+		fmt.Fprintf(writer, "    <td>%s</td>\n",
+			time.Since(sub.lastSuccessfulPoll))
+	}
 	fmt.Fprintf(writer, "  </tr>\n")
 }

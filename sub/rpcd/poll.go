@@ -10,10 +10,10 @@ func (t *rpcType) Poll(request sub.PollRequest, reply *sub.PollResponse) error {
 	response.FetchInProgress = fetchInProgress
 	response.UpdateInProgress = updateInProgress
 	rwLock.RUnlock()
+	response.GenerationCount = fileSystemHistory.GenerationCount()
 	fs := fileSystemHistory.FileSystem()
 	if fs != nil &&
 		request.HaveGeneration != fileSystemHistory.GenerationCount() {
-		response.GenerationCount = fileSystemHistory.GenerationCount()
 		response.FileSystem = fs
 	}
 	*reply = response

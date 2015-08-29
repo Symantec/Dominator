@@ -15,6 +15,7 @@ const (
 	statusWaitingToPoll
 	statusPolling
 	statusFailedToPoll
+	statusSubNotReady
 	statusImageNotReady
 	statusFetching
 	statusFailedToFetch
@@ -35,6 +36,7 @@ type Sub struct {
 	generationCount              uint64
 	generationCountAtChangeStart uint64
 	status                       uint
+	lastSuccessfulPoll           time.Time
 }
 
 type Herd struct {

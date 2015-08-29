@@ -7,6 +7,7 @@ import (
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"net/rpc"
 	"strings"
+	"time"
 )
 
 func (sub *Sub) tryMakeBusy() bool {
@@ -53,14 +54,21 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		fmt.Printf("Error calling\t%s\n", err)
 		return
 	}
-	fs := reply.FileSystem
-	if fs != nil {
+	sub.lastSuccessfulPoll = time.Now()
+	if reply.GenerationCount == 0 {
+		sub.fileSystem = nil
+	}
+	if fs := reply.FileSystem; fs != nil {
 		fs.RebuildPointers()
 		sub.fileSystem = fs
 		sub.generationCount = reply.GenerationCount
 		// TODO(rgooch): Remove debugging output.
 		fmt.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)
+	}
+	if sub.fileSystem == nil {
+		sub.status = statusSubNotReady
+		return
 	}
 	if reply.FetchInProgress {
 		sub.status = statusFetching
@@ -74,31 +82,32 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		sub.status = statusWaitingForNextPoll
 		return
 	}
-	if !sub.fetchMissingObjects(connection, sub.requiredImage) {
+	if idle, status := sub.fetchMissingObjects(connection,
+		sub.requiredImage); !idle {
+		sub.status = status
 		return
 	}
-	if !sub.sendUpdate(connection) {
+	if idle, status := sub.sendUpdate(connection); !idle {
+		sub.status = status
 		return
 	}
-	if !sub.fetchMissingObjects(connection, sub.plannedImage) {
+	if idle, status := sub.fetchMissingObjects(connection,
+		sub.plannedImage); !idle {
+		sub.status = status
 		return
 	}
 	sub.status = statusSynced
 }
 
 // Returns true if all required objects are available.
-func (sub *Sub) fetchMissingObjects(connection *rpc.Client,
-	imageName string) bool {
-	sub.status = statusImageNotReady
-	if sub.fileSystem == nil {
-		return false
-	}
+func (sub *Sub) fetchMissingObjects(connection *rpc.Client, imageName string) (
+	bool, uint) {
 	if imageName == "" {
-		return false
+		return false, statusImageNotReady
 	}
 	image := sub.herd.getImage(imageName)
 	if image == nil {
-		return false
+		return false, statusImageNotReady
 	}
 	missingObjects := make(map[hash.Hash]bool)
 	for _, inode := range image.FileSystem.RegularInodeTable {
@@ -115,7 +124,7 @@ func (sub *Sub) fetchMissingObjects(connection *rpc.Client,
 		}
 	}
 	if len(missingObjects) < 1 {
-		return true
+		return true, statusSynced
 	}
 	// TODO(rgooch): Remove debugging output.
 	fmt.Printf("Objects needing to be fetched: %d\n", len(missingObjects))
@@ -125,20 +134,17 @@ func (sub *Sub) fetchMissingObjects(connection *rpc.Client,
 	for hash, _ := range missingObjects {
 		request.Hashes = append(request.Hashes, hash)
 	}
-	sub.status = statusFetching
 	err := connection.Call("Subd.Fetch", request, &reply)
 	if err != nil {
-		sub.status = statusFailedToFetch
 		fmt.Printf("Error calling\t%s\n", err)
-		return false
+		return false, statusFailedToFetch
 	}
 	sub.generationCountAtChangeStart = sub.generationCount
-	return false
+	return false, statusFetching
 }
 
 // Returns true if no update needs to be performed.
-func (sub *Sub) sendUpdate(connection *rpc.Client) bool {
+func (sub *Sub) sendUpdate(connection *rpc.Client) (bool, uint) {
 	// TODO(rgooch): Implement this.
-	sub.status = statusUpdating
-	return false
+	return false, statusUpdating
 }
