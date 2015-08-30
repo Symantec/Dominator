@@ -2,13 +2,15 @@ package main
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"net/rpc"
 	"os"
 )
 
-func checkImageSubcommand(client *rpc.Client, args []string) {
-	imageExists, err := checkImage(client, args[0])
+func checkImageSubcommand(imageClient *rpc.Client,
+	objectClient *objectclient.ObjectClient, args []string) {
+	imageExists, err := checkImage(imageClient, args[0])
 	if err != nil {
 		fmt.Printf("Error checking image\t%s\n", err)
 		os.Exit(1)

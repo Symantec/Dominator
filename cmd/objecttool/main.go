@@ -6,7 +6,6 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/objectserver"
-	"net/rpc"
 	"os"
 )
 
@@ -50,14 +49,8 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
-	clientName := fmt.Sprintf("%s:%d",
-		*objectServerHostname, *objectServerPortNum)
-	client, err := rpc.DialHTTP("tcp", clientName)
-	if err != nil {
-		fmt.Printf("Error dialing\t%s\n", err)
-		os.Exit(1)
-	}
-	objectServer := objectclient.NewObjectClient(client)
+	objectServer := objectclient.NewObjectClient(fmt.Sprintf("%s:%d",
+		*objectServerHostname, *objectServerPortNum))
 	for _, subcommand := range subcommands {
 		if flag.Arg(0) == subcommand.command {
 			if flag.NArg()-1 != subcommand.numArgs {

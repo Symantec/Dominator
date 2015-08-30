@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/objectclient"
 	"net/rpc"
 	"os"
 )
@@ -30,7 +31,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  list")
 }
 
-type commandFunc func(*rpc.Client, []string)
+type commandFunc func(*rpc.Client, *objectclient.ObjectClient, []string)
 
 type subcommand struct {
 	command string
@@ -54,18 +55,19 @@ func main() {
 	}
 	clientName := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)
-	client, err := rpc.DialHTTP("tcp", clientName)
+	imageClient, err := rpc.DialHTTP("tcp", clientName)
 	if err != nil {
 		fmt.Printf("Error dialing\t%s\n", err)
 		os.Exit(1)
 	}
+	objectClient := objectclient.NewObjectClient(clientName)
 	for _, subcommand := range subcommands {
 		if flag.Arg(0) == subcommand.command {
 			if flag.NArg()-1 != subcommand.numArgs {
 				printUsage()
 				os.Exit(2)
 			}
-			subcommand.cmdFunc(client, flag.Args()[1:])
+			subcommand.cmdFunc(imageClient, objectClient, flag.Args()[1:])
 			os.Exit(3)
 		}
 	}

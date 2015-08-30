@@ -1,46 +1,70 @@
 package rpcd
 
 import (
-	"errors"
+	"encoding/gob"
 	"fmt"
 	"github.com/Symantec/Dominator/proto/objectserver"
-	"io/ioutil"
-	"runtime"
+	"io"
+	"net/http"
 )
 
-func (t *rpcType) GetObjects(request objectserver.GetObjectsRequest,
-	reply *objectserver.GetObjectsResponse) error {
-	var response objectserver.GetObjectsResponse
-	// First a quick check for existence. If any objects missing, fail request.
-	objectSizes, err := objectServer.CheckObjects(request.Hashes)
-	if err != nil {
-		return err
+func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
+	if req.Method != "CONNECT" {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		io.WriteString(w, "405 must CONNECT\n")
+		return
 	}
+	conn, bufrw, err := w.(http.Hijacker).Hijack()
+	if err != nil {
+		fmt.Println("rpc hijacking ", req.RemoteAddr, ": ", err.Error())
+		return
+	}
+	defer conn.Close()
+	defer bufrw.Flush()
+	io.WriteString(conn, "HTTP/1.0 200 Connected to GetObjects RPC\n\n")
+	var request objectserver.GetObjectsRequest
+	var response objectserver.GetObjectsResponse
+	decoder := gob.NewDecoder(bufrw)
+	encoder := gob.NewEncoder(bufrw)
+	err = decoder.Decode(&request)
+	if err != nil {
+		response.ResponseString = err.Error()
+		encoder.Encode(response)
+		return
+	}
+	response.ObjectSizes, err = objectServer.CheckObjects(request.Hashes)
+	if err != nil {
+		response.ResponseString = err.Error()
+		encoder.Encode(response)
+		return
+	}
+	// First a quick check for existence. If any objects missing, fail request.
 	for index, hash := range request.Hashes {
-		if objectSizes[index] < 1 {
-			return errors.New(fmt.Sprintf("unknown object: %x", hash))
+		if response.ObjectSizes[index] < 1 {
+			response.ResponseString = fmt.Sprintf("unknown object: %x", hash)
+			encoder.Encode(response)
+			return
 		}
 	}
-	response.ObjectSizes = make([]uint64, len(request.Hashes))
-	response.Objects = make([][]byte, len(request.Hashes))
 	objectsReader, err := objectServer.GetObjects(request.Hashes)
 	if err != nil {
-		return err
+		response.ResponseString = err.Error()
+		encoder.Encode(response)
+		return
 	}
-	for index := range request.Hashes {
-		size, reader, err := objectsReader.NextObject()
+	encoder.Encode(response)
+	bufrw.Flush()
+	for range request.Hashes {
+		_, reader, err := objectsReader.NextObject()
 		if err != nil {
-			return err
+			fmt.Println(err)
+			return
 		}
-		response.ObjectSizes[index] = size
-		response.Objects[index], err = ioutil.ReadAll(reader)
-		reader.Close()
+		_, err = io.Copy(conn, reader)
 		if err != nil {
-			return errors.New(fmt.Sprintf(
-				"error reading data for object: %s %s", err.Error()))
+			fmt.Printf("Error copying:\t%s\n", err)
+			return
 		}
 	}
-	*reply = response
-	runtime.GC() // An opportune time to take out the garbage.
-	return nil
 }

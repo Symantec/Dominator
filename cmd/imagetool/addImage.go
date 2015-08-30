@@ -19,8 +19,9 @@ import (
 	"strings"
 )
 
-func addImageSubcommand(client *rpc.Client, args []string) {
-	err := addImage(client, args[0], args[1], args[2])
+func addImageSubcommand(imageClient *rpc.Client,
+	objectClient *objectclient.ObjectClient, args []string) {
+	err := addImage(imageClient, objectClient, args[0], args[1], args[2])
 	if err != nil {
 		fmt.Printf("Error adding image: \"%s\"\t%s\n", args[0], err)
 		os.Exit(1)
@@ -28,7 +29,7 @@ func addImageSubcommand(client *rpc.Client, args []string) {
 	os.Exit(0)
 }
 
-func addImage(client *rpc.Client,
+func addImage(imageClient *rpc.Client, objectClient *objectclient.ObjectClient,
 	name, imageFilename, filterFilename string) error {
 	var request imageserver.AddImageRequest
 	var reply imageserver.AddImageResponse
@@ -56,7 +57,7 @@ func addImage(client *rpc.Client,
 		return err
 	}
 	defer filterFile.Close()
-	imageExists, err := checkImage(client, name)
+	imageExists, err := checkImage(imageClient, name)
 	if err != nil {
 		return errors.New("error checking for image existance: " + err.Error())
 	}
@@ -78,12 +79,12 @@ func addImage(client *rpc.Client,
 		return errors.New("error reading filter: " + err.Error())
 	}
 	tarReader := tar.NewReader(imageReader)
-	request.Image.FileSystem, err = buildImage(client, tarReader,
+	request.Image.FileSystem, err = buildImage(objectClient, tarReader,
 		newImage.Filter)
 	if err != nil {
 		return errors.New("error building image: " + err.Error())
 	}
-	err = client.Call("ImageServer.AddImage", request, &reply)
+	err = imageClient.Call("ImageServer.AddImage", request, &reply)
 	if err != nil {
 		return errors.New("remote error: " + err.Error())
 	}
@@ -121,11 +122,10 @@ func (dh *dataHandler) HandleData(data []byte) (hash.Hash, error) {
 	return hash, nil
 }
 
-func buildImage(client *rpc.Client, tarReader *tar.Reader,
+func buildImage(objectClient *objectclient.ObjectClient, tarReader *tar.Reader,
 	filter *filter.Filter) (*filesystem.FileSystem, error) {
 	var dh dataHandler
-	dh.objQ = objectclient.NewObjectAdderQueue(
-		objectclient.NewObjectClient(client), 1024*1024*128)
+	dh.objQ = objectclient.NewObjectAdderQueue(objectClient, 1024*1024*128)
 	fs, err := untar.Decode(tarReader, &dh, filter)
 	if err != nil {
 		return nil, err
