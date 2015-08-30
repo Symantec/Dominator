@@ -2,13 +2,15 @@ package main
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"net/rpc"
 	"os"
 )
 
-func listImagesSubcommand(client *rpc.Client, args []string) {
-	err := listImages(client)
+func listImagesSubcommand(imageClient *rpc.Client,
+	objectClient *objectclient.ObjectClient, args []string) {
+	err := listImages(imageClient)
 	if err != nil {
 		fmt.Printf("Error listing images\t%s\n", err)
 		os.Exit(1)

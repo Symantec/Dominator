@@ -4,15 +4,15 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/objectserver"
 	"io"
-	"net/rpc"
+	"net"
 )
 
 type ObjectClient struct {
-	client *rpc.Client
+	address string
 }
 
-func NewObjectClient(client *rpc.Client) *ObjectClient {
-	return &ObjectClient{client}
+func NewObjectClient(address string) *ObjectClient {
+	return &ObjectClient{address}
 }
 
 func (objClient *ObjectClient) AddObjects(datas [][]byte,
@@ -32,7 +32,7 @@ func (objClient *ObjectClient) GetObjects(hashes []hash.Hash) (
 
 type ObjectsReader struct {
 	sizes     []uint64
-	datas     [][]byte
+	conn      net.Conn
 	nextIndex int64
 }
 

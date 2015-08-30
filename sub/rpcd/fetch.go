@@ -9,7 +9,6 @@ import (
 	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/proto/sub"
 	"io"
-	"net/rpc"
 	"os"
 	"path"
 	"syscall"
@@ -32,16 +31,10 @@ func (t *rpcType) Fetch(request sub.FetchRequest,
 
 func doFetch(request sub.FetchRequest) {
 	defer clearFetchInProgress()
-	client, err := rpc.DialHTTP("tcp", request.ServerAddress)
-	if err != nil {
-		fmt.Printf("Error dialing\t%s\n", err)
-		return
-	}
-	defer client.Close()
-	objectServer := objectclient.NewObjectClient(client)
+	objectServer := objectclient.NewObjectClient(request.ServerAddress)
 	objectsReader, err := objectServer.GetObjects(request.Hashes)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Error getting object reader:\t%s\n", err.Error())
 		return
 	}
 	for _, hash := range request.Hashes {
