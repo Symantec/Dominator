@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"syscall"
+	"time"
 )
 
 func (t *rpcType) Fetch(request sub.FetchRequest,
@@ -32,13 +33,22 @@ func (t *rpcType) Fetch(request sub.FetchRequest,
 func doFetch(request sub.FetchRequest) {
 	defer clearFetchInProgress()
 	objectServer := objectclient.NewObjectClient(request.ServerAddress)
+	benchmark := false
+	if networkReaderContext.MaximumSpeed() < 1 {
+		benchmark = enoughBytesForBenchmark(objectServer, request)
+		if benchmark {
+			objectServer.SetExclusiveGetObjects(true)
+		}
+	}
 	objectsReader, err := objectServer.GetObjects(request.Hashes)
 	if err != nil {
 		fmt.Printf("Error getting object reader:\t%s\n", err.Error())
 		return
 	}
+	var totalLength uint64
+	timeStart := time.Now()
 	for _, hash := range request.Hashes {
-		_, reader, err := objectsReader.NextObject()
+		length, reader, err := objectsReader.NextObject()
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -49,8 +59,35 @@ func doFetch(request sub.FetchRequest) {
 			fmt.Println(err)
 			return
 		}
+		totalLength += length
+	}
+	if benchmark {
+		duration := time.Since(timeStart)
+		speed := uint64(float64(totalLength) / duration.Seconds())
+		file, err := os.Create(netbenchFilename)
+		if err == nil {
+			fmt.Fprintf(file, "%d\n", speed)
+			file.Close()
+		}
+		networkReaderContext.InitialiseMaximumSpeed(speed)
 	}
 	rescanObjectCacheChannel <- true
+}
+
+func enoughBytesForBenchmark(objectServer *objectclient.ObjectClient,
+	request sub.FetchRequest) bool {
+	lengths, err := objectServer.CheckObjects(request.Hashes)
+	if err != nil {
+		return false
+	}
+	var totalLength uint64
+	for _, length := range lengths {
+		totalLength += length
+	}
+	if totalLength > 1024*1024*64 {
+		return true
+	}
+	return false
 }
 
 func readOne(hash hash.Hash, reader io.Reader) error {
