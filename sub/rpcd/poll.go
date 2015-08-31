@@ -6,6 +6,7 @@ import (
 
 func (t *rpcType) Poll(request sub.PollRequest, reply *sub.PollResponse) error {
 	var response sub.PollResponse
+	response.NetworkSpeed = networkReaderContext.MaximumSpeed()
 	rwLock.RLock()
 	response.FetchInProgress = fetchInProgress
 	response.UpdateInProgress = updateInProgress

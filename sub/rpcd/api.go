@@ -10,15 +10,17 @@ import (
 var fileSystemHistory *scanner.FileSystemHistory
 var objectsDir string
 var networkReaderContext *rateio.ReaderContext
+var netbenchFilename string
 var rescanObjectCacheChannel chan bool
 
 type rpcType int
 
 func Setup(fsh *scanner.FileSystemHistory, objectsDirname string,
-	netReaderContext *rateio.ReaderContext) chan bool {
+	netReaderContext *rateio.ReaderContext, netbenchFname string) chan bool {
 	fileSystemHistory = fsh
 	objectsDir = objectsDirname
 	networkReaderContext = netReaderContext
+	netbenchFilename = netbenchFname
 	rescanObjectCacheChannel = make(chan bool)
 	rpc.RegisterName("Subd", new(rpcType))
 	rpc.HandleHTTP()

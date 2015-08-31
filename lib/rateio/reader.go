@@ -26,6 +26,13 @@ func newReaderContext(maxIOPerSecond uint64, speedPercent uint64,
 	return &ctx
 }
 
+func (ctx *ReaderContext) initialiseMaximumSpeed(maxSpeed uint64) {
+	if ctx.maxIOPerSecond > 0 {
+		fmt.Println("Maximum speed already set")
+	}
+	ctx.maxIOPerSecond = maxSpeed
+}
+
 func (ctx *ReaderContext) setSpeedPercent(percent uint) {
 	if percent > 100 {
 		percent = 100
@@ -50,6 +57,10 @@ func (ctx *ReaderContext) format() string {
 }
 
 func (rd *Reader) read(b []byte) (n int, err error) {
+	if rd.ctx.maxIOPerSecond < 1 {
+		// Unspecified capacity: go at maximum speed.
+		return rd.rd.Read(b)
+	}
 	if rd.ctx.speedPercent >= 100 {
 		// Operate at maximum speed: get out of the way.
 		return rd.rd.Read(b)

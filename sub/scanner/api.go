@@ -7,13 +7,15 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/objectcache"
+	"github.com/Symantec/Dominator/lib/rateio"
 	"io"
 	"time"
 )
 
 type Configuration struct {
-	FsScanContext *fsrateio.ReaderContext
-	Filter        *filter.Filter
+	FsScanContext        *fsrateio.ReaderContext
+	NetworkReaderContext *rateio.ReaderContext
+	Filter               *filter.Filter
 }
 
 type FileSystemHistory struct {
