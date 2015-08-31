@@ -72,6 +72,7 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		_, err = io.Copy(conn, reader)
+		reader.Close()
 		if err != nil {
 			fmt.Printf("Error copying:\t%s\n", err)
 			return
