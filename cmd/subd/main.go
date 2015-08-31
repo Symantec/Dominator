@@ -114,7 +114,7 @@ func unshareAndBind(workingRootDir string) bool {
 	return true
 }
 
-func getCachedSpeed(workingRootDir string, cacheDirname string) (bytesPerSecond,
+func getCachedFsSpeed(workingRootDir string, cacheDirname string) (bytesPerSecond,
 	blocksPerSecond uint64, computed, ok bool) {
 	bytesPerSecond = 0
 	blocksPerSecond = 0
@@ -152,6 +152,21 @@ func getCachedSpeed(workingRootDir string, cacheDirname string) (bytesPerSecond,
 	return bytesPerSecond, blocksPerSecond, true, true
 }
 
+func getCachedNetworkSpeed() uint64 {
+	cacheFilename := path.Join(*subdDir, "netbench")
+	file, err := os.Open(cacheFilename)
+	if err != nil {
+		return 0
+	}
+	defer file.Close()
+	var bytesPerSecond uint64
+	n, err := fmt.Fscanf(file, "%d", &bytesPerSecond)
+	if n == 1 || err == nil {
+		return bytesPerSecond
+	}
+	return 0
+}
+
 func main() {
 	flag.Parse()
 	workingRootDir := path.Join(*subdDir, "root")
@@ -175,7 +190,7 @@ func main() {
 	if !unshareAndBind(workingRootDir) {
 		os.Exit(1)
 	}
-	bytesPerSecond, blocksPerSecond, firstScan, ok := getCachedSpeed(
+	bytesPerSecond, blocksPerSecond, firstScan, ok := getCachedFsSpeed(
 		workingRootDir, tmpDir)
 	if !ok {
 		os.Exit(1)
@@ -199,7 +214,7 @@ func main() {
 	var fsh scanner.FileSystemHistory
 	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir,
 		&configuration)
-	networkReaderContext := rateio.NewReaderContext(0,
+	networkReaderContext := rateio.NewReaderContext(getCachedNetworkSpeed(),
 		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 	configuration.NetworkReaderContext = networkReaderContext
 	rescanObjectCacheChannel := rpcd.Setup(&fsh, objectsDir,
