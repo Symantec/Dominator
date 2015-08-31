@@ -43,9 +43,7 @@ func doFetch(request sub.FetchRequest) {
 			fmt.Println(err)
 			return
 		}
-		// TODO(rgooch): Wrap reader with networkReaderContext.NewReader() once
-		//               streaming RPCs are implemented.
-		err = readOne(hash, reader)
+		err = readOne(hash, networkReaderContext.NewReader(reader))
 		reader.Close()
 		if err != nil {
 			fmt.Println(err)
