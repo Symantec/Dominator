@@ -91,7 +91,6 @@ func enoughBytesForBenchmark(objectServer *objectclient.ObjectClient,
 }
 
 func readOne(hash hash.Hash, reader io.Reader) error {
-	fmt.Printf("Reading: %x\n", hash) // TODO(rgooch): Remove debugging output.
 	filename := path.Join(objectsDir, objectcache.HashToFilename(hash))
 	dirname := path.Dir(filename)
 	err := os.MkdirAll(dirname, syscall.S_IRUSR|syscall.S_IWUSR)
