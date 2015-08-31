@@ -32,6 +32,12 @@ func NewReaderContext(maxIOPerSecond uint64, speedPercent uint64,
 	return newReaderContext(maxIOPerSecond, speedPercent, measurer)
 }
 
+func (ctx *ReaderContext) InitialiseMaximumSpeed(maxSpeed uint64) {
+	ctx.initialiseMaximumSpeed(maxSpeed)
+}
+
+func (ctx *ReaderContext) MaximumSpeed() uint64 { return ctx.maxIOPerSecond }
+
 func (ctx *ReaderContext) SpeedPercent() uint { return uint(ctx.speedPercent) }
 
 func (ctx *ReaderContext) SetSpeedPercent(percent uint) {
