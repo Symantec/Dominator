@@ -8,11 +8,12 @@ import (
 )
 
 type ObjectClient struct {
-	address string
+	address      string
+	exclusiveGet bool
 }
 
 func NewObjectClient(address string) *ObjectClient {
-	return &ObjectClient{address}
+	return &ObjectClient{address, false}
 }
 
 func (objClient *ObjectClient) AddObjects(datas [][]byte,
@@ -28,6 +29,10 @@ func (objClient *ObjectClient) CheckObjects(hashes []hash.Hash) (
 func (objClient *ObjectClient) GetObjects(hashes []hash.Hash) (
 	objectserver.ObjectsReader, error) {
 	return objClient.getObjects(hashes)
+}
+
+func (objClient *ObjectClient) SetExclusiveGetObjects(exclusive bool) {
+	objClient.exclusiveGet = exclusive
 }
 
 type ObjectsReader struct {

@@ -45,6 +45,7 @@ func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (
 	}
 	var request objectserver.GetObjectsRequest
 	var reply objectserver.GetObjectsResponse
+	request.Exclusive = objClient.exclusiveGet
 	request.Hashes = hashes
 	decoder := gob.NewDecoder(conn)
 	encoder := gob.NewEncoder(conn)
