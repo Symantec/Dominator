@@ -9,9 +9,6 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 	herd.Lock()
 	defer herd.Unlock()
 	herd.subsByIndex = nil
-	if herd.subsByName == nil {
-		herd.subsByName = make(map[string]*Sub)
-	}
 	for _, sub := range herd.subsByName {
 		sub.hostname = "" // Flag sub as potentially not in the new MDB.
 	}
@@ -25,6 +22,8 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 		sub.hostname = machine.Hostname // Flag sub as being in the new MDB.
 		sub.requiredImage = machine.RequiredImage
 		sub.plannedImage = machine.PlannedImage
+		herd.getImageHaveLock(sub.requiredImage) // Preload.
+		herd.getImageHaveLock(sub.plannedImage)
 	}
 	// Delete unflagged subs (those not in the new MDB).
 	subsToDelete := make([]string, 0)

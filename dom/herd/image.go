@@ -8,10 +8,23 @@ import (
 )
 
 func (herd *Herd) getImage(name string) *image.Image {
+	if name == "" {
+		return nil
+	}
+	herd.RLock()
+	image := herd.imagesByName[name]
+	herd.RUnlock()
+	if image != nil {
+		return image
+	}
 	herd.Lock()
 	defer herd.Unlock()
-	if herd.imagesByName == nil {
-		herd.imagesByName = make(map[string]*image.Image)
+	return herd.getImageHaveLock(name)
+}
+
+func (herd *Herd) getImageHaveLock(name string) *image.Image {
+	if name == "" {
+		return nil
 	}
 	image := herd.imagesByName[name]
 	if image != nil {

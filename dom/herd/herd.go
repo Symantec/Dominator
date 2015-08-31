@@ -1,6 +1,7 @@
 package herd
 
 import (
+	"github.com/Symantec/Dominator/lib/image"
 	"runtime"
 	"sort"
 	"time"
@@ -9,6 +10,8 @@ import (
 func newHerd(imageServerAddress string) *Herd {
 	var herd Herd
 	herd.imageServerAddress = imageServerAddress
+	herd.subsByName = make(map[string]*Sub)
+	herd.imagesByName = make(map[string]*image.Image)
 	herd.makeConnectionSemaphore = make(chan bool, 1000)
 	herd.pollSemaphore = make(chan bool, runtime.NumCPU()*2)
 	herd.previousScanStartTime = time.Now()
