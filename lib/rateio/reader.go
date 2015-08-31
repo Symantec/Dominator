@@ -50,6 +50,10 @@ func (ctx *ReaderContext) format() string {
 }
 
 func (rd *Reader) read(b []byte) (n int, err error) {
+	if rd.ctx.maxIOPerSecond < 1 {
+		// Unspecified capacity: go at maximum speed.
+		return rd.rd.Read(b)
+	}
 	if rd.ctx.speedPercent >= 100 {
 		// Operate at maximum speed: get out of the way.
 		return rd.rd.Read(b)
