@@ -220,7 +220,9 @@ func main() {
 	configuration.NetworkReaderContext = networkReaderContext
 	rescanObjectCacheChannel := rpcd.Setup(&fsh, objectsDir,
 		networkReaderContext, netbenchFilename)
-	err = httpd.StartServer(*portNum, &fsh)
+	httpd.AddHtmlWriter(&fsh)
+	httpd.AddHtmlWriter(&configuration)
+	err = httpd.StartServer(*portNum)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)
 		os.Exit(1)

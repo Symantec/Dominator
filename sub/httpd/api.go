@@ -11,15 +11,18 @@ type HtmlWriter interface {
 	WriteHtml(writer io.Writer)
 }
 
-var onlyHtmler HtmlWriter
+var htmlWriters []HtmlWriter
 
-func StartServer(portNum uint, htmlWriter HtmlWriter) error {
+func StartServer(portNum uint) error {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", portNum))
 	if err != nil {
 		return err
 	}
-	onlyHtmler = htmlWriter
 	http.HandleFunc("/", statusHandler)
 	go http.Serve(listener, nil)
 	return nil
+}
+
+func AddHtmlWriter(htmlWriter HtmlWriter) {
+	htmlWriters = append(htmlWriters, htmlWriter)
 }

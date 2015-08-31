@@ -18,6 +18,10 @@ type Configuration struct {
 	Filter               *filter.Filter
 }
 
+func (configuration *Configuration) WriteHtml(writer io.Writer) {
+	configuration.writeHtml(writer)
+}
+
 type FileSystemHistory struct {
 	fileSystem         *FileSystem
 	scanCount          uint64
