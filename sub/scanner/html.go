@@ -24,6 +24,13 @@ func (fsh *FileSystemHistory) writeHtml(writer io.Writer) {
 	if fsh.generationCount > 0 {
 		fmt.Fprintf(writer, "Last change: %s<br>\n", fsh.timeOfLastChange)
 	}
+	if fsh.fileSystem != nil {
+		ctx := fsh.fileSystem.Configuration().NetworkReaderContext
+		fmt.Fprintf(writer, "Network Speed: %s (%d%% of %s)<br>\n",
+			format.FormatBytes(
+				ctx.MaximumSpeed()*uint64(ctx.SpeedPercent())/100),
+			ctx.SpeedPercent(), format.FormatBytes(ctx.MaximumSpeed()))
+	}
 }
 
 func (fs *FileSystem) writeHtml(writer io.Writer) {
