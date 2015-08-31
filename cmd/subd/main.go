@@ -152,8 +152,7 @@ func getCachedFsSpeed(workingRootDir string, cacheDirname string) (bytesPerSecon
 	return bytesPerSecond, blocksPerSecond, true, true
 }
 
-func getCachedNetworkSpeed() uint64 {
-	cacheFilename := path.Join(*subdDir, "netbench")
+func getCachedNetworkSpeed(cacheFilename string) uint64 {
 	file, err := os.Open(cacheFilename)
 	if err != nil {
 		return 0
@@ -172,6 +171,7 @@ func main() {
 	workingRootDir := path.Join(*subdDir, "root")
 	objectsDir := path.Join(*subdDir, "objects")
 	tmpDir := path.Join(*subdDir, "tmp")
+	netbenchFilename := path.Join(*subdDir, "netbench")
 	if !createDirectory(workingRootDir) {
 		os.Exit(1)
 	}
@@ -214,11 +214,12 @@ func main() {
 	var fsh scanner.FileSystemHistory
 	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir,
 		&configuration)
-	networkReaderContext := rateio.NewReaderContext(getCachedNetworkSpeed(),
+	networkReaderContext := rateio.NewReaderContext(
+		getCachedNetworkSpeed(netbenchFilename),
 		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 	configuration.NetworkReaderContext = networkReaderContext
 	rescanObjectCacheChannel := rpcd.Setup(&fsh, objectsDir,
-		networkReaderContext)
+		networkReaderContext, netbenchFilename)
 	err = httpd.StartServer(*portNum, &fsh)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)
