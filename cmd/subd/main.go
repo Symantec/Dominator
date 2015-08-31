@@ -203,6 +203,7 @@ func main() {
 	networkBytesPerSecond := uint64(1e9)
 	networkReaderContext := rateio.NewReaderContext(networkBytesPerSecond,
 		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
+	configuration.NetworkReaderContext = networkReaderContext
 	rescanObjectCacheChannel := rpcd.Setup(&fsh, objectsDir,
 		networkReaderContext)
 	err = httpd.StartServer(*portNum, &fsh)

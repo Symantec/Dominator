@@ -16,6 +16,8 @@ func (t *rpcType) SetConfiguration(request sub.SetConfigurationRequest,
 	configuration := fs.Configuration()
 	configuration.FsScanContext.GetContext().SetSpeedPercent(
 		request.ScanSpeedPercent)
+	configuration.NetworkReaderContext.SetSpeedPercent(
+		request.NetworkSpeedPercent)
 	newFilter, err := filter.NewFilter(request.ScanExclusionList)
 	if err != nil {
 		return err
