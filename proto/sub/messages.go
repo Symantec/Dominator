@@ -29,6 +29,7 @@ type PollRequest struct {
 }
 
 type PollResponse struct {
+	NetworkSpeed     uint64
 	FetchInProgress  bool // Fetch() and Update() are mutually exclusive.
 	UpdateInProgress bool
 	GenerationCount  uint64
