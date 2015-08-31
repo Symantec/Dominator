@@ -23,7 +23,8 @@ type CheckObjectsResponse struct {
 
 // This is used in the special GetObjects streaming HTTP/RPC protocol.
 type GetObjectsRequest struct {
-	Hashes []hash.Hash
+	Exclusive bool // For initial performance benchmarking only.
+	Hashes    []hash.Hash
 }
 
 type GetObjectsResponse struct {

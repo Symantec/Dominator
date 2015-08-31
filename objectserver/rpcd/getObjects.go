@@ -6,7 +6,10 @@ import (
 	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
 	"net/http"
+	"sync"
 )
+
+var exclusive sync.RWMutex
 
 func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 	if req.Method != "CONNECT" {
@@ -25,6 +28,13 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 	io.WriteString(conn, "HTTP/1.0 200 Connected to GetObjects RPC\n\n")
 	var request objectserver.GetObjectsRequest
 	var response objectserver.GetObjectsResponse
+	if request.Exclusive {
+		exclusive.Lock()
+		defer exclusive.Unlock()
+	} else {
+		exclusive.RLock()
+		defer exclusive.RUnlock()
+	}
 	decoder := gob.NewDecoder(bufrw)
 	encoder := gob.NewEncoder(bufrw)
 	err = decoder.Decode(&request)
