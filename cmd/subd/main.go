@@ -199,9 +199,7 @@ func main() {
 	var fsh scanner.FileSystemHistory
 	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir,
 		&configuration)
-	// TODO(rgooch): Try to benchmark network link speed.
-	networkBytesPerSecond := uint64(1e9)
-	networkReaderContext := rateio.NewReaderContext(networkBytesPerSecond,
+	networkReaderContext := rateio.NewReaderContext(0,
 		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 	configuration.NetworkReaderContext = networkReaderContext
 	rescanObjectCacheChannel := rpcd.Setup(&fsh, objectsDir,
