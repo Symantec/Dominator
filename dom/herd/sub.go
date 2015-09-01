@@ -57,6 +57,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	sub.lastSuccessfulPoll = time.Now()
 	if reply.GenerationCount == 0 {
 		sub.fileSystem = nil
+		sub.generationCount = 0
 	}
 	if fs := reply.FileSystem; fs != nil {
 		fs.RebuildPointers()
