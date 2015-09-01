@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectclient"
@@ -19,10 +20,13 @@ func (t *rpcType) Fetch(request sub.FetchRequest,
 	reply *sub.FetchResponse) error {
 	rwLock.Lock()
 	defer rwLock.Unlock()
+	logger.Printf("Fetch() %d objects\n", len(request.Hashes))
 	if fetchInProgress {
+		logger.Println("Error: fetch already in progress")
 		return errors.New("fetch already in progress")
 	}
 	if updateInProgress {
+		logger.Println("Error: update progress")
 		return errors.New("update in progress")
 	}
 	fetchInProgress = true
@@ -38,11 +42,12 @@ func doFetch(request sub.FetchRequest) {
 		benchmark = enoughBytesForBenchmark(objectServer, request)
 		if benchmark {
 			objectServer.SetExclusiveGetObjects(true)
+			logger.Println("Benchmarking network speed")
 		}
 	}
 	objectsReader, err := objectServer.GetObjects(request.Hashes)
 	if err != nil {
-		fmt.Printf("Error getting object reader:\t%s\n", err.Error())
+		logger.Printf("Error getting object reader:\t%s\n", err.Error())
 		return
 	}
 	var totalLength uint64
@@ -50,26 +55,31 @@ func doFetch(request sub.FetchRequest) {
 	for _, hash := range request.Hashes {
 		length, reader, err := objectsReader.NextObject()
 		if err != nil {
-			fmt.Println(err)
+			logger.Println(err)
 			return
 		}
 		err = readOne(hash, networkReaderContext.NewReader(reader))
 		reader.Close()
 		if err != nil {
-			fmt.Println(err)
+			logger.Println(err)
 			return
 		}
 		totalLength += length
 	}
+	duration := time.Since(timeStart)
+	speed := uint64(float64(totalLength) / duration.Seconds())
 	if benchmark {
-		duration := time.Since(timeStart)
-		speed := uint64(float64(totalLength) / duration.Seconds())
 		file, err := os.Create(netbenchFilename)
 		if err == nil {
 			fmt.Fprintf(file, "%d\n", speed)
+			logger.Printf("Fetch() complete. Benchmarked network speed: %s\n",
+				format.FormatBytes(speed))
 			file.Close()
 		}
 		networkReaderContext.InitialiseMaximumSpeed(speed)
+	} else {
+		logger.Printf("Fetch() complete. Speed: %s\n",
+			format.FormatBytes(speed))
 	}
 	rescanObjectCacheChannel <- true
 }

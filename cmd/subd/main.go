@@ -13,6 +13,7 @@ import (
 	"github.com/Symantec/Dominator/sub/httpd"
 	"github.com/Symantec/Dominator/sub/rpcd"
 	"github.com/Symantec/Dominator/sub/scanner"
+	"log"
 	"os"
 	"path"
 	"runtime"
@@ -198,7 +199,8 @@ func main() {
 	if !ok {
 		os.Exit(1)
 	}
-	logBuffer := logbuf.New(*logbufLines)
+	circularBuffer := logbuf.New(*logbufLines)
+	logger := log.New(circularBuffer, "", log.LstdFlags)
 	var configuration scanner.Configuration
 	var err error
 	configuration.Filter, err = filter.NewFilter(constants.ScanExcludeList)
@@ -223,10 +225,10 @@ func main() {
 		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 	configuration.NetworkReaderContext = networkReaderContext
 	rescanObjectCacheChannel := rpcd.Setup(&fsh, objectsDir,
-		networkReaderContext, netbenchFilename)
+		networkReaderContext, netbenchFilename, logger)
 	httpd.AddHtmlWriter(&fsh)
 	httpd.AddHtmlWriter(&configuration)
-	httpd.AddHtmlWriter(logBuffer)
+	httpd.AddHtmlWriter(circularBuffer)
 	err = httpd.StartServer(*portNum)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)
