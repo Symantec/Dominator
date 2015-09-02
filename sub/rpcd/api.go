@@ -3,6 +3,7 @@ package rpcd
 import (
 	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/sub/scanner"
+	"log"
 	"net/rpc"
 	"sync"
 )
@@ -12,15 +13,18 @@ var objectsDir string
 var networkReaderContext *rateio.ReaderContext
 var netbenchFilename string
 var rescanObjectCacheChannel chan bool
+var logger *log.Logger
 
 type rpcType int
 
 func Setup(fsh *scanner.FileSystemHistory, objectsDirname string,
-	netReaderContext *rateio.ReaderContext, netbenchFname string) chan bool {
+	netReaderContext *rateio.ReaderContext, netbenchFname string,
+	lg *log.Logger) chan bool {
 	fileSystemHistory = fsh
 	objectsDir = objectsDirname
 	networkReaderContext = netReaderContext
 	netbenchFilename = netbenchFname
+	logger = lg
 	rescanObjectCacheChannel = make(chan bool)
 	rpc.RegisterName("Subd", new(rpcType))
 	rpc.HandleHTTP()

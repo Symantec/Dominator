@@ -57,6 +57,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	sub.lastSuccessfulPoll = time.Now()
 	if reply.GenerationCount == 0 {
 		sub.fileSystem = nil
+		sub.generationCount = 0
 	}
 	if fs := reply.FileSystem; fs != nil {
 		fs.RebuildPointers()
@@ -102,9 +103,6 @@ func (sub *Sub) poll(connection *rpc.Client) {
 // Returns true if all required objects are available.
 func (sub *Sub) fetchMissingObjects(connection *rpc.Client, imageName string) (
 	bool, uint) {
-	if imageName == "" {
-		return false, statusImageNotReady
-	}
 	image := sub.herd.getImage(imageName)
 	if image == nil {
 		return false, statusImageNotReady

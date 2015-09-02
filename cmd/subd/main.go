@@ -7,11 +7,13 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/fsrateio"
+	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/Dominator/lib/memstats"
 	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/sub/httpd"
 	"github.com/Symantec/Dominator/sub/rpcd"
 	"github.com/Symantec/Dominator/sub/scanner"
+	"log"
 	"os"
 	"path"
 	"runtime"
@@ -22,6 +24,8 @@ import (
 var (
 	portNum = flag.Uint("portNum", constants.SubPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
+	logbufLines = flag.Uint("logbufLines", 1024,
+		"Number of lines to store in the log buffer")
 	rootDir = flag.String("rootDir", "/",
 		"Name of root of directory tree to manage")
 	showStats = flag.Bool("showStats", false,
@@ -195,6 +199,8 @@ func main() {
 	if !ok {
 		os.Exit(1)
 	}
+	circularBuffer := logbuf.New(*logbufLines)
+	logger := log.New(circularBuffer, "", log.LstdFlags)
 	var configuration scanner.Configuration
 	var err error
 	configuration.Filter, err = filter.NewFilter(constants.ScanExcludeList)
@@ -219,8 +225,11 @@ func main() {
 		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 	configuration.NetworkReaderContext = networkReaderContext
 	rescanObjectCacheChannel := rpcd.Setup(&fsh, objectsDir,
-		networkReaderContext, netbenchFilename)
-	err = httpd.StartServer(*portNum, &fsh)
+		networkReaderContext, netbenchFilename, logger)
+	httpd.AddHtmlWriter(&fsh)
+	httpd.AddHtmlWriter(&configuration)
+	httpd.AddHtmlWriter(circularBuffer)
+	err = httpd.StartServer(*portNum)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)
 		os.Exit(1)

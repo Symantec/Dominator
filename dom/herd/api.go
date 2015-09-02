@@ -4,6 +4,8 @@ import (
 	"github.com/Symantec/Dominator/dom/mdb"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/sub/scanner"
+	"io"
+	"log"
 	"sync"
 	"time"
 )
@@ -25,6 +27,10 @@ const (
 	statusSynced
 )
 
+type HtmlWriter interface {
+	WriteHtml(writer io.Writer)
+}
+
 type Sub struct {
 	herd                         *Herd
 	hostname                     string
@@ -42,6 +48,8 @@ type Sub struct {
 type Herd struct {
 	sync.RWMutex            // Protect map and slice mutations.
 	imageServerAddress      string
+	logger                  *log.Logger
+	htmlWriters             []HtmlWriter
 	nextSubToPoll           uint
 	subsByName              map[string]*Sub
 	subsByIndex             []*Sub
@@ -52,8 +60,8 @@ type Herd struct {
 	currentScanStartTime    time.Time
 }
 
-func NewHerd(imageServerAddress string) *Herd {
-	return newHerd(imageServerAddress)
+func NewHerd(imageServerAddress string, logger *log.Logger) *Herd {
+	return newHerd(imageServerAddress, logger)
 }
 
 func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {
@@ -66,4 +74,8 @@ func (herd *Herd) PollNextSub() bool {
 
 func (herd *Herd) StartServer(portNum uint, daemon bool) error {
 	return herd.startServer(portNum, daemon)
+}
+
+func (herd *Herd) AddHtmlWriter(htmlWriter HtmlWriter) {
+	herd.addHtmlWriter(htmlWriter)
 }
