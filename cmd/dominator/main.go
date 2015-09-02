@@ -6,6 +6,8 @@ import (
 	"github.com/Symantec/Dominator/dom/herd"
 	"github.com/Symantec/Dominator/dom/mdb"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/logbuf"
+	"log"
 	"os"
 	"path"
 	"runtime"
@@ -20,6 +22,8 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
+	logbufLines = flag.Uint("logbufLines", 1024,
+		"Number of lines to store in the log buffer")
 	minInterval = flag.Uint("minInterval", 1,
 		"Minimum interval between loops (in seconds)")
 	portNum = flag.Uint("portNum", constants.DomPortNumber,
@@ -51,8 +55,11 @@ func main() {
 	}
 	mdbChannel := mdb.StartMdbDaemon(path.Join(*stateDir, "mdb"))
 	interval := time.Duration(*minInterval) * time.Second
+	circularBuffer := logbuf.New(*logbufLines)
+	logger := log.New(circularBuffer, "", log.LstdFlags)
 	herd := herd.NewHerd(fmt.Sprintf("%s:%d", *imageServerHostname,
-		*imageServerPortNum))
+		*imageServerPortNum), logger)
+	herd.AddHtmlWriter(circularBuffer)
 	err = herd.StartServer(*portNum, true)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)

@@ -24,3 +24,7 @@ func (herd *Herd) startServer(portNum uint, daemon bool) error {
 	}
 	return nil
 }
+
+func (herd *Herd) addHtmlWriter(htmlWriter HtmlWriter) {
+	herd.htmlWriters = append(herd.htmlWriters, htmlWriter)
+}
