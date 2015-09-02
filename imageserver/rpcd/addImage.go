@@ -37,7 +37,6 @@ func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 		}
 	}
 	request.Image.FileSystem.RebuildPointers()
-	// TODO(rgooch): Remove debugging output.
-	fmt.Printf("AddImage(%s)\n", request.ImageName)
+	logger.Printf("AddImage(%s)\n", request.ImageName)
 	return imageDataBase.AddImage(request.Image, request.ImageName)
 }

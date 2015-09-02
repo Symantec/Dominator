@@ -12,6 +12,8 @@ type HtmlWriter interface {
 	WriteHtml(writer io.Writer)
 }
 
+var htmlWriters []HtmlWriter
+
 var imageDataBase *scanner.ImageDataBase
 
 func StartServer(portNum uint, imdb *scanner.ImageDataBase, daemon bool) error {
@@ -30,4 +32,8 @@ func StartServer(portNum uint, imdb *scanner.ImageDataBase, daemon bool) error {
 		http.Serve(listener, nil)
 	}
 	return nil
+}
+
+func AddHtmlWriter(htmlWriter HtmlWriter) {
+	htmlWriters = append(htmlWriters, htmlWriter)
 }
