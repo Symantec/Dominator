@@ -35,7 +35,7 @@ func (configuration *Configuration) writeHtml(writer io.Writer) {
 	speed := "unknown"
 	ctx := configuration.NetworkReaderContext
 	if ctx.MaximumSpeed() > 0 {
-		speed = fmt.Sprintf("%s (%d%% of %s)",
+		speed = fmt.Sprintf("%s/s (%d%% of %s/s)",
 			format.FormatBytes(
 				ctx.MaximumSpeed()*uint64(ctx.SpeedPercent())/100),
 			ctx.SpeedPercent(), format.FormatBytes(ctx.MaximumSpeed()))

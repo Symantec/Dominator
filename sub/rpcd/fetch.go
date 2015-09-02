@@ -72,13 +72,13 @@ func doFetch(request sub.FetchRequest) {
 		file, err := os.Create(netbenchFilename)
 		if err == nil {
 			fmt.Fprintf(file, "%d\n", speed)
-			logger.Printf("Fetch() complete. Benchmarked network speed: %s\n",
-				format.FormatBytes(speed))
 			file.Close()
+			logger.Printf("Fetch() complete. Benchmarked network speed: %s/s\n",
+				format.FormatBytes(speed))
 		}
 		networkReaderContext.InitialiseMaximumSpeed(speed)
 	} else {
-		logger.Printf("Fetch() complete. Speed: %s\n",
+		logger.Printf("Fetch() complete. Speed: %s/s\n",
 			format.FormatBytes(speed))
 	}
 	rescanObjectCacheChannel <- true
