@@ -219,7 +219,7 @@ func main() {
 	}
 	var fsh scanner.FileSystemHistory
 	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir,
-		&configuration)
+		&configuration, logger)
 	networkReaderContext := rateio.NewReaderContext(
 		getCachedNetworkSpeed(netbenchFilename),
 		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
