@@ -2,6 +2,7 @@ package mdb
 
 import (
 	"io"
+	"log"
 )
 
 type Machine struct {
@@ -22,6 +23,6 @@ func (mdb *Mdb) DebugWrite(w io.Writer) error {
 	return mdb.debugWrite(w)
 }
 
-func StartMdbDaemon(mdbDir string) chan *Mdb {
-	return startMdbDaemon(mdbDir)
+func StartMdbDaemon(mdbDir string, logger *log.Logger) chan *Mdb {
+	return startMdbDaemon(mdbDir, logger)
 }
