@@ -49,9 +49,10 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
 	err := connection.Call("Subd.Poll", request, &reply)
+	logger := sub.herd.logger
 	if err != nil {
 		sub.status = statusFailedToPoll
-		fmt.Printf("Error calling\t%s\n", err)
+		logger.Printf("Error calling %s.Poll()\t%s\n", sub.hostname, err)
 		return
 	}
 	sub.lastSuccessfulPoll = time.Now()
@@ -124,8 +125,9 @@ func (sub *Sub) fetchMissingObjects(connection *rpc.Client, imageName string) (
 	if len(missingObjects) < 1 {
 		return true, statusSynced
 	}
-	// TODO(rgooch): Remove debugging output.
-	fmt.Printf("Objects needing to be fetched: %d\n", len(missingObjects))
+	logger := sub.herd.logger
+	logger.Printf("Calling %s.Fetch() for: %d objects\n",
+		sub.hostname, len(missingObjects))
 	var request subproto.FetchRequest
 	var reply subproto.FetchResponse
 	request.ServerAddress = sub.herd.imageServerAddress
@@ -134,7 +136,7 @@ func (sub *Sub) fetchMissingObjects(connection *rpc.Client, imageName string) (
 	}
 	err := connection.Call("Subd.Fetch", request, &reply)
 	if err != nil {
-		fmt.Printf("Error calling\t%s\n", err)
+		logger.Printf("Error calling %s.Fetch()\t%s\n", sub.hostname, err)
 		return false, statusFailedToFetch
 	}
 	sub.generationCountAtChangeStart = sub.generationCount
