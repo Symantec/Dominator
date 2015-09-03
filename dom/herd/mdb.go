@@ -9,31 +9,30 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 	herd.Lock()
 	defer herd.Unlock()
 	herd.subsByIndex = nil
+	// Mark for delete all current subs, then later unmark ones in the new MDB.
+	subsToDelete := make(map[string]bool)
 	for _, sub := range herd.subsByName {
-		sub.hostname = "" // Flag sub as potentially not in the new MDB.
+		subsToDelete[sub.hostname] = true
 	}
 	for _, machine := range mdb.Machines {
 		sub := herd.subsByName[machine.Hostname]
 		if sub == nil {
 			sub = new(Sub)
 			sub.herd = herd
+			sub.hostname = machine.Hostname
 			herd.subsByName[machine.Hostname] = sub
 		}
-		sub.hostname = machine.Hostname // Flag sub as being in the new MDB.
+		subsToDelete[sub.hostname] = false
 		sub.requiredImage = machine.RequiredImage
 		sub.plannedImage = machine.PlannedImage
 		herd.getImageHaveLock(sub.requiredImage) // Preload.
 		herd.getImageHaveLock(sub.plannedImage)
 	}
-	// Delete unflagged subs (those not in the new MDB).
-	subsToDelete := make([]string, 0)
-	for hostname, sub := range herd.subsByName {
-		if sub.hostname == "" {
-			subsToDelete = append(subsToDelete, hostname)
+	// Delete flagged subs (those not in the new MDB).
+	for subHostname, toDelete := range subsToDelete {
+		if toDelete {
+			delete(herd.subsByName, subHostname)
 		}
-	}
-	for _, hostname := range subsToDelete {
-		delete(herd.subsByName, hostname)
 	}
 	herd.subsByIndex = make([]*Sub, 0, len(herd.subsByName))
 	imageUseMap := make(map[string]bool) // Unreferenced by default.
