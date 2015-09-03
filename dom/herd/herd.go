@@ -57,11 +57,26 @@ func (herd *Herd) pollNextSub() bool {
 	return false
 }
 
+func (herd *Herd) countSelectedSubs(selectFunc func(*Sub) bool) uint64 {
+	herd.RLock()
+	defer herd.RUnlock()
+	if selectFunc == nil {
+		return uint64(len(herd.subsByIndex))
+	}
+	count := 0
+	for _, sub := range herd.subsByIndex {
+		if selectFunc(sub) {
+			count++
+		}
+	}
+	return uint64(count)
+}
+
 func (herd *Herd) getSelectedSubs(selectFunc func(*Sub) bool) []*Sub {
-	httpdHerd.RLock()
-	defer httpdHerd.RUnlock()
-	subs := make([]*Sub, 0, len(httpdHerd.subsByIndex))
-	for _, sub := range httpdHerd.subsByIndex {
+	herd.RLock()
+	defer herd.RUnlock()
+	subs := make([]*Sub, 0, len(herd.subsByIndex))
+	for _, sub := range herd.subsByIndex {
 		if selectFunc == nil || selectFunc(sub) {
 			subs = append(subs, sub)
 		}
