@@ -39,3 +39,8 @@ type PollResponse struct {
 type SetConfigurationRequest Configuration
 
 type SetConfigurationResponse common.StatusResponse
+
+type UpdateRequest struct {
+}
+
+type UpdateResponse struct{}

@@ -145,6 +145,15 @@ func (sub *Sub) fetchMissingObjects(connection *rpc.Client, imageName string) (
 
 // Returns true if no update needs to be performed.
 func (sub *Sub) sendUpdate(connection *rpc.Client) (bool, uint) {
+	logger := sub.herd.logger
+	logger.Printf("Calling %s.Update()\n", sub.hostname)
+	var request subproto.UpdateRequest
+	var reply subproto.UpdateResponse
 	// TODO(rgooch): Implement this.
+	err := connection.Call("Subd.Update", request, &reply)
+	if err != nil {
+		logger.Printf("Error calling %s.Update()\t%s\n", sub.hostname, err)
+		return false, statusFailedToUpdate
+	}
 	return false, statusUpdating
 }
