@@ -30,7 +30,7 @@ func showSubsHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "    <th>Status</b></th>")
 	fmt.Fprintln(writer, "    <th>Staleness</b></th>")
 	fmt.Fprintln(writer, "  </tr>")
-	subs := httpdHerd.getSortedSubs()
+	subs := httpdHerd.getSortedSubs(nil)
 	for _, sub := range subs {
 		showSub(writer, sub)
 	}

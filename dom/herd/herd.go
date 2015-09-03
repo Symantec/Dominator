@@ -4,7 +4,6 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"log"
 	"runtime"
-	"sort"
 	"time"
 )
 
@@ -58,17 +57,14 @@ func (herd *Herd) pollNextSub() bool {
 	return false
 }
 
-func (herd *Herd) getSortedSubs() []*Sub {
+func (herd *Herd) getSortedSubs(selectFunc func(*Sub) bool) []*Sub {
 	httpdHerd.RLock()
 	defer httpdHerd.RUnlock()
-	subNames := make([]string, 0, len(httpdHerd.subsByName))
-	subs := make([]*Sub, 0, len(httpdHerd.subsByName))
-	for name, _ := range httpdHerd.subsByName {
-		subNames = append(subNames, name)
-	}
-	sort.Strings(subNames)
-	for _, name := range subNames {
-		subs = append(subs, httpdHerd.subsByName[name])
+	subs := make([]*Sub, 0, len(httpdHerd.subsByIndex))
+	for _, sub := range httpdHerd.subsByIndex {
+		if selectFunc == nil || selectFunc(sub) {
+			subs = append(subs, sub)
+		}
 	}
 	return subs
 }
