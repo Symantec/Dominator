@@ -149,7 +149,7 @@ func (sub *Sub) sendUpdate(connection *rpc.Client) (bool, uint) {
 	logger.Printf("Calling %s.Update()\n", sub.hostname)
 	var request subproto.UpdateRequest
 	var reply subproto.UpdateResponse
-	// TODO(rgooch): Implement this.
+	sub.buildUpdateRequest(&request)
 	err := connection.Call("Subd.Update", request, &reply)
 	if err != nil {
 		logger.Printf("Error calling %s.Update()\t%s\n", sub.hostname, err)
