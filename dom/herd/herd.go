@@ -57,7 +57,7 @@ func (herd *Herd) pollNextSub() bool {
 	return false
 }
 
-func (herd *Herd) getSortedSubs(selectFunc func(*Sub) bool) []*Sub {
+func (herd *Herd) getSelectedSubs(selectFunc func(*Sub) bool) []*Sub {
 	httpdHerd.RLock()
 	defer httpdHerd.RUnlock()
 	subs := make([]*Sub, 0, len(httpdHerd.subsByIndex))
