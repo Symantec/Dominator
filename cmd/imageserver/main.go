@@ -46,7 +46,7 @@ func main() {
 		os.Exit(1)
 	}
 	imageserverRpcd.Setup(imdb, logger)
-	objectserverRpcd.Setup(objSrv)
+	objectserverRpcd.Setup(objSrv, logger)
 	rpc.HandleHTTP()
 	httpd.AddHtmlWriter(imdb)
 	httpd.AddHtmlWriter(circularBuffer)
