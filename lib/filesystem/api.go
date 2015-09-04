@@ -36,9 +36,14 @@ type Directory struct {
 	SymlinkList     []*Symlink
 	FileList        []*File
 	DirectoryList   []*Directory
+	EntriesByName   map[string]interface{}
 	Mode            uint32
 	Uid             uint32
 	Gid             uint32
+}
+
+func (directory *Directory) BuildEntryMap() {
+	directory.buildEntryMap()
 }
 
 func (directory *Directory) String() string {

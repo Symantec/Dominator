@@ -37,3 +37,20 @@ func (fs *FileSystem) computeTotalDataBytes() {
 		fs.TotalDataBytes += uint64(inode.Size)
 	}
 }
+
+func (directory *Directory) buildEntryMap() {
+	directory.EntriesByName = make(map[string]interface{})
+	for _, entry := range directory.RegularFileList {
+		directory.EntriesByName[entry.Name] = entry
+	}
+	for _, entry := range directory.SymlinkList {
+		directory.EntriesByName[entry.Name] = entry
+	}
+	for _, entry := range directory.FileList {
+		directory.EntriesByName[entry.Name] = entry
+	}
+	for _, entry := range directory.DirectoryList {
+		directory.EntriesByName[entry.Name] = entry
+		entry.buildEntryMap()
+	}
+}
