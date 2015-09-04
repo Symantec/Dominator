@@ -10,10 +10,19 @@ import (
 	"time"
 )
 
-func showSubsHandler(w http.ResponseWriter, req *http.Request) {
+func showAllSubsHandler(w http.ResponseWriter, req *http.Request) {
+	httpdHerd.showSubs(w, "", nil)
+}
+
+func showDeviantSubsHandler(w http.ResponseWriter, req *http.Request) {
+	httpdHerd.showSubs(w, "deviant ", selectDeviantSub)
+}
+
+func (herd *Herd) showSubs(w io.Writer, subType string,
+	selectFunc func(*Sub) bool) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
-	fmt.Fprintln(writer, "<title>Dominator subs</title>")
+	fmt.Fprintf(writer, "<title>Dominator %s subs</title>", subType)
 	fmt.Fprintln(writer, `<style>
                           table, th, td {
                           border-collapse: collapse;
@@ -30,7 +39,7 @@ func showSubsHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "    <th>Status</b></th>")
 	fmt.Fprintln(writer, "    <th>Staleness</b></th>")
 	fmt.Fprintln(writer, "  </tr>")
-	subs := httpdHerd.getSelectedSubs(nil)
+	subs := herd.getSelectedSubs(selectFunc)
 	for _, sub := range subs {
 		showSub(writer, sub)
 	}
