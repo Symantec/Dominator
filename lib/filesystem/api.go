@@ -18,8 +18,8 @@ type FileSystem struct {
 	Directory
 }
 
-func (fs *FileSystem) RebuildPointers() {
-	fs.rebuildPointers()
+func (fs *FileSystem) RebuildInodePointers() {
+	fs.rebuildInodePointers()
 }
 
 func (fs *FileSystem) ComputeTotalDataBytes() {

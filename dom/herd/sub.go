@@ -61,7 +61,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		sub.generationCount = 0
 	}
 	if fs := reply.FileSystem; fs != nil {
-		fs.RebuildPointers()
+		fs.RebuildInodePointers()
 		sub.fileSystem = fs
 		sub.generationCount = reply.GenerationCount
 		// TODO(rgooch): Remove debugging output.
