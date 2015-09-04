@@ -62,6 +62,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	}
 	if fs := reply.FileSystem; fs != nil {
 		fs.RebuildInodePointers()
+		fs.BuildEntryMap()
 		sub.fileSystem = fs
 		sub.generationCount = reply.GenerationCount
 		// TODO(rgooch): Remove debugging output.

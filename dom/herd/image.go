@@ -47,6 +47,7 @@ func (herd *Herd) getImageHaveLock(name string) *image.Image {
 		herd.logger.Printf("Got image: %s\n", name)
 	}
 	reply.Image.FileSystem.RebuildInodePointers()
+	reply.Image.FileSystem.BuildEntryMap()
 	herd.imagesByName[name] = reply.Image
 	return reply.Image
 }
