@@ -46,6 +46,7 @@ func (herd *Herd) getImageHaveLock(name string) *image.Image {
 	if reply.Image != nil {
 		herd.logger.Printf("Got image: %s\n", name)
 	}
+	reply.Image.FileSystem.RebuildInodePointers()
 	herd.imagesByName[name] = reply.Image
 	return reply.Image
 }
