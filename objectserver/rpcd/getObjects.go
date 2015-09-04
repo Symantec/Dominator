@@ -34,6 +34,8 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 	} else {
 		exclusive.RLock()
 		defer exclusive.RUnlock()
+		getSemaphore <- true
+		defer releaseSemaphore(getSemaphore)
 	}
 	decoder := gob.NewDecoder(bufrw)
 	encoder := gob.NewEncoder(bufrw)
@@ -78,4 +80,8 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+}
+
+func releaseSemaphore(semaphore chan bool) {
+	<-semaphore
 }

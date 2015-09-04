@@ -46,9 +46,10 @@ func main() {
 		os.Exit(1)
 	}
 	imageserverRpcd.Setup(imdb, logger)
-	objectserverRpcd.Setup(objSrv, logger)
+	rpcHtmlWriter := objectserverRpcd.Setup(objSrv, logger)
 	rpc.HandleHTTP()
 	httpd.AddHtmlWriter(imdb)
+	httpd.AddHtmlWriter(rpcHtmlWriter)
 	httpd.AddHtmlWriter(circularBuffer)
 	err = httpd.StartServer(*portNum, imdb, false)
 	if err != nil {
