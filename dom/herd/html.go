@@ -21,6 +21,10 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 	fmt.Fprintf(writer,
 		"Number of deviant subs: <a href=\"showDeviantSubs\">%d</a><br>\n",
 		numSubs)
+	numSubs = herd.countSelectedSubs(selectCompliantSub)
+	fmt.Fprintf(writer,
+		"Number of compliant subs: <a href=\"showCompliantSubs\">%d</a><br>\n",
+		numSubs)
 	fmt.Fprintf(writer, "Connection slots: %d out of %d<br>\n",
 		len(herd.makeConnectionSemaphore), cap(herd.makeConnectionSemaphore))
 	fmt.Fprintf(writer, "RPC slots: %d out of %d<br>\n",
@@ -29,6 +33,13 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 
 func selectDeviantSub(sub *Sub) bool {
 	if sub.status == statusUpdating {
+		return true
+	}
+	return false
+}
+
+func selectCompliantSub(sub *Sub) bool {
+	if sub.status == statusSynced {
 		return true
 	}
 	return false

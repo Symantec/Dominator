@@ -18,6 +18,10 @@ func showDeviantSubsHandler(w http.ResponseWriter, req *http.Request) {
 	httpdHerd.showSubs(w, "deviant ", selectDeviantSub)
 }
 
+func showCompliantSubsHandler(w http.ResponseWriter, req *http.Request) {
+	httpdHerd.showSubs(w, "compliant ", selectCompliantSub)
+}
+
 func (herd *Herd) showSubs(w io.Writer, subType string,
 	selectFunc func(*Sub) bool) {
 	writer := bufio.NewWriter(w)
