@@ -10,7 +10,8 @@ func (fs *FileSystem) debugWrite(w io.Writer, prefix string) error {
 }
 
 func (directory *Directory) debugWrite(w io.Writer, prefix string) error {
-	_, err := fmt.Fprintf(w, "%s%s\n", prefix, directory.Name)
+	_, err := fmt.Fprintf(w, "%s%s\t%o %d %d\n", prefix, directory.Name,
+		directory.Mode, directory.Uid, directory.Gid)
 	if err != nil {
 		return err
 	}
@@ -66,7 +67,9 @@ func (directory *Directory) debugWrite(w io.Writer, prefix string) error {
 }
 
 func (file *RegularFile) debugWrite(w io.Writer, prefix string) error {
-	_, err := fmt.Fprintf(w, "%s%s\t%x\n", prefix, file.Name, file.inode.Hash)
+	inode := file.inode
+	_, err := fmt.Fprintf(w, "%s%s\t%o %d %d %x\n", prefix, file.Name,
+		inode.Mode, inode.Uid, inode.Gid, inode.Hash)
 	if err != nil {
 		return err
 	}
@@ -74,8 +77,9 @@ func (file *RegularFile) debugWrite(w io.Writer, prefix string) error {
 }
 
 func (symlink *Symlink) debugWrite(w io.Writer, prefix string) error {
-	_, err := fmt.Fprintf(w, "%s%s\t%s\n", prefix, symlink.Name,
-		symlink.inode.Symlink)
+	inode := symlink.inode
+	_, err := fmt.Fprintf(w, "%s%s\t%d %d %s\n", prefix, symlink.Name,
+		inode.Uid, inode.Gid, inode.Symlink)
 	if err != nil {
 		return err
 	}
@@ -83,9 +87,11 @@ func (symlink *Symlink) debugWrite(w io.Writer, prefix string) error {
 }
 
 func (file *File) debugWrite(w io.Writer, prefix string) error {
+	inode := file.inode
 	var data string
 	data = ""
-	_, err := fmt.Fprintf(w, "%s%s\t%s\n", prefix, file.Name, data)
+	_, err := fmt.Fprintf(w, "%s%s\t%o %d %d %s\n", prefix, file.Name,
+		inode.Mode, inode.Uid, inode.Gid, data)
 	if err != nil {
 		return err
 	}
