@@ -19,7 +19,7 @@ func (fileSystem *FileSystem) getRegularInode(stat *syscall.Stat_t) (
 	if inode == nil {
 		var _inode filesystem.RegularInode
 		inode = &_inode
-		_inode.Mode = stat.Mode
+		_inode.Mode = os.FileMode(stat.Mode)
 		_inode.Uid = stat.Uid
 		_inode.Gid = stat.Gid
 		_inode.MtimeSeconds = stat.Mtim.Sec
@@ -53,7 +53,7 @@ func (fileSystem *FileSystem) getInode(stat *syscall.Stat_t) (
 	if inode == nil {
 		var _inode filesystem.Inode
 		inode = &_inode
-		_inode.Mode = stat.Mode
+		_inode.Mode = os.FileMode(stat.Mode)
 		_inode.Uid = stat.Uid
 		_inode.Gid = stat.Gid
 		_inode.MtimeSeconds = stat.Mtim.Sec
@@ -83,7 +83,7 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	fileSystem.directoryInodeList = make(directoryInodeList)
 	fileSystem.directoryInodeList[stat.Ino] = true
 	fileSystem.dev = stat.Dev
-	fileSystem.Mode = stat.Mode
+	fileSystem.Mode = os.FileMode(stat.Mode)
 	fileSystem.Uid = stat.Uid
 	fileSystem.Gid = stat.Gid
 	var tmpInode filesystem.RegularInode
@@ -196,7 +196,7 @@ func addDirectory(directory *filesystem.Directory,
 	fileSystem.directoryInodeList[stat.Ino] = true
 	var dir filesystem.Directory
 	dir.Name = name
-	dir.Mode = stat.Mode
+	dir.Mode = os.FileMode(stat.Mode)
 	dir.Uid = stat.Uid
 	dir.Gid = stat.Gid
 	err := scanDirectory(&dir, fileSystem, oldFS, directoryPathName)

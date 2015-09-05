@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"io"
 	"io/ioutil"
+	"os"
 	"path"
 	"syscall"
 )
@@ -107,7 +108,7 @@ func (decoderData *decoderData) addRegularFile(tarReader *tar.Reader,
 	dataHandler DataHandler, header *tar.Header, parent *filesystem.Directory,
 	name string) error {
 	var newInode filesystem.RegularInode
-	newInode.Mode = uint32(header.Mode & syscall.S_IFMT)
+	newInode.Mode = os.FileMode(header.Mode & syscall.S_IFMT)
 	newInode.Uid = uint32(header.Uid)
 	newInode.Gid = uint32(header.Gid)
 	newInode.MtimeNanoSeconds = int32(header.ModTime.Nanosecond())
@@ -143,7 +144,7 @@ func (decoderData *decoderData) addDirectory(header *tar.Header,
 	parent *filesystem.Directory, name string) error {
 	var newEntry filesystem.Directory
 	newEntry.Name = name
-	newEntry.Mode = uint32(header.Mode & syscall.S_IFMT)
+	newEntry.Mode = os.FileMode(header.Mode & syscall.S_IFMT)
 	newEntry.Uid = uint32(header.Uid)
 	newEntry.Gid = uint32(header.Gid)
 	parent.DirectoryList = append(parent.DirectoryList, &newEntry)

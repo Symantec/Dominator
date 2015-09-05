@@ -10,7 +10,7 @@ func (fs *FileSystem) debugWrite(w io.Writer, prefix string) error {
 }
 
 func (directory *Directory) debugWrite(w io.Writer, prefix string) error {
-	_, err := fmt.Fprintf(w, "%s%s\t%o %d %d\n", prefix, directory.Name,
+	_, err := fmt.Fprintf(w, "%s%s\t%v %d %d\n", prefix, directory.Name,
 		directory.Mode, directory.Uid, directory.Gid)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func (directory *Directory) debugWrite(w io.Writer, prefix string) error {
 
 func (file *RegularFile) debugWrite(w io.Writer, prefix string) error {
 	inode := file.inode
-	_, err := fmt.Fprintf(w, "%s%s\t%o %d %d %x\n", prefix, file.Name,
+	_, err := fmt.Fprintf(w, "%s%s\t%v %d %d %x\n", prefix, file.Name,
 		inode.Mode, inode.Uid, inode.Gid, inode.Hash)
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (file *File) debugWrite(w io.Writer, prefix string) error {
 	inode := file.inode
 	var data string
 	data = ""
-	_, err := fmt.Fprintf(w, "%s%s\t%o %d %d %s\n", prefix, file.Name,
+	_, err := fmt.Fprintf(w, "%s%s\t%v %d %d %s\n", prefix, file.Name,
 		inode.Mode, inode.Uid, inode.Gid, data)
 	if err != nil {
 		return err
