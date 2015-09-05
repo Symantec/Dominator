@@ -8,7 +8,6 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"io"
 	"io/ioutil"
-	"os"
 	"path"
 	"syscall"
 )
@@ -108,7 +107,8 @@ func (decoderData *decoderData) addRegularFile(tarReader *tar.Reader,
 	dataHandler DataHandler, header *tar.Header, parent *filesystem.Directory,
 	name string) error {
 	var newInode filesystem.RegularInode
-	newInode.Mode = os.FileMode(header.Mode & syscall.S_IFMT)
+	newInode.Mode = filesystem.FileMode((header.Mode & ^syscall.S_IFMT) |
+		syscall.S_IFREG)
 	newInode.Uid = uint32(header.Uid)
 	newInode.Gid = uint32(header.Gid)
 	newInode.MtimeNanoSeconds = int32(header.ModTime.Nanosecond())
@@ -144,7 +144,8 @@ func (decoderData *decoderData) addDirectory(header *tar.Header,
 	parent *filesystem.Directory, name string) error {
 	var newEntry filesystem.Directory
 	newEntry.Name = name
-	newEntry.Mode = os.FileMode(header.Mode & syscall.S_IFMT)
+	newEntry.Mode = filesystem.FileMode((header.Mode & ^syscall.S_IFMT) |
+		syscall.S_IFDIR)
 	newEntry.Uid = uint32(header.Uid)
 	newEntry.Gid = uint32(header.Gid)
 	parent.DirectoryList = append(parent.DirectoryList, &newEntry)
@@ -198,11 +199,14 @@ func (decoderData *decoderData) addFile(header *tar.Header,
 	parent *filesystem.Directory, name string) error {
 	var newInode filesystem.Inode
 	if header.Typeflag == tar.TypeChar {
-		newInode.Mode = syscall.S_IFCHR
+		newInode.Mode = filesystem.FileMode((header.Mode & ^syscall.S_IFMT) |
+			syscall.S_IFCHR)
 	} else if header.Typeflag == tar.TypeBlock {
-		newInode.Mode = syscall.S_IFBLK
+		newInode.Mode = filesystem.FileMode((header.Mode & ^syscall.S_IFMT) |
+			syscall.S_IFBLK)
 	} else if header.Typeflag == tar.TypeFifo {
-		newInode.Mode = syscall.S_IFIFO
+		newInode.Mode = filesystem.FileMode((header.Mode & ^syscall.S_IFMT) |
+			syscall.S_IFIFO)
 	} else {
 		return errors.New(fmt.Sprintf("unsupported type: %v", header.Typeflag))
 	}

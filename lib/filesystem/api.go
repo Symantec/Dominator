@@ -3,7 +3,6 @@ package filesystem
 import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"io"
-	"os"
 )
 
 type RegularInodeTable map[uint64]*RegularInode
@@ -38,7 +37,7 @@ type Directory struct {
 	FileList        []*File
 	DirectoryList   []*Directory
 	EntriesByName   map[string]interface{}
-	Mode            os.FileMode
+	Mode            FileMode
 	Uid             uint32
 	Gid             uint32
 }
@@ -56,7 +55,7 @@ func (directory *Directory) DebugWrite(w io.Writer, prefix string) error {
 }
 
 type RegularInode struct {
-	Mode             os.FileMode
+	Mode             FileMode
 	Uid              uint32
 	Gid              uint32
 	MtimeNanoSeconds int32
@@ -112,7 +111,7 @@ func (symlink *Symlink) DebugWrite(w io.Writer, prefix string) error {
 }
 
 type Inode struct {
-	Mode             os.FileMode
+	Mode             FileMode
 	Uid              uint32
 	Gid              uint32
 	MtimeNanoSeconds int32
@@ -140,6 +139,12 @@ func (file *File) String() string {
 
 func (file *File) DebugWrite(w io.Writer, prefix string) error {
 	return file.debugWrite(w, prefix)
+}
+
+type FileMode uint32
+
+func (mode FileMode) String() string {
+	return mode.string()
 }
 
 func CompareFileSystems(left, right *FileSystem, logWriter io.Writer) bool {
