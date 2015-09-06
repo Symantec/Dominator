@@ -1,21 +1,22 @@
 package scanner
 
 import (
-	"fmt"
+	"log"
 	"runtime"
 	"syscall"
 )
 
 func startScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
-	configuration *Configuration) chan *FileSystem {
+	configuration *Configuration, logger *log.Logger) chan *FileSystem {
 	fsChannel := make(chan *FileSystem)
 	go scannerDaemon(rootDirectoryName, cacheDirectoryName, configuration,
-		fsChannel)
+		fsChannel, logger)
 	return fsChannel
 }
 
 func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
-	configuration *Configuration, fsChannel chan *FileSystem) {
+	configuration *Configuration, fsChannel chan *FileSystem,
+	logger *log.Logger) {
 	if runtime.GOMAXPROCS(0) < 2 {
 		runtime.GOMAXPROCS(2)
 	}
@@ -26,7 +27,7 @@ func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 		fs, err := scanFileSystem(rootDirectoryName, cacheDirectoryName,
 			configuration, &oldFS)
 		if err != nil {
-			fmt.Printf("Error scanning\t%s\n", err)
+			logger.Printf("Error scanning\t%s\n", err)
 		} else {
 			oldFS.RegularInodeTable = fs.RegularInodeTable
 			oldFS.SymlinkInodeTable = fs.SymlinkInodeTable

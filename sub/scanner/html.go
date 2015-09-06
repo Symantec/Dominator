@@ -27,7 +27,7 @@ func (fsh *FileSystemHistory) writeHtml(writer io.Writer) {
 }
 
 func (fs *FileSystem) writeHtml(writer io.Writer) {
-	fmt.Fprintf(writer, "Scanned: %s<br>\n",
+	fmt.Fprintf(writer, "Scanned: <a href=\"dumpFileSystem\">%s</a><br>\n",
 		format.FormatBytes(fs.TotalDataBytes))
 }
 

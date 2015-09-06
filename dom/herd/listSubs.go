@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"sort"
 )
 
 func listSubsHandler(w http.ResponseWriter, req *http.Request) {
@@ -16,12 +15,11 @@ func listSubsHandler(w http.ResponseWriter, req *http.Request) {
 
 func listSubs(writer io.Writer) {
 	httpdHerd.RLock()
-	subs := make([]string, 0, len(httpdHerd.subsByName))
-	for name, _ := range httpdHerd.subsByName {
-		subs = append(subs, name)
+	subs := make([]string, 0, len(httpdHerd.subsByIndex))
+	for _, sub := range httpdHerd.subsByIndex {
+		subs = append(subs, sub.hostname)
 	}
 	httpdHerd.RUnlock()
-	sort.Strings(subs)
 	for _, name := range subs {
 		fmt.Fprintln(writer, name)
 	}

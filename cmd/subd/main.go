@@ -7,12 +7,14 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/fsrateio"
+	"github.com/Symantec/Dominator/lib/html"
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/Dominator/lib/memstats"
 	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/sub/httpd"
 	"github.com/Symantec/Dominator/sub/rpcd"
 	"github.com/Symantec/Dominator/sub/scanner"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -170,6 +172,20 @@ func getCachedNetworkSpeed(cacheFilename string) uint64 {
 	return 0
 }
 
+type DumpableFileSystemHistory struct {
+	fsh *scanner.FileSystemHistory
+}
+
+func (fsh *DumpableFileSystemHistory) WriteHtml(writer io.Writer) {
+	fs := fsh.fsh.FileSystem()
+	if fs == nil {
+		return
+	}
+	fmt.Fprintln(writer, "<pre>")
+	fs.DebugWrite(writer, "")
+	fmt.Fprintln(writer, "</pre>")
+}
+
 func main() {
 	flag.Parse()
 	workingRootDir := path.Join(*subdDir, "root")
@@ -219,7 +235,7 @@ func main() {
 	}
 	var fsh scanner.FileSystemHistory
 	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir,
-		&configuration)
+		&configuration, logger)
 	networkReaderContext := rateio.NewReaderContext(
 		getCachedNetworkSpeed(netbenchFilename),
 		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
@@ -229,6 +245,8 @@ func main() {
 	httpd.AddHtmlWriter(&fsh)
 	httpd.AddHtmlWriter(&configuration)
 	httpd.AddHtmlWriter(circularBuffer)
+	html.RegisterHtmlWriterForPattern("/dumpFileSystem", "Scanned File System",
+		&DumpableFileSystemHistory{&fsh})
 	err = httpd.StartServer(*portNum)
 	if err != nil {
 		fmt.Printf("Unable to create http server\t%s\n", err)

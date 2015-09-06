@@ -44,7 +44,7 @@ func compareDirectories(left, right *Directory, logWriter io.Writer) bool {
 	}
 	if left.Mode != right.Mode {
 		if logWriter != nil {
-			fmt.Fprintf(logWriter, "Mode: left vs. right: %x vs. %x\n",
+			fmt.Fprintf(logWriter, "Mode: left vs. right: %o vs. %o\n",
 				left.Mode, right.Mode)
 		}
 		return false
@@ -130,7 +130,7 @@ func compareRegularFiles(left, right *RegularFile, logWriter io.Writer) bool {
 func compareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
 	if left.Mode != right.Mode {
 		if logWriter != nil {
-			fmt.Fprintf(logWriter, "Mode: left vs. right: %x vs. %x\n",
+			fmt.Fprintf(logWriter, "Mode: left vs. right: %o vs. %o\n",
 				left.Mode, right.Mode)
 		}
 		return false
@@ -228,7 +228,7 @@ func compareFiles(left, right *File, logWriter io.Writer) bool {
 func compareInodes(left, right *Inode, logWriter io.Writer) bool {
 	if left.Mode != right.Mode {
 		if logWriter != nil {
-			fmt.Fprintf(logWriter, "Mode: left vs. right: %x vs. %x\n",
+			fmt.Fprintf(logWriter, "Mode: left vs. right: %o vs. %o\n",
 				left.Mode, right.Mode)
 		}
 		return false

@@ -40,7 +40,7 @@ func pollSubcommand(client *rpc.Client, args []string) {
 		if fs == nil {
 			fmt.Println("No FileSystem pointer")
 		} else {
-			fs.RebuildPointers()
+			fs.RebuildInodePointers()
 			if *debug {
 				fs.DebugWrite(os.Stdout, "")
 			} else {

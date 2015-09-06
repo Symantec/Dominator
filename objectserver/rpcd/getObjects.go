@@ -20,7 +20,7 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	conn, bufrw, err := w.(http.Hijacker).Hijack()
 	if err != nil {
-		fmt.Println("rpc hijacking ", req.RemoteAddr, ": ", err.Error())
+		logger.Println("rpc hijacking ", req.RemoteAddr, ": ", err.Error())
 		return
 	}
 	defer conn.Close()
@@ -34,6 +34,8 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 	} else {
 		exclusive.RLock()
 		defer exclusive.RUnlock()
+		getSemaphore <- true
+		defer releaseSemaphore(getSemaphore)
 	}
 	decoder := gob.NewDecoder(bufrw)
 	encoder := gob.NewEncoder(bufrw)
@@ -68,14 +70,18 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 	for range request.Hashes {
 		_, reader, err := objectsReader.NextObject()
 		if err != nil {
-			fmt.Println(err)
+			logger.Println(err)
 			return
 		}
 		_, err = io.Copy(conn, reader)
 		reader.Close()
 		if err != nil {
-			fmt.Printf("Error copying:\t%s\n", err)
+			logger.Printf("Error copying:\t%s\n", err)
 			return
 		}
 	}
+}
+
+func releaseSemaphore(semaphore chan bool) {
+	<-semaphore
 }

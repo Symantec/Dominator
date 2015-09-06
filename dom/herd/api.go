@@ -52,7 +52,7 @@ type Herd struct {
 	htmlWriters             []HtmlWriter
 	nextSubToPoll           uint
 	subsByName              map[string]*Sub
-	subsByIndex             []*Sub
+	subsByIndex             []*Sub // Sorted by Sub.hostname.
 	imagesByName            map[string]*image.Image
 	makeConnectionSemaphore chan bool
 	pollSemaphore           chan bool

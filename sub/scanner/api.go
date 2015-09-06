@@ -9,6 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/rateio"
 	"io"
+	"log"
 	"time"
 )
 
@@ -99,7 +100,7 @@ func CompareFileSystems(left, right *FileSystem, logWriter io.Writer) bool {
 }
 
 func StartScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
-	configuration *Configuration) chan *FileSystem {
+	configuration *Configuration, logger *log.Logger) chan *FileSystem {
 	return startScannerDaemon(rootDirectoryName, cacheDirectoryName,
-		configuration)
+		configuration, logger)
 }

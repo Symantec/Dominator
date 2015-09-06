@@ -36,7 +36,7 @@ func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 				hashes[index]))
 		}
 	}
-	request.Image.FileSystem.RebuildPointers()
+	request.Image.FileSystem.RebuildInodePointers()
 	logger.Printf("AddImage(%s)\n", request.ImageName)
 	return imageDataBase.AddImage(request.Image, request.ImageName)
 }

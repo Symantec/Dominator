@@ -18,8 +18,8 @@ type FileSystem struct {
 	Directory
 }
 
-func (fs *FileSystem) RebuildPointers() {
-	fs.rebuildPointers()
+func (fs *FileSystem) RebuildInodePointers() {
+	fs.rebuildInodePointers()
 }
 
 func (fs *FileSystem) ComputeTotalDataBytes() {
@@ -36,9 +36,14 @@ type Directory struct {
 	SymlinkList     []*Symlink
 	FileList        []*File
 	DirectoryList   []*Directory
-	Mode            uint32
+	EntriesByName   map[string]interface{}
+	Mode            FileMode
 	Uid             uint32
 	Gid             uint32
+}
+
+func (directory *Directory) BuildEntryMap() {
+	directory.buildEntryMap()
 }
 
 func (directory *Directory) String() string {
@@ -50,7 +55,7 @@ func (directory *Directory) DebugWrite(w io.Writer, prefix string) error {
 }
 
 type RegularInode struct {
-	Mode             uint32
+	Mode             FileMode
 	Uid              uint32
 	Gid              uint32
 	MtimeNanoSeconds int32
@@ -106,7 +111,7 @@ func (symlink *Symlink) DebugWrite(w io.Writer, prefix string) error {
 }
 
 type Inode struct {
-	Mode             uint32
+	Mode             FileMode
 	Uid              uint32
 	Gid              uint32
 	MtimeNanoSeconds int32
@@ -134,6 +139,12 @@ func (file *File) String() string {
 
 func (file *File) DebugWrite(w io.Writer, prefix string) error {
 	return file.debugWrite(w, prefix)
+}
+
+type FileMode uint32
+
+func (mode FileMode) String() string {
+	return mode.string()
 }
 
 func CompareFileSystems(left, right *FileSystem, logWriter io.Writer) bool {

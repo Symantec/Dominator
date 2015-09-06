@@ -53,10 +53,10 @@ func main() {
 		fmt.Printf("%s is not a directory\n", *stateDir)
 		os.Exit(1)
 	}
-	mdbChannel := mdb.StartMdbDaemon(path.Join(*stateDir, "mdb"))
 	interval := time.Duration(*minInterval) * time.Second
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
+	mdbChannel := mdb.StartMdbDaemon(path.Join(*stateDir, "mdb"), logger)
 	herd := herd.NewHerd(fmt.Sprintf("%s:%d", *imageServerHostname,
 		*imageServerPortNum), logger)
 	herd.AddHtmlWriter(circularBuffer)
