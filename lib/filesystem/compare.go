@@ -168,12 +168,14 @@ func compareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
 		}
 		return false
 	}
-	if bytes.Compare(left.Hash[:], right.Hash[:]) != 0 {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter, "hash: left vs. right: %x vs. %x\n",
-				left.Hash, right.Hash)
+	if left.Size > 0 {
+		if bytes.Compare(left.Hash[:], right.Hash[:]) != 0 {
+			if logWriter != nil {
+				fmt.Fprintf(logWriter, "hash: left vs. right: %x vs. %x\n",
+					left.Hash, right.Hash)
+			}
+			return false
 		}
-		return false
 	}
 	return true
 }
