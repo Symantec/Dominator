@@ -112,7 +112,7 @@ func (decoderData *decoderData) addRegularFile(tarReader *tar.Reader,
 	newInode.Uid = uint32(header.Uid)
 	newInode.Gid = uint32(header.Gid)
 	newInode.MtimeNanoSeconds = int32(header.ModTime.Nanosecond())
-	newInode.MtimeSeconds = int64(header.ModTime.Second())
+	newInode.MtimeSeconds = header.ModTime.Unix()
 	newInode.Size = uint64(header.Size)
 	if header.Size > 0 {
 		data, err := ioutil.ReadAll(tarReader)
@@ -213,7 +213,7 @@ func (decoderData *decoderData) addFile(header *tar.Header,
 	newInode.Uid = uint32(header.Uid)
 	newInode.Gid = uint32(header.Gid)
 	newInode.MtimeNanoSeconds = int32(header.ModTime.Nanosecond())
-	newInode.MtimeSeconds = int64(header.ModTime.Second())
+	newInode.MtimeSeconds = header.ModTime.Unix()
 	if header.Devminor > 255 {
 		return errors.New(fmt.Sprintf("minor device number: %d too large",
 			header.Devminor))
