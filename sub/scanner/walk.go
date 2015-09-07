@@ -216,9 +216,11 @@ func addRegularFile(directory *filesystem.Directory,
 	file.InodeNumber = stat.Ino
 	file.SetInode(inode)
 	if isNewInode {
-		err := scanRegularFile(&file, fileSystem, directoryPathName)
-		if err != nil {
-			return err
+		if inode.Size > 0 {
+			err := scanRegularFile(&file, fileSystem, directoryPathName)
+			if err != nil {
+				return err
+			}
 		}
 		if oldFS != nil && oldFS.RegularInodeTable != nil {
 			if oldInode, found := oldFS.RegularInodeTable[stat.Ino]; found {
