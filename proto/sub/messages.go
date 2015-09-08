@@ -41,6 +41,7 @@ type SetConfigurationRequest Configuration
 type SetConfigurationResponse common.StatusResponse
 
 type UpdateRequest struct {
+	PathsToDelete []string
 }
 
 type UpdateResponse struct{}
