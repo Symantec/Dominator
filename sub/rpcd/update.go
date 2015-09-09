@@ -3,6 +3,7 @@ package rpcd
 import (
 	"errors"
 	"github.com/Symantec/Dominator/proto/sub"
+	"time"
 )
 
 func (t *rpcType) Update(request sub.UpdateRequest,
@@ -25,6 +26,8 @@ func (t *rpcType) Update(request sub.UpdateRequest,
 
 func doUpdate(request sub.UpdateRequest) {
 	defer clearUpdateInProgress()
+	// TODO(rgooch): Remove debugging hack and implement.
+	time.Sleep(time.Second * 15)
 	logger.Printf("Update() complete\n")
 }
 
