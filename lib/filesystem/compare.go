@@ -128,6 +128,14 @@ func compareRegularFiles(left, right *RegularFile, logWriter io.Writer) bool {
 }
 
 func compareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
+	if !compareRegularInodesMetadata(left, right, logWriter) {
+		return false
+	}
+	return compareRegularInodesData(left, right, logWriter)
+}
+
+func compareRegularInodesMetadata(left, right *RegularInode,
+	logWriter io.Writer) bool {
 	if left.Mode != right.Mode {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "Mode: left vs. right: %o vs. %o\n",
@@ -149,13 +157,6 @@ func compareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
 		}
 		return false
 	}
-	if left.Size != right.Size {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter, "Size: left vs. right: %d vs. %d\n",
-				left.Size, right.Size)
-		}
-		return false
-	}
 	var leftMtime, rightMtime syscall.Timespec
 	leftMtime.Sec = left.MtimeSeconds
 	leftMtime.Nsec = int64(left.MtimeNanoSeconds)
@@ -165,6 +166,18 @@ func compareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "Mtime: left vs. right: %v vs. %v\n",
 				leftMtime, rightMtime)
+		}
+		return false
+	}
+	return true
+}
+
+func compareRegularInodesData(left, right *RegularInode,
+	logWriter io.Writer) bool {
+	if left.Size != right.Size {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Size: left vs. right: %d vs. %d\n",
+				left.Size, right.Size)
 		}
 		return false
 	}

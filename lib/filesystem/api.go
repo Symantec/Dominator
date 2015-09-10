@@ -163,6 +163,16 @@ func CompareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
 	return compareRegularInodes(left, right, logWriter)
 }
 
+func CompareRegularInodesMetadata(left, right *RegularInode,
+	logWriter io.Writer) bool {
+	return compareRegularInodesMetadata(left, right, logWriter)
+}
+
+func CompareRegularInodesData(left, right *RegularInode,
+	logWriter io.Writer) bool {
+	return compareRegularInodesData(left, right, logWriter)
+}
+
 func CompareSymlinks(left, right *Symlink, logWriter io.Writer) bool {
 	return compareSymlinks(left, right, logWriter)
 }
