@@ -24,17 +24,36 @@ func compareDirectories(request *subproto.UpdateRequest,
 	subDirectory, requiredDirectory *filesystem.Directory,
 	parentName string, filter *filter.Filter) {
 	// First look for entries that should be deleted.
-	subPathName := path.Join(parentName, subDirectory.Name)
-	for name, subEntry := range subDirectory.EntriesByName {
-		pathname := path.Join(subPathName, entryName(subEntry))
+	if subDirectory != nil {
+		subPathName := path.Join(parentName, subDirectory.Name)
+		for name, subEntry := range subDirectory.EntriesByName {
+			pathname := path.Join(subPathName, entryName(subEntry))
+			if filter.Match(pathname) {
+				continue
+			}
+			if _, ok := requiredDirectory.EntriesByName[name]; !ok {
+				request.PathsToDelete = append(request.PathsToDelete, pathname)
+				fmt.Printf("Delete: %s\n", pathname) // HACK
+			}
+		}
+	}
+	requiredPathName := path.Join(parentName, requiredDirectory.Name)
+	for name, requiredEntry := range requiredDirectory.EntriesByName {
+		pathname := path.Join(requiredPathName, entryName(requiredEntry))
 		if filter.Match(pathname) {
 			continue
 		}
-		if requiredEntry, ok := requiredDirectory.EntriesByName[name]; ok {
-			compareEntries(request, subEntry, requiredEntry, subPathName,
+		if subDirectory == nil {
+			compareEntries(request, nil, requiredEntry, requiredPathName,
 				filter)
 		} else {
-			request.PathsToDelete = append(request.PathsToDelete, pathname)
+			if subEntry, ok := subDirectory.EntriesByName[name]; ok {
+				compareEntries(request, subEntry, requiredEntry,
+					requiredPathName, filter)
+			} else {
+				compareEntries(request, nil, requiredEntry, requiredPathName,
+					filter)
+			}
 		}
 	}
 }
@@ -56,41 +75,48 @@ func entryName(entry interface{}) string {
 func compareEntries(request *subproto.UpdateRequest,
 	subEntry, requiredEntry interface{},
 	parentName string, filter *filter.Filter) {
-	switch se := subEntry.(type) {
+	switch re := requiredEntry.(type) {
 	case *filesystem.RegularFile:
-		compareSubRegularFileWithEntry(request, se, requiredEntry)
+		compareRegularFile(request, subEntry, re, parentName)
 		return
 	case *filesystem.Symlink:
+		//compareSymlink(request, subEntry, re, parentName)
 		return
 	case *filesystem.File:
+		//compareFile(request, subEntry, re, parentName)
 		return
 	case *filesystem.Directory:
-		compareSubDirectoryWithEntry(request, se, requiredEntry, parentName,
-			filter)
+		compareDirectory(request, subEntry, re, parentName, filter)
 		return
 	}
 	panic("Unsupported entry type")
 }
 
-func compareSubRegularFileWithEntry(request *subproto.UpdateRequest,
-	subRegularFile *filesystem.RegularFile, requiredEntry interface{}) {
-	if requiredRegularFile, ok := requiredEntry.(*filesystem.RegularFile); ok {
-		if filesystem.CompareRegularFiles(subRegularFile, requiredRegularFile,
-			os.Stdout) {
+func compareRegularFile(request *subproto.UpdateRequest,
+	subEntry interface{}, requiredRegularFile *filesystem.RegularFile,
+	parentName string) {
+	if subRegularFile, ok := subEntry.(*filesystem.RegularFile); ok {
+		sameMetadata := filesystem.CompareRegularInodesMetadata(
+			subRegularFile.Inode(), requiredRegularFile.Inode(),
+			os.Stdout)
+		sameData := filesystem.CompareRegularInodesData(subRegularFile.Inode(),
+			requiredRegularFile.Inode(), os.Stdout)
+		if sameMetadata && sameData {
 			return
 		}
 		fmt.Printf("Different: %s...\n", subRegularFile.Name) // HACK
+	} else {
+		fmt.Printf("Add: %s...\n", subRegularFile.Name) // HACK
 	}
 	// TODO(rgooch): Delete regular file and replace.
 }
 
-func compareSubDirectoryWithEntry(request *subproto.UpdateRequest,
-	subDirectory *filesystem.Directory, requiredEntry interface{},
+func compareDirectory(request *subproto.UpdateRequest,
+	subEntry interface{}, requiredDirectory *filesystem.Directory,
 	parentName string, filter *filter.Filter) {
-	if requiredDirectory, ok := requiredEntry.(*filesystem.Directory); ok {
+	if subDirectory, ok := subEntry.(*filesystem.Directory); ok {
 		compareDirectories(request, subDirectory, requiredDirectory,
-			parentName,
-			filter)
+			parentName, filter)
 	} else {
 		// TODO(rgooch): Delete directory and replace.
 	}
