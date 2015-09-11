@@ -218,7 +218,7 @@ func (decoderData *decoderData) addFile(header *tar.Header,
 		return errors.New(fmt.Sprintf("minor device number: %d too large",
 			header.Devminor))
 	}
-	newInode.Rdev = uint64(header.Devmajor>>8 | header.Devminor)
+	newInode.Rdev = uint64(header.Devmajor<<8 | header.Devminor)
 	decoderData.inodeTable[header.Name] = decoderData.nextInodeNumber
 	decoderData.fileSystem.InodeTable[decoderData.nextInodeNumber] =
 		&newInode
