@@ -91,7 +91,11 @@ func (file *File) debugWrite(w io.Writer, prefix string) error {
 	inode := file.inode
 	var data string
 	data = ""
-	_, err := fmt.Fprintf(w, "%s%s\t%v %d %d %s\n", prefix, file.Name,
+	if inode.Mode&syscall.S_IFMT == syscall.S_IFBLK ||
+		inode.Mode&syscall.S_IFMT == syscall.S_IFCHR {
+		data = fmt.Sprintf(" %#x", inode.Rdev)
+	}
+	_, err := fmt.Fprintf(w, "%s%s\t%v %d %d%s\n", prefix, file.Name,
 		inode.Mode, inode.Uid, inode.Gid, data)
 	if err != nil {
 		return err
