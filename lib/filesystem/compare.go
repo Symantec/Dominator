@@ -278,7 +278,7 @@ func compareInodes(left, right *Inode, logWriter io.Writer) bool {
 		left.Mode&syscall.S_IFMT == syscall.S_IFCHR {
 		if left.Rdev != right.Rdev {
 			if logWriter != nil {
-				fmt.Fprintf(logWriter, "Rdev: left vs. right: %x vs. %x\n",
+				fmt.Fprintf(logWriter, "Rdev: left vs. right: %#x vs. %#x\n",
 					left.Rdev, right.Rdev)
 			}
 			return false
