@@ -42,25 +42,7 @@ func compareDirectories(left, right *Directory, logWriter io.Writer) bool {
 		}
 		return false
 	}
-	if left.Mode != right.Mode {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter, "Mode: left vs. right: %o vs. %o\n",
-				left.Mode, right.Mode)
-		}
-		return false
-	}
-	if left.Uid != right.Uid {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter, "Uid: left vs. right: %d vs. %d\n",
-				left.Uid, right.Uid)
-		}
-		return false
-	}
-	if left.Gid != right.Gid {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter, "Gid: left vs. right: %d vs. %d\n",
-				left.Gid, right.Gid)
-		}
+	if !compareDirectoriesMetadata(left, right, logWriter) {
 		return false
 	}
 	if len(left.RegularFileList) != len(right.RegularFileList) {
@@ -112,6 +94,32 @@ func compareDirectories(left, right *Directory, logWriter io.Writer) bool {
 			logWriter) {
 			return false
 		}
+	}
+	return true
+}
+
+func compareDirectoriesMetadata(left, right *Directory,
+	logWriter io.Writer) bool {
+	if left.Mode != right.Mode {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Mode: left vs. right: %o vs. %o\n",
+				left.Mode, right.Mode)
+		}
+		return false
+	}
+	if left.Uid != right.Uid {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Uid: left vs. right: %d vs. %d\n",
+				left.Uid, right.Uid)
+		}
+		return false
+	}
+	if left.Gid != right.Gid {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Gid: left vs. right: %d vs. %d\n",
+				left.Gid, right.Gid)
+		}
+		return false
 	}
 	return true
 }
