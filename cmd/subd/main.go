@@ -240,7 +240,7 @@ func main() {
 		getCachedNetworkSpeed(netbenchFilename),
 		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 	configuration.NetworkReaderContext = networkReaderContext
-	rescanObjectCacheChannel := rpcd.Setup(&fsh, objectsDir,
+	rescanObjectCacheChannel := rpcd.Setup(&configuration, &fsh, objectsDir,
 		networkReaderContext, netbenchFilename, logger)
 	httpd.AddHtmlWriter(&fsh)
 	httpd.AddHtmlWriter(&configuration)
