@@ -39,7 +39,7 @@ func compareDirectories(request *subproto.UpdateRequest,
 		if !filesystem.CompareDirectoriesMetadata(subDirectory,
 			requiredDirectory, os.Stdout) {
 			fmt.Printf("Different directory: %s...\n",
-				subDirectory.Name) // HACK
+				requiredDirectory.Name) // HACK
 			// TODO(rgooch): Update metadata.
 		}
 	}
@@ -110,9 +110,9 @@ func compareRegularFile(request *subproto.UpdateRequest,
 		if sameMetadata && sameData {
 			return
 		}
-		fmt.Printf("Different rfile: %s...\n", subRegularFile.Name) // HACK
+		fmt.Printf("Different rfile: %s...\n", requiredRegularFile.Name) // HACK
 	} else {
-		fmt.Printf("Add rfile: %s...\n", subRegularFile.Name) // HACK
+		fmt.Printf("Add rfile: %s...\n", requiredRegularFile.Name) // HACK
 	}
 	// TODO(rgooch): Delete entry and replace.
 }
@@ -125,9 +125,9 @@ func compareSymlink(request *subproto.UpdateRequest,
 			requiredSymlink.Inode(), os.Stdout) {
 			return
 		}
-		fmt.Printf("Different symlink: %s...\n", subSymlink.Name) // HACK
+		fmt.Printf("Different symlink: %s...\n", requiredSymlink.Name) // HACK
 	} else {
-		fmt.Printf("Add symlink: %s...\n", subSymlink.Name) // HACK
+		fmt.Printf("Add symlink: %s...\n", requiredSymlink.Name) // HACK
 	}
 	// TODO(rgooch): Delete entry and replace.
 }
@@ -140,9 +140,9 @@ func compareFile(request *subproto.UpdateRequest,
 			os.Stdout) {
 			return
 		}
-		fmt.Printf("Different file: %s...\n", subFile.Name) // HACK
+		fmt.Printf("Different file: %s...\n", requiredFile.Name) // HACK
 	} else {
-		fmt.Printf("Add file: %s...\n", subFile.Name) // HACK
+		fmt.Printf("Add file: %s...\n", requiredFile.Name) // HACK
 	}
 	// TODO(rgooch): Delete entry and replace.
 }
