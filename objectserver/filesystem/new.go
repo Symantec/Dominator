@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
+	"log"
 	"os"
 	"path"
 )
 
-func newObjectServer(baseDir string) (*ObjectServer, error) {
+func newObjectServer(baseDir string, logger *log.Logger) (
+	*ObjectServer, error) {
 	fi, err := os.Stat(baseDir)
 	if err != nil {
 		return nil, errors.New(
@@ -21,6 +23,10 @@ func newObjectServer(baseDir string) (*ObjectServer, error) {
 	var objSrv ObjectServer
 	objSrv.baseDir = baseDir
 	objSrv.sizesMap = make(map[hash.Hash]uint64)
+	if logger == nil {
+		logger = log.New(os.Stdout, "", log.LstdFlags)
+	}
+	objSrv.logger = logger
 	err = scanDirectory(&objSrv, baseDir, "")
 	if err != nil {
 		return nil, err
