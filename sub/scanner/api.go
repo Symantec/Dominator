@@ -82,6 +82,10 @@ func (fs *FileSystem) Configuration() *Configuration {
 	return fs.configuration
 }
 
+func (fs *FileSystem) RootDirectoryName() string {
+	return fs.rootDirectoryName
+}
+
 func (fs *FileSystem) String() string {
 	return fmt.Sprintf("Tree: %d inodes, total file size: %s, number of regular inodes: %d\nObjectCache: %d objects\n",
 		len(fs.RegularInodeTable)+len(fs.SymlinkInodeTable)+len(fs.InodeTable)+
