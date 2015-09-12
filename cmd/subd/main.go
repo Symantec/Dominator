@@ -219,7 +219,7 @@ func main() {
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	var configuration scanner.Configuration
 	var err error
-	configuration.Filter, err = filter.NewFilter(constants.ScanExcludeList)
+	configuration.ScanFilter, err = filter.NewFilter(constants.ScanExcludeList)
 	if err != nil {
 		fmt.Printf("Unable to set default scan exclusions\t%s\n", err)
 		os.Exit(1)

@@ -22,7 +22,7 @@ func (t *rpcType) SetConfiguration(request sub.SetConfigurationRequest,
 	if err != nil {
 		return err
 	}
-	configuration.Filter = newFilter
+	configuration.ScanFilter = newFilter
 	response.Success = true
 	*reply = response
 	return nil

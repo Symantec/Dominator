@@ -18,8 +18,8 @@ func (t *rpcType) GetConfiguration(request sub.GetConfigurationRequest,
 	response.NetworkSpeedPercent =
 		configuration.NetworkReaderContext.SpeedPercent()
 	response.ScanExclusionList = make([]string,
-		len(configuration.Filter.FilterLines))
-	for index, line := range configuration.Filter.FilterLines {
+		len(configuration.ScanFilter.FilterLines))
+	for index, line := range configuration.ScanFilter.FilterLines {
 		response.ScanExclusionList[index] = line
 	}
 	*reply = response

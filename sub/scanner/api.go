@@ -16,7 +16,7 @@ import (
 type Configuration struct {
 	FsScanContext        *fsrateio.ReaderContext
 	NetworkReaderContext *rateio.ReaderContext
-	Filter               *filter.Filter
+	ScanFilter           *filter.Filter
 }
 
 func (configuration *Configuration) WriteHtml(writer io.Writer) {

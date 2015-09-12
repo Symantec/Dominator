@@ -133,7 +133,7 @@ func scanDirectory(directory *filesystem.Directory,
 			continue
 		}
 		filename := path.Join(myPathName, name)
-		if fileSystem.configuration.Filter.Match(filename) {
+		if fileSystem.configuration.ScanFilter.Match(filename) {
 			continue
 		}
 		var stat syscall.Stat_t
