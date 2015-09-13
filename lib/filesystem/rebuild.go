@@ -1,5 +1,9 @@
 package filesystem
 
+import (
+	"path"
+)
+
 func (fs *FileSystem) rebuildInodePointers() {
 	fs.Directory.rebuildInodePointers(fs)
 }
@@ -29,6 +33,35 @@ func (symlink *Symlink) rebuildInodePointers(fs *FileSystem) {
 
 func (file *File) rebuildInodePointers(fs *FileSystem) {
 	file.inode = fs.InodeTable[file.InodeNumber]
+}
+
+func (fs *FileSystem) buildFilenamesTable() {
+	fs.FilenamesTable = make(FilenamesTable)
+	fs.Directory.buildFilenamesTable(fs, "")
+}
+
+func (directory *Directory) buildFilenamesTable(fs *FileSystem,
+	parentName string) {
+	myPathName := path.Join(parentName, directory.Name)
+	for _, entry := range directory.RegularFileList {
+		fs.addFilenameToTable(entry.InodeNumber, myPathName, entry.Name)
+	}
+	for _, entry := range directory.SymlinkList {
+		fs.addFilenameToTable(entry.InodeNumber, myPathName, entry.Name)
+	}
+	for _, entry := range directory.FileList {
+		fs.addFilenameToTable(entry.InodeNumber, myPathName, entry.Name)
+	}
+	for _, entry := range directory.DirectoryList {
+		entry.buildFilenamesTable(fs, myPathName)
+	}
+}
+
+func (fs *FileSystem) addFilenameToTable(inode uint64,
+	parentName, entryName string) {
+	filenames := fs.FilenamesTable[inode]
+	filenames = append(filenames, path.Join(parentName, entryName))
+	fs.FilenamesTable[inode] = filenames
 }
 
 func (fs *FileSystem) computeTotalDataBytes() {
