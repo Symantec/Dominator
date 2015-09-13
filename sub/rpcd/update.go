@@ -51,6 +51,7 @@ func processDeletes(request sub.UpdateRequest, rootDirectoryName string) {
 		fullPathname := path.Join(rootDirectoryName, pathname)
 		// TODO(rgooch): Remove debugging.
 		fmt.Printf("Delete: %s\n", fullPathname)
+		// TODO(rgooch): Implement.
 	}
 }
 
@@ -69,5 +70,6 @@ func processMakeDirectories(request sub.UpdateRequest,
 		fullPathname := path.Join(rootDirectoryName, newdir.Name)
 		// TODO(rgooch): Remove debugging.
 		fmt.Printf("Mkdir: %s\n", fullPathname)
+		// TODO(rgooch): Implement.
 	}
 }
