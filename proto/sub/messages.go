@@ -40,8 +40,16 @@ type SetConfigurationRequest Configuration
 
 type SetConfigurationResponse common.StatusResponse
 
+type Directory struct {
+	Name string
+	Mode uint32
+	Uid  uint32
+	Gid  uint32
+}
+
 type UpdateRequest struct {
-	PathsToDelete []string
+	PathsToDelete     []string
+	DirectoriesToMake []Directory
 }
 
 type UpdateResponse struct{}
