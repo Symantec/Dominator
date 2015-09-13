@@ -4,15 +4,18 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/objectserver"
 	"io"
+	"log"
 )
 
 type ObjectServer struct {
 	baseDir  string
 	sizesMap map[hash.Hash]uint64 // Only set if object is known.
+	logger   *log.Logger
 }
 
-func NewObjectServer(baseDir string) (*ObjectServer, error) {
-	return newObjectServer(baseDir)
+func NewObjectServer(baseDir string, logger *log.Logger) (
+	*ObjectServer, error) {
+	return newObjectServer(baseDir, logger)
 }
 
 func (objSrv *ObjectServer) AddObjects(datas [][]byte,

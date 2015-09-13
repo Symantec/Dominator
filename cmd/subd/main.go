@@ -17,6 +17,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
 	"path"
 	"runtime"
 	"strconv"
@@ -104,13 +105,12 @@ func unshareAndBind(workingRootDir string) bool {
 			return false
 		}
 	}
-	// Strip out the "-unshare=false" just in case.
-	os.Args = os.Args[0 : len(os.Args)-1]
 	err := syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, "")
 	if err != nil {
 		fmt.Printf("Unable to set mount sharing to private\t%s\n", err)
 		return false
 	}
+	syscall.Unmount(workingRootDir, 0)
 	err = syscall.Mount(*rootDir, workingRootDir, "", syscall.MS_BIND, "")
 	if err != nil {
 		fmt.Printf("Unable to bind mount %s to %s\t%s\n",
@@ -219,7 +219,7 @@ func main() {
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	var configuration scanner.Configuration
 	var err error
-	configuration.Filter, err = filter.NewFilter(constants.ScanExcludeList)
+	configuration.ScanFilter, err = filter.NewFilter(constants.ScanExcludeList)
 	if err != nil {
 		fmt.Printf("Unable to set default scan exclusions\t%s\n", err)
 		os.Exit(1)
@@ -240,7 +240,7 @@ func main() {
 		getCachedNetworkSpeed(netbenchFilename),
 		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 	configuration.NetworkReaderContext = networkReaderContext
-	rescanObjectCacheChannel := rpcd.Setup(&fsh, objectsDir,
+	rescanObjectCacheChannel := rpcd.Setup(&configuration, &fsh, objectsDir,
 		networkReaderContext, netbenchFilename, logger)
 	httpd.AddHtmlWriter(&fsh)
 	httpd.AddHtmlWriter(&configuration)
@@ -254,8 +254,15 @@ func main() {
 	}
 	fsh.Update(nil)
 	invalidateNextScanObjectCache := false
+	sighupChannel := make(chan os.Signal)
+	signal.Notify(sighupChannel, syscall.SIGHUP)
 	for iter := 0; true; {
 		select {
+		case <-sighupChannel:
+			err = syscall.Exec(os.Args[0], os.Args, os.Environ())
+			if err != nil {
+				logger.Printf("Unable to Exec:%s\t%s\n", os.Args[0], err)
+			}
 		case fs := <-fsChannel:
 			if *showStats {
 				fmt.Printf("Completed cycle: %d\n", iter)

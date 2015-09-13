@@ -16,7 +16,7 @@ import (
 type Configuration struct {
 	FsScanContext        *fsrateio.ReaderContext
 	NetworkReaderContext *rateio.ReaderContext
-	Filter               *filter.Filter
+	ScanFilter           *filter.Filter
 }
 
 func (configuration *Configuration) WriteHtml(writer io.Writer) {
@@ -80,6 +80,10 @@ func (fs *FileSystem) ScanObjectCache() error {
 
 func (fs *FileSystem) Configuration() *Configuration {
 	return fs.configuration
+}
+
+func (fs *FileSystem) RootDirectoryName() string {
+	return fs.rootDirectoryName
 }
 
 func (fs *FileSystem) String() string {

@@ -36,6 +36,12 @@ func compareDirectories(request *subproto.UpdateRequest,
 				fmt.Printf("Delete: %s\n", pathname) // HACK
 			}
 		}
+		if !filesystem.CompareDirectoriesMetadata(subDirectory,
+			requiredDirectory, os.Stdout) {
+			fmt.Printf("Different directory: %s...\n",
+				requiredDirectory.Name) // HACK
+			// TODO(rgooch): Update metadata.
+		}
 	}
 	requiredPathName := path.Join(parentName, requiredDirectory.Name)
 	for name, requiredEntry := range requiredDirectory.EntriesByName {
@@ -80,10 +86,10 @@ func compareEntries(request *subproto.UpdateRequest,
 		compareRegularFile(request, subEntry, re, parentName)
 		return
 	case *filesystem.Symlink:
-		//compareSymlink(request, subEntry, re, parentName)
+		compareSymlink(request, subEntry, re, parentName)
 		return
 	case *filesystem.File:
-		//compareFile(request, subEntry, re, parentName)
+		compareFile(request, subEntry, re, parentName)
 		return
 	case *filesystem.Directory:
 		compareDirectory(request, subEntry, re, parentName, filter)
@@ -104,11 +110,41 @@ func compareRegularFile(request *subproto.UpdateRequest,
 		if sameMetadata && sameData {
 			return
 		}
-		fmt.Printf("Different: %s...\n", subRegularFile.Name) // HACK
+		fmt.Printf("Different rfile: %s...\n", requiredRegularFile.Name) // HACK
 	} else {
-		fmt.Printf("Add: %s...\n", subRegularFile.Name) // HACK
+		fmt.Printf("Add rfile: %s...\n", requiredRegularFile.Name) // HACK
 	}
-	// TODO(rgooch): Delete regular file and replace.
+	// TODO(rgooch): Delete entry and replace.
+}
+
+func compareSymlink(request *subproto.UpdateRequest,
+	subEntry interface{}, requiredSymlink *filesystem.Symlink,
+	parentName string) {
+	if subSymlink, ok := subEntry.(*filesystem.Symlink); ok {
+		if filesystem.CompareSymlinkInodes(subSymlink.Inode(),
+			requiredSymlink.Inode(), os.Stdout) {
+			return
+		}
+		fmt.Printf("Different symlink: %s...\n", requiredSymlink.Name) // HACK
+	} else {
+		fmt.Printf("Add symlink: %s...\n", requiredSymlink.Name) // HACK
+	}
+	// TODO(rgooch): Delete entry and replace.
+}
+
+func compareFile(request *subproto.UpdateRequest,
+	subEntry interface{}, requiredFile *filesystem.File,
+	parentName string) {
+	if subFile, ok := subEntry.(*filesystem.File); ok {
+		if filesystem.CompareInodes(subFile.Inode(), requiredFile.Inode(),
+			os.Stdout) {
+			return
+		}
+		fmt.Printf("Different file: %s...\n", requiredFile.Name) // HACK
+	} else {
+		fmt.Printf("Add file: %s...\n", requiredFile.Name) // HACK
+	}
+	// TODO(rgooch): Delete entry and replace.
 }
 
 func compareDirectory(request *subproto.UpdateRequest,
@@ -118,6 +154,6 @@ func compareDirectory(request *subproto.UpdateRequest,
 		compareDirectories(request, subDirectory, requiredDirectory,
 			parentName, filter)
 	} else {
-		// TODO(rgooch): Delete directory and replace.
+		// TODO(rgooch): Delete entry and replace.
 	}
 }

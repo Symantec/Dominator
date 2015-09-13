@@ -17,34 +17,42 @@ const buflen = 65536
 func (objSrv *ObjectServer) addObjects(datas [][]byte,
 	expectedHashes []*hash.Hash) ([]hash.Hash, error) {
 	hashes := make([]hash.Hash, len(datas))
+	numAdded := 0
 	for index, data := range datas {
 		var err error
-		hashes[index], err = objSrv.addObject(data, expectedHashes[index])
+		var add bool
+		hashes[index], add, err = objSrv.addObject(data, expectedHashes[index])
 		if err != nil {
+			objSrv.logger.Printf("AddObjects(): error: %s", err.Error())
 			return nil, err
 		}
+		if add {
+			numAdded++
+		}
 	}
+	objSrv.logger.Printf("AddObjects(): %d of %d are new objects",
+		numAdded, len(datas))
 	return hashes, nil
 }
 
 func (objSrv *ObjectServer) addObject(data []byte, expectedHash *hash.Hash) (
-	hash.Hash, error) {
+	hash.Hash, bool, error) {
 	var hash hash.Hash
 	if len(data) < 1 {
-		return hash, errors.New("zero length object cannot be added")
+		return hash, false, errors.New("zero length object cannot be added")
 	}
 	hasher := sha512.New()
 	if hasher.Size() != len(hash) {
-		return hash, errors.New("Incompatible hash size")
+		return hash, false, errors.New("Incompatible hash size")
 	}
 	_, err := hasher.Write(data)
 	if err != nil {
-		return hash, err
+		return hash, false, err
 	}
 	copy(hash[:], hasher.Sum(nil))
 	if expectedHash != nil {
 		if hash != *expectedHash {
-			return hash, errors.New(fmt.Sprintf(
+			return hash, false, errors.New(fmt.Sprintf(
 				"Hash mismatch. Computed=%x, expected=%x", hash, *expectedHash))
 		}
 	}
@@ -53,32 +61,30 @@ func (objSrv *ObjectServer) addObject(data []byte, expectedHash *hash.Hash) (
 	fi, err := os.Lstat(filename)
 	if err == nil {
 		if !fi.Mode().IsRegular() {
-			return hash, errors.New("Existing non-file: " + filename)
+			return hash, false, errors.New("Existing non-file: " + filename)
 		}
 		err := collisionCheck(data, filename, fi.Size())
 		if err != nil {
-			return hash, errors.New("Collision detected: " + err.Error())
+			return hash, false, errors.New("Collision detected: " + err.Error())
 		}
 		// No collision and no error: it's the same object. Go home early.
-		return hash, nil
+		return hash, false, nil
 	}
 	err = os.MkdirAll(path.Dir(filename), 0755)
 	if err != nil {
-		return hash, err
+		return hash, false, err
 	}
-	// TODO(rgooch): Remove debugging output.
-	fmt.Printf("Writing object: %x\n", hash)
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0660)
 	if err != nil {
-		return hash, err
+		return hash, false, err
 	}
 	defer file.Close()
 	_, err = file.Write(data)
 	if err != nil {
-		return hash, err
+		return hash, false, err
 	}
 	objSrv.sizesMap[hash] = uint64(len(data))
-	return hash, nil
+	return hash, true, nil
 }
 
 func collisionCheck(data []byte, filename string, size int64) error {

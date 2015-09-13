@@ -8,6 +8,7 @@ import (
 	"sync"
 )
 
+var scannerConfiguration *scanner.Configuration
 var fileSystemHistory *scanner.FileSystemHistory
 var objectsDir string
 var networkReaderContext *rateio.ReaderContext
@@ -17,9 +18,10 @@ var logger *log.Logger
 
 type rpcType int
 
-func Setup(fsh *scanner.FileSystemHistory, objectsDirname string,
-	netReaderContext *rateio.ReaderContext, netbenchFname string,
-	lg *log.Logger) chan bool {
+func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
+	objectsDirname string, netReaderContext *rateio.ReaderContext,
+	netbenchFname string, lg *log.Logger) chan bool {
+	scannerConfiguration = configuration
 	fileSystemHistory = fsh
 	objectsDir = objectsDirname
 	networkReaderContext = netReaderContext

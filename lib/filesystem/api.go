@@ -155,6 +155,11 @@ func CompareDirectories(left, right *Directory, logWriter io.Writer) bool {
 	return compareDirectories(left, right, logWriter)
 }
 
+func CompareDirectoriesMetadata(left, right *Directory,
+	logWriter io.Writer) bool {
+	return compareDirectoriesMetadata(left, right, logWriter)
+}
+
 func CompareRegularFiles(left, right *RegularFile, logWriter io.Writer) bool {
 	return compareRegularFiles(left, right, logWriter)
 }

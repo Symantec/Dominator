@@ -35,7 +35,7 @@ func main() {
 	}
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
-	objSrv, err := filesystem.NewObjectServer(*objectDir)
+	objSrv, err := filesystem.NewObjectServer(*objectDir, logger)
 	if err != nil {
 		fmt.Printf("Cannot create ObjectServer\t%s\n", err)
 		os.Exit(1)

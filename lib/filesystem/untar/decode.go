@@ -85,7 +85,7 @@ func (decoderData *decoderData) addHeader(tarReader *tar.Reader,
 		return decoderData.addRegularFile(tarReader, dataHandler, header,
 			parentDir, leafName)
 	} else if header.Typeflag == tar.TypeLink {
-		return decoderData.addDirectory(header, parentDir, leafName)
+		return decoderData.addHardlink(header, parentDir, leafName)
 	} else if header.Typeflag == tar.TypeSymlink {
 		return decoderData.addSymlink(header, parentDir, leafName)
 	} else if header.Typeflag == tar.TypeChar {
