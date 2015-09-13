@@ -23,8 +23,12 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 func compareDirectories(request *subproto.UpdateRequest,
 	subDirectory, requiredDirectory *filesystem.Directory,
 	parentName string, filter *filter.Filter) {
+	requiredPathName := path.Join(parentName, requiredDirectory.Name)
 	// First look for entries that should be deleted.
-	if subDirectory != nil {
+	makeSubDirectory := false
+	if subDirectory == nil {
+		makeSubDirectory = true
+	} else {
 		subPathName := path.Join(parentName, subDirectory.Name)
 		for name, subEntry := range subDirectory.EntriesByName {
 			pathname := path.Join(subPathName, entryName(subEntry))
@@ -38,12 +42,19 @@ func compareDirectories(request *subproto.UpdateRequest,
 		}
 		if !filesystem.CompareDirectoriesMetadata(subDirectory,
 			requiredDirectory, os.Stdout) {
-			fmt.Printf("Different directory: %s...\n",
-				requiredDirectory.Name) // HACK
+			fmt.Printf("Different directory: %s...\n", requiredPathName) // HACK
+			makeSubDirectory = true
 			// TODO(rgooch): Update metadata.
 		}
 	}
-	requiredPathName := path.Join(parentName, requiredDirectory.Name)
+	if makeSubDirectory {
+		var newdir subproto.Directory
+		newdir.Name = requiredPathName
+		newdir.Mode = uint32(requiredDirectory.Mode)
+		newdir.Uid = requiredDirectory.Uid
+		newdir.Gid = requiredDirectory.Gid
+		request.DirectoriesToMake = append(request.DirectoriesToMake, newdir)
+	}
 	for name, requiredEntry := range requiredDirectory.EntriesByName {
 		pathname := path.Join(requiredPathName, entryName(requiredEntry))
 		if filter.Match(pathname) {
@@ -154,6 +165,6 @@ func compareDirectory(request *subproto.UpdateRequest,
 		compareDirectories(request, subDirectory, requiredDirectory,
 			parentName, filter)
 	} else {
-		// TODO(rgooch): Delete entry and replace.
+		compareDirectories(request, nil, requiredDirectory, parentName, filter)
 	}
 }
