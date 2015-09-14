@@ -9,18 +9,22 @@ import (
 	"path"
 )
 
+type state struct {
+}
+
 func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 	fmt.Println("buildUpdateRequest()") // TODO(rgooch): Delete debugging.
 	subFS := sub.fileSystem
 	requiredImage := sub.herd.getImage(sub.requiredImage)
 	requiredFS := requiredImage.FileSystem
 	filter := requiredImage.Filter
-	compareDirectories(request, &subFS.Directory, &requiredFS.Directory, "",
-		filter)
+	var state state
+	compareDirectories(request, &state, &subFS.Directory, &requiredFS.Directory,
+		"", filter)
 	// TODO(rgooch): Implement this.
 }
 
-func compareDirectories(request *subproto.UpdateRequest,
+func compareDirectories(request *subproto.UpdateRequest, state *state,
 	subDirectory, requiredDirectory *filesystem.Directory,
 	parentName string, filter *filter.Filter) {
 	requiredPathName := path.Join(parentName, requiredDirectory.Name)
@@ -61,15 +65,15 @@ func compareDirectories(request *subproto.UpdateRequest,
 			continue
 		}
 		if subDirectory == nil {
-			compareEntries(request, nil, requiredEntry, requiredPathName,
+			compareEntries(request, state, nil, requiredEntry, requiredPathName,
 				filter)
 		} else {
 			if subEntry, ok := subDirectory.EntriesByName[name]; ok {
-				compareEntries(request, subEntry, requiredEntry,
+				compareEntries(request, state, subEntry, requiredEntry,
 					requiredPathName, filter)
 			} else {
-				compareEntries(request, nil, requiredEntry, requiredPathName,
-					filter)
+				compareEntries(request, state, nil, requiredEntry,
+					requiredPathName, filter)
 			}
 		}
 	}
@@ -89,27 +93,27 @@ func entryName(entry interface{}) string {
 	panic("Unsupported entry type")
 }
 
-func compareEntries(request *subproto.UpdateRequest,
+func compareEntries(request *subproto.UpdateRequest, state *state,
 	subEntry, requiredEntry interface{},
 	parentName string, filter *filter.Filter) {
 	switch re := requiredEntry.(type) {
 	case *filesystem.RegularFile:
-		compareRegularFile(request, subEntry, re, parentName)
+		compareRegularFile(request, state, subEntry, re, parentName)
 		return
 	case *filesystem.Symlink:
-		compareSymlink(request, subEntry, re, parentName)
+		compareSymlink(request, state, subEntry, re, parentName)
 		return
 	case *filesystem.File:
-		compareFile(request, subEntry, re, parentName)
+		compareFile(request, state, subEntry, re, parentName)
 		return
 	case *filesystem.Directory:
-		compareDirectory(request, subEntry, re, parentName, filter)
+		compareDirectory(request, state, subEntry, re, parentName, filter)
 		return
 	}
 	panic("Unsupported entry type")
 }
 
-func compareRegularFile(request *subproto.UpdateRequest,
+func compareRegularFile(request *subproto.UpdateRequest, state *state,
 	subEntry interface{}, requiredRegularFile *filesystem.RegularFile,
 	parentName string) {
 	if subRegularFile, ok := subEntry.(*filesystem.RegularFile); ok {
@@ -128,7 +132,7 @@ func compareRegularFile(request *subproto.UpdateRequest,
 	// TODO(rgooch): Delete entry and replace.
 }
 
-func compareSymlink(request *subproto.UpdateRequest,
+func compareSymlink(request *subproto.UpdateRequest, state *state,
 	subEntry interface{}, requiredSymlink *filesystem.Symlink,
 	parentName string) {
 	if subSymlink, ok := subEntry.(*filesystem.Symlink); ok {
@@ -143,7 +147,7 @@ func compareSymlink(request *subproto.UpdateRequest,
 	// TODO(rgooch): Delete entry and replace.
 }
 
-func compareFile(request *subproto.UpdateRequest,
+func compareFile(request *subproto.UpdateRequest, state *state,
 	subEntry interface{}, requiredFile *filesystem.File,
 	parentName string) {
 	if subFile, ok := subEntry.(*filesystem.File); ok {
@@ -158,13 +162,14 @@ func compareFile(request *subproto.UpdateRequest,
 	// TODO(rgooch): Delete entry and replace.
 }
 
-func compareDirectory(request *subproto.UpdateRequest,
+func compareDirectory(request *subproto.UpdateRequest, state *state,
 	subEntry interface{}, requiredDirectory *filesystem.Directory,
 	parentName string, filter *filter.Filter) {
 	if subDirectory, ok := subEntry.(*filesystem.Directory); ok {
-		compareDirectories(request, subDirectory, requiredDirectory,
+		compareDirectories(request, state, subDirectory, requiredDirectory,
 			parentName, filter)
 	} else {
-		compareDirectories(request, nil, requiredDirectory, parentName, filter)
+		compareDirectories(request, state, nil, requiredDirectory, parentName,
+			filter)
 	}
 }
