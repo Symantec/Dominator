@@ -54,7 +54,7 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 	if makeSubDirectory {
 		var newdir subproto.Directory
 		newdir.Name = requiredPathName
-		newdir.Mode = uint32(requiredDirectory.Mode)
+		newdir.Mode = requiredDirectory.Mode
 		newdir.Uid = requiredDirectory.Uid
 		newdir.Gid = requiredDirectory.Gid
 		request.DirectoriesToMake = append(request.DirectoriesToMake, newdir)

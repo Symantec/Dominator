@@ -1,6 +1,7 @@
 package sub
 
 import (
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/proto/common"
 	"github.com/Symantec/Dominator/sub/scanner"
@@ -42,7 +43,7 @@ type SetConfigurationResponse common.StatusResponse
 
 type Directory struct {
 	Name string
-	Mode uint32
+	Mode filesystem.FileMode
 	Uid  uint32
 	Gid  uint32
 }
