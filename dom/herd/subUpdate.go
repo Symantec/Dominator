@@ -10,6 +10,7 @@ import (
 )
 
 type state struct {
+	subInodeToRequiredInode map[uint64]uint64
 }
 
 func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
@@ -19,6 +20,7 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 	requiredFS := requiredImage.FileSystem
 	filter := requiredImage.Filter
 	var state state
+	state.subInodeToRequiredInode = make(map[uint64]uint64)
 	compareDirectories(request, &state, &subFS.Directory, &requiredFS.Directory,
 		"", filter)
 	// TODO(rgooch): Implement this.
@@ -116,7 +118,18 @@ func compareEntries(request *subproto.UpdateRequest, state *state,
 func compareRegularFile(request *subproto.UpdateRequest, state *state,
 	subEntry interface{}, requiredRegularFile *filesystem.RegularFile,
 	parentName string) {
+	debugFilename := path.Join(parentName, requiredRegularFile.Name)
 	if subRegularFile, ok := subEntry.(*filesystem.RegularFile); ok {
+		if requiredInode, ok :=
+			state.subInodeToRequiredInode[subRegularFile.InodeNumber]; ok {
+			if requiredInode == requiredRegularFile.InodeNumber {
+				//
+				fmt.Printf("Different links: %s...\n", debugFilename) // HACK
+			}
+		} else {
+			state.subInodeToRequiredInode[subRegularFile.InodeNumber] =
+				requiredRegularFile.InodeNumber
+		}
 		sameMetadata := filesystem.CompareRegularInodesMetadata(
 			subRegularFile.Inode(), requiredRegularFile.Inode(),
 			os.Stdout)
@@ -125,9 +138,9 @@ func compareRegularFile(request *subproto.UpdateRequest, state *state,
 		if sameMetadata && sameData {
 			return
 		}
-		fmt.Printf("Different rfile: %s...\n", requiredRegularFile.Name) // HACK
+		fmt.Printf("Different rfile: %s...\n", debugFilename) // HACK
 	} else {
-		fmt.Printf("Add rfile: %s...\n", requiredRegularFile.Name) // HACK
+		fmt.Printf("Add rfile: %s...\n", debugFilename) // HACK
 	}
 	// TODO(rgooch): Delete entry and replace.
 }
@@ -135,14 +148,24 @@ func compareRegularFile(request *subproto.UpdateRequest, state *state,
 func compareSymlink(request *subproto.UpdateRequest, state *state,
 	subEntry interface{}, requiredSymlink *filesystem.Symlink,
 	parentName string) {
+	debugFilename := path.Join(parentName, requiredSymlink.Name)
 	if subSymlink, ok := subEntry.(*filesystem.Symlink); ok {
+		if requiredInode, ok :=
+			state.subInodeToRequiredInode[subSymlink.InodeNumber]; ok {
+			if requiredInode != requiredSymlink.InodeNumber {
+				fmt.Printf("Different links: %s...\n", debugFilename) // HACK
+			}
+		} else {
+			state.subInodeToRequiredInode[subSymlink.InodeNumber] =
+				requiredSymlink.InodeNumber
+		}
 		if filesystem.CompareSymlinkInodes(subSymlink.Inode(),
 			requiredSymlink.Inode(), os.Stdout) {
 			return
 		}
-		fmt.Printf("Different symlink: %s...\n", requiredSymlink.Name) // HACK
+		fmt.Printf("Different symlink: %s...\n", debugFilename) // HACK
 	} else {
-		fmt.Printf("Add symlink: %s...\n", requiredSymlink.Name) // HACK
+		fmt.Printf("Add symlink: %s...\n", debugFilename) // HACK
 	}
 	// TODO(rgooch): Delete entry and replace.
 }
@@ -150,14 +173,24 @@ func compareSymlink(request *subproto.UpdateRequest, state *state,
 func compareFile(request *subproto.UpdateRequest, state *state,
 	subEntry interface{}, requiredFile *filesystem.File,
 	parentName string) {
+	debugFilename := path.Join(parentName, requiredFile.Name)
 	if subFile, ok := subEntry.(*filesystem.File); ok {
+		if requiredInode, ok :=
+			state.subInodeToRequiredInode[subFile.InodeNumber]; ok {
+			if requiredInode != requiredFile.InodeNumber {
+				fmt.Printf("Different links: %s...\n", debugFilename) // HACK
+			}
+		} else {
+			state.subInodeToRequiredInode[subFile.InodeNumber] =
+				requiredFile.InodeNumber
+		}
 		if filesystem.CompareInodes(subFile.Inode(), requiredFile.Inode(),
 			os.Stdout) {
 			return
 		}
-		fmt.Printf("Different file: %s...\n", requiredFile.Name) // HACK
+		fmt.Printf("Different file: %s...\n", debugFilename) // HACK
 	} else {
-		fmt.Printf("Add file: %s...\n", requiredFile.Name) // HACK
+		fmt.Printf("Add file: %s...\n", debugFilename) // HACK
 	}
 	// TODO(rgooch): Delete entry and replace.
 }
