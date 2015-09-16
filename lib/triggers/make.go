@@ -16,7 +16,7 @@ func (triggers *Triggers) compile() error {
 		trigger.matchRegexes = make([]*regexp.Regexp, len(trigger.MatchLines))
 		for index, line := range trigger.MatchLines {
 			var err error
-			trigger.matchRegexes[index], err = regexp.Compile(line)
+			trigger.matchRegexes[index], err = regexp.Compile("^" + line)
 			if err != nil {
 				return err
 			}
