@@ -4,11 +4,11 @@ import (
 	"regexp"
 )
 
-func (triggers Triggers) addTrigger(matchLines []string, actionLine string) {
+func (triggers *Triggers) addTrigger(matchLines []string, actionLine string) {
 	var trigger Trigger
 	trigger.MatchLines = matchLines
 	trigger.ActionLine = actionLine
-	triggers = append(triggers, &trigger)
+	*triggers = append(*triggers, &trigger)
 }
 
 func (triggers Triggers) compile() error {

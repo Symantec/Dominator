@@ -16,6 +16,6 @@ func New() *Triggers {
 	return &Triggers{}
 }
 
-func (triggers Triggers) AddTrigger(matchLines []string, actionLine string) {
+func (triggers *Triggers) AddTrigger(matchLines []string, actionLine string) {
 	triggers.addTrigger(matchLines, actionLine)
 }
