@@ -108,7 +108,7 @@ func loadTriggers(image *image.Image, triggersFilename string) error {
 	var trig triggers.Triggers
 	err = decoder.Decode(&trig)
 	if err != nil {
-		return errors.New("Error decoding " + err.Error())
+		return errors.New("error decoding triggers " + err.Error())
 	}
 	image.Triggers = &trig
 	return nil
