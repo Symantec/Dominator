@@ -55,16 +55,6 @@ func addImage(imageClient *rpc.Client, objectClient *objectclient.ObjectClient,
 	} else {
 		return errors.New("unrecognised image type")
 	}
-	filterFile, err := os.Open(filterFilename)
-	if err != nil {
-		return err
-	}
-	defer filterFile.Close()
-	triggersFile, err := os.Open(triggersFilename)
-	if err != nil {
-		return err
-	}
-	defer triggersFile.Close()
 	imageExists, err := checkImage(imageClient, name)
 	if err != nil {
 		return errors.New("error checking for image existance: " + err.Error())
@@ -72,27 +62,15 @@ func addImage(imageClient *rpc.Client, objectClient *objectclient.ObjectClient,
 	if imageExists {
 		return errors.New("image exists")
 	}
-	filterLines, err := readLines(filterFile)
-	if err != nil {
-		return errors.New("error reading filter: " + err.Error())
-	}
 	var newImage image.Image
-	newImage.Filter, err = filter.NewFilter(filterLines)
-	if err != nil {
+	if err := loadFilter(&newImage, filterFilename); err != nil {
 		return err
 	}
-	decoder := json.NewDecoder(triggersFile)
-	var trig triggers.Triggers
-	err = decoder.Decode(&trig)
-	if err != nil {
-		return errors.New("Error decoding " + err.Error())
+	if err := loadTriggers(&newImage, triggersFilename); err != nil {
+		return err
 	}
-	newImage.Triggers = &trig
 	request.ImageName = name
 	request.Image = &newImage
-	if err != nil {
-		return errors.New("error reading filter: " + err.Error())
-	}
 	tarReader := tar.NewReader(imageReader)
 	request.Image.FileSystem, err = buildImage(objectClient, tarReader,
 		newImage.Filter)
@@ -103,6 +81,36 @@ func addImage(imageClient *rpc.Client, objectClient *objectclient.ObjectClient,
 	if err != nil {
 		return errors.New("remote error: " + err.Error())
 	}
+	return nil
+}
+
+func loadFilter(image *image.Image, filterFilename string) error {
+	filterFile, err := os.Open(filterFilename)
+	if err != nil {
+		return err
+	}
+	defer filterFile.Close()
+	filterLines, err := readLines(filterFile)
+	if err != nil {
+		return errors.New("error reading filter: " + err.Error())
+	}
+	image.Filter, err = filter.NewFilter(filterLines)
+	return err
+}
+
+func loadTriggers(image *image.Image, triggersFilename string) error {
+	triggersFile, err := os.Open(triggersFilename)
+	if err != nil {
+		return err
+	}
+	defer triggersFile.Close()
+	decoder := json.NewDecoder(triggersFile)
+	var trig triggers.Triggers
+	err = decoder.Decode(&trig)
+	if err != nil {
+		return errors.New("Error decoding " + err.Error())
+	}
+	image.Triggers = &trig
 	return nil
 }
 
