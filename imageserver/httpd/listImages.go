@@ -30,6 +30,7 @@ func listImagesHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "    <th>Data Size</b></th>")
 	fmt.Fprintln(writer, "    <th>Data Inodes</b></th>")
 	fmt.Fprintln(writer, "    <th>Filter Lines</b></th>")
+	fmt.Fprintln(writer, "    <th>Triggers</b></th>")
 	fmt.Fprintln(writer, "  </tr>")
 	for _, name := range imageNames {
 		showImage(writer, name, imageDataBase.GetImage(name))
@@ -47,5 +48,7 @@ func showImage(writer io.Writer, name string, image *image.Image) {
 		name, len(image.FileSystem.RegularInodeTable))
 	fmt.Fprintf(writer, "    <td><a href=\"listFilter?%s\">%d</a></td>\n",
 		name, len(image.Filter.FilterLines))
+	fmt.Fprintf(writer, "    <td><a href=\"listTriggers?%s\">%d</a></td>\n",
+		name, len(*image.Triggers))
 	fmt.Fprintf(writer, "  </tr>\n")
 }

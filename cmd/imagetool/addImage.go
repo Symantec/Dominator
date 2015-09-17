@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
@@ -12,6 +13,7 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectclient"
+	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"io"
 	"net/rpc"
@@ -21,7 +23,8 @@ import (
 
 func addImageSubcommand(imageClient *rpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
-	err := addImage(imageClient, objectClient, args[0], args[1], args[2])
+	err := addImage(imageClient, objectClient, args[0], args[1], args[2],
+		args[3])
 	if err != nil {
 		fmt.Printf("Error adding image: \"%s\"\t%s\n", args[0], err)
 		os.Exit(1)
@@ -30,7 +33,7 @@ func addImageSubcommand(imageClient *rpc.Client,
 }
 
 func addImage(imageClient *rpc.Client, objectClient *objectclient.ObjectClient,
-	name, imageFilename, filterFilename string) error {
+	name, imageFilename, filterFilename, triggersFilename string) error {
 	var request imageserver.AddImageRequest
 	var reply imageserver.AddImageResponse
 	imageFile, err := os.Open(imageFilename)
@@ -52,11 +55,6 @@ func addImage(imageClient *rpc.Client, objectClient *objectclient.ObjectClient,
 	} else {
 		return errors.New("unrecognised image type")
 	}
-	filterFile, err := os.Open(filterFilename)
-	if err != nil {
-		return err
-	}
-	defer filterFile.Close()
 	imageExists, err := checkImage(imageClient, name)
 	if err != nil {
 		return errors.New("error checking for image existance: " + err.Error())
@@ -64,20 +62,15 @@ func addImage(imageClient *rpc.Client, objectClient *objectclient.ObjectClient,
 	if imageExists {
 		return errors.New("image exists")
 	}
-	filterLines, err := readLines(filterFile)
-	if err != nil {
-		return errors.New("error reading filter: " + err.Error())
-	}
 	var newImage image.Image
-	newImage.Filter, err = filter.NewFilter(filterLines)
-	if err != nil {
+	if err := loadFilter(&newImage, filterFilename); err != nil {
+		return err
+	}
+	if err := loadTriggers(&newImage, triggersFilename); err != nil {
 		return err
 	}
 	request.ImageName = name
 	request.Image = &newImage
-	if err != nil {
-		return errors.New("error reading filter: " + err.Error())
-	}
 	tarReader := tar.NewReader(imageReader)
 	request.Image.FileSystem, err = buildImage(objectClient, tarReader,
 		newImage.Filter)
@@ -88,6 +81,36 @@ func addImage(imageClient *rpc.Client, objectClient *objectclient.ObjectClient,
 	if err != nil {
 		return errors.New("remote error: " + err.Error())
 	}
+	return nil
+}
+
+func loadFilter(image *image.Image, filterFilename string) error {
+	filterFile, err := os.Open(filterFilename)
+	if err != nil {
+		return err
+	}
+	defer filterFile.Close()
+	filterLines, err := readLines(filterFile)
+	if err != nil {
+		return errors.New("error reading filter: " + err.Error())
+	}
+	image.Filter, err = filter.NewFilter(filterLines)
+	return err
+}
+
+func loadTriggers(image *image.Image, triggersFilename string) error {
+	triggersFile, err := os.Open(triggersFilename)
+	if err != nil {
+		return err
+	}
+	defer triggersFile.Close()
+	decoder := json.NewDecoder(triggersFile)
+	var trig triggers.Triggers
+	err = decoder.Decode(&trig)
+	if err != nil {
+		return errors.New("error decoding triggers " + err.Error())
+	}
+	image.Triggers = &trig
 	return nil
 }
 

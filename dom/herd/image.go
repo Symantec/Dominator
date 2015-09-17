@@ -48,6 +48,7 @@ func (herd *Herd) getImageHaveLock(name string) *image.Image {
 	}
 	reply.Image.FileSystem.RebuildInodePointers()
 	reply.Image.FileSystem.BuildEntryMap()
+	reply.Image.FileSystem.BuildFilenamesTable()
 	herd.imagesByName[name] = reply.Image
 	return reply.Image
 }

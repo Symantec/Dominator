@@ -8,11 +8,13 @@ import (
 type RegularInodeTable map[uint64]*RegularInode
 type SymlinkInodeTable map[uint64]*SymlinkInode
 type InodeTable map[uint64]*Inode
+type FilenamesTable map[uint64][]string
 
 type FileSystem struct {
 	RegularInodeTable RegularInodeTable
 	SymlinkInodeTable SymlinkInodeTable
 	InodeTable        InodeTable
+	FilenamesTable    FilenamesTable
 	TotalDataBytes    uint64
 	DirectoryCount    uint64
 	Directory
@@ -20,6 +22,10 @@ type FileSystem struct {
 
 func (fs *FileSystem) RebuildInodePointers() {
 	fs.rebuildInodePointers()
+}
+
+func (fs *FileSystem) BuildFilenamesTable() {
+	fs.buildFilenamesTable()
 }
 
 func (fs *FileSystem) ComputeTotalDataBytes() {

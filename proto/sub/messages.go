@@ -1,6 +1,7 @@
 package sub
 
 import (
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/proto/common"
 	"github.com/Symantec/Dominator/sub/scanner"
@@ -40,8 +41,16 @@ type SetConfigurationRequest Configuration
 
 type SetConfigurationResponse common.StatusResponse
 
+type Directory struct {
+	Name string
+	Mode filesystem.FileMode
+	Uid  uint32
+	Gid  uint32
+}
+
 type UpdateRequest struct {
-	PathsToDelete []string
+	PathsToDelete     []string
+	DirectoriesToMake []Directory
 }
 
 type UpdateResponse struct{}
