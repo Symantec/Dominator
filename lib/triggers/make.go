@@ -4,10 +4,12 @@ import (
 	"regexp"
 )
 
-func (triggers *Triggers) addTrigger(matchLines []string, actionLine string) {
+func (triggers *Triggers) addTrigger(matchLines []string, command string,
+	highImpact bool) {
 	var trigger Trigger
 	trigger.MatchLines = matchLines
-	trigger.ActionLine = actionLine
+	trigger.Command = command
+	trigger.HighImpact = highImpact
 	*triggers = append(*triggers, &trigger)
 }
 

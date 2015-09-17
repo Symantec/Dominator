@@ -7,7 +7,8 @@ import (
 type Trigger struct {
 	MatchLines   []string
 	matchRegexes []*regexp.Regexp
-	ActionLine   string
+	Command      string
+	HighImpact   bool
 }
 
 type Triggers []*Trigger
@@ -16,6 +17,7 @@ func New() *Triggers {
 	return &Triggers{}
 }
 
-func (triggers *Triggers) AddTrigger(matchLines []string, actionLine string) {
-	triggers.addTrigger(matchLines, actionLine)
+func (triggers *Triggers) AddTrigger(matchLines []string, command string,
+	highImpact bool) {
+	triggers.addTrigger(matchLines, command, highImpact)
 }
