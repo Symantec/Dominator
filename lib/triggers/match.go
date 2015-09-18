@@ -1,6 +1,7 @@
 package triggers
 
 func (triggers *Triggers) match(line string) {
+	triggers.compile()
 	if triggers.matchedTriggers == nil {
 		triggers.matchedTriggers = make(map[*Trigger]bool)
 		triggers.unmatchedTriggers = make(map[*Trigger]bool)
@@ -20,11 +21,11 @@ func (triggers *Triggers) match(line string) {
 }
 
 func (triggers *Triggers) getMatchedTriggers() []*Trigger {
-	mtriggers := make([]*Trigger, 0, len(triggers.matchedTriggers))
+	mTriggers := make([]*Trigger, 0, len(triggers.matchedTriggers))
 	for trigger, _ := range triggers.matchedTriggers {
-		mtriggers = append(mtriggers, trigger)
+		mTriggers = append(mTriggers, trigger)
 	}
 	triggers.matchedTriggers = nil
 	triggers.unmatchedTriggers = nil
-	return mtriggers
+	return mTriggers
 }

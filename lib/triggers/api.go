@@ -13,17 +13,13 @@ type Trigger struct {
 
 type Triggers struct {
 	Triggers          []*Trigger
+	compiled          bool
 	matchedTriggers   map[*Trigger]bool
 	unmatchedTriggers map[*Trigger]bool
 }
 
 func New() *Triggers {
 	return newTriggers()
-}
-
-func (triggers *Triggers) AddTrigger(matchLines []string, command string,
-	highImpact bool) {
-	triggers.addTrigger(matchLines, command, highImpact)
 }
 
 func (triggers *Triggers) Match(line string) {
