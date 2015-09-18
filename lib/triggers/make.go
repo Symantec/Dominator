@@ -4,17 +4,21 @@ import (
 	"regexp"
 )
 
+func newTriggers() *Triggers {
+	return &Triggers{}
+}
+
 func (triggers *Triggers) addTrigger(matchLines []string, command string,
 	highImpact bool) {
 	var trigger Trigger
 	trigger.MatchLines = matchLines
 	trigger.Command = command
 	trigger.HighImpact = highImpact
-	*triggers = append(*triggers, &trigger)
+	triggers.Triggers = append(triggers.Triggers, &trigger)
 }
 
 func (triggers Triggers) compile() error {
-	for _, trigger := range triggers {
+	for _, trigger := range triggers.Triggers {
 		trigger.matchRegexes = make([]*regexp.Regexp, len(trigger.MatchLines))
 		for index, line := range trigger.MatchLines {
 			var err error

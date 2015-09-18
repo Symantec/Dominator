@@ -22,7 +22,7 @@ func listTriggersHandler(w http.ResponseWriter, req *http.Request) {
 	} else {
 		fmt.Fprintf(writer, "Triggers for image: %s\n", imageName)
 		fmt.Fprintln(writer, "<pre>")
-		b, _ := json.Marshal(*image.Triggers)
+		b, _ := json.Marshal(image.Triggers.Triggers)
 		var out bytes.Buffer
 		json.Indent(&out, b, "", "    ")
 		out.WriteTo(writer)
