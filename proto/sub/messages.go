@@ -3,6 +3,7 @@ package sub
 import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/common"
 	"github.com/Symantec/Dominator/sub/scanner"
 )
@@ -51,6 +52,7 @@ type Directory struct {
 type UpdateRequest struct {
 	PathsToDelete     []string
 	DirectoriesToMake []Directory
+	Triggers          *triggers.Triggers
 }
 
 type UpdateResponse struct{}
