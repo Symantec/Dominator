@@ -1,9 +1,12 @@
 package rpcd
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/proto/sub"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -35,6 +38,15 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 	defer clearUpdateInProgress()
 	processDeletes(request, rootDirectoryName)
 	processMakeDirectories(request, rootDirectoryName)
+	// TODO(rgooch): Remove debugging output.
+	mTriggers := request.Triggers.GetMatchedTriggers()
+	if len(mTriggers) > 0 {
+		fmt.Println("Triggers:")
+		b, _ := json.Marshal(mTriggers)
+		var out bytes.Buffer
+		json.Indent(&out, b, "", "    ")
+		out.WriteTo(os.Stdout)
+	}
 	// TODO(rgooch): Remove debugging hack and implement.
 	time.Sleep(time.Second * 15)
 	logger.Printf("Update() complete\n")
@@ -51,6 +63,7 @@ func processDeletes(request sub.UpdateRequest, rootDirectoryName string) {
 		fullPathname := path.Join(rootDirectoryName, pathname)
 		// TODO(rgooch): Remove debugging.
 		fmt.Printf("Delete: %s\n", fullPathname)
+		request.Triggers.Match(pathname)
 		// TODO(rgooch): Implement.
 	}
 }
@@ -71,5 +84,6 @@ func processMakeDirectories(request sub.UpdateRequest,
 		// TODO(rgooch): Remove debugging.
 		fmt.Printf("Mkdir: %s\n", fullPathname)
 		// TODO(rgooch): Implement.
+		request.Triggers.Match(newdir.Name)
 	}
 }
