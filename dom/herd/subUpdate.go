@@ -19,6 +19,7 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 	requiredImage := sub.herd.getImage(sub.requiredImage)
 	requiredFS := requiredImage.FileSystem
 	filter := requiredImage.Filter
+	request.Triggers = requiredImage.Triggers
 	var state state
 	state.subInodeToRequiredInode = make(map[uint64]uint64)
 	compareDirectories(request, &state, &subFS.Directory, &requiredFS.Directory,

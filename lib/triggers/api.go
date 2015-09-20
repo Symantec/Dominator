@@ -11,13 +11,21 @@ type Trigger struct {
 	HighImpact   bool
 }
 
-type Triggers []*Trigger
-
-func New() *Triggers {
-	return &Triggers{}
+type Triggers struct {
+	Triggers          []*Trigger
+	compiled          bool
+	matchedTriggers   map[*Trigger]bool
+	unmatchedTriggers map[*Trigger]bool
 }
 
-func (triggers *Triggers) AddTrigger(matchLines []string, command string,
-	highImpact bool) {
-	triggers.addTrigger(matchLines, command, highImpact)
+func New() *Triggers {
+	return newTriggers()
+}
+
+func (triggers *Triggers) Match(line string) {
+	triggers.match(line)
+}
+
+func (triggers *Triggers) GetMatchedTriggers() []*Trigger {
+	return triggers.getMatchedTriggers()
 }

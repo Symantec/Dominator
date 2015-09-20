@@ -25,6 +25,8 @@ import (
 )
 
 var (
+	pidfile = flag.String("pidfile", "/var/run/subd.pid",
+		"Name of file to write my PID to")
 	portNum = flag.Uint("portNum", constants.SubPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
 	logbufLines = flag.Uint("logbufLines", 1024,
@@ -186,6 +188,21 @@ func (fsh *DumpableFileSystemHistory) WriteHtml(writer io.Writer) {
 	fmt.Fprintln(writer, "</pre>")
 }
 
+func gracefulCleanup() {
+	os.Remove(*pidfile)
+	os.Exit(1)
+}
+
+func writePidfile() {
+	file, err := os.Create(*pidfile)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	defer file.Close()
+	fmt.Fprintln(file, os.Getpid())
+}
+
 func main() {
 	flag.Parse()
 	workingRootDir := path.Join(*subdDir, "root")
@@ -256,6 +273,9 @@ func main() {
 	invalidateNextScanObjectCache := false
 	sighupChannel := make(chan os.Signal)
 	signal.Notify(sighupChannel, syscall.SIGHUP)
+	sigtermChannel := make(chan os.Signal)
+	signal.Notify(sigtermChannel, syscall.SIGTERM, syscall.SIGINT)
+	writePidfile()
 	for iter := 0; true; {
 		select {
 		case <-sighupChannel:
@@ -263,6 +283,8 @@ func main() {
 			if err != nil {
 				logger.Printf("Unable to Exec:%s\t%s\n", os.Args[0], err)
 			}
+		case <-sigtermChannel:
+			gracefulCleanup()
 		case fs := <-fsChannel:
 			if *showStats {
 				fmt.Printf("Completed cycle: %d\n", iter)
