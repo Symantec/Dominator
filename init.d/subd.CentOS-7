@@ -1,0 +1,46 @@
+#! /bin/sh
+#
+# subd		Start up the Dominator subject daemon
+#
+# chkconfig: 2345 95 25
+# description: subd is the Dominator subject daemon.
+
+### BEGIN INIT INFO
+# Provides:		subd
+# Required-Start:	$local_fs $syslog
+# Required-Stop:	$local_fs $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 6
+# Short-Description:	Dominator subject daemon
+### END INIT INFO
+
+test -x /usr/local/sbin/subd || exit 0
+
+umask 022
+
+. /etc/rc.d/init.d/functions
+
+export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+
+case "$1" in
+  start)
+	/usr/local/sbin/subd < /dev/null &> /dev/null &
+	;;
+  stop)
+	kill -TERM $(cat /var/run/subd.pid)
+	;;
+
+  reload|force-reload)
+	kill -HUP $(cat /var/run/subd.pid)
+	;;
+
+  restart)
+	kill -HUP $(cat /var/run/subd.pid)
+	;;
+
+  *)
+	echo "Usage: /etc/init.d/subd {start|stop|reload|force-reload|restart}" || true
+	exit 1
+esac
+
+exit 0
