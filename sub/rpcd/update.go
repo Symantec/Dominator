@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
 	"os"
 	"path"
@@ -36,16 +37,46 @@ func (t *rpcType) Update(request sub.UpdateRequest,
 
 func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 	defer clearUpdateInProgress()
+	var oldTriggers *triggers.Triggers
+	file, err := os.Open(oldTriggersFilename)
+	if err == nil {
+		decoder := json.NewDecoder(file)
+		var trig triggers.Triggers
+		err = decoder.Decode(&trig.Triggers)
+		file.Close()
+		if err == nil {
+			oldTriggers = &trig
+		} else {
+			logger.Printf("Error decoding old triggers: %s", err.Error())
+		}
+	}
+	if oldTriggers != nil {
+		// TODO(rgooch): Process old triggers before making any changes.
+		matchedOldTriggers := oldTriggers.GetMatchedTriggers()
+		_ = matchedOldTriggers
+	}
 	processDeletes(request, rootDirectoryName)
 	processMakeDirectories(request, rootDirectoryName)
+	matchedNewTriggers := request.Triggers.GetMatchedTriggers()
 	// TODO(rgooch): Remove debugging output.
-	mTriggers := request.Triggers.GetMatchedTriggers()
-	if len(mTriggers) > 0 {
+	if len(matchedNewTriggers) > 0 {
 		fmt.Println("Triggers:")
-		b, _ := json.Marshal(mTriggers)
+		b, _ := json.Marshal(matchedNewTriggers)
 		var out bytes.Buffer
 		json.Indent(&out, b, "", "    ")
 		out.WriteTo(os.Stdout)
+	}
+	file, err = os.Create(oldTriggersFilename)
+	if err == nil {
+		b, err := json.Marshal(request.Triggers.Triggers)
+		if err == nil {
+			var out bytes.Buffer
+			json.Indent(&out, b, "", "    ")
+			out.WriteTo(file)
+		} else {
+			logger.Printf("Error marshaling triggers: %s", err.Error())
+		}
+		file.Close()
 	}
 	// TODO(rgooch): Remove debugging hack and implement.
 	time.Sleep(time.Second * 15)
