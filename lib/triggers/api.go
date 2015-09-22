@@ -7,7 +7,7 @@ import (
 type Trigger struct {
 	MatchLines   []string
 	matchRegexes []*regexp.Regexp
-	Command      string
+	Service      string
 	HighImpact   bool
 }
 
