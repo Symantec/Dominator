@@ -37,7 +37,7 @@ func (t *rpcType) Update(request sub.UpdateRequest,
 
 func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 	defer clearUpdateInProgress()
-	var oldTriggers *triggers.Triggers
+	var oldTriggers triggers.Triggers
 	file, err := os.Open(oldTriggersFilename)
 	if err == nil {
 		decoder := json.NewDecoder(file)
@@ -45,16 +45,14 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 		err = decoder.Decode(&trig.Triggers)
 		file.Close()
 		if err == nil {
-			oldTriggers = &trig
+			oldTriggers = trig
 		} else {
 			logger.Printf("Error decoding old triggers: %s", err.Error())
 		}
 	}
-	if oldTriggers != nil {
-		// TODO(rgooch): Process old triggers before making any changes.
-		matchedOldTriggers := oldTriggers.GetMatchedTriggers()
-		_ = matchedOldTriggers
-	}
+	// TODO(rgooch): Process old triggers before making any changes.
+	matchedOldTriggers := oldTriggers.GetMatchedTriggers()
+	_ = matchedOldTriggers
 	processDeletes(request, rootDirectoryName)
 	processMakeDirectories(request, rootDirectoryName)
 	matchedNewTriggers := request.Triggers.GetMatchedTriggers()
