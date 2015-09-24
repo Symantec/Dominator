@@ -50,20 +50,15 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 			logger.Printf("Error decoding old triggers: %s", err.Error())
 		}
 	}
-	// TODO(rgooch): Process old triggers before making any changes.
-	matchedOldTriggers := oldTriggers.GetMatchedTriggers()
-	_ = matchedOldTriggers
-	processDeletes(request, rootDirectoryName)
-	processMakeDirectories(request, rootDirectoryName)
-	matchedNewTriggers := request.Triggers.GetMatchedTriggers()
-	// TODO(rgooch): Remove debugging output.
-	if len(matchedNewTriggers) > 0 {
-		fmt.Println("Triggers:")
-		b, _ := json.Marshal(matchedNewTriggers)
-		var out bytes.Buffer
-		json.Indent(&out, b, "", "    ")
-		out.WriteTo(os.Stdout)
+	if len(oldTriggers.Triggers) > 0 {
+		processDeletes(request, rootDirectoryName, &oldTriggers, false)
+		processMakeDirectories(request, rootDirectoryName, &oldTriggers, false)
+		matchedOldTriggers := oldTriggers.GetMatchedTriggers()
+		runTriggers(matchedOldTriggers, "stop")
 	}
+	processDeletes(request, rootDirectoryName, request.Triggers, true)
+	processMakeDirectories(request, rootDirectoryName, request.Triggers, true)
+	matchedNewTriggers := request.Triggers.GetMatchedTriggers()
 	file, err = os.Create(oldTriggersFilename)
 	if err == nil {
 		b, err := json.Marshal(request.Triggers.Triggers)
@@ -76,6 +71,7 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 		}
 		file.Close()
 	}
+	runTriggers(matchedNewTriggers, "start")
 	// TODO(rgooch): Remove debugging hack and implement.
 	time.Sleep(time.Second * 15)
 	logger.Printf("Update() complete\n")
@@ -87,18 +83,21 @@ func clearUpdateInProgress() {
 	updateInProgress = false
 }
 
-func processDeletes(request sub.UpdateRequest, rootDirectoryName string) {
+func processDeletes(request sub.UpdateRequest, rootDirectoryName string,
+	triggers *triggers.Triggers, takeAction bool) {
 	for _, pathname := range request.PathsToDelete {
 		fullPathname := path.Join(rootDirectoryName, pathname)
-		// TODO(rgooch): Remove debugging.
-		fmt.Printf("Delete: %s\n", fullPathname)
-		request.Triggers.Match(pathname)
-		// TODO(rgooch): Implement.
+		triggers.Match(pathname)
+		if takeAction {
+			// TODO(rgooch): Remove debugging.
+			fmt.Printf("Delete: %s\n", fullPathname)
+			// TODO(rgooch): Implement.
+		}
 	}
 }
 
-func processMakeDirectories(request sub.UpdateRequest,
-	rootDirectoryName string) {
+func processMakeDirectories(request sub.UpdateRequest, rootDirectoryName string,
+	triggers *triggers.Triggers, takeAction bool) {
 	for _, newdir := range request.DirectoriesToMake {
 		if scannerConfiguration.ScanFilter.Match(newdir.Name) {
 			continue
@@ -110,9 +109,33 @@ func processMakeDirectories(request sub.UpdateRequest,
 			continue
 		}
 		fullPathname := path.Join(rootDirectoryName, newdir.Name)
-		// TODO(rgooch): Remove debugging.
-		fmt.Printf("Mkdir: %s\n", fullPathname)
+		triggers.Match(newdir.Name)
+		if takeAction {
+			// TODO(rgooch): Remove debugging.
+			fmt.Printf("Mkdir: %s\n", fullPathname)
+			// TODO(rgooch): Implement.
+		}
+	}
+}
+
+func runTriggers(triggers []*triggers.Trigger, action string) {
+	// For "start" action, if there is a reboot trigger, just do that one.
+	if action == "start" {
+		for _, trigger := range triggers {
+			if trigger.Service == "reboot" {
+				// TODO(rgooch): Remove debugging output.
+				fmt.Println("Action: reboot")
+				// TODO(rgooch): Implement.
+				return
+			}
+		}
+	}
+	for _, trigger := range triggers {
+		if trigger.Service == "reboot" && action == "stop" {
+			continue
+		}
+		// TODO(rgooch): Remove debugging output.
+		fmt.Printf("Action: service %s %s\n", trigger.Service, action)
 		// TODO(rgooch): Implement.
-		request.Triggers.Match(newdir.Name)
 	}
 }
