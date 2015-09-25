@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
 	"time"
@@ -123,19 +124,32 @@ func runTriggers(triggers []*triggers.Trigger, action string) {
 	if action == "start" {
 		for _, trigger := range triggers {
 			if trigger.Service == "reboot" {
+				logger.Print("Rebooting")
 				// TODO(rgooch): Remove debugging output.
-				fmt.Println("Action: reboot")
-				// TODO(rgooch): Implement.
+				cmd := exec.Command("echo", "reboot")
+				cmd.Stdout = os.Stdout
+				err := cmd.Run()
+				if err != nil {
+					logger.Print(err)
+				}
 				return
 			}
 		}
 	}
+	ppid := fmt.Sprint(os.Getppid())
 	for _, trigger := range triggers {
 		if trigger.Service == "reboot" && action == "stop" {
 			continue
 		}
+		logger.Printf("Action: service %s %s\n", trigger.Service, action)
 		// TODO(rgooch): Remove debugging output.
-		fmt.Printf("Action: service %s %s\n", trigger.Service, action)
+		cmd := exec.Command("run-in-mntns", ppid, "echo", "service", action,
+			trigger.Service)
+		cmd.Stdout = os.Stdout
+		err := cmd.Run()
+		if err != nil {
+			logger.Print(err)
+		}
 		// TODO(rgooch): Implement.
 	}
 }
