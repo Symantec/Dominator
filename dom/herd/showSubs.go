@@ -42,6 +42,8 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
 	fmt.Fprintln(writer, "    <th>Busy</b></th>")
 	fmt.Fprintln(writer, "    <th>Status</b></th>")
 	fmt.Fprintln(writer, "    <th>Staleness</b></th>")
+	fmt.Fprintln(writer, "    <th>Short Poll</b></th>")
+	fmt.Fprintln(writer, "    <th>Full Poll</b></th>")
 	fmt.Fprintln(writer, "  </tr>")
 	subs := herd.getSelectedSubs(selectFunc)
 	for _, sub := range subs {
@@ -90,11 +92,22 @@ func showSub(writer io.Writer, sub *Sub) {
 		status = "synced"
 	}
 	fmt.Fprintf(writer, "    <td>%s</td>\n", status)
-	if sub.lastSuccessfulPoll.IsZero() {
+	if sub.lastPollSucceededTime.IsZero() {
 		fmt.Fprintf(writer, "    <td></td>\n")
 	} else {
 		fmt.Fprintf(writer, "    <td>%s</td>\n",
-			time.Since(sub.lastSuccessfulPoll))
+			time.Since(sub.lastPollSucceededTime))
+	}
+	if sub.lastShortPollDuration < 1 {
+		fmt.Fprintf(writer, "    <td></td>\n")
+	} else {
+		fmt.Fprintf(writer, "    <td>%s</td>\n", sub.lastShortPollDuration)
+	}
+	if sub.lastFullPollDuration < 1 {
+		fmt.Fprintf(writer, "    <td></td>\n")
+	} else {
+		fmt.Fprintf(writer, "    <td>%.fms</td>\n",
+			sub.lastFullPollDuration.Seconds()*1e3)
 	}
 	fmt.Fprintf(writer, "  </tr>\n")
 }

@@ -42,7 +42,10 @@ type Sub struct {
 	generationCount              uint64
 	generationCountAtChangeStart uint64
 	status                       uint
-	lastSuccessfulPoll           time.Time
+	lastPollStartTime            time.Time
+	lastPollSucceededTime        time.Time
+	lastShortPollDuration        time.Duration
+	lastFullPollDuration         time.Duration
 }
 
 type Herd struct {
