@@ -48,6 +48,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	var request subproto.PollRequest
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
+	sub.lastPollStartTime = time.Now()
 	err := connection.Call("Subd.Poll", request, &reply)
 	logger := sub.herd.logger
 	if err != nil {
@@ -55,16 +56,21 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		logger.Printf("Error calling %s.Poll()\t%s\n", sub.hostname, err)
 		return
 	}
-	sub.lastSuccessfulPoll = time.Now()
+	sub.lastPollSucceededTime = time.Now()
 	if reply.GenerationCount == 0 {
 		sub.fileSystem = nil
 		sub.generationCount = 0
 	}
-	if fs := reply.FileSystem; fs != nil {
+	if fs := reply.FileSystem; fs == nil {
+		sub.lastShortPollDuration =
+			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
+	} else {
 		fs.RebuildInodePointers()
 		fs.BuildEntryMap()
 		sub.fileSystem = fs
 		sub.generationCount = reply.GenerationCount
+		sub.lastFullPollDuration =
+			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
 		// TODO(rgooch): Remove debugging output.
 		fmt.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)

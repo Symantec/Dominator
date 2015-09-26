@@ -209,6 +209,7 @@ func main() {
 	objectsDir := path.Join(*subdDir, "objects")
 	tmpDir := path.Join(*subdDir, "tmp")
 	netbenchFilename := path.Join(*subdDir, "netbench")
+	oldTriggersFilename := path.Join(*subdDir, "triggers.previous")
 	if !createDirectory(workingRootDir) {
 		os.Exit(1)
 	}
@@ -258,7 +259,7 @@ func main() {
 		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 	configuration.NetworkReaderContext = networkReaderContext
 	rescanObjectCacheChannel := rpcd.Setup(&configuration, &fsh, objectsDir,
-		networkReaderContext, netbenchFilename, logger)
+		networkReaderContext, netbenchFilename, oldTriggersFilename, logger)
 	httpd.AddHtmlWriter(&fsh)
 	httpd.AddHtmlWriter(&configuration)
 	httpd.AddHtmlWriter(circularBuffer)
