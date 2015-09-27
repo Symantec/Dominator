@@ -1,9 +1,9 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#define _GNU_SOURCE
 #include <sched.h>
 #include <sys/syscall.h>
 
