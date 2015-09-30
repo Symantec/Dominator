@@ -92,9 +92,24 @@ func showPollDurationStats(writer io.Writer, durations []time.Duration,
 		avgDuration += duration
 	}
 	avgDuration /= time.Duration(len(durations))
+	medDuration := durations[len(durations)/2]
+	unit := "ns"
+	scale := 1.0
+	switch {
+	case medDuration > 1e9:
+		unit = "s"
+		scale = 1e-9
+	case medDuration > 1e6:
+		unit = "ms"
+		scale = 1e-6
+	case medDuration > 1e3:
+		unit = "µs"
+		scale = 1e-3
+	}
 	fmt.Fprintf(writer,
-		"%s poll durations: %s/%s/%s/%s (avg/med/min/max)<br>\n",
+		"%s poll durations: %.3f/%.3f/%.3f/%.3f %s (avg/med/min/max)<br>\n",
 		pollType,
-		avgDuration, durations[len(durations)/2], durations[0],
-		durations[len(durations)-1])
+		float64(avgDuration)*scale, float64(medDuration)*scale,
+		float64(durations[0])*scale, float64(durations[len(durations)-1])*scale,
+		unit)
 }
