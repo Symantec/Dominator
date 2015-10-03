@@ -11,9 +11,14 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 	numSubs := herd.countSelectedSubs(nil)
 	fmt.Fprintf(writer, "Time since current cycle start: %s<br>\n",
 		time.Since(herd.currentScanStartTime))
-	fmt.Fprintf(writer, "Duration of previous cycle: %s (%s/sub)<br>\n",
-		herd.previousScanDuration,
-		herd.previousScanDuration/time.Duration(numSubs))
+	if numSubs < 1 {
+		fmt.Fprintf(writer, "Duration of previous cycle: %s<br>\n",
+			herd.previousScanDuration)
+	} else {
+		fmt.Fprintf(writer, "Duration of previous cycle: %s (%s/sub)<br>\n",
+			herd.previousScanDuration,
+			herd.previousScanDuration/time.Duration(numSubs))
+	}
 	fmt.Fprintf(writer, "Image server: <a href=\"http://%s/\">%s</a><br>\n",
 		herd.imageServerAddress, herd.imageServerAddress)
 	fmt.Fprintf(writer,
