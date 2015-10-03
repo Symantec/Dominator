@@ -59,8 +59,8 @@ type Herd struct {
 	imagesByName            map[string]*image.Image
 	makeConnectionSemaphore chan bool
 	pollSemaphore           chan bool
-	previousScanStartTime   time.Time
 	currentScanStartTime    time.Time
+	previousScanDuration    time.Duration
 }
 
 func NewHerd(imageServerAddress string, logger *log.Logger) *Herd {
