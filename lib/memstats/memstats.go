@@ -16,6 +16,5 @@ func WriteMemoryStats(writer io.Writer) {
 	runtime.ReadMemStats(&memStats)
 	fmt.Fprintln(writer, "MemStats:")
 	writeNamedStat(writer, "Alloc", memStats.Alloc)
-	writeNamedStat(writer, "TotalAlloc", memStats.TotalAlloc)
 	writeNamedStat(writer, "Sys", memStats.Sys)
 }
