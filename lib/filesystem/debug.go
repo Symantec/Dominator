@@ -130,26 +130,29 @@ func (mode FileMode) string() string {
 		buf[0] = 'c'
 	case mode&syscall.S_IFMT == syscall.S_IFIFO:
 		buf[0] = 'p'
-	case mode&syscall.S_ISUID != 0:
+	default:
+		buf[0] = '?'
+	}
+	if mode&syscall.S_ISUID != 0 {
 		if mode&syscall.S_IXUSR == 0 {
 			buf[3] = 'S'
 		} else {
 			buf[3] = 's'
 		}
-	case mode&syscall.S_ISGID != 0:
+	}
+	if mode&syscall.S_ISGID != 0 {
 		if mode&syscall.S_IXGRP == 0 {
 			buf[6] = 'S'
 		} else {
 			buf[6] = 's'
 		}
-	case mode&syscall.S_ISVTX != 0:
+	}
+	if mode&syscall.S_ISVTX != 0 {
 		if mode&syscall.S_IXOTH == 0 {
 			buf[9] = 'T'
 		} else {
 			buf[9] = 't'
 		}
-	default:
-		buf[0] = '?'
 	}
 	return string(buf[:])
 }
