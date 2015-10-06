@@ -17,9 +17,6 @@ func startScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 	configuration *Configuration, fsChannel chan *FileSystem,
 	logger *log.Logger) {
-	if runtime.GOMAXPROCS(0) < 2 {
-		runtime.GOMAXPROCS(2)
-	}
 	runtime.LockOSThread()
 	loweredPriority := false
 	var oldFS FileSystem
