@@ -27,7 +27,7 @@ import (
 var (
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
-	maxThreads = flag.Uint("maxThreads", 2,
+	maxThreads = flag.Uint("maxThreads", 1,
 		"Maximum number of parallel OS threads to use")
 	pidfile = flag.String("pidfile", "/var/run/subd.pid",
 		"Name of file to write my PID to")
