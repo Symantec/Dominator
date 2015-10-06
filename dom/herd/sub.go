@@ -3,6 +3,7 @@ package herd
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"net/rpc"
@@ -116,17 +117,21 @@ func (sub *Sub) fetchMissingObjects(connection *rpc.Client, imageName string) (
 		return false, statusImageNotReady
 	}
 	missingObjects := make(map[hash.Hash]bool)
-	for _, inode := range image.FileSystem.RegularInodeTable {
-		if inode.Size > 0 {
-			missingObjects[inode.Hash] = true
+	for _, inode := range image.FileSystem.InodeTable {
+		if inode, ok := inode.(*filesystem.RegularInode); ok {
+			if inode.Size > 0 {
+				missingObjects[inode.Hash] = true
+			}
 		}
 	}
 	for _, hash := range sub.fileSystem.ObjectCache {
 		delete(missingObjects, hash)
 	}
-	for _, inode := range sub.fileSystem.RegularInodeTable {
-		if inode.Size > 0 {
-			delete(missingObjects, inode.Hash)
+	for _, inode := range sub.fileSystem.InodeTable {
+		if inode, ok := inode.(*filesystem.RegularInode); ok {
+			if inode.Size > 0 {
+				delete(missingObjects, inode.Hash)
+			}
 		}
 	}
 	if len(missingObjects) < 1 {

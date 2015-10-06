@@ -89,7 +89,7 @@ func main() {
 				return
 			}
 			w := bufio.NewWriter(file)
-			fs.DebugWrite(w, "")
+			fs.DebugWrite(w)
 			w.Flush()
 			file.Close()
 		}

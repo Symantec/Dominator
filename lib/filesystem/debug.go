@@ -3,100 +3,62 @@ package filesystem
 import (
 	"fmt"
 	"io"
+	"path"
 	"syscall"
 )
 
-func (fs *FileSystem) debugWrite(w io.Writer, prefix string) error {
-	return fs.Directory.debugWrite(w, prefix)
+func (fs *FileSystem) debugWrite(w io.Writer) error {
+	return fs.DirectoryInode.debugWrite(w, "/")
 }
 
-func (directory *Directory) debugWrite(w io.Writer, prefix string) error {
-	_, err := fmt.Fprintf(w, "%s%s\t%v %d %d\n", prefix, directory.Name,
-		directory.Mode, directory.Uid, directory.Gid)
+func (inode *DirectoryInode) debugWrite(w io.Writer, name string) error {
+	_, err := fmt.Fprintf(w, "%v %d %d\t%s\n",
+		inode.Mode, inode.Uid, inode.Gid, name)
 	if err != nil {
 		return err
 	}
-	if len(directory.RegularFileList) > 0 {
-		_, err = fmt.Fprintf(w, "%s Regular Files:\n", prefix)
+	for _, dirent := range inode.EntryList {
+		err = dirent.inode.DebugWrite(w, path.Join(name, dirent.Name))
 		if err != nil {
 			return err
-		}
-		for _, file := range directory.RegularFileList {
-			err = file.DebugWrite(w, prefix+"  ")
-			if err != nil {
-				return err
-			}
-		}
-	}
-	if len(directory.SymlinkList) > 0 {
-		_, err = fmt.Fprintf(w, "%s Symlinks:\n", prefix)
-		if err != nil {
-			return err
-		}
-		for _, symlink := range directory.SymlinkList {
-			err = symlink.DebugWrite(w, prefix+"  ")
-			if err != nil {
-				return err
-			}
-		}
-	}
-	if len(directory.FileList) > 0 {
-		_, err = fmt.Fprintf(w, "%s Files:\n", prefix)
-		if err != nil {
-			return err
-		}
-		for _, file := range directory.FileList {
-			err = file.DebugWrite(w, prefix+"  ")
-			if err != nil {
-				return err
-			}
-		}
-	}
-	if len(directory.DirectoryList) > 0 {
-		_, err = fmt.Fprintf(w, "%s Directories:\n", prefix)
-		if err != nil {
-			return err
-		}
-		for _, dir := range directory.DirectoryList {
-			err = dir.DebugWrite(w, prefix+"  ")
-			if err != nil {
-				return err
-			}
 		}
 	}
 	return nil
 }
 
-func (file *RegularFile) debugWrite(w io.Writer, prefix string) error {
-	inode := file.inode
-	_, err := fmt.Fprintf(w, "%s%s\t%v %d %d %x\n", prefix, file.Name,
-		inode.Mode, inode.Uid, inode.Gid, inode.Hash)
+func (inode *RegularInode) debugWrite(w io.Writer, name string) error {
+	var err error
+	if inode.Size > 0 {
+		_, err = fmt.Fprintf(w, "%v %d %d %d\t%s %x\n",
+			inode.Mode, inode.Uid, inode.Gid, inode.Size, name, inode.Hash)
+	} else {
+		_, err = fmt.Fprintf(w, "%v %d %d 0\t%s\n",
+			inode.Mode, inode.Uid, inode.Gid, name)
+	}
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (symlink *Symlink) debugWrite(w io.Writer, prefix string) error {
-	inode := symlink.inode
-	_, err := fmt.Fprintf(w, "%s%s\t%d %d %s\n", prefix, symlink.Name,
-		inode.Uid, inode.Gid, inode.Symlink)
+func (inode *SymlinkInode) debugWrite(w io.Writer, name string) error {
+	_, err := fmt.Fprintf(w, "lrwxrwxrwx %d %d\t%s -> %s\n",
+		inode.Uid, inode.Gid, name, inode.Symlink)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (file *File) debugWrite(w io.Writer, prefix string) error {
-	inode := file.inode
+func (inode *Inode) debugWrite(w io.Writer, name string) error {
 	var data string
 	data = ""
 	if inode.Mode&syscall.S_IFMT == syscall.S_IFBLK ||
 		inode.Mode&syscall.S_IFMT == syscall.S_IFCHR {
 		data = fmt.Sprintf(" %#x", inode.Rdev)
 	}
-	_, err := fmt.Fprintf(w, "%s%s\t%v %d %d%s\n", prefix, file.Name,
-		inode.Mode, inode.Uid, inode.Gid, data)
+	_, err := fmt.Fprintf(w, "%v %d %d%s\t%s\n",
+		inode.Mode, inode.Uid, inode.Gid, data, name)
 	if err != nil {
 		return err
 	}

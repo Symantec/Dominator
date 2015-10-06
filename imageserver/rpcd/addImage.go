@@ -3,6 +3,7 @@ package rpcd
 import (
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
@@ -19,11 +20,12 @@ func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 		return errors.New("nil file-system")
 	}
 	// Verify all objects are available.
-	hashes := make([]hash.Hash, 0,
-		len(request.Image.FileSystem.RegularInodeTable))
-	for _, inode := range request.Image.FileSystem.RegularInodeTable {
-		if inode.Size > 0 {
-			hashes = append(hashes, inode.Hash)
+	hashes := make([]hash.Hash, 0, request.Image.FileSystem.NumRegularInodes)
+	for _, inode := range request.Image.FileSystem.InodeTable {
+		if inode, ok := inode.(*filesystem.RegularInode); ok {
+			if inode.Size > 0 {
+				hashes = append(hashes, inode.Hash)
+			}
 		}
 	}
 	objectSizes, err := imageDataBase.ObjectServer().CheckObjects(hashes)

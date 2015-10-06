@@ -9,32 +9,29 @@ import (
 	"io"
 	"io/ioutil"
 	"path"
+	"strings"
 	"syscall"
 )
 
 type decoderData struct {
-	nextInodeNumber   uint64
-	fileSystem        filesystem.FileSystem
-	regularInodeTable map[string]uint64
-	symlinkInodeTable map[string]uint64
-	inodeTable        map[string]uint64
-	directoryTable    map[string]*filesystem.Directory
+	nextInodeNumber uint64
+	fileSystem      filesystem.FileSystem
+	inodeTable      map[string]uint64
+	directoryTable  map[string]*filesystem.DirectoryInode
 }
 
 func decode(tarReader *tar.Reader, dataHandler DataHandler,
 	filter *filter.Filter) (*filesystem.FileSystem, error) {
 	var decoderData decoderData
-	decoderData.regularInodeTable = make(map[string]uint64)
-	decoderData.symlinkInodeTable = make(map[string]uint64)
 	decoderData.inodeTable = make(map[string]uint64)
-	decoderData.directoryTable = make(map[string]*filesystem.Directory)
+	decoderData.directoryTable = make(map[string]*filesystem.DirectoryInode)
 	fileSystem := &decoderData.fileSystem
-	fileSystem.RegularInodeTable = make(filesystem.RegularInodeTable)
-	fileSystem.SymlinkInodeTable = make(filesystem.SymlinkInodeTable)
 	fileSystem.InodeTable = make(filesystem.InodeTable)
-	// Create a container directory for the top-level directory.
-	var containerDir filesystem.Directory
-	decoderData.directoryTable["/"] = &containerDir
+	// Create a default top-level directory which may be updated.
+	decoderData.addInode("/", &fileSystem.DirectoryInode)
+	fileSystem.DirectoryInode.Mode = syscall.S_IFDIR | syscall.S_IRWXU |
+		syscall.S_IRGRP | syscall.S_IXGRP | syscall.S_IROTH | syscall.S_IXOTH
+	decoderData.directoryTable["/"] = &fileSystem.DirectoryInode
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -44,6 +41,10 @@ func decode(tarReader *tar.Reader, dataHandler DataHandler,
 			return nil, err
 		}
 		header.Name = normaliseFilename(header.Name)
+		if header.Name == "/.subd" ||
+			strings.HasPrefix(header.Name, "/.subd/") {
+			continue
+		}
 		if filter.Match(header.Name) {
 			continue
 		}
@@ -52,11 +53,9 @@ func decode(tarReader *tar.Reader, dataHandler DataHandler,
 			return nil, err
 		}
 	}
-	fileSystem.Directory = *containerDir.DirectoryList[0]
-	sortDirectory(&fileSystem.Directory)
 	fileSystem.DirectoryCount = uint64(len(decoderData.directoryTable))
-	fileSystem.RebuildInodePointers()
 	fileSystem.ComputeTotalDataBytes()
+	sortDirectory(&fileSystem.DirectoryInode)
 	return fileSystem, nil
 }
 
@@ -104,8 +103,8 @@ func (decoderData *decoderData) addHeader(tarReader *tar.Reader,
 }
 
 func (decoderData *decoderData) addRegularFile(tarReader *tar.Reader,
-	dataHandler DataHandler, header *tar.Header, parent *filesystem.Directory,
-	name string) error {
+	dataHandler DataHandler, header *tar.Header,
+	parent *filesystem.DirectoryInode, name string) error {
 	var newInode filesystem.RegularInode
 	newInode.Mode = filesystem.FileMode((header.Mode & ^syscall.S_IFMT) |
 		syscall.S_IFREG)
@@ -129,48 +128,34 @@ func (decoderData *decoderData) addRegularFile(tarReader *tar.Reader,
 			return err
 		}
 	}
-	decoderData.regularInodeTable[header.Name] = decoderData.nextInodeNumber
-	decoderData.fileSystem.RegularInodeTable[decoderData.nextInodeNumber] =
-		&newInode
-	var newEntry filesystem.RegularFile
-	newEntry.Name = name
-	newEntry.InodeNumber = decoderData.nextInodeNumber
-	parent.RegularFileList = append(parent.RegularFileList, &newEntry)
-	decoderData.nextInodeNumber++
+	decoderData.addEntry(parent, header.Name, name, &newInode)
 	return nil
 }
 
 func (decoderData *decoderData) addDirectory(header *tar.Header,
-	parent *filesystem.Directory, name string) error {
-	var newEntry filesystem.Directory
-	newEntry.Name = name
-	newEntry.Mode = filesystem.FileMode((header.Mode & ^syscall.S_IFMT) |
+	parent *filesystem.DirectoryInode, name string) error {
+	var newInode filesystem.DirectoryInode
+	newInode.Mode = filesystem.FileMode((header.Mode & ^syscall.S_IFMT) |
 		syscall.S_IFDIR)
-	newEntry.Uid = uint32(header.Uid)
-	newEntry.Gid = uint32(header.Gid)
-	parent.DirectoryList = append(parent.DirectoryList, &newEntry)
-	decoderData.directoryTable[header.Name] = &newEntry
+	newInode.Uid = uint32(header.Uid)
+	newInode.Gid = uint32(header.Gid)
+	if header.Name == "/" {
+		*decoderData.directoryTable[header.Name] = newInode
+		return nil
+	}
+	decoderData.addEntry(parent, header.Name, name, &newInode)
+	decoderData.directoryTable[header.Name] = &newInode
 	return nil
 }
 
 func (decoderData *decoderData) addHardlink(header *tar.Header,
-	parent *filesystem.Directory, name string) error {
+	parent *filesystem.DirectoryInode, name string) error {
 	header.Linkname = normaliseFilename(header.Linkname)
-	if inum, ok := decoderData.regularInodeTable[header.Linkname]; ok {
-		var newEntry filesystem.RegularFile
+	if inum, ok := decoderData.inodeTable[header.Linkname]; ok {
+		var newEntry filesystem.DirectoryEntry
 		newEntry.Name = name
 		newEntry.InodeNumber = inum
-		parent.RegularFileList = append(parent.RegularFileList, &newEntry)
-	} else if inum, ok := decoderData.symlinkInodeTable[header.Linkname]; ok {
-		var newEntry filesystem.Symlink
-		newEntry.Name = name
-		newEntry.InodeNumber = inum
-		parent.SymlinkList = append(parent.SymlinkList, &newEntry)
-	} else if inum, ok := decoderData.inodeTable[header.Linkname]; ok {
-		var newEntry filesystem.File
-		newEntry.Name = name
-		newEntry.InodeNumber = inum
-		parent.FileList = append(parent.FileList, &newEntry)
+		parent.EntryList = append(parent.EntryList, &newEntry)
 	} else {
 		return errors.New(fmt.Sprintf("missing hardlink target: %s",
 			header.Linkname))
@@ -179,24 +164,17 @@ func (decoderData *decoderData) addHardlink(header *tar.Header,
 }
 
 func (decoderData *decoderData) addSymlink(header *tar.Header,
-	parent *filesystem.Directory, name string) error {
+	parent *filesystem.DirectoryInode, name string) error {
 	var newInode filesystem.SymlinkInode
 	newInode.Uid = uint32(header.Uid)
 	newInode.Gid = uint32(header.Gid)
 	newInode.Symlink = header.Linkname
-	decoderData.symlinkInodeTable[header.Name] = decoderData.nextInodeNumber
-	decoderData.fileSystem.SymlinkInodeTable[decoderData.nextInodeNumber] =
-		&newInode
-	var newEntry filesystem.Symlink
-	newEntry.Name = name
-	newEntry.InodeNumber = decoderData.nextInodeNumber
-	parent.SymlinkList = append(parent.SymlinkList, &newEntry)
-	decoderData.nextInodeNumber++
+	decoderData.addEntry(parent, header.Name, name, &newInode)
 	return nil
 }
 
 func (decoderData *decoderData) addFile(header *tar.Header,
-	parent *filesystem.Directory, name string) error {
+	parent *filesystem.DirectoryInode, name string) error {
 	var newInode filesystem.Inode
 	if header.Typeflag == tar.TypeChar {
 		newInode.Mode = filesystem.FileMode((header.Mode & ^syscall.S_IFMT) |
@@ -219,13 +197,23 @@ func (decoderData *decoderData) addFile(header *tar.Header,
 			header.Devminor))
 	}
 	newInode.Rdev = uint64(header.Devmajor<<8 | header.Devminor)
-	decoderData.inodeTable[header.Name] = decoderData.nextInodeNumber
-	decoderData.fileSystem.InodeTable[decoderData.nextInodeNumber] =
-		&newInode
-	var newEntry filesystem.File
+	decoderData.addEntry(parent, header.Name, name, &newInode)
+	return nil
+}
+
+func (decoderData *decoderData) addEntry(parent *filesystem.DirectoryInode,
+	fullName, name string, inode filesystem.GenericInode) {
+	var newEntry filesystem.DirectoryEntry
 	newEntry.Name = name
 	newEntry.InodeNumber = decoderData.nextInodeNumber
-	parent.FileList = append(parent.FileList, &newEntry)
+	newEntry.SetInode(inode)
+	parent.EntryList = append(parent.EntryList, &newEntry)
+	decoderData.addInode(fullName, inode)
+}
+
+func (decoderData *decoderData) addInode(fullName string,
+	inode filesystem.GenericInode) {
+	decoderData.inodeTable[fullName] = decoderData.nextInodeNumber
+	decoderData.fileSystem.InodeTable[decoderData.nextInodeNumber] = inode
 	decoderData.nextInodeNumber++
-	return nil
 }
