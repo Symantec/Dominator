@@ -63,9 +63,14 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	if sha512.New().Size() != len(tmpInode.Hash) {
 		return nil, errors.New("Incompatible hash size")
 	}
-	err = scanDirectory(&fileSystem.FileSystem.DirectoryInode, &fileSystem,
-		oldFS, "/")
+	var oldDirectory *filesystem.DirectoryInode
+	if oldFS != nil && oldFS.InodeTable != nil {
+		oldDirectory = oldFS.FileSystem.InodeTable[stat.Ino].(*filesystem.DirectoryInode)
+	}
+	err = scanDirectory(&fileSystem.FileSystem.DirectoryInode, oldDirectory,
+		&fileSystem, oldFS, "/")
 	oldFS = nil
+	oldDirectory = nil
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +91,7 @@ func (fs *FileSystem) scanObjectCache() error {
 	return err
 }
 
-func scanDirectory(directory *filesystem.DirectoryInode,
+func scanDirectory(directory, oldDirectory *filesystem.DirectoryInode,
 	fileSystem, oldFS *FileSystem, myPathName string) error {
 	file, err := os.Open(path.Join(fileSystem.rootDirectoryName, myPathName))
 	if err != nil {
@@ -98,7 +103,8 @@ func scanDirectory(directory *filesystem.DirectoryInode,
 		return err
 	}
 	sort.Strings(names)
-	directory.EntryList = make([]*filesystem.DirectoryEntry, 0, len(names))
+	entryList := make([]*filesystem.DirectoryEntry, 0, len(names))
+	var copiedDirents int
 	for _, name := range names {
 		if directory == &fileSystem.DirectoryInode && name == ".subd" {
 			continue
@@ -119,19 +125,28 @@ func scanDirectory(directory *filesystem.DirectoryInode,
 		if stat.Dev != fileSystem.dev {
 			continue
 		}
-		var dirent filesystem.DirectoryEntry
+		dirent := new(filesystem.DirectoryEntry)
 		dirent.Name = name
 		dirent.InodeNumber = stat.Ino
+		var oldDirent *filesystem.DirectoryEntry
+		if oldDirectory != nil {
+			index := len(entryList)
+			if len(oldDirectory.EntryList) > index &&
+				oldDirectory.EntryList[index].Name == name {
+				oldDirent = oldDirectory.EntryList[index]
+			}
+		}
 		if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
-			err = addDirectory(&dirent, fileSystem, oldFS, myPathName, &stat)
+			err = addDirectory(dirent, oldDirent, fileSystem, oldFS, myPathName,
+				&stat)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
-			err = addRegularFile(&dirent, fileSystem, oldFS, myPathName, &stat)
+			err = addRegularFile(dirent, fileSystem, oldFS, myPathName, &stat)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFLNK {
-			err = addSymlink(&dirent, fileSystem, oldFS, myPathName, &stat)
+			err = addSymlink(dirent, fileSystem, oldFS, myPathName, &stat)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFSOCK {
 			continue
 		} else {
-			err = addFile(&dirent, fileSystem, oldFS, &stat)
+			err = addFile(dirent, fileSystem, oldFS, &stat)
 		}
 		if err != nil {
 			if err == syscall.ENOENT {
@@ -139,12 +154,21 @@ func scanDirectory(directory *filesystem.DirectoryInode,
 			}
 			return err
 		}
-		directory.EntryList = append(directory.EntryList, &dirent)
+		if oldDirent != nil && *dirent == *oldDirent {
+			dirent = oldDirent
+			copiedDirents++
+		}
+		entryList = append(entryList, dirent)
+	}
+	if oldDirectory != nil && len(directory.EntryList) == copiedDirents {
+		directory.EntryList = oldDirectory.EntryList
+	} else {
+		directory.EntryList = entryList
 	}
 	return nil
 }
 
-func addDirectory(dirent *filesystem.DirectoryEntry,
+func addDirectory(dirent, oldDirent *filesystem.DirectoryEntry,
 	fileSystem, oldFS *FileSystem,
 	directoryPathName string, stat *syscall.Stat_t) error {
 	myPathName := path.Join(directoryPathName, dirent.Name)
@@ -157,7 +181,13 @@ func addDirectory(dirent *filesystem.DirectoryEntry,
 	inode.Uid = stat.Uid
 	inode.Gid = stat.Gid
 	fileSystem.InodeTable[stat.Ino] = &inode
-	err := scanDirectory(&inode, fileSystem, oldFS, myPathName)
+	var oldInode *filesystem.DirectoryInode
+	if oldDirent != nil {
+		if oi, ok := oldDirent.Inode().(*filesystem.DirectoryInode); ok {
+			oldInode = oi
+		}
+	}
+	err := scanDirectory(&inode, oldInode, fileSystem, oldFS, myPathName)
 	if err != nil {
 		return err
 	}
