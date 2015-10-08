@@ -42,7 +42,7 @@ func pollSubcommand(client *rpc.Client, args []string) {
 		} else {
 			fs.RebuildInodePointers()
 			if *debug {
-				fs.DebugWrite(os.Stdout)
+				fs.List(os.Stdout)
 			} else {
 				fmt.Print(fs)
 			}

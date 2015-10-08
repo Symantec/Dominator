@@ -186,7 +186,7 @@ func (fsh *DumpableFileSystemHistory) WriteHtml(writer io.Writer) {
 		return
 	}
 	fmt.Fprintln(writer, "<pre>")
-	fs.DebugWrite(writer)
+	fs.List(writer)
 	fmt.Fprintln(writer, "</pre>")
 }
 

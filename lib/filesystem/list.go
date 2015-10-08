@@ -7,18 +7,18 @@ import (
 	"syscall"
 )
 
-func (fs *FileSystem) debugWrite(w io.Writer) error {
-	return fs.DirectoryInode.debugWrite(w, "/")
+func (fs *FileSystem) list(w io.Writer) error {
+	return fs.DirectoryInode.list(w, "/")
 }
 
-func (inode *DirectoryInode) debugWrite(w io.Writer, name string) error {
+func (inode *DirectoryInode) list(w io.Writer, name string) error {
 	_, err := fmt.Fprintf(w, "%v %d %d\t%s\n",
 		inode.Mode, inode.Uid, inode.Gid, name)
 	if err != nil {
 		return err
 	}
 	for _, dirent := range inode.EntryList {
-		err = dirent.inode.DebugWrite(w, path.Join(name, dirent.Name))
+		err = dirent.inode.List(w, path.Join(name, dirent.Name))
 		if err != nil {
 			return err
 		}
@@ -26,7 +26,7 @@ func (inode *DirectoryInode) debugWrite(w io.Writer, name string) error {
 	return nil
 }
 
-func (inode *RegularInode) debugWrite(w io.Writer, name string) error {
+func (inode *RegularInode) list(w io.Writer, name string) error {
 	var err error
 	if inode.Size > 0 {
 		_, err = fmt.Fprintf(w, "%v %d %d %d\t%s %x\n",
@@ -41,7 +41,7 @@ func (inode *RegularInode) debugWrite(w io.Writer, name string) error {
 	return nil
 }
 
-func (inode *SymlinkInode) debugWrite(w io.Writer, name string) error {
+func (inode *SymlinkInode) list(w io.Writer, name string) error {
 	_, err := fmt.Fprintf(w, "lrwxrwxrwx %d %d\t%s -> %s\n",
 		inode.Uid, inode.Gid, name, inode.Symlink)
 	if err != nil {
@@ -50,7 +50,7 @@ func (inode *SymlinkInode) debugWrite(w io.Writer, name string) error {
 	return nil
 }
 
-func (inode *Inode) debugWrite(w io.Writer, name string) error {
+func (inode *Inode) list(w io.Writer, name string) error {
 	var data string
 	data = ""
 	if inode.Mode&syscall.S_IFMT == syscall.S_IFBLK ||
