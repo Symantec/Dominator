@@ -67,7 +67,7 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	if oldFS != nil && oldFS.InodeTable != nil {
 		oldDirectory = oldFS.FileSystem.InodeTable[stat.Ino].(*filesystem.DirectoryInode)
 	}
-	err = scanDirectory(&fileSystem.FileSystem.DirectoryInode, oldDirectory,
+	err, _ = scanDirectory(&fileSystem.FileSystem.DirectoryInode, oldDirectory,
 		&fileSystem, oldFS, "/")
 	oldFS = nil
 	oldDirectory = nil
@@ -92,15 +92,15 @@ func (fs *FileSystem) scanObjectCache() error {
 }
 
 func scanDirectory(directory, oldDirectory *filesystem.DirectoryInode,
-	fileSystem, oldFS *FileSystem, myPathName string) error {
+	fileSystem, oldFS *FileSystem, myPathName string) (error, bool) {
 	file, err := os.Open(path.Join(fileSystem.rootDirectoryName, myPathName))
 	if err != nil {
-		return err
+		return err, false
 	}
 	names, err := file.Readdirnames(-1)
 	file.Close()
 	if err != nil {
-		return err
+		return err, false
 	}
 	sort.Strings(names)
 	entryList := make([]*filesystem.DirectoryEntry, 0, len(names))
@@ -120,7 +120,7 @@ func scanDirectory(directory, oldDirectory *filesystem.DirectoryInode,
 			if err == syscall.ENOENT {
 				continue
 			}
-			return err
+			return err, false
 		}
 		if stat.Dev != fileSystem.dev {
 			continue
@@ -152,7 +152,7 @@ func scanDirectory(directory, oldDirectory *filesystem.DirectoryInode,
 			if err == syscall.ENOENT {
 				continue
 			}
-			return err
+			return err, false
 		}
 		if oldDirent != nil && *dirent == *oldDirent {
 			dirent = oldDirent
@@ -162,10 +162,11 @@ func scanDirectory(directory, oldDirectory *filesystem.DirectoryInode,
 	}
 	if oldDirectory != nil && len(entryList) == copiedDirents {
 		directory.EntryList = oldDirectory.EntryList
+		return nil, true
 	} else {
 		directory.EntryList = entryList
+		return nil, false
 	}
-	return nil
 }
 
 func addDirectory(dirent, oldDirent *filesystem.DirectoryEntry,
@@ -175,21 +176,25 @@ func addDirectory(dirent, oldDirent *filesystem.DirectoryEntry,
 	if _, ok := fileSystem.InodeTable[stat.Ino]; ok {
 		return errors.New("Hardlinked directory: " + myPathName)
 	}
-	var inode filesystem.DirectoryInode
-	dirent.SetInode(&inode)
+	inode := new(filesystem.DirectoryInode)
+	dirent.SetInode(inode)
+	fileSystem.InodeTable[stat.Ino] = inode
 	inode.Mode = filesystem.FileMode(stat.Mode)
 	inode.Uid = stat.Uid
 	inode.Gid = stat.Gid
-	fileSystem.InodeTable[stat.Ino] = &inode
 	var oldInode *filesystem.DirectoryInode
 	if oldDirent != nil {
 		if oi, ok := oldDirent.Inode().(*filesystem.DirectoryInode); ok {
 			oldInode = oi
 		}
 	}
-	err := scanDirectory(&inode, oldInode, fileSystem, oldFS, myPathName)
+	err, copied := scanDirectory(inode, oldInode, fileSystem, oldFS, myPathName)
 	if err != nil {
 		return err
+	}
+	if copied && filesystem.CompareDirectoriesMetadata(inode, oldInode, nil) {
+		dirent.SetInode(oldInode)
+		fileSystem.InodeTable[stat.Ino] = oldInode
 	}
 	fileSystem.DirectoryCount++
 	return nil
