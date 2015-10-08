@@ -160,7 +160,7 @@ func scanDirectory(directory, oldDirectory *filesystem.DirectoryInode,
 		}
 		entryList = append(entryList, dirent)
 	}
-	if oldDirectory != nil && len(directory.EntryList) == copiedDirents {
+	if oldDirectory != nil && len(entryList) == copiedDirents {
 		directory.EntryList = oldDirectory.EntryList
 	} else {
 		directory.EntryList = entryList
