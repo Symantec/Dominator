@@ -5,14 +5,17 @@ import (
 	"io"
 	"path"
 	"syscall"
+	"time"
 )
+
+var timeFormat string = "02 Jan 2006 15:04:05 MST"
 
 func (fs *FileSystem) list(w io.Writer) error {
 	return fs.DirectoryInode.list(w, "/")
 }
 
 func (inode *DirectoryInode) list(w io.Writer, name string) error {
-	_, err := fmt.Fprintf(w, "%v %5d %5d %10s %s\n",
+	_, err := fmt.Fprintf(w, "%v %5d %5d %35s %s\n",
 		inode.Mode, inode.Uid, inode.Gid, "", name)
 	if err != nil {
 		return err
@@ -28,12 +31,15 @@ func (inode *DirectoryInode) list(w io.Writer, name string) error {
 
 func (inode *RegularInode) list(w io.Writer, name string) error {
 	var err error
+	t := time.Unix(inode.MtimeSeconds, int64(inode.MtimeNanoSeconds))
 	if inode.Size > 0 {
-		_, err = fmt.Fprintf(w, "%v %5d %5d %10d %s %x\n",
-			inode.Mode, inode.Uid, inode.Gid, inode.Size, name, inode.Hash)
+		_, err = fmt.Fprintf(w, "%v %5d %5d %10d %s %s %x\n",
+			inode.Mode, inode.Uid, inode.Gid, inode.Size, t.Format(timeFormat),
+			name, inode.Hash)
 	} else {
-		_, err = fmt.Fprintf(w, "%v %5d %5d %10d %s\n",
-			inode.Mode, inode.Uid, inode.Gid, inode.Size, name)
+		_, err = fmt.Fprintf(w, "%v %5d %5d %10d %s %s\n",
+			inode.Mode, inode.Uid, inode.Gid, inode.Size, t.Format(timeFormat),
+			name)
 	}
 	if err != nil {
 		return err
@@ -42,7 +48,7 @@ func (inode *RegularInode) list(w io.Writer, name string) error {
 }
 
 func (inode *SymlinkInode) list(w io.Writer, name string) error {
-	_, err := fmt.Fprintf(w, "lrwxrwxrwx %5d %5d %10s %s -> %s\n",
+	_, err := fmt.Fprintf(w, "lrwxrwxrwx %5d %5d %35s %s -> %s\n",
 		inode.Uid, inode.Gid, "", name, inode.Symlink)
 	if err != nil {
 		return err
@@ -53,12 +59,13 @@ func (inode *SymlinkInode) list(w io.Writer, name string) error {
 func (inode *Inode) list(w io.Writer, name string) error {
 	var data string
 	data = ""
+	t := time.Unix(inode.MtimeSeconds, int64(inode.MtimeNanoSeconds))
 	if inode.Mode&syscall.S_IFMT == syscall.S_IFBLK ||
 		inode.Mode&syscall.S_IFMT == syscall.S_IFCHR {
 		data = fmt.Sprintf("%#x", inode.Rdev)
 	}
-	_, err := fmt.Fprintf(w, "%v %5d %5d %10s %s\n",
-		inode.Mode, inode.Uid, inode.Gid, data, name)
+	_, err := fmt.Fprintf(w, "%v %5d %5d %10s %s %s\n",
+		inode.Mode, inode.Uid, inode.Gid, data, t.Format(timeFormat), name)
 	if err != nil {
 		return err
 	}
