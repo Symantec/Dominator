@@ -8,9 +8,20 @@ import (
 	"io"
 	"os"
 	"path"
+	"runtime"
 	"sort"
 	"syscall"
 )
+
+var myCountGC int
+
+func myGC() {
+	if myCountGC > 1000 {
+		runtime.GC()
+		myCountGC = 0
+	}
+	myCountGC++
+}
 
 func makeRegularInode(stat *syscall.Stat_t) *filesystem.RegularInode {
 	var inode filesystem.RegularInode
@@ -125,6 +136,7 @@ func scanDirectory(directory, oldDirectory *filesystem.DirectoryInode,
 		if stat.Dev != fileSystem.dev {
 			continue
 		}
+		myGC()
 		dirent := new(filesystem.DirectoryEntry)
 		dirent.Name = name
 		dirent.InodeNumber = stat.Ino
