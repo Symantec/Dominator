@@ -12,8 +12,8 @@ func (fs *FileSystem) list(w io.Writer) error {
 }
 
 func (inode *DirectoryInode) list(w io.Writer, name string) error {
-	_, err := fmt.Fprintf(w, "%v %d %d\t%s\n",
-		inode.Mode, inode.Uid, inode.Gid, name)
+	_, err := fmt.Fprintf(w, "%v %5d %5d %10s %s\n",
+		inode.Mode, inode.Uid, inode.Gid, "", name)
 	if err != nil {
 		return err
 	}
@@ -29,11 +29,11 @@ func (inode *DirectoryInode) list(w io.Writer, name string) error {
 func (inode *RegularInode) list(w io.Writer, name string) error {
 	var err error
 	if inode.Size > 0 {
-		_, err = fmt.Fprintf(w, "%v %d %d %d\t%s %x\n",
+		_, err = fmt.Fprintf(w, "%v %5d %5d %10d %s %x\n",
 			inode.Mode, inode.Uid, inode.Gid, inode.Size, name, inode.Hash)
 	} else {
-		_, err = fmt.Fprintf(w, "%v %d %d 0\t%s\n",
-			inode.Mode, inode.Uid, inode.Gid, name)
+		_, err = fmt.Fprintf(w, "%v %5d %5d %10d %s\n",
+			inode.Mode, inode.Uid, inode.Gid, inode.Size, name)
 	}
 	if err != nil {
 		return err
@@ -42,8 +42,8 @@ func (inode *RegularInode) list(w io.Writer, name string) error {
 }
 
 func (inode *SymlinkInode) list(w io.Writer, name string) error {
-	_, err := fmt.Fprintf(w, "lrwxrwxrwx %d %d\t%s -> %s\n",
-		inode.Uid, inode.Gid, name, inode.Symlink)
+	_, err := fmt.Fprintf(w, "lrwxrwxrwx %5d %5d %10s %s -> %s\n",
+		inode.Uid, inode.Gid, "", name, inode.Symlink)
 	if err != nil {
 		return err
 	}
@@ -55,9 +55,9 @@ func (inode *Inode) list(w io.Writer, name string) error {
 	data = ""
 	if inode.Mode&syscall.S_IFMT == syscall.S_IFBLK ||
 		inode.Mode&syscall.S_IFMT == syscall.S_IFCHR {
-		data = fmt.Sprintf(" %#x", inode.Rdev)
+		data = fmt.Sprintf("%#x", inode.Rdev)
 	}
-	_, err := fmt.Fprintf(w, "%v %d %d%s\t%s\n",
+	_, err := fmt.Fprintf(w, "%v %5d %5d %10s %s\n",
 		inode.Mode, inode.Uid, inode.Gid, data, name)
 	if err != nil {
 		return err
