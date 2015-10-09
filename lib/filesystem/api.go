@@ -5,8 +5,11 @@ import (
 	"io"
 )
 
+type NumLinksTable map[uint64]int
+
 type GenericInode interface {
-	List(w io.Writer, name string) error
+	List(w io.Writer, name string, numLinksTable NumLinksTable,
+		numLinks int) error
 }
 
 type InodeTable map[uint64]GenericInode
@@ -49,8 +52,9 @@ func (directory *DirectoryInode) BuildEntryMap() {
 	directory.buildEntryMap()
 }
 
-func (inode *DirectoryInode) List(w io.Writer, name string) error {
-	return inode.list(w, name)
+func (inode *DirectoryInode) List(w io.Writer, name string,
+	numLinksTable NumLinksTable, numLinks int) error {
+	return inode.list(w, name, numLinksTable, numLinks)
 }
 
 type DirectoryEntry struct {
@@ -81,8 +85,9 @@ type RegularInode struct {
 	Hash             hash.Hash
 }
 
-func (inode *RegularInode) List(w io.Writer, name string) error {
-	return inode.list(w, name)
+func (inode *RegularInode) List(w io.Writer, name string,
+	numLinksTable NumLinksTable, numLinks int) error {
+	return inode.list(w, name, numLinksTable, numLinks)
 }
 
 type SymlinkInode struct {
@@ -91,8 +96,9 @@ type SymlinkInode struct {
 	Symlink string
 }
 
-func (inode *SymlinkInode) List(w io.Writer, name string) error {
-	return inode.list(w, name)
+func (inode *SymlinkInode) List(w io.Writer, name string,
+	numLinksTable NumLinksTable, numLinks int) error {
+	return inode.list(w, name, numLinksTable, numLinks)
 }
 
 type Inode struct {
@@ -104,8 +110,9 @@ type Inode struct {
 	Rdev             uint64
 }
 
-func (inode *Inode) List(w io.Writer, name string) error {
-	return inode.list(w, name)
+func (inode *Inode) List(w io.Writer, name string,
+	numLinksTable NumLinksTable, numLinks int) error {
+	return inode.list(w, name, numLinksTable, numLinks)
 }
 
 type FileMode uint32
