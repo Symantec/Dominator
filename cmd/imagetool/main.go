@@ -28,6 +28,8 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  add    name imagefile filterfile triggerfile")
 	fmt.Fprintln(os.Stderr, "  check  name")
 	fmt.Fprintln(os.Stderr, "  delete name")
+	fmt.Fprintln(os.Stderr, "  diffi   tool image image")
+	fmt.Fprintln(os.Stderr, "  diffs   tool image sub")
 	fmt.Fprintln(os.Stderr, "  list")
 }
 
@@ -43,6 +45,8 @@ var subcommands = []subcommand{
 	{"add", 4, addImageSubcommand},
 	{"check", 1, checkImageSubcommand},
 	{"delete", 1, deleteImageSubcommand},
+	{"diffi", 3, diffImageVImageSubcommand},
+	{"diffs", 3, diffImageVSubSubcommand},
 	{"list", 0, listImagesSubcommand},
 }
 
