@@ -5,85 +5,56 @@ import (
 )
 
 func (fs *FileSystem) rebuildInodePointers() {
-	fs.Directory.rebuildInodePointers(fs)
+	fs.DirectoryInode.rebuildInodePointers(fs)
 }
 
-func (directory *Directory) rebuildInodePointers(fs *FileSystem) {
-	for _, entry := range directory.RegularFileList {
-		entry.rebuildInodePointers(fs)
+func (inode *DirectoryInode) rebuildInodePointers(fs *FileSystem) {
+	for _, dirent := range inode.EntryList {
+		dirent.inode = fs.InodeTable[dirent.InodeNumber]
+		if inode, ok := dirent.inode.(*DirectoryInode); ok {
+			inode.rebuildInodePointers(fs)
+		}
 	}
-	for _, entry := range directory.SymlinkList {
-		entry.rebuildInodePointers(fs)
-	}
-	for _, entry := range directory.FileList {
-		entry.rebuildInodePointers(fs)
-	}
-	for _, entry := range directory.DirectoryList {
-		entry.rebuildInodePointers(fs)
-	}
-}
-
-func (file *RegularFile) rebuildInodePointers(fs *FileSystem) {
-	file.inode = fs.RegularInodeTable[file.InodeNumber]
-}
-
-func (symlink *Symlink) rebuildInodePointers(fs *FileSystem) {
-	symlink.inode = fs.SymlinkInodeTable[symlink.InodeNumber]
-}
-
-func (file *File) rebuildInodePointers(fs *FileSystem) {
-	file.inode = fs.InodeTable[file.InodeNumber]
 }
 
 func (fs *FileSystem) buildFilenamesTable() {
 	fs.FilenamesTable = make(FilenamesTable)
-	fs.Directory.buildFilenamesTable(fs, "")
+	fs.DirectoryInode.buildFilenamesTable(fs, "")
 }
 
-func (directory *Directory) buildFilenamesTable(fs *FileSystem,
-	parentName string) {
-	myPathName := path.Join(parentName, directory.Name)
-	for _, entry := range directory.RegularFileList {
-		fs.addFilenameToTable(entry.InodeNumber, myPathName, entry.Name)
-	}
-	for _, entry := range directory.SymlinkList {
-		fs.addFilenameToTable(entry.InodeNumber, myPathName, entry.Name)
-	}
-	for _, entry := range directory.FileList {
-		fs.addFilenameToTable(entry.InodeNumber, myPathName, entry.Name)
-	}
-	for _, entry := range directory.DirectoryList {
-		entry.buildFilenamesTable(fs, myPathName)
+func (inode *DirectoryInode) buildFilenamesTable(fs *FileSystem, name string) {
+	for _, dirent := range inode.EntryList {
+		name := path.Join(name, dirent.Name)
+		fs.addFilenameToTable(dirent.InodeNumber, name)
+		if inode, ok := dirent.inode.(*DirectoryInode); ok {
+			inode.buildFilenamesTable(fs, name)
+		}
 	}
 }
 
-func (fs *FileSystem) addFilenameToTable(inode uint64,
-	parentName, entryName string) {
+func (fs *FileSystem) addFilenameToTable(inode uint64, name string) {
 	filenames := fs.FilenamesTable[inode]
-	filenames = append(filenames, path.Join(parentName, entryName))
+	filenames = append(filenames, name)
 	fs.FilenamesTable[inode] = filenames
 }
 
 func (fs *FileSystem) computeTotalDataBytes() {
+	fs.NumRegularInodes = 0
 	fs.TotalDataBytes = 0
-	for _, inode := range fs.RegularInodeTable {
-		fs.TotalDataBytes += uint64(inode.Size)
+	for _, inode := range fs.InodeTable {
+		if inode, ok := inode.(*RegularInode); ok {
+			fs.NumRegularInodes++
+			fs.TotalDataBytes += uint64(inode.Size)
+		}
 	}
 }
 
-func (directory *Directory) buildEntryMap() {
-	directory.EntriesByName = make(map[string]interface{})
-	for _, entry := range directory.RegularFileList {
-		directory.EntriesByName[entry.Name] = entry
-	}
-	for _, entry := range directory.SymlinkList {
-		directory.EntriesByName[entry.Name] = entry
-	}
-	for _, entry := range directory.FileList {
-		directory.EntriesByName[entry.Name] = entry
-	}
-	for _, entry := range directory.DirectoryList {
-		directory.EntriesByName[entry.Name] = entry
-		entry.buildEntryMap()
+func (inode *DirectoryInode) buildEntryMap() {
+	inode.EntriesByName = make(map[string]*DirectoryEntry)
+	for _, dirent := range inode.EntryList {
+		inode.EntriesByName[dirent.Name] = dirent
+		if inode, ok := dirent.inode.(*DirectoryInode); ok {
+			inode.buildEntryMap()
+		}
 	}
 }

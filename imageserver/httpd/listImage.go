@@ -21,7 +21,7 @@ func listImageHandler(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(writer, "File-system data for image: %s\n", imageName)
 		fmt.Fprintln(writer, "</h3>")
 		fmt.Fprintln(writer, "<pre>")
-		image.FileSystem.DebugWrite(writer, "")
+		image.FileSystem.List(writer)
 		fmt.Fprintln(writer, "</pre>")
 	}
 	fmt.Fprintln(writer, "</body>")

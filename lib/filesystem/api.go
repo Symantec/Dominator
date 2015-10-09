@@ -5,19 +5,20 @@ import (
 	"io"
 )
 
-type RegularInodeTable map[uint64]*RegularInode
-type SymlinkInodeTable map[uint64]*SymlinkInode
-type InodeTable map[uint64]*Inode
+type GenericInode interface {
+	List(w io.Writer, name string) error
+}
+
+type InodeTable map[uint64]GenericInode
 type FilenamesTable map[uint64][]string
 
 type FileSystem struct {
-	RegularInodeTable RegularInodeTable
-	SymlinkInodeTable SymlinkInodeTable
-	InodeTable        InodeTable
-	FilenamesTable    FilenamesTable
-	TotalDataBytes    uint64
-	DirectoryCount    uint64
-	Directory
+	InodeTable       InodeTable
+	FilenamesTable   FilenamesTable
+	NumRegularInodes uint64
+	TotalDataBytes   uint64
+	DirectoryCount   uint64
+	DirectoryInode
 }
 
 func (fs *FileSystem) RebuildInodePointers() {
@@ -32,32 +33,42 @@ func (fs *FileSystem) ComputeTotalDataBytes() {
 	fs.computeTotalDataBytes()
 }
 
-func (fs *FileSystem) DebugWrite(w io.Writer, prefix string) error {
-	return fs.debugWrite(w, prefix)
+func (fs *FileSystem) List(w io.Writer) error {
+	return fs.list(w)
 }
 
-type Directory struct {
-	Name            string
-	RegularFileList []*RegularFile
-	SymlinkList     []*Symlink
-	FileList        []*File
-	DirectoryList   []*Directory
-	EntriesByName   map[string]interface{}
-	Mode            FileMode
-	Uid             uint32
-	Gid             uint32
+type DirectoryInode struct {
+	EntryList     []*DirectoryEntry
+	EntriesByName map[string]*DirectoryEntry
+	Mode          FileMode
+	Uid           uint32
+	Gid           uint32
 }
 
-func (directory *Directory) BuildEntryMap() {
+func (directory *DirectoryInode) BuildEntryMap() {
 	directory.buildEntryMap()
 }
 
-func (directory *Directory) String() string {
-	return directory.Name
+func (inode *DirectoryInode) List(w io.Writer, name string) error {
+	return inode.list(w, name)
 }
 
-func (directory *Directory) DebugWrite(w io.Writer, prefix string) error {
-	return directory.debugWrite(w, prefix)
+type DirectoryEntry struct {
+	Name        string
+	InodeNumber uint64
+	inode       GenericInode // Keep private to avoid encoding/transmission.
+}
+
+func (dirent *DirectoryEntry) Inode() GenericInode {
+	return dirent.inode
+}
+
+func (dirent *DirectoryEntry) SetInode(inode GenericInode) {
+	dirent.inode = inode
+}
+
+func (dirent *DirectoryEntry) String() string {
+	return dirent.Name
 }
 
 type RegularInode struct {
@@ -70,26 +81,8 @@ type RegularInode struct {
 	Hash             hash.Hash
 }
 
-type RegularFile struct {
-	Name        string
-	InodeNumber uint64
-	inode       *RegularInode // Keep private to avoid encoding/transmission.
-}
-
-func (file *RegularFile) Inode() *RegularInode {
-	return file.inode
-}
-
-func (file *RegularFile) SetInode(inode *RegularInode) {
-	file.inode = inode
-}
-
-func (file *RegularFile) String() string {
-	return file.Name
-}
-
-func (file *RegularFile) DebugWrite(w io.Writer, prefix string) error {
-	return file.debugWrite(w, prefix)
+func (inode *RegularInode) List(w io.Writer, name string) error {
+	return inode.list(w, name)
 }
 
 type SymlinkInode struct {
@@ -98,22 +91,8 @@ type SymlinkInode struct {
 	Symlink string
 }
 
-type Symlink struct {
-	Name        string
-	InodeNumber uint64
-	inode       *SymlinkInode // Keep private to avoid encoding/transmission.
-}
-
-func (symlink *Symlink) Inode() *SymlinkInode {
-	return symlink.inode
-}
-
-func (symlink *Symlink) SetInode(inode *SymlinkInode) {
-	symlink.inode = inode
-}
-
-func (symlink *Symlink) DebugWrite(w io.Writer, prefix string) error {
-	return symlink.debugWrite(w, prefix)
+func (inode *SymlinkInode) List(w io.Writer, name string) error {
+	return inode.list(w, name)
 }
 
 type Inode struct {
@@ -125,26 +104,8 @@ type Inode struct {
 	Rdev             uint64
 }
 
-type File struct {
-	Name        string
-	InodeNumber uint64
-	inode       *Inode // Keep private to avoid encoding/transmission.
-}
-
-func (file *File) Inode() *Inode {
-	return file.inode
-}
-
-func (file *File) SetInode(inode *Inode) {
-	file.inode = inode
-}
-
-func (file *File) String() string {
-	return file.Name
-}
-
-func (file *File) DebugWrite(w io.Writer, prefix string) error {
-	return file.debugWrite(w, prefix)
+func (inode *Inode) List(w io.Writer, name string) error {
+	return inode.list(w, name)
 }
 
 type FileMode uint32
@@ -157,17 +118,19 @@ func CompareFileSystems(left, right *FileSystem, logWriter io.Writer) bool {
 	return compareFileSystems(left, right, logWriter)
 }
 
-func CompareDirectories(left, right *Directory, logWriter io.Writer) bool {
-	return compareDirectories(left, right, logWriter)
+func CompareDirectoryInodes(left, right *DirectoryInode,
+	logWriter io.Writer) bool {
+	return compareDirectoryInodes(left, right, logWriter)
 }
 
-func CompareDirectoriesMetadata(left, right *Directory,
+func CompareDirectoriesMetadata(left, right *DirectoryInode,
 	logWriter io.Writer) bool {
 	return compareDirectoriesMetadata(left, right, logWriter)
 }
 
-func CompareRegularFiles(left, right *RegularFile, logWriter io.Writer) bool {
-	return compareRegularFiles(left, right, logWriter)
+func CompareDirectoryEntries(left, right *DirectoryEntry,
+	logWriter io.Writer) bool {
+	return compareDirectoryEntries(left, right, logWriter)
 }
 
 func CompareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
@@ -184,16 +147,8 @@ func CompareRegularInodesData(left, right *RegularInode,
 	return compareRegularInodesData(left, right, logWriter)
 }
 
-func CompareSymlinks(left, right *Symlink, logWriter io.Writer) bool {
-	return compareSymlinks(left, right, logWriter)
-}
-
 func CompareSymlinkInodes(left, right *SymlinkInode, logWriter io.Writer) bool {
 	return compareSymlinkInodes(left, right, logWriter)
-}
-
-func CompareFiles(left, right *File, logWriter io.Writer) bool {
-	return compareFiles(left, right, logWriter)
 }
 
 func CompareInodes(left, right *Inode, logWriter io.Writer) bool {

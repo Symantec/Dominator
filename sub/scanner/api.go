@@ -56,13 +56,10 @@ func (fsh *FileSystemHistory) WriteHtml(writer io.Writer) {
 	fsh.writeHtml(writer)
 }
 
-type directoryInodeList map[uint64]bool
-
 type FileSystem struct {
-	configuration      *Configuration
-	rootDirectoryName  string
-	directoryInodeList directoryInodeList
-	dev                uint64
+	configuration     *Configuration
+	rootDirectoryName string
+	dev               uint64
 	filesystem.FileSystem
 	cacheDirectoryName string
 	objectcache.ObjectCache
@@ -88,10 +85,9 @@ func (fs *FileSystem) RootDirectoryName() string {
 
 func (fs *FileSystem) String() string {
 	return fmt.Sprintf("Tree: %d inodes, total file size: %s, number of regular inodes: %d\nObjectCache: %d objects\n",
-		len(fs.RegularInodeTable)+len(fs.SymlinkInodeTable)+len(fs.InodeTable)+
-			int(fs.DirectoryCount),
+		len(fs.InodeTable),
 		format.FormatBytes(fs.TotalDataBytes),
-		len(fs.RegularInodeTable),
+		fs.NumRegularInodes,
 		len(fs.ObjectCache))
 }
 

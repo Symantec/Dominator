@@ -8,22 +8,6 @@ import (
 )
 
 func compareFileSystems(left, right *FileSystem, logWriter io.Writer) bool {
-	if len(left.RegularInodeTable) != len(right.RegularInodeTable) {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter,
-				"left vs. right: %d vs. %d regular file inodes\n",
-				len(left.RegularInodeTable), len(right.RegularInodeTable))
-		}
-		return false
-	}
-	if len(left.SymlinkInodeTable) != len(right.SymlinkInodeTable) {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter,
-				"left vs. right: %d vs. %d symlink inodes\n",
-				len(left.SymlinkInodeTable), len(right.SymlinkInodeTable))
-		}
-		return false
-	}
 	if len(left.InodeTable) != len(right.InodeTable) {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d inodes\n",
@@ -31,66 +15,27 @@ func compareFileSystems(left, right *FileSystem, logWriter io.Writer) bool {
 		}
 		return false
 	}
-	return compareDirectories(&left.Directory, &right.Directory, logWriter)
+	return compareDirectoryInodes(&left.DirectoryInode, &right.DirectoryInode,
+		logWriter)
 }
 
-func compareDirectories(left, right *Directory, logWriter io.Writer) bool {
-	if left.Name != right.Name {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter, "dirname: left vs. right: %s vs. %s\n",
-				left.Name, right.Name)
-		}
-		return false
+func compareDirectoryInodes(left, right *DirectoryInode,
+	logWriter io.Writer) bool {
+	if left == right {
+		return true
 	}
 	if !compareDirectoriesMetadata(left, right, logWriter) {
 		return false
 	}
-	if len(left.RegularFileList) != len(right.RegularFileList) {
+	if len(left.EntryList) != len(right.EntryList) {
 		if logWriter != nil {
-			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d regular files\n",
-				len(left.RegularFileList), len(right.RegularFileList))
+			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d entries\n",
+				len(left.EntryList), len(right.EntryList))
 		}
 		return false
 	}
-	if len(left.SymlinkList) != len(right.SymlinkList) {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d symlinks\n",
-				len(left.SymlinkList), len(right.SymlinkList))
-		}
-		return false
-	}
-	if len(left.FileList) != len(right.FileList) {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d files\n",
-				len(left.FileList), len(right.FileList))
-		}
-		return false
-	}
-	if len(left.DirectoryList) != len(right.DirectoryList) {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter, "left vs. right: %d vs. %d subdirs\n",
-				len(left.DirectoryList), len(right.DirectoryList))
-		}
-		return false
-	}
-	for index, leftEntry := range left.RegularFileList {
-		if !compareRegularFiles(leftEntry, right.RegularFileList[index],
-			logWriter) {
-			return false
-		}
-	}
-	for index, leftEntry := range left.SymlinkList {
-		if !compareSymlinks(leftEntry, right.SymlinkList[index], logWriter) {
-			return false
-		}
-	}
-	for index, leftEntry := range left.FileList {
-		if !compareFiles(leftEntry, right.FileList[index], logWriter) {
-			return false
-		}
-	}
-	for index, leftEntry := range left.DirectoryList {
-		if !compareDirectories(leftEntry, right.DirectoryList[index],
+	for index, leftEntry := range left.EntryList {
+		if !compareDirectoryEntries(leftEntry, right.EntryList[index],
 			logWriter) {
 			return false
 		}
@@ -98,7 +43,7 @@ func compareDirectories(left, right *Directory, logWriter io.Writer) bool {
 	return true
 }
 
-func compareDirectoriesMetadata(left, right *Directory,
+func compareDirectoriesMetadata(left, right *DirectoryInode,
 	logWriter io.Writer) bool {
 	if left.Mode != right.Mode {
 		if logWriter != nil {
@@ -124,7 +69,11 @@ func compareDirectoriesMetadata(left, right *Directory,
 	return true
 }
 
-func compareRegularFiles(left, right *RegularFile, logWriter io.Writer) bool {
+func compareDirectoryEntries(left, right *DirectoryEntry,
+	logWriter io.Writer) bool {
+	if left == right {
+		return true
+	}
 	if left.Name != right.Name {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "filename: left vs. right: %s vs. %s\n",
@@ -132,10 +81,35 @@ func compareRegularFiles(left, right *RegularFile, logWriter io.Writer) bool {
 		}
 		return false
 	}
-	return compareRegularInodes(left.inode, right.inode, logWriter)
+	switch left := left.inode.(type) {
+	case *RegularInode:
+		if right, ok := right.inode.(*RegularInode); ok {
+			return compareRegularInodes(left, right, logWriter)
+		}
+	case *SymlinkInode:
+		if right, ok := right.inode.(*SymlinkInode); ok {
+			return compareSymlinkInodes(left, right, logWriter)
+		}
+	case *Inode:
+		if right, ok := right.inode.(*Inode); ok {
+			return compareInodes(left, right, logWriter)
+		}
+	case *DirectoryInode:
+		if right, ok := right.inode.(*DirectoryInode); ok {
+			return compareDirectoryInodes(left, right, logWriter)
+		}
+	}
+	if logWriter != nil {
+		fmt.Fprintf(logWriter, "types: left vs. right: %s vs. %s\n",
+			left.Name, right.Name)
+	}
+	return false
 }
 
 func compareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
+	if left == right {
+		return true
+	}
 	if !compareRegularInodesMetadata(left, right, logWriter) {
 		return false
 	}
@@ -201,18 +175,10 @@ func compareRegularInodesData(left, right *RegularInode,
 	return true
 }
 
-func compareSymlinks(left, right *Symlink, logWriter io.Writer) bool {
-	if left.Name != right.Name {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter, "filename: left vs. right: %s vs. %s\n",
-				left.Name, right.Name)
-		}
-		return false
-	}
-	return compareSymlinkInodes(left.inode, right.inode, logWriter)
-}
-
 func compareSymlinkInodes(left, right *SymlinkInode, logWriter io.Writer) bool {
+	if left == right {
+		return true
+	}
 	if left.Uid != right.Uid {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "Uid: left vs. right: %d vs. %d\n",
@@ -237,18 +203,10 @@ func compareSymlinkInodes(left, right *SymlinkInode, logWriter io.Writer) bool {
 	return true
 }
 
-func compareFiles(left, right *File, logWriter io.Writer) bool {
-	if left.Name != right.Name {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter, "filename: left vs. right: %s vs. %s\n",
-				left.Name, right.Name)
-		}
-		return false
-	}
-	return compareInodes(left.inode, right.inode, logWriter)
-}
-
 func compareInodes(left, right *Inode, logWriter io.Writer) bool {
+	if left == right {
+		return true
+	}
 	if left.Mode != right.Mode {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "Mode: left vs. right: %o vs. %o\n",

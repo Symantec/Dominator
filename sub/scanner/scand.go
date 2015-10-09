@@ -26,10 +26,9 @@ func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 		if err != nil {
 			logger.Printf("Error scanning\t%s\n", err)
 		} else {
-			oldFS.RegularInodeTable = fs.RegularInodeTable
-			oldFS.SymlinkInodeTable = fs.SymlinkInodeTable
 			oldFS.InodeTable = fs.InodeTable
 			fsChannel <- fs
+			runtime.GC()
 			if !loweredPriority {
 				syscall.Setpriority(syscall.PRIO_PROCESS, 0, 10)
 				loweredPriority = true

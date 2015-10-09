@@ -22,23 +22,22 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 	request.Triggers = requiredImage.Triggers
 	var state state
 	state.subInodeToRequiredInode = make(map[uint64]uint64)
-	compareDirectories(request, &state, &subFS.Directory, &requiredFS.Directory,
-		"", filter)
+	compareDirectories(request, &state,
+		&subFS.DirectoryInode, &requiredFS.DirectoryInode,
+		"/", filter)
 	// TODO(rgooch): Implement this.
 }
 
 func compareDirectories(request *subproto.UpdateRequest, state *state,
-	subDirectory, requiredDirectory *filesystem.Directory,
-	parentName string, filter *filter.Filter) {
-	requiredPathName := path.Join(parentName, requiredDirectory.Name)
+	subDirectory, requiredDirectory *filesystem.DirectoryInode,
+	myPathName string, filter *filter.Filter) {
 	// First look for entries that should be deleted.
 	makeSubDirectory := false
 	if subDirectory == nil {
 		makeSubDirectory = true
 	} else {
-		subPathName := path.Join(parentName, subDirectory.Name)
-		for name, subEntry := range subDirectory.EntriesByName {
-			pathname := path.Join(subPathName, entryName(subEntry))
+		for name, _ := range subDirectory.EntriesByName {
+			pathname := path.Join(myPathName, name)
 			if filter.Match(pathname) {
 				continue
 			}
@@ -49,161 +48,159 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 		}
 		if !filesystem.CompareDirectoriesMetadata(subDirectory,
 			requiredDirectory, os.Stdout) {
-			fmt.Printf("Different directory: %s...\n", requiredPathName) // HACK
+			fmt.Printf("Different directory: %s...\n", myPathName) // HACK
 			makeSubDirectory = true
 			// TODO(rgooch): Update metadata.
 		}
 	}
 	if makeSubDirectory {
 		var newdir subproto.Directory
-		newdir.Name = requiredPathName
+		newdir.Name = myPathName
 		newdir.Mode = requiredDirectory.Mode
 		newdir.Uid = requiredDirectory.Uid
 		newdir.Gid = requiredDirectory.Gid
 		request.DirectoriesToMake = append(request.DirectoriesToMake, newdir)
 	}
 	for name, requiredEntry := range requiredDirectory.EntriesByName {
-		pathname := path.Join(requiredPathName, entryName(requiredEntry))
+		pathname := path.Join(myPathName, name)
 		if filter.Match(pathname) {
 			continue
 		}
 		if subDirectory == nil {
-			compareEntries(request, state, nil, requiredEntry, requiredPathName,
+			compareEntries(request, state, nil, requiredEntry, pathname,
 				filter)
 		} else {
 			if subEntry, ok := subDirectory.EntriesByName[name]; ok {
 				compareEntries(request, state, subEntry, requiredEntry,
-					requiredPathName, filter)
+					pathname, filter)
 			} else {
 				compareEntries(request, state, nil, requiredEntry,
-					requiredPathName, filter)
+					pathname, filter)
 			}
 		}
 	}
 }
 
-func entryName(entry interface{}) string {
-	switch e := entry.(type) {
-	case *filesystem.RegularFile:
-		return e.Name
-	case *filesystem.Symlink:
-		return e.Name
-	case *filesystem.File:
-		return e.Name
-	case *filesystem.Directory:
-		return e.Name
-	}
-	panic("Unsupported entry type")
-}
-
 func compareEntries(request *subproto.UpdateRequest, state *state,
-	subEntry, requiredEntry interface{},
-	parentName string, filter *filter.Filter) {
-	switch re := requiredEntry.(type) {
-	case *filesystem.RegularFile:
-		compareRegularFile(request, state, subEntry, re, parentName)
+	subEntry, requiredEntry *filesystem.DirectoryEntry,
+	myPathName string, filter *filter.Filter) {
+	switch requiredInode := requiredEntry.Inode().(type) {
+	case *filesystem.RegularInode:
+		compareRegularFile(request, state, subEntry,
+			requiredInode, requiredEntry.InodeNumber, myPathName)
 		return
-	case *filesystem.Symlink:
-		compareSymlink(request, state, subEntry, re, parentName)
+	case *filesystem.SymlinkInode:
+		compareSymlink(request, state, subEntry,
+			requiredInode, requiredEntry.InodeNumber, myPathName)
 		return
-	case *filesystem.File:
-		compareFile(request, state, subEntry, re, parentName)
+	case *filesystem.Inode:
+		compareFile(request, state, subEntry,
+			requiredInode, requiredEntry.InodeNumber, myPathName)
 		return
-	case *filesystem.Directory:
-		compareDirectory(request, state, subEntry, re, parentName, filter)
+	case *filesystem.DirectoryInode:
+		compareDirectory(request, state, subEntry, requiredInode, myPathName,
+			filter)
 		return
 	}
 	panic("Unsupported entry type")
 }
 
 func compareRegularFile(request *subproto.UpdateRequest, state *state,
-	subEntry interface{}, requiredRegularFile *filesystem.RegularFile,
-	parentName string) {
-	debugFilename := path.Join(parentName, requiredRegularFile.Name)
-	if subRegularFile, ok := subEntry.(*filesystem.RegularFile); ok {
-		if requiredInode, ok :=
-			state.subInodeToRequiredInode[subRegularFile.InodeNumber]; ok {
-			if requiredInode == requiredRegularFile.InodeNumber {
+	subEntry *filesystem.DirectoryEntry,
+	requiredInode *filesystem.RegularInode, requiredInodeNumber uint64,
+	myPathName string) {
+	if subEntry == nil {
+		fmt.Printf("Add rfile: %s...\n", myPathName) // HACK
+		// TODO(rgooch): Add entry.
+		return
+	}
+	if subInode, ok := subEntry.Inode().(*filesystem.RegularInode); ok {
+		if requiredInum, ok :=
+			state.subInodeToRequiredInode[subEntry.InodeNumber]; ok {
+			if requiredInum != requiredInodeNumber {
 				//
-				fmt.Printf("Different links: %s...\n", debugFilename) // HACK
+				fmt.Printf("Different links: %s...\n", myPathName) // HACK
 			}
 		} else {
-			state.subInodeToRequiredInode[subRegularFile.InodeNumber] =
-				requiredRegularFile.InodeNumber
+			state.subInodeToRequiredInode[subEntry.InodeNumber] =
+				requiredInodeNumber
 		}
 		sameMetadata := filesystem.CompareRegularInodesMetadata(
-			subRegularFile.Inode(), requiredRegularFile.Inode(),
-			os.Stdout)
-		sameData := filesystem.CompareRegularInodesData(subRegularFile.Inode(),
-			requiredRegularFile.Inode(), os.Stdout)
+			subInode, requiredInode, os.Stdout)
+		sameData := filesystem.CompareRegularInodesData(subInode,
+			requiredInode, os.Stdout)
 		if sameMetadata && sameData {
 			return
 		}
-		fmt.Printf("Different rfile: %s...\n", debugFilename) // HACK
+		fmt.Printf("Different rfile: %s...\n", myPathName) // HACK
 	} else {
-		fmt.Printf("Add rfile: %s...\n", debugFilename) // HACK
+		fmt.Printf("Delete+add rfile: %s...\n", myPathName) // HACK
 	}
 	// TODO(rgooch): Delete entry and replace.
 }
 
 func compareSymlink(request *subproto.UpdateRequest, state *state,
-	subEntry interface{}, requiredSymlink *filesystem.Symlink,
-	parentName string) {
-	debugFilename := path.Join(parentName, requiredSymlink.Name)
-	if subSymlink, ok := subEntry.(*filesystem.Symlink); ok {
-		if requiredInode, ok :=
-			state.subInodeToRequiredInode[subSymlink.InodeNumber]; ok {
-			if requiredInode != requiredSymlink.InodeNumber {
-				fmt.Printf("Different links: %s...\n", debugFilename) // HACK
+	subEntry *filesystem.DirectoryEntry,
+	requiredInode *filesystem.SymlinkInode, requiredInodeNumber uint64,
+	myPathName string) {
+	if subInode, ok := subEntry.Inode().(*filesystem.SymlinkInode); ok {
+		if requiredInum, ok :=
+			state.subInodeToRequiredInode[subEntry.InodeNumber]; ok {
+			if requiredInum != requiredInodeNumber {
+				fmt.Printf("Different links: %s...\n", myPathName) // HACK
 			}
 		} else {
-			state.subInodeToRequiredInode[subSymlink.InodeNumber] =
-				requiredSymlink.InodeNumber
+			state.subInodeToRequiredInode[subEntry.InodeNumber] =
+				requiredInodeNumber
 		}
-		if filesystem.CompareSymlinkInodes(subSymlink.Inode(),
-			requiredSymlink.Inode(), os.Stdout) {
+		if filesystem.CompareSymlinkInodes(subInode, requiredInode, os.Stdout) {
 			return
 		}
-		fmt.Printf("Different symlink: %s...\n", debugFilename) // HACK
+		fmt.Printf("Different symlink: %s...\n", myPathName) // HACK
 	} else {
-		fmt.Printf("Add symlink: %s...\n", debugFilename) // HACK
+		fmt.Printf("Add symlink: %s...\n", myPathName) // HACK
 	}
 	// TODO(rgooch): Delete entry and replace.
 }
 
 func compareFile(request *subproto.UpdateRequest, state *state,
-	subEntry interface{}, requiredFile *filesystem.File,
-	parentName string) {
-	debugFilename := path.Join(parentName, requiredFile.Name)
-	if subFile, ok := subEntry.(*filesystem.File); ok {
-		if requiredInode, ok :=
-			state.subInodeToRequiredInode[subFile.InodeNumber]; ok {
-			if requiredInode != requiredFile.InodeNumber {
-				fmt.Printf("Different links: %s...\n", debugFilename) // HACK
+	subEntry *filesystem.DirectoryEntry,
+	requiredInode *filesystem.Inode, requiredInodeNumber uint64,
+	myPathName string) {
+	if subInode, ok := subEntry.Inode().(*filesystem.Inode); ok {
+		if requiredInum, ok :=
+			state.subInodeToRequiredInode[subEntry.InodeNumber]; ok {
+			if requiredInum != requiredInodeNumber {
+				fmt.Printf("Different links: %s...\n", myPathName) // HACK
 			}
 		} else {
-			state.subInodeToRequiredInode[subFile.InodeNumber] =
-				requiredFile.InodeNumber
+			state.subInodeToRequiredInode[subEntry.InodeNumber] =
+				requiredInodeNumber
 		}
-		if filesystem.CompareInodes(subFile.Inode(), requiredFile.Inode(),
-			os.Stdout) {
+		if filesystem.CompareInodes(subInode, requiredInode, os.Stdout) {
 			return
 		}
-		fmt.Printf("Different file: %s...\n", debugFilename) // HACK
+		fmt.Printf("Different file: %s...\n", myPathName) // HACK
 	} else {
-		fmt.Printf("Add file: %s...\n", debugFilename) // HACK
+		fmt.Printf("Add file: %s...\n", myPathName) // HACK
 	}
 	// TODO(rgooch): Delete entry and replace.
 }
 
 func compareDirectory(request *subproto.UpdateRequest, state *state,
-	subEntry interface{}, requiredDirectory *filesystem.Directory,
-	parentName string, filter *filter.Filter) {
-	if subDirectory, ok := subEntry.(*filesystem.Directory); ok {
-		compareDirectories(request, state, subDirectory, requiredDirectory,
-			parentName, filter)
+	subEntry *filesystem.DirectoryEntry,
+	requiredInode *filesystem.DirectoryInode,
+	myPathName string, filter *filter.Filter) {
+	if subEntry == nil {
+		compareDirectories(request, state, nil, requiredInode, myPathName,
+			filter)
+		return
+	}
+	if subInode, ok := subEntry.Inode().(*filesystem.DirectoryInode); ok {
+		compareDirectories(request, state, subInode, requiredInode,
+			myPathName, filter)
 	} else {
-		compareDirectories(request, state, nil, requiredDirectory, parentName,
+		compareDirectories(request, state, nil, requiredInode, myPathName,
 			filter)
 	}
 }

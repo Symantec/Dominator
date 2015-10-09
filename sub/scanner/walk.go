@@ -8,61 +8,48 @@ import (
 	"io"
 	"os"
 	"path"
+	"runtime"
 	"sort"
 	"syscall"
 )
 
-func (fileSystem *FileSystem) getRegularInode(stat *syscall.Stat_t) (
-	*filesystem.RegularInode, bool) {
-	inode := fileSystem.RegularInodeTable[stat.Ino]
-	new := false
-	if inode == nil {
-		var _inode filesystem.RegularInode
-		inode = &_inode
-		_inode.Mode = filesystem.FileMode(stat.Mode)
-		_inode.Uid = stat.Uid
-		_inode.Gid = stat.Gid
-		_inode.MtimeSeconds = stat.Mtim.Sec
-		_inode.MtimeNanoSeconds = int32(stat.Mtim.Nsec)
-		_inode.Size = uint64(stat.Size)
-		fileSystem.RegularInodeTable[stat.Ino] = inode
-		new = true
+var myCountGC int
+
+func myGC() {
+	if myCountGC > 1000 {
+		runtime.GC()
+		myCountGC = 0
 	}
-	return inode, new
+	myCountGC++
 }
 
-func (fileSystem *FileSystem) getSymlinkInode(stat *syscall.Stat_t) (
-	*filesystem.SymlinkInode, bool) {
-	inode := fileSystem.SymlinkInodeTable[stat.Ino]
-	new := false
-	if inode == nil {
-		var _inode filesystem.SymlinkInode
-		inode = &_inode
-		_inode.Uid = stat.Uid
-		_inode.Gid = stat.Gid
-		fileSystem.SymlinkInodeTable[stat.Ino] = inode
-		new = true
-	}
-	return inode, new
+func makeRegularInode(stat *syscall.Stat_t) *filesystem.RegularInode {
+	var inode filesystem.RegularInode
+	inode.Mode = filesystem.FileMode(stat.Mode)
+	inode.Uid = stat.Uid
+	inode.Gid = stat.Gid
+	inode.MtimeSeconds = stat.Mtim.Sec
+	inode.MtimeNanoSeconds = int32(stat.Mtim.Nsec)
+	inode.Size = uint64(stat.Size)
+	return &inode
 }
 
-func (fileSystem *FileSystem) getInode(stat *syscall.Stat_t) (
-	*filesystem.Inode, bool) {
-	inode := fileSystem.InodeTable[stat.Ino]
-	new := false
-	if inode == nil {
-		var _inode filesystem.Inode
-		inode = &_inode
-		_inode.Mode = filesystem.FileMode(stat.Mode)
-		_inode.Uid = stat.Uid
-		_inode.Gid = stat.Gid
-		_inode.MtimeSeconds = stat.Mtim.Sec
-		_inode.MtimeNanoSeconds = int32(stat.Mtim.Nsec)
-		_inode.Rdev = stat.Rdev
-		fileSystem.InodeTable[stat.Ino] = inode
-		new = true
-	}
-	return inode, new
+func makeSymlinkInode(stat *syscall.Stat_t) *filesystem.SymlinkInode {
+	var inode filesystem.SymlinkInode
+	inode.Uid = stat.Uid
+	inode.Gid = stat.Gid
+	return &inode
+}
+
+func makeInode(stat *syscall.Stat_t) *filesystem.Inode {
+	var inode filesystem.Inode
+	inode.Mode = filesystem.FileMode(stat.Mode)
+	inode.Uid = stat.Uid
+	inode.Gid = stat.Gid
+	inode.MtimeSeconds = stat.Mtim.Sec
+	inode.MtimeNanoSeconds = int32(stat.Mtim.Nsec)
+	inode.Rdev = stat.Rdev
+	return &inode
 }
 
 func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
@@ -71,30 +58,30 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	fileSystem.configuration = configuration
 	fileSystem.rootDirectoryName = rootDirectoryName
 	fileSystem.cacheDirectoryName = cacheDirectoryName
-	fileSystem.Name = "/"
 	var stat syscall.Stat_t
 	err := syscall.Lstat(rootDirectoryName, &stat)
 	if err != nil {
 		return nil, err
 	}
-	fileSystem.RegularInodeTable = make(filesystem.RegularInodeTable)
-	fileSystem.SymlinkInodeTable = make(filesystem.SymlinkInodeTable)
 	fileSystem.InodeTable = make(filesystem.InodeTable)
-	fileSystem.directoryInodeList = make(directoryInodeList)
-	fileSystem.directoryInodeList[stat.Ino] = true
 	fileSystem.dev = stat.Dev
 	fileSystem.Mode = filesystem.FileMode(stat.Mode)
 	fileSystem.Uid = stat.Uid
 	fileSystem.Gid = stat.Gid
+	fileSystem.InodeTable[stat.Ino] = &fileSystem.DirectoryInode
+	fileSystem.DirectoryCount++
 	var tmpInode filesystem.RegularInode
 	if sha512.New().Size() != len(tmpInode.Hash) {
 		return nil, errors.New("Incompatible hash size")
 	}
-	err = scanDirectory(&fileSystem.FileSystem.Directory, &fileSystem, oldFS,
-		"")
+	var oldDirectory *filesystem.DirectoryInode
+	if oldFS != nil && oldFS.InodeTable != nil {
+		oldDirectory = oldFS.FileSystem.InodeTable[stat.Ino].(*filesystem.DirectoryInode)
+	}
+	err, _ = scanDirectory(&fileSystem.FileSystem.DirectoryInode, oldDirectory,
+		&fileSystem, oldFS, "/")
 	oldFS = nil
-	fileSystem.DirectoryCount = uint64(len(fileSystem.directoryInodeList))
-	fileSystem.directoryInodeList = nil
+	oldDirectory = nil
 	if err != nil {
 		return nil, err
 	}
@@ -115,21 +102,22 @@ func (fs *FileSystem) scanObjectCache() error {
 	return err
 }
 
-func scanDirectory(directory *filesystem.Directory,
-	fileSystem, oldFS *FileSystem, parentName string) error {
-	myPathName := path.Join(parentName, directory.Name)
+func scanDirectory(directory, oldDirectory *filesystem.DirectoryInode,
+	fileSystem, oldFS *FileSystem, myPathName string) (error, bool) {
 	file, err := os.Open(path.Join(fileSystem.rootDirectoryName, myPathName))
 	if err != nil {
-		return err
+		return err, false
 	}
 	names, err := file.Readdirnames(-1)
 	file.Close()
 	if err != nil {
-		return err
+		return err, false
 	}
 	sort.Strings(names)
+	entryList := make([]*filesystem.DirectoryEntry, 0, len(names))
+	var copiedDirents int
 	for _, name := range names {
-		if directory == &fileSystem.Directory && name == ".subd" {
+		if directory == &fileSystem.DirectoryInode && name == ".subd" {
 			continue
 		}
 		filename := path.Join(myPathName, name)
@@ -143,154 +131,175 @@ func scanDirectory(directory *filesystem.Directory,
 			if err == syscall.ENOENT {
 				continue
 			}
-			return err
+			return err, false
 		}
 		if stat.Dev != fileSystem.dev {
 			continue
 		}
+		myGC()
+		dirent := new(filesystem.DirectoryEntry)
+		dirent.Name = name
+		dirent.InodeNumber = stat.Ino
+		var oldDirent *filesystem.DirectoryEntry
+		if oldDirectory != nil {
+			index := len(entryList)
+			if len(oldDirectory.EntryList) > index &&
+				oldDirectory.EntryList[index].Name == name {
+				oldDirent = oldDirectory.EntryList[index]
+			}
+		}
 		if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
-			err = addDirectory(directory, fileSystem, oldFS, name, myPathName,
+			err = addDirectory(dirent, oldDirent, fileSystem, oldFS, myPathName,
 				&stat)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
-			err = addRegularFile(directory, fileSystem, oldFS, name, myPathName,
-				&stat)
+			err = addRegularFile(dirent, fileSystem, oldFS, myPathName, &stat)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFLNK {
-			err = addSymlink(directory, fileSystem, oldFS, name, myPathName,
-				&stat)
+			err = addSymlink(dirent, fileSystem, oldFS, myPathName, &stat)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFSOCK {
 			continue
 		} else {
-			err = addFile(directory, fileSystem, oldFS, name, myPathName, &stat)
+			err = addFile(dirent, fileSystem, oldFS, &stat)
 		}
 		if err != nil {
 			if err == syscall.ENOENT {
 				continue
 			}
-			return err
+			return err, false
 		}
+		if oldDirent != nil && *dirent == *oldDirent {
+			dirent = oldDirent
+			copiedDirents++
+		}
+		entryList = append(entryList, dirent)
 	}
-	// Save file and directory lists which are exactly the right length.
-	regularFileList := make([]*filesystem.RegularFile,
-		len(directory.RegularFileList))
-	copy(regularFileList, directory.RegularFileList)
-	directory.RegularFileList = regularFileList
-	symlinkList := make([]*filesystem.Symlink, len(directory.SymlinkList))
-	copy(symlinkList, directory.SymlinkList)
-	directory.SymlinkList = symlinkList
-	fileList := make([]*filesystem.File, len(directory.FileList))
-	copy(fileList, directory.FileList)
-	directory.FileList = fileList
-	directoryList := make([]*filesystem.Directory, len(directory.DirectoryList))
-	copy(directoryList, directory.DirectoryList)
-	directory.DirectoryList = directoryList
-	return nil
+	if oldDirectory != nil && len(entryList) == copiedDirents {
+		directory.EntryList = oldDirectory.EntryList
+		return nil, true
+	} else {
+		directory.EntryList = entryList
+		return nil, false
+	}
 }
 
-func addDirectory(directory *filesystem.Directory,
+func addDirectory(dirent, oldDirent *filesystem.DirectoryEntry,
 	fileSystem, oldFS *FileSystem,
-	name string, directoryPathName string, stat *syscall.Stat_t) error {
-	myPathName := path.Join(directoryPathName, name)
-	if fileSystem.directoryInodeList[stat.Ino] {
+	directoryPathName string, stat *syscall.Stat_t) error {
+	myPathName := path.Join(directoryPathName, dirent.Name)
+	if _, ok := fileSystem.InodeTable[stat.Ino]; ok {
 		return errors.New("Hardlinked directory: " + myPathName)
 	}
-	fileSystem.directoryInodeList[stat.Ino] = true
-	var dir filesystem.Directory
-	dir.Name = name
-	dir.Mode = filesystem.FileMode(stat.Mode)
-	dir.Uid = stat.Uid
-	dir.Gid = stat.Gid
-	err := scanDirectory(&dir, fileSystem, oldFS, directoryPathName)
+	inode := new(filesystem.DirectoryInode)
+	dirent.SetInode(inode)
+	fileSystem.InodeTable[stat.Ino] = inode
+	inode.Mode = filesystem.FileMode(stat.Mode)
+	inode.Uid = stat.Uid
+	inode.Gid = stat.Gid
+	var oldInode *filesystem.DirectoryInode
+	if oldDirent != nil {
+		if oi, ok := oldDirent.Inode().(*filesystem.DirectoryInode); ok {
+			oldInode = oi
+		}
+	}
+	err, copied := scanDirectory(inode, oldInode, fileSystem, oldFS, myPathName)
 	if err != nil {
 		return err
 	}
-	directory.DirectoryList = append(directory.DirectoryList, &dir)
+	if copied && filesystem.CompareDirectoriesMetadata(inode, oldInode, nil) {
+		dirent.SetInode(oldInode)
+		fileSystem.InodeTable[stat.Ino] = oldInode
+	}
+	fileSystem.DirectoryCount++
 	return nil
 }
 
-func addRegularFile(directory *filesystem.Directory,
+func addRegularFile(dirent *filesystem.DirectoryEntry,
 	fileSystem, oldFS *FileSystem,
-	name string, directoryPathName string, stat *syscall.Stat_t) error {
-	inode, isNewInode := fileSystem.getRegularInode(stat)
-	var file filesystem.RegularFile
-	file.Name = name
-	file.InodeNumber = stat.Ino
-	file.SetInode(inode)
-	if isNewInode {
-		if inode.Size > 0 {
-			err := scanRegularFile(&file, fileSystem, directoryPathName)
-			if err != nil {
-				return err
-			}
+	directoryPathName string, stat *syscall.Stat_t) error {
+	if inode, ok := fileSystem.InodeTable[stat.Ino]; ok {
+		if inode, ok := inode.(*filesystem.RegularInode); ok {
+			dirent.SetInode(inode)
+			return nil
 		}
-		if oldFS != nil && oldFS.RegularInodeTable != nil {
-			if oldInode, found := oldFS.RegularInodeTable[stat.Ino]; found {
+		return errors.New("Inode changed type")
+	}
+	inode := makeRegularInode(stat)
+	if inode.Size > 0 {
+		err := scanRegularInode(inode, fileSystem,
+			path.Join(directoryPathName, dirent.Name))
+		if err != nil {
+			return err
+		}
+	}
+	if oldFS != nil && oldFS.InodeTable != nil {
+		if oldInode, found := oldFS.InodeTable[stat.Ino]; found {
+			if oldInode, ok := oldInode.(*filesystem.RegularInode); ok {
 				if filesystem.CompareRegularInodes(inode, oldInode, nil) {
 					inode = oldInode
-					file.SetInode(inode)
-					fileSystem.RegularInodeTable[stat.Ino] = inode
 				}
 			}
 		}
 	}
-	directory.RegularFileList = append(directory.RegularFileList, &file)
+	dirent.SetInode(inode)
+	fileSystem.InodeTable[stat.Ino] = inode
 	return nil
 }
 
-func addSymlink(directory *filesystem.Directory, fileSystem, oldFS *FileSystem,
-	name string, directoryPathName string, stat *syscall.Stat_t) error {
-	inode, isNewInode := fileSystem.getSymlinkInode(stat)
-	var symlink filesystem.Symlink
-	symlink.Name = name
-	symlink.InodeNumber = stat.Ino
-	symlink.SetInode(inode)
-	if isNewInode {
-		err := scanSymlink(&symlink, fileSystem, directoryPathName)
-		if err != nil {
-			return err
+func addSymlink(dirent *filesystem.DirectoryEntry,
+	fileSystem, oldFS *FileSystem,
+	directoryPathName string, stat *syscall.Stat_t) error {
+	if inode, ok := fileSystem.InodeTable[stat.Ino]; ok {
+		if inode, ok := inode.(*filesystem.SymlinkInode); ok {
+			dirent.SetInode(inode)
+			return nil
 		}
-		if oldFS != nil && oldFS.SymlinkInodeTable != nil {
-			if oldInode, found := oldFS.SymlinkInodeTable[stat.Ino]; found {
+		return errors.New("Inode changed type")
+	}
+	inode := makeSymlinkInode(stat)
+	err := scanSymlinkInode(inode, fileSystem,
+		path.Join(directoryPathName, dirent.Name))
+	if err != nil {
+		return err
+	}
+	if oldFS != nil && oldFS.InodeTable != nil {
+		if oldInode, found := oldFS.InodeTable[stat.Ino]; found {
+			if oldInode, ok := oldInode.(*filesystem.SymlinkInode); ok {
 				if filesystem.CompareSymlinkInodes(inode, oldInode, nil) {
 					inode = oldInode
-					symlink.SetInode(inode)
-					fileSystem.SymlinkInodeTable[stat.Ino] = inode
 				}
 			}
 		}
 	}
-	directory.SymlinkList = append(directory.SymlinkList, &symlink)
+	dirent.SetInode(inode)
+	fileSystem.InodeTable[stat.Ino] = inode
 	return nil
 }
 
-func addFile(directory *filesystem.Directory, fileSystem, oldFS *FileSystem,
-	name string, directoryPathName string, stat *syscall.Stat_t) error {
-	inode, isNewInode := fileSystem.getInode(stat)
-	var file filesystem.File
-	file.Name = name
-	file.InodeNumber = stat.Ino
-	file.SetInode(inode)
-	if isNewInode {
-		err := scanFile(&file, fileSystem, directoryPathName)
-		if err != nil {
-			return err
+func addFile(dirent *filesystem.DirectoryEntry, fileSystem, oldFS *FileSystem,
+	stat *syscall.Stat_t) error {
+	if inode, ok := fileSystem.InodeTable[stat.Ino]; ok {
+		if inode, ok := inode.(*filesystem.Inode); ok {
+			dirent.SetInode(inode)
+			return nil
 		}
-		if oldFS != nil && oldFS.InodeTable != nil {
-			if oldInode, found := oldFS.InodeTable[stat.Ino]; found {
+		return errors.New("Inode changed type")
+	}
+	inode := makeInode(stat)
+	if oldFS != nil && oldFS.InodeTable != nil {
+		if oldInode, found := oldFS.InodeTable[stat.Ino]; found {
+			if oldInode, ok := oldInode.(*filesystem.Inode); ok {
 				if filesystem.CompareInodes(inode, oldInode, nil) {
 					inode = oldInode
-					file.SetInode(inode)
-					fileSystem.InodeTable[stat.Ino] = inode
 				}
 			}
 		}
 	}
-	directory.FileList = append(directory.FileList, &file)
+	dirent.SetInode(inode)
+	fileSystem.InodeTable[stat.Ino] = inode
 	return nil
 }
 
-func scanRegularFile(file *filesystem.RegularFile, fileSystem *FileSystem,
-	parentName string) error {
-	myPathName := path.Join(parentName, file.Name)
+func scanRegularInode(inode *filesystem.RegularInode, fileSystem *FileSystem,
+	myPathName string) error {
 	f, err := os.Open(path.Join(fileSystem.rootDirectoryName, myPathName))
 	if err != nil {
 		return err
@@ -299,23 +308,17 @@ func scanRegularFile(file *filesystem.RegularFile, fileSystem *FileSystem,
 	hash := sha512.New()
 	io.Copy(hash, reader)
 	f.Close()
-	copy(file.Inode().Hash[:], hash.Sum(nil))
+	copy(inode.Hash[:], hash.Sum(nil))
 	return nil
 }
 
-func scanSymlink(symlink *filesystem.Symlink, fileSystem *FileSystem,
-	parentName string) error {
-	myPathName := path.Join(parentName, symlink.Name)
+func scanSymlinkInode(inode *filesystem.SymlinkInode, fileSystem *FileSystem,
+	myPathName string) error {
 	target, err := os.Readlink(path.Join(fileSystem.rootDirectoryName,
 		myPathName))
 	if err != nil {
 		return err
 	}
-	symlink.Inode().Symlink = target
-	return nil
-}
-
-func scanFile(file *filesystem.File, fileSystem *FileSystem,
-	parentName string) error {
+	inode.Symlink = target
 	return nil
 }
