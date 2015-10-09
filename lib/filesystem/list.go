@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"runtime"
 	"syscall"
 	"time"
 )
@@ -11,17 +12,37 @@ import (
 var timeFormat string = "02 Jan 2006 15:04:05 MST"
 
 func (fs *FileSystem) list(w io.Writer) error {
-	return fs.DirectoryInode.list(w, "/")
+	defer runtime.GC()
+	numLinksTable := buildNumLinksTable(fs)
+	return fs.DirectoryInode.list(w, "/", numLinksTable, 1)
 }
 
-func (inode *DirectoryInode) list(w io.Writer, name string) error {
-	_, err := fmt.Fprintf(w, "%v %5d %5d %35s %s\n",
-		inode.Mode, inode.Uid, inode.Gid, "", name)
+func buildNumLinksTable(fs *FileSystem) NumLinksTable {
+	numLinksTable := make(NumLinksTable)
+	fs.DirectoryInode.scanDirectory(fs, numLinksTable)
+	return numLinksTable
+}
+
+func (inode *DirectoryInode) scanDirectory(fs *FileSystem,
+	numLinksTable NumLinksTable) {
+	for _, dirent := range inode.EntryList {
+		numLinksTable[dirent.InodeNumber]++
+		if inode, ok := dirent.Inode().(*DirectoryInode); ok {
+			inode.scanDirectory(fs, numLinksTable)
+		}
+	}
+}
+
+func (inode *DirectoryInode) list(w io.Writer, name string,
+	numLinksTable NumLinksTable, numLinks int) error {
+	_, err := fmt.Fprintf(w, "%v %3d %5d %5d %35s %s\n",
+		inode.Mode, numLinks, inode.Uid, inode.Gid, "", name)
 	if err != nil {
 		return err
 	}
 	for _, dirent := range inode.EntryList {
-		err = dirent.inode.List(w, path.Join(name, dirent.Name))
+		err = dirent.inode.List(w, path.Join(name, dirent.Name), numLinksTable,
+			numLinksTable[dirent.InodeNumber])
 		if err != nil {
 			return err
 		}
@@ -29,17 +50,18 @@ func (inode *DirectoryInode) list(w io.Writer, name string) error {
 	return nil
 }
 
-func (inode *RegularInode) list(w io.Writer, name string) error {
+func (inode *RegularInode) list(w io.Writer, name string,
+	numLinksTable NumLinksTable, numLinks int) error {
 	var err error
 	t := time.Unix(inode.MtimeSeconds, int64(inode.MtimeNanoSeconds))
 	if inode.Size > 0 {
-		_, err = fmt.Fprintf(w, "%v %5d %5d %10d %s %s %x\n",
-			inode.Mode, inode.Uid, inode.Gid, inode.Size, t.Format(timeFormat),
-			name, inode.Hash)
+		_, err = fmt.Fprintf(w, "%v %3d %5d %5d %10d %s %s %x\n",
+			inode.Mode, numLinks, inode.Uid, inode.Gid, inode.Size,
+			t.Format(timeFormat), name, inode.Hash)
 	} else {
-		_, err = fmt.Fprintf(w, "%v %5d %5d %10d %s %s\n",
-			inode.Mode, inode.Uid, inode.Gid, inode.Size, t.Format(timeFormat),
-			name)
+		_, err = fmt.Fprintf(w, "%v %3d %5d %5d %10d %s %s\n",
+			inode.Mode, numLinks, inode.Uid, inode.Gid, inode.Size,
+			t.Format(timeFormat), name)
 	}
 	if err != nil {
 		return err
@@ -47,16 +69,18 @@ func (inode *RegularInode) list(w io.Writer, name string) error {
 	return nil
 }
 
-func (inode *SymlinkInode) list(w io.Writer, name string) error {
-	_, err := fmt.Fprintf(w, "lrwxrwxrwx %5d %5d %35s %s -> %s\n",
-		inode.Uid, inode.Gid, "", name, inode.Symlink)
+func (inode *SymlinkInode) list(w io.Writer, name string,
+	numLinksTable NumLinksTable, numLinks int) error {
+	_, err := fmt.Fprintf(w, "lrwxrwxrwx %3d %5d %5d %35s %s -> %s\n",
+		numLinks, inode.Uid, inode.Gid, "", name, inode.Symlink)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (inode *Inode) list(w io.Writer, name string) error {
+func (inode *Inode) list(w io.Writer, name string,
+	numLinksTable NumLinksTable, numLinks int) error {
 	var data string
 	data = ""
 	t := time.Unix(inode.MtimeSeconds, int64(inode.MtimeNanoSeconds))
@@ -64,8 +88,9 @@ func (inode *Inode) list(w io.Writer, name string) error {
 		inode.Mode&syscall.S_IFMT == syscall.S_IFCHR {
 		data = fmt.Sprintf("%#x", inode.Rdev)
 	}
-	_, err := fmt.Fprintf(w, "%v %5d %5d %10s %s %s\n",
-		inode.Mode, inode.Uid, inode.Gid, data, t.Format(timeFormat), name)
+	_, err := fmt.Fprintf(w, "%v %3d %5d %5d %10s %s %s\n",
+		inode.Mode, numLinks, inode.Uid, inode.Gid, data, t.Format(timeFormat),
+		name)
 	if err != nil {
 		return err
 	}
