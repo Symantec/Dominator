@@ -60,6 +60,7 @@ type FileSystem struct {
 	configuration     *Configuration
 	rootDirectoryName string
 	dev               uint64
+	inodeNumber       uint64
 	filesystem.FileSystem
 	cacheDirectoryName string
 	objectcache.ObjectCache

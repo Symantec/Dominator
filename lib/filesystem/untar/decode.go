@@ -53,6 +53,7 @@ func decode(tarReader *tar.Reader, dataHandler DataHandler,
 			return nil, err
 		}
 	}
+	delete(fileSystem.InodeTable, 0)
 	fileSystem.DirectoryCount = uint64(len(decoderData.directoryTable))
 	fileSystem.ComputeTotalDataBytes()
 	sortDirectory(&fileSystem.DirectoryInode)

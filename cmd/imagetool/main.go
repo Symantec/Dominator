@@ -30,6 +30,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  delete name")
 	fmt.Fprintln(os.Stderr, "  diffi  tool image image")
 	fmt.Fprintln(os.Stderr, "  diffs  tool image sub")
+	fmt.Fprintln(os.Stderr, "  get    name directory")
 	fmt.Fprintln(os.Stderr, "  list")
 	fmt.Fprintln(os.Stderr, "  show   name")
 }
@@ -48,6 +49,7 @@ var subcommands = []subcommand{
 	{"delete", 1, deleteImageSubcommand},
 	{"diffi", 3, diffImageVImageSubcommand},
 	{"diffs", 3, diffImageVSubSubcommand},
+	{"get", 2, getImageSubcommand},
 	{"list", 0, listImagesSubcommand},
 	{"show", 1, showImageSubcommand},
 }

@@ -100,7 +100,7 @@ func enoughBytesForBenchmark(objectServer *objectclient.ObjectClient,
 func readOne(hash hash.Hash, reader io.Reader) error {
 	filename := path.Join(objectsDir, objectcache.HashToFilename(hash))
 	dirname := path.Dir(filename)
-	err := os.MkdirAll(dirname, syscall.S_IRUSR|syscall.S_IWUSR)
+	err := os.MkdirAll(dirname, syscall.S_IRWXU)
 	if err != nil {
 		return err
 	}
