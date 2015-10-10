@@ -65,10 +65,10 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	}
 	fileSystem.InodeTable = make(filesystem.InodeTable)
 	fileSystem.dev = stat.Dev
+	fileSystem.inodeNumber = stat.Ino
 	fileSystem.Mode = filesystem.FileMode(stat.Mode)
 	fileSystem.Uid = stat.Uid
 	fileSystem.Gid = stat.Gid
-	fileSystem.InodeTable[stat.Ino] = &fileSystem.DirectoryInode
 	fileSystem.DirectoryCount++
 	var tmpInode filesystem.RegularInode
 	if sha512.New().Size() != len(tmpInode.Hash) {
@@ -76,7 +76,7 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	}
 	var oldDirectory *filesystem.DirectoryInode
 	if oldFS != nil && oldFS.InodeTable != nil {
-		oldDirectory = oldFS.FileSystem.InodeTable[stat.Ino].(*filesystem.DirectoryInode)
+		oldDirectory = &oldFS.DirectoryInode
 	}
 	err, _ = scanDirectory(&fileSystem.FileSystem.DirectoryInode, oldDirectory,
 		&fileSystem, oldFS, "/")
@@ -185,6 +185,9 @@ func addDirectory(dirent, oldDirent *filesystem.DirectoryEntry,
 	fileSystem, oldFS *FileSystem,
 	directoryPathName string, stat *syscall.Stat_t) error {
 	myPathName := path.Join(directoryPathName, dirent.Name)
+	if stat.Ino == fileSystem.inodeNumber {
+		return errors.New("Recursive directory: " + myPathName)
+	}
 	if _, ok := fileSystem.InodeTable[stat.Ino]; ok {
 		return errors.New("Hardlinked directory: " + myPathName)
 	}
