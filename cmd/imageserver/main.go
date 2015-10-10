@@ -30,19 +30,19 @@ var (
 func main() {
 	flag.Parse()
 	if os.Geteuid() == 0 {
-		fmt.Println("Do not run the Image Server as root")
+		fmt.Fprintln(os.Stderr, "Do not run the Image Server as root")
 		os.Exit(1)
 	}
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	objSrv, err := filesystem.NewObjectServer(*objectDir, logger)
 	if err != nil {
-		fmt.Printf("Cannot create ObjectServer\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Cannot create ObjectServer\t%s\n", err)
 		os.Exit(1)
 	}
 	imdb, err := scanner.LoadImageDataBase(*imageDir, objSrv)
 	if err != nil {
-		fmt.Printf("Cannot load image database\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Cannot load image database\t%s\n", err)
 		os.Exit(1)
 	}
 	imageserverRpcd.Setup(imdb, logger)
@@ -53,7 +53,7 @@ func main() {
 	httpd.AddHtmlWriter(circularBuffer)
 	err = httpd.StartServer(*portNum, imdb, false)
 	if err != nil {
-		fmt.Printf("Unable to create http server\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
 		os.Exit(1)
 	}
 }
