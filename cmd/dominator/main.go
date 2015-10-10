@@ -41,16 +41,16 @@ func showMdb(mdb *mdb.Mdb) {
 func main() {
 	flag.Parse()
 	if os.Geteuid() == 0 {
-		fmt.Println("Do not run the Dominator as root")
+		fmt.Fprintln(os.Stderr, "Do not run the Dominator as root")
 		os.Exit(1)
 	}
 	fi, err := os.Lstat(*stateDir)
 	if err != nil {
-		fmt.Printf("Cannot stat: %s\t%s\n", *stateDir, err)
+		fmt.Fprintf(os.Stderr, "Cannot stat: %s\t%s\n", *stateDir, err)
 		os.Exit(1)
 	}
 	if !fi.IsDir() {
-		fmt.Printf("%s is not a directory\n", *stateDir)
+		fmt.Fprintf(os.Stderr, "%s is not a directory\n", *stateDir)
 		os.Exit(1)
 	}
 	interval := time.Duration(*minInterval) * time.Second
@@ -62,7 +62,7 @@ func main() {
 	herd.AddHtmlWriter(circularBuffer)
 	err = herd.StartServer(*portNum, true)
 	if err != nil {
-		fmt.Printf("Unable to create http server\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
 		os.Exit(1)
 	}
 	nextCycleStopTime := time.Now().Add(interval)
