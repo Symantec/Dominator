@@ -12,7 +12,7 @@ func listImagesSubcommand(imageClient *rpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
 	err := listImages(imageClient)
 	if err != nil {
-		fmt.Printf("Error listing images\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error listing images\t%s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)

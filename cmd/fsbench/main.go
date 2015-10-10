@@ -14,7 +14,7 @@ func main() {
 	}
 	bytesPerSecond, blocksPerSecond, err := fsbench.GetReadSpeed(pathname)
 	if err != nil {
-		fmt.Printf("Error! %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error! %s\n", err)
 		return
 	}
 	fmt.Printf("speed=%d MiB/s ", bytesPerSecond>>20)

@@ -12,7 +12,7 @@ import (
 func setConfigSubcommand(client *rpc.Client, args []string) {
 	err := setConfig(client)
 	if err != nil {
-		fmt.Printf("Error setting config\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error setting config\t%s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)

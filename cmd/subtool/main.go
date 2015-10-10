@@ -65,7 +65,7 @@ func main() {
 	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
 	client, err := rpc.DialHTTP("tcp", clientName)
 	if err != nil {
-		fmt.Printf("Error dialing\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
 		os.Exit(1)
 	}
 	for _, subcommand := range subcommands {

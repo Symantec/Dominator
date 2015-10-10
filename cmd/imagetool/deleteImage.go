@@ -13,7 +13,7 @@ func deleteImageSubcommand(imageClient *rpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
 	err := deleteImage(imageClient, args[0])
 	if err != nil {
-		fmt.Printf("Error deleting image\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error deleting image\t%s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)

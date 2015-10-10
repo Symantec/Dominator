@@ -19,7 +19,7 @@ func pollSubcommand(client *rpc.Client, args []string) {
 		if client == nil {
 			client, err = rpc.DialHTTP("tcp", clientName)
 			if err != nil {
-				fmt.Printf("Error dialing\t%s\n", err)
+				fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
 				os.Exit(1)
 			}
 		}
@@ -29,7 +29,7 @@ func pollSubcommand(client *rpc.Client, args []string) {
 		err = client.Call("Subd.Poll", request, &reply)
 		fmt.Printf("Poll duration: %s\n", time.Since(pollStartTime))
 		if err != nil {
-			fmt.Printf("Error calling\t%s\n", err)
+			fmt.Fprintf(os.Stderr, "Error calling\t%s\n", err)
 			os.Exit(1)
 		}
 		if *newConnection {
@@ -49,7 +49,8 @@ func pollSubcommand(client *rpc.Client, args []string) {
 			if *file != "" {
 				f, err := os.Create(*file)
 				if err != nil {
-					fmt.Printf("Error creating: %s\t%s\n", *file, err)
+					fmt.Fprintf(os.Stderr, "Error creating: %s\t%s\n",
+						*file, err)
 					os.Exit(1)
 				}
 				encoder := gob.NewEncoder(f)

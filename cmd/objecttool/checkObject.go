@@ -13,12 +13,12 @@ func checkObjectSubcommand(objSrv objectserver.ObjectServer, args []string) {
 	var err error
 	hashes[0], err = objectcache.FilenameToHash(args[0])
 	if err != nil {
-		fmt.Printf("Error parsing hash\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error parsing hash\t%s\n", err)
 		os.Exit(2)
 	}
 	objectSizes, err := objSrv.CheckObjects(hashes)
 	if err != nil {
-		fmt.Printf("Error checking object\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking object\t%s\n", err)
 		os.Exit(2)
 	}
 	if objectSizes[0] > 0 {

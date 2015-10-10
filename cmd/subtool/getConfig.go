@@ -10,7 +10,7 @@ import (
 func getConfigSubcommand(client *rpc.Client, args []string) {
 	err := getConfig(client)
 	if err != nil {
-		fmt.Printf("Error getting config\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error getting config\t%s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)

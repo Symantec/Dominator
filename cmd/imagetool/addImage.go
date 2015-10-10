@@ -26,7 +26,7 @@ func addImageSubcommand(imageClient *rpc.Client,
 	err := addImage(imageClient, objectClient, args[0], args[1], args[2],
 		args[3])
 	if err != nil {
-		fmt.Printf("Error adding image: \"%s\"\t%s\n", args[0], err)
+		fmt.Fprintf(os.Stderr, "Error adding image: \"%s\"\t%s\n", args[0], err)
 		os.Exit(1)
 	}
 	os.Exit(0)

@@ -19,7 +19,7 @@ func main() {
 	}
 	bytesPerSecond, blocksPerSecond, err := fsbench.GetReadSpeed(pathname)
 	if err != nil {
-		fmt.Printf("Error! %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error! %s\n", err)
 		return
 	}
 	ctx := fsrateio.NewReaderContext(bytesPerSecond, blocksPerSecond, 0)
@@ -27,7 +27,7 @@ func main() {
 	var file *os.File
 	file, err = os.Open(pathname)
 	if err != nil {
-		fmt.Printf("Error! %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error! %s\n", err)
 		return
 	}
 	rd := bufio.NewReader(ctx.NewReader(file))
@@ -41,7 +41,7 @@ func main() {
 			break
 		}
 		if err != nil {
-			fmt.Printf("Error! %s\n", err)
+			fmt.Fprintf(os.Stderr, "Error! %s\n", err)
 			return
 		}
 		tread += n

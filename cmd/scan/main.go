@@ -40,13 +40,13 @@ func main() {
 	var err error
 	bytesPerSecond, blocksPerSecond, err := fsbench.GetReadSpeed(*rootDir)
 	if err != nil {
-		fmt.Printf("Error! %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error! %s\n", err)
 		return
 	}
 	var configuration scanner.Configuration
 	configuration.ScanFilter, err = filter.NewFilter(nil)
 	if err != nil {
-		fmt.Printf("Unable to create empty filter\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to create empty filter\t%s\n", err)
 		os.Exit(1)
 	}
 	configuration.FsScanContext = fsrateio.NewReaderContext(bytesPerSecond,
@@ -66,7 +66,7 @@ func main() {
 			fmt.Println()
 		}
 		if err != nil {
-			fmt.Printf("Error! %s\n", err)
+			fmt.Fprintf(os.Stderr, "Error! %s\n", err)
 			return
 		}
 		fmt.Print(fs)
@@ -85,7 +85,7 @@ func main() {
 		if *debugFile != "" {
 			file, err := os.Create(*debugFile)
 			if err != nil {
-				fmt.Printf("Error! %s\n", err)
+				fmt.Fprintf(os.Stderr, "Error! %s\n", err)
 				return
 			}
 			w := bufio.NewWriter(file)
@@ -96,7 +96,8 @@ func main() {
 		if *gobFile != "" {
 			file, err := os.Create(*gobFile)
 			if err != nil {
-				fmt.Printf("Error creating: %s\t%s\n", *gobFile, err)
+				fmt.Fprintf(os.Stderr, "Error creating: %s\t%s\n",
+					*gobFile, err)
 				os.Exit(1)
 			}
 			encoder := gob.NewEncoder(file)

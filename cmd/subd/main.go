@@ -45,16 +45,19 @@ var (
 func sanityCheck() bool {
 	r_devnum, err := fsbench.GetDevnumForFile(*rootDir)
 	if err != nil {
-		fmt.Printf("Unable to get device number for: %s\t%s\n", *rootDir, err)
+		fmt.Fprintf(os.Stderr, "Unable to get device number for: %s\t%s\n",
+			*rootDir, err)
 		return false
 	}
 	s_devnum, err := fsbench.GetDevnumForFile(*subdDir)
 	if err != nil {
-		fmt.Printf("Unable to get device number for: %s\t%s\n", *subdDir, err)
+		fmt.Fprintf(os.Stderr, "Unable to get device number for: %s\t%s\n",
+			*subdDir, err)
 		return false
 	}
 	if r_devnum != s_devnum {
-		fmt.Printf("rootDir and subdDir must be on the same file-system\n")
+		fmt.Fprintf(os.Stderr,
+			"rootDir and subdDir must be on the same file-system\n")
 		return false
 	}
 	return true
@@ -63,7 +66,8 @@ func sanityCheck() bool {
 func createDirectory(dirname string) bool {
 	err := os.MkdirAll(dirname, 0750)
 	if err != nil {
-		fmt.Printf("Unable to create directory: %s\t%s\n", dirname, err)
+		fmt.Fprintf(os.Stderr, "Unable to create directory: %s\t%s\n",
+			dirname, err)
 		return false
 	}
 	return true
@@ -73,7 +77,8 @@ func mountTmpfs(dirname string) bool {
 	var statfs syscall.Statfs_t
 	err := syscall.Statfs(dirname, &statfs)
 	if err != nil {
-		fmt.Printf("Unable to create Statfs: %s\t%s\n", dirname, err)
+		fmt.Fprintf(os.Stderr, "Unable to create Statfs: %s\t%s\n",
+			dirname, err)
 		return false
 	}
 	if statfs.Type != 0x01021994 {
@@ -82,7 +87,8 @@ func mountTmpfs(dirname string) bool {
 		if err == nil {
 			fmt.Printf("Mounted tmpfs on: %s\n", dirname)
 		} else {
-			fmt.Printf("Unable to mount tmpfs on: %s\t%s\n", dirname, err)
+			fmt.Fprintf(os.Stderr, "Unable to mount tmpfs on: %s\t%s\n",
+				dirname, err)
 			return false
 		}
 	}
@@ -99,25 +105,27 @@ func unshareAndBind(workingRootDir string) bool {
 		runtime.LockOSThread()
 		err := syscall.Unshare(syscall.CLONE_NEWNS)
 		if err != nil {
-			fmt.Printf("Unable to unshare mount namesace\t%s\n", err)
+			fmt.Fprintf(os.Stderr, "Unable to unshare mount namesace\t%s\n",
+				err)
 			return false
 		}
 		args := append(os.Args, "-unshare=false")
 		err = syscall.Exec(args[0], args, os.Environ())
 		if err != nil {
-			fmt.Printf("Unable to Exec:%s\t%s\n", args[0], err)
+			fmt.Fprintf(os.Stderr, "Unable to Exec:%s\t%s\n", args[0], err)
 			return false
 		}
 	}
 	err := syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, "")
 	if err != nil {
-		fmt.Printf("Unable to set mount sharing to private\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to set mount sharing to private\t%s\n",
+			err)
 		return false
 	}
 	syscall.Unmount(workingRootDir, 0)
 	err = syscall.Mount(*rootDir, workingRootDir, "", syscall.MS_BIND, "")
 	if err != nil {
-		fmt.Printf("Unable to bind mount %s to %s\t%s\n",
+		fmt.Fprintf(os.Stderr, "Unable to bind mount %s to %s\t%s\n",
 			*rootDir, workingRootDir, err)
 		return false
 	}
@@ -130,7 +138,7 @@ func getCachedFsSpeed(workingRootDir string, cacheDirname string) (bytesPerSecon
 	blocksPerSecond = 0
 	devnum, err := fsbench.GetDevnumForFile(workingRootDir)
 	if err != nil {
-		fmt.Printf("Unable to get device number for: %s\t%s\n",
+		fmt.Fprintf(os.Stderr, "Unable to get device number for: %s\t%s\n",
 			workingRootDir, err)
 		return 0, 0, false, false
 	}
@@ -149,12 +157,13 @@ func getCachedFsSpeed(workingRootDir string, cacheDirname string) (bytesPerSecon
 	}
 	bytesPerSecond, blocksPerSecond, err = fsbench.GetReadSpeed(workingRootDir)
 	if err != nil {
-		fmt.Printf("Unable to measure read speed\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to measure read speed\t%s\n", err)
 		return 0, 0, true, false
 	}
 	file, err = os.Create(cacheFilename)
 	if err != nil {
-		fmt.Printf("Unable to open: %s for write\t%s\n", cacheFilename, err)
+		fmt.Fprintf(os.Stderr, "Unable to open: %s for write\t%s\n",
+			cacheFilename, err)
 		return 0, 0, true, false
 	}
 	fmt.Fprintf(file, "%d %d\n", bytesPerSecond, blocksPerSecond)
@@ -198,7 +207,7 @@ func gracefulCleanup() {
 func writePidfile() {
 	file, err := os.Create(*pidfile)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	defer file.Close()
@@ -242,7 +251,8 @@ func main() {
 	var err error
 	configuration.ScanFilter, err = filter.NewFilter(constants.ScanExcludeList)
 	if err != nil {
-		fmt.Printf("Unable to set default scan exclusions\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to set default scan exclusions\t%s\n",
+			err)
 		os.Exit(1)
 	}
 	configuration.FsScanContext = fsrateio.NewReaderContext(bytesPerSecond,
@@ -270,7 +280,7 @@ func main() {
 		&DumpableFileSystemHistory{&fsh})
 	err = httpd.StartServer(*portNum)
 	if err != nil {
-		fmt.Printf("Unable to create http server\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
 		os.Exit(1)
 	}
 	fsh.Update(nil)
