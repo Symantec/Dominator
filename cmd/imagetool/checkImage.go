@@ -12,7 +12,7 @@ func checkImageSubcommand(imageClient *rpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
 	imageExists, err := checkImage(imageClient, args[0])
 	if err != nil {
-		fmt.Printf("Error checking image\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking image\t%s\n", err)
 		os.Exit(1)
 	}
 	if imageExists {

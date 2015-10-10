@@ -19,7 +19,7 @@ func diffImageVImageSubcommand(imageClient *rpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
 	err := diffImageVImage(imageClient, args[0], args[1], args[2])
 	if err != nil {
-		fmt.Printf("Error diffing images\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error diffing images\t%s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
@@ -41,7 +41,7 @@ func diffImageVSubSubcommand(imageClient *rpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
 	err := diffImageVSub(imageClient, args[0], args[1], args[2])
 	if err != nil {
-		fmt.Printf("Error diffing images\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error diffing images\t%s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
@@ -70,6 +70,7 @@ func getImage(client *rpc.Client, name string) (*filesystem.FileSystem, error) {
 	if reply.Image == nil {
 		return nil, errors.New(name + ": not found")
 	}
+	reply.Image.FileSystem.RebuildInodePointers()
 	return reply.Image.FileSystem, nil
 }
 
@@ -88,12 +89,11 @@ func pollImage(name string) (*filesystem.FileSystem, error) {
 	if reply.FileSystem == nil {
 		return nil, errors.New("no poll data")
 	}
+	reply.FileSystem.FileSystem.RebuildInodePointers()
 	return &reply.FileSystem.FileSystem, nil
 }
 
 func diffImages(tool string, lfs, rfs *filesystem.FileSystem) error {
-	lfs.RebuildInodePointers()
-	rfs.RebuildInodePointers()
 	lname, err := writeImage(lfs)
 	defer os.Remove(lname)
 	if err != nil {

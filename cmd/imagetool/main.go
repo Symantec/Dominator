@@ -28,9 +28,10 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  add    name imagefile filterfile triggerfile")
 	fmt.Fprintln(os.Stderr, "  check  name")
 	fmt.Fprintln(os.Stderr, "  delete name")
-	fmt.Fprintln(os.Stderr, "  diffi   tool image image")
-	fmt.Fprintln(os.Stderr, "  diffs   tool image sub")
+	fmt.Fprintln(os.Stderr, "  diffi  tool image image")
+	fmt.Fprintln(os.Stderr, "  diffs  tool image sub")
 	fmt.Fprintln(os.Stderr, "  list")
+	fmt.Fprintln(os.Stderr, "  show   name")
 }
 
 type commandFunc func(*rpc.Client, *objectclient.ObjectClient, []string)
@@ -48,6 +49,7 @@ var subcommands = []subcommand{
 	{"diffi", 3, diffImageVImageSubcommand},
 	{"diffs", 3, diffImageVSubSubcommand},
 	{"list", 0, listImagesSubcommand},
+	{"show", 1, showImageSubcommand},
 }
 
 func main() {
@@ -61,7 +63,7 @@ func main() {
 		*imageServerHostname, *imageServerPortNum)
 	imageClient, err := rpc.DialHTTP("tcp", clientName)
 	if err != nil {
-		fmt.Printf("Error dialing\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
 		os.Exit(1)
 	}
 	objectClient := objectclient.NewObjectClient(clientName)
