@@ -13,12 +13,12 @@ import (
 func getObjectSubcommand(objSrv objectserver.ObjectServer, args []string) {
 	hash, err := objectcache.FilenameToHash(args[0])
 	if err != nil {
-		fmt.Printf("Error parsing hash\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error parsing hash\t%s\n", err)
 		os.Exit(2)
 	}
 	err = getObject(objSrv, hash, args[1])
 	if err != nil {
-		fmt.Printf("Error getting object\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error getting object\t%s\n", err)
 		os.Exit(2)
 	}
 	os.Exit(0)
