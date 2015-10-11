@@ -63,8 +63,7 @@ func getImage(client *rpc.Client, name string) (*filesystem.FileSystem, error) {
 	var request imageserver.GetImageRequest
 	request.ImageName = name
 	var reply imageserver.GetImageResponse
-	err := client.Call("ImageServer.GetImage", request, &reply)
-	if err != nil {
+	if err := client.Call("ImageServer.GetImage", request, &reply); err != nil {
 		return nil, err
 	}
 	if reply.Image == nil {
@@ -82,8 +81,7 @@ func pollImage(name string) (*filesystem.FileSystem, error) {
 	}
 	var request sub.PollRequest
 	var reply sub.PollResponse
-	err = client.Call("Subd.Poll", request, &reply)
-	if err != nil {
+	if err = client.Call("Subd.Poll", request, &reply); err != nil {
 		return nil, err
 	}
 	if reply.FileSystem == nil {

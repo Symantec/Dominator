@@ -100,8 +100,7 @@ func enoughBytesForBenchmark(objectServer *objectclient.ObjectClient,
 func readOne(hash hash.Hash, reader io.Reader) error {
 	filename := path.Join(objectsDir, objectcache.HashToFilename(hash))
 	dirname := path.Dir(filename)
-	err := os.MkdirAll(dirname, syscall.S_IRWXU)
-	if err != nil {
+	if err := os.MkdirAll(dirname, syscall.S_IRWXU); err != nil {
 		return err
 	}
 	file, err := os.Create(filename)
@@ -111,8 +110,7 @@ func readOne(hash hash.Hash, reader io.Reader) error {
 	defer file.Close()
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
-	_, err = io.Copy(writer, reader)
-	if err != nil {
+	if _, err = io.Copy(writer, reader); err != nil {
 		return errors.New(fmt.Sprintf("error copying: %s", err.Error()))
 	}
 	return nil

@@ -64,8 +64,7 @@ func sanityCheck() bool {
 }
 
 func createDirectory(dirname string) bool {
-	err := os.MkdirAll(dirname, 0750)
-	if err != nil {
+	if err := os.MkdirAll(dirname, 0750); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create directory: %s\t%s\n",
 			dirname, err)
 		return false
@@ -75,8 +74,7 @@ func createDirectory(dirname string) bool {
 
 func mountTmpfs(dirname string) bool {
 	var statfs syscall.Statfs_t
-	err := syscall.Statfs(dirname, &statfs)
-	if err != nil {
+	if err := syscall.Statfs(dirname, &statfs); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create Statfs: %s\t%s\n",
 			dirname, err)
 		return false
@@ -103,15 +101,13 @@ func unshareAndBind(workingRootDir string) bool {
 		// randomly. Thus, the namespace can be suddenly switched for running
 		// code. This is an aspect of Go that was not well thought out.
 		runtime.LockOSThread()
-		err := syscall.Unshare(syscall.CLONE_NEWNS)
-		if err != nil {
+		if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to unshare mount namesace\t%s\n",
 				err)
 			return false
 		}
 		args := append(os.Args, "-unshare=false")
-		err = syscall.Exec(args[0], args, os.Environ())
-		if err != nil {
+		if err = syscall.Exec(args[0], args, os.Environ()); err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to Exec:%s\t%s\n", args[0], err)
 			return false
 		}
@@ -278,8 +274,7 @@ func main() {
 	httpd.AddHtmlWriter(circularBuffer)
 	html.RegisterHtmlWriterForPattern("/dumpFileSystem", "Scanned File System",
 		&DumpableFileSystemHistory{&fsh})
-	err = httpd.StartServer(*portNum)
-	if err != nil {
+	if err = httpd.StartServer(*portNum); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
 		os.Exit(1)
 	}

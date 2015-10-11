@@ -9,14 +9,12 @@ import (
 func (objQ *ObjectAdderQueue) add(data []byte) (hash.Hash, error) {
 	var hash hash.Hash
 	if uint64(len(data))+objQ.numBytes > objQ.maxBytes {
-		err := objQ.Flush()
-		if err != nil {
+		if err := objQ.Flush(); err != nil {
 			return hash, err
 		}
 	}
 	hasher := sha512.New()
-	_, err := hasher.Write(data)
-	if err != nil {
+	if _, err := hasher.Write(data); err != nil {
 		return hash, err
 	}
 	copy(hash[:], hasher.Sum(nil))

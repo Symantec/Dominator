@@ -44,8 +44,7 @@ func scanObjectCache(cacheDirectoryName string, subpath string,
 		return nil, err
 	}
 	for _, name := range names {
-		err = cleanPath(cacheDirectoryName, name)
-		if err != nil {
+		if err = cleanPath(cacheDirectoryName, name); err != nil {
 			return nil, err
 		}
 	}

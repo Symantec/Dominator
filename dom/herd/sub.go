@@ -50,9 +50,8 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
 	sub.lastPollStartTime = time.Now()
-	err := connection.Call("Subd.Poll", request, &reply)
 	logger := sub.herd.logger
-	if err != nil {
+	if err := connection.Call("Subd.Poll", request, &reply); err != nil {
 		sub.status = statusFailedToPoll
 		logger.Printf("Error calling %s.Poll()\t%s\n", sub.hostname, err)
 		return
@@ -146,8 +145,7 @@ func (sub *Sub) fetchMissingObjects(connection *rpc.Client, imageName string) (
 	for hash, _ := range missingObjects {
 		request.Hashes = append(request.Hashes, hash)
 	}
-	err := connection.Call("Subd.Fetch", request, &reply)
-	if err != nil {
+	if err := connection.Call("Subd.Fetch", request, &reply); err != nil {
 		logger.Printf("Error calling %s.Fetch()\t%s\n", sub.hostname, err)
 		return false, statusFailedToFetch
 	}
@@ -162,8 +160,7 @@ func (sub *Sub) sendUpdate(connection *rpc.Client) (bool, uint) {
 	var request subproto.UpdateRequest
 	var reply subproto.UpdateResponse
 	sub.buildUpdateRequest(&request)
-	err := connection.Call("Subd.Update", request, &reply)
-	if err != nil {
+	if err := connection.Call("Subd.Update", request, &reply); err != nil {
 		logger.Printf("Error calling %s.Update()\t%s\n", sub.hostname, err)
 		return false, statusFailedToUpdate
 	}
