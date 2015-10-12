@@ -77,7 +77,7 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	if oldFS != nil && oldFS.InodeTable != nil {
 		oldDirectory = &oldFS.DirectoryInode
 	}
-	err, _ = scanDirectory(&fileSystem.FileSystem.DirectoryInode, oldDirectory,
+	err, _ := scanDirectory(&fileSystem.FileSystem.DirectoryInode, oldDirectory,
 		&fileSystem, oldFS, "/")
 	oldFS = nil
 	oldDirectory = nil

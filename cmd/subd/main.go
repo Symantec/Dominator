@@ -107,7 +107,7 @@ func unshareAndBind(workingRootDir string) bool {
 			return false
 		}
 		args := append(os.Args, "-unshare=false")
-		if err = syscall.Exec(args[0], args, os.Environ()); err != nil {
+		if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to Exec:%s\t%s\n", args[0], err)
 			return false
 		}
