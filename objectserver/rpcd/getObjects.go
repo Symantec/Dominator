@@ -39,8 +39,7 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	decoder := gob.NewDecoder(bufrw)
 	encoder := gob.NewEncoder(bufrw)
-	err = decoder.Decode(&request)
-	if err != nil {
+	if err = decoder.Decode(&request); err != nil {
 		response.ResponseString = err.Error()
 		encoder.Encode(response)
 		return

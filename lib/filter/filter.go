@@ -7,8 +7,7 @@ import (
 func newFilter(filterLines []string) (*Filter, error) {
 	var filter Filter
 	filter.FilterLines = filterLines
-	err := filter.compile()
-	if err != nil {
+	if err := filter.compile(); err != nil {
 		return nil, err
 	}
 	return &filter, nil

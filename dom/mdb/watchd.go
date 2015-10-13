@@ -20,8 +20,7 @@ func watchDaemon(mdbFileName string, mdbChannel chan *Mdb, logger *log.Logger) {
 	var lastMdb *Mdb
 	for ; ; time.Sleep(time.Second) {
 		var stat syscall.Stat_t
-		err := syscall.Stat(mdbFileName, &stat)
-		if err != nil {
+		if err := syscall.Stat(mdbFileName, &stat); err != nil {
 			logger.Printf("Error stating file: %s\t%s\n", mdbFileName, err)
 			continue
 		}
@@ -33,8 +32,7 @@ func watchDaemon(mdbFileName string, mdbChannel chan *Mdb, logger *log.Logger) {
 			}
 			decoder := json.NewDecoder(file)
 			var mdb Mdb
-			err = decoder.Decode(&mdb.Machines)
-			if err != nil {
+			if err = decoder.Decode(&mdb.Machines); err != nil {
 				logger.Printf("Error decoding\t%s\n", err)
 				continue
 			}

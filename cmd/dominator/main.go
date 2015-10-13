@@ -60,8 +60,7 @@ func main() {
 	herd := herd.NewHerd(fmt.Sprintf("%s:%d", *imageServerHostname,
 		*imageServerPortNum), logger)
 	herd.AddHtmlWriter(circularBuffer)
-	err = herd.StartServer(*portNum, true)
-	if err != nil {
+	if err = herd.StartServer(*portNum, true); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
 		os.Exit(1)
 	}

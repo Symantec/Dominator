@@ -59,8 +59,7 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	fileSystem.rootDirectoryName = rootDirectoryName
 	fileSystem.cacheDirectoryName = cacheDirectoryName
 	var stat syscall.Stat_t
-	err := syscall.Lstat(rootDirectoryName, &stat)
-	if err != nil {
+	if err := syscall.Lstat(rootDirectoryName, &stat); err != nil {
 		return nil, err
 	}
 	fileSystem.InodeTable = make(filesystem.InodeTable)
@@ -78,15 +77,14 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	if oldFS != nil && oldFS.InodeTable != nil {
 		oldDirectory = &oldFS.DirectoryInode
 	}
-	err, _ = scanDirectory(&fileSystem.FileSystem.DirectoryInode, oldDirectory,
+	err, _ := scanDirectory(&fileSystem.FileSystem.DirectoryInode, oldDirectory,
 		&fileSystem, oldFS, "/")
 	oldFS = nil
 	oldDirectory = nil
 	if err != nil {
 		return nil, err
 	}
-	err = fileSystem.scanObjectCache()
-	if err != nil {
+	if err = fileSystem.scanObjectCache(); err != nil {
 		return nil, err
 	}
 	fileSystem.ComputeTotalDataBytes()

@@ -32,8 +32,7 @@ func (fsh *FileSystemHistory) updateObjectCacheOnly() error {
 		return nil
 	}
 	oldObjectCache := fsh.fileSystem.ObjectCache
-	err := fsh.fileSystem.ScanObjectCache()
-	if err != nil {
+	if err := fsh.fileSystem.ScanObjectCache(); err != nil {
 		return err
 	}
 	if !objectcache.CompareObjects(oldObjectCache, fsh.fileSystem.ObjectCache,

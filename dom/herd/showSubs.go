@@ -14,6 +14,10 @@ func showAllSubsHandler(w http.ResponseWriter, req *http.Request) {
 	httpdHerd.showSubs(w, "", nil)
 }
 
+func showAliveSubsHandler(w http.ResponseWriter, req *http.Request) {
+	httpdHerd.showSubs(w, "alive ", selectAliveSub)
+}
+
 func showDeviantSubsHandler(w http.ResponseWriter, req *http.Request) {
 	httpdHerd.showSubs(w, "deviant ", selectDeviantSub)
 }

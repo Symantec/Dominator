@@ -45,8 +45,7 @@ func (objSrv *ObjectServer) addObject(data []byte, expectedHash *hash.Hash) (
 	if hasher.Size() != len(hash) {
 		return hash, false, errors.New("Incompatible hash size")
 	}
-	_, err := hasher.Write(data)
-	if err != nil {
+	if _, err := hasher.Write(data); err != nil {
 		return hash, false, err
 	}
 	copy(hash[:], hasher.Sum(nil))
@@ -63,15 +62,13 @@ func (objSrv *ObjectServer) addObject(data []byte, expectedHash *hash.Hash) (
 		if !fi.Mode().IsRegular() {
 			return hash, false, errors.New("Existing non-file: " + filename)
 		}
-		err := collisionCheck(data, filename, fi.Size())
-		if err != nil {
+		if err := collisionCheck(data, filename, fi.Size()); err != nil {
 			return hash, false, errors.New("Collision detected: " + err.Error())
 		}
 		// No collision and no error: it's the same object. Go home early.
 		return hash, false, nil
 	}
-	err = os.MkdirAll(path.Dir(filename), 0755)
-	if err != nil {
+	if err = os.MkdirAll(path.Dir(filename), 0755); err != nil {
 		return hash, false, err
 	}
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0660)
@@ -79,8 +76,7 @@ func (objSrv *ObjectServer) addObject(data []byte, expectedHash *hash.Hash) (
 		return hash, false, err
 	}
 	defer file.Close()
-	_, err = file.Write(data)
-	if err != nil {
+	if _, err = file.Write(data); err != nil {
 		return hash, false, err
 	}
 	objSrv.sizesMap[hash] = uint64(len(data))

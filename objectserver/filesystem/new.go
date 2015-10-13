@@ -27,8 +27,7 @@ func newObjectServer(baseDir string, logger *log.Logger) (
 		logger = log.New(os.Stdout, "", log.LstdFlags)
 	}
 	objSrv.logger = logger
-	err = scanDirectory(&objSrv, baseDir, "")
-	if err != nil {
+	if err = scanDirectory(&objSrv, baseDir, ""); err != nil {
 		return nil, err
 	}
 	return &objSrv, nil
@@ -53,8 +52,7 @@ func scanDirectory(objSrv *ObjectServer, baseDir string, subpath string) error {
 		}
 		filename := path.Join(subpath, name)
 		if fi.IsDir() {
-			err = scanDirectory(objSrv, baseDir, filename)
-			if err != nil {
+			if err = scanDirectory(objSrv, baseDir, filename); err != nil {
 				return err
 			}
 		} else {

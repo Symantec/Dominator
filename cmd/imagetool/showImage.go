@@ -9,8 +9,7 @@ import (
 
 func showImageSubcommand(imageClient *rpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
-	err := showImage(imageClient, args[0])
-	if err != nil {
+	if err := showImage(imageClient, args[0]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error showing image\t%s\n", err)
 		os.Exit(1)
 	}

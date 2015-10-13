@@ -25,8 +25,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer) (
 	imdb.baseDir = baseDir
 	imdb.imageMap = make(map[string]*image.Image)
 	imdb.objectServer = objSrv
-	err = imdb.scanDirectory("")
-	if err != nil {
+	if err = imdb.scanDirectory(""); err != nil {
 		return nil, err
 	}
 	return imdb, nil
@@ -72,8 +71,7 @@ func (imdb *ImageDataBase) loadFile(filename string) error {
 	defer file.Close()
 	decoder := gob.NewDecoder(file)
 	var image image.Image
-	err = decoder.Decode(&image)
-	if err != nil {
+	if err = decoder.Decode(&image); err != nil {
 		return err
 	}
 	image.FileSystem.RebuildInodePointers()

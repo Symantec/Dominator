@@ -16,8 +16,7 @@ func getObjectSubcommand(objSrv objectserver.ObjectServer, args []string) {
 		fmt.Fprintf(os.Stderr, "Error parsing hash\t%s\n", err)
 		os.Exit(2)
 	}
-	err = getObject(objSrv, hash, args[1])
-	if err != nil {
+	if err = getObject(objSrv, hash, args[1]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting object\t%s\n", err)
 		os.Exit(2)
 	}

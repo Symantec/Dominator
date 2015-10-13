@@ -19,8 +19,7 @@ func newReadMeasurer() *ReadMeasurer {
 func (measurer *ReadMeasurer) MeasureReadIO(bytesSinceLastMeasurement uint64) (
 	uint64, error) {
 	var rusage syscall.Rusage
-	err := syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
-	if err != nil {
+	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &rusage); err != nil {
 		return 0, err
 	}
 	blocks := uint64(rusage.Inblock)

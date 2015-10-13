@@ -16,8 +16,7 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
 		return errors.New("image: " + name + " already exists")
 	} else {
 		filename := path.Join(imdb.baseDir, name)
-		err := os.MkdirAll(path.Dir(filename), 0755)
-		if err != nil {
+		if err := os.MkdirAll(path.Dir(filename), 0755); err != nil {
 			return err
 		}
 		file, err := os.Create(filename)
@@ -46,8 +45,7 @@ func (imdb *ImageDataBase) deleteImage(name string) error {
 	defer imdb.Unlock()
 	if _, ok := imdb.imageMap[name]; ok {
 		filename := path.Join(imdb.baseDir, name)
-		err := os.Remove(filename)
-		if err != nil {
+		if err := os.Remove(filename); err != nil {
 			return err
 		}
 		delete(imdb.imageMap, name)

@@ -128,8 +128,7 @@ func runTriggers(triggers []*triggers.Trigger, action string) {
 				// TODO(rgooch): Remove debugging output.
 				cmd := exec.Command("echo", "reboot")
 				cmd.Stdout = os.Stdout
-				err := cmd.Run()
-				if err != nil {
+				if err := cmd.Run(); err != nil {
 					logger.Print(err)
 				}
 				return
@@ -146,8 +145,7 @@ func runTriggers(triggers []*triggers.Trigger, action string) {
 		cmd := exec.Command("run-in-mntns", ppid, "echo", "service", action,
 			trigger.Service)
 		cmd.Stdout = os.Stdout
-		err := cmd.Run()
-		if err != nil {
+		if err := cmd.Run(); err != nil {
 			logger.Print(err)
 		}
 		// TODO(rgooch): Implement.

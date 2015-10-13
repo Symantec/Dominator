@@ -21,8 +21,7 @@ func openDirect(name string, flag int, perm os.FileMode) (file *os.File,
 
 func GetDevnumForFile(name string) (devnum uint64, err error) {
 	var stat syscall.Stat_t
-	err = syscall.Stat(name, &stat)
-	if err != nil {
+	if err = syscall.Stat(name, &stat); err != nil {
 		return 0, err
 	}
 	return stat.Dev, nil
@@ -30,8 +29,7 @@ func GetDevnumForFile(name string) (devnum uint64, err error) {
 
 func getDevnumForDevice(name string) (devnum uint64, err error) {
 	var stat syscall.Stat_t
-	err = syscall.Stat(name, &stat)
-	if err != nil {
+	if err = syscall.Stat(name, &stat); err != nil {
 		return 0, err
 	}
 	return stat.Rdev, nil
@@ -81,8 +79,7 @@ func GetReadSpeed(name string) (bytesPerSecond, blocksPerSecond uint64,
 	var tread uint = 0
 	buffer := make([]byte, BUFLEN)
 	var rusage_start, rusage_stop syscall.Rusage
-	err = syscall.Getrusage(syscall.RUSAGE_SELF, &rusage_start)
-	if err != nil {
+	if err = syscall.Getrusage(syscall.RUSAGE_SELF, &rusage_start); err != nil {
 		return
 	}
 	time_start := time.Now()
@@ -96,8 +93,7 @@ func GetReadSpeed(name string) (bytesPerSecond, blocksPerSecond uint64,
 	}
 	elapsed := time.Since(time_start)
 	bytesPerSecond = uint64(float64(tread) / elapsed.Seconds())
-	err = syscall.Getrusage(syscall.RUSAGE_SELF, &rusage_stop)
-	if err != nil {
+	if err = syscall.Getrusage(syscall.RUSAGE_SELF, &rusage_stop); err != nil {
 		return
 	}
 	if rusage_stop.Inblock > rusage_start.Inblock {

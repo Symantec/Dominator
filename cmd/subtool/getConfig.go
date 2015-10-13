@@ -8,8 +8,7 @@ import (
 )
 
 func getConfigSubcommand(client *rpc.Client, args []string) {
-	err := getConfig(client)
-	if err != nil {
+	if err := getConfig(client); err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting config\t%s\n", err)
 		os.Exit(1)
 	}
