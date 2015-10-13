@@ -24,6 +24,10 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 	fmt.Fprintf(writer,
 		"Number of <a href=\"listSubs\">subs</a>: <a href=\"showAllSubs\">%d</a><br>\n",
 		numSubs)
+	numSubs = herd.countSelectedSubs(selectAliveSub)
+	fmt.Fprintf(writer,
+		"Number of alive subs: <a href=\"showAliveSubs\">%d</a><br>\n",
+		numSubs)
 	numSubs = herd.countSelectedSubs(selectDeviantSub)
 	fmt.Fprintf(writer,
 		"Number of deviant subs: <a href=\"showDeviantSubs\">%d</a><br>\n",
@@ -41,6 +45,18 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 		len(herd.makeConnectionSemaphore), cap(herd.makeConnectionSemaphore))
 	fmt.Fprintf(writer, "RPC slots: %d out of %d<br>\n",
 		len(herd.pollSemaphore), cap(herd.pollSemaphore))
+}
+
+func selectAliveSub(sub *Sub) bool {
+	switch {
+	case sub.status == statusConnecting:
+		return false
+	case sub.status == statusFailedToConnect:
+		return false
+	case sub.status == statusFailedToPoll:
+		return false
+	}
+	return true
 }
 
 func selectDeviantSub(sub *Sub) bool {

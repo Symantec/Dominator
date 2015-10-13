@@ -17,6 +17,7 @@ func (herd *Herd) startServer(portNum uint, daemon bool) error {
 	http.HandleFunc("/", statusHandler)
 	http.HandleFunc("/listSubs", listSubsHandler)
 	http.HandleFunc("/showAllSubs", showAllSubsHandler)
+	http.HandleFunc("/showAliveSubs", showAliveSubsHandler)
 	http.HandleFunc("/showDeviantSubs", showDeviantSubsHandler)
 	http.HandleFunc("/showCompliantSubs", showCompliantSubsHandler)
 	if daemon {
