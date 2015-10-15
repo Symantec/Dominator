@@ -17,9 +17,13 @@ func writeHeader(writer io.Writer) {
 	fmt.Fprintf(writer, "Uptime: %s<br>\n", uptime)
 	var rusage syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
+	userCpuTime := time.Duration(rusage.Utime.Sec)*time.Second +
+		time.Duration(rusage.Utime.Usec)*time.Microsecond
+	sysCpuTime := time.Duration(rusage.Stime.Sec)*time.Second +
+		time.Duration(rusage.Stime.Usec)*time.Microsecond
 	cpuTime := rusage.Utime.Sec + rusage.Stime.Sec
-	fmt.Fprintf(writer, "CPU Time: %d%%<br>\n",
-		cpuTime*100/int64(uptime.Seconds()))
+	fmt.Fprintf(writer, "CPU Time: %d%% (User: %s Sys: %s)<br>\n",
+		cpuTime*100/int64(uptime.Seconds()), userCpuTime, sysCpuTime)
 	var memStatsBeforeGC, memStatsAfterGC runtime.MemStats
 	runtime.ReadMemStats(&memStatsBeforeGC)
 	runtime.GC()
