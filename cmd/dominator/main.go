@@ -79,9 +79,12 @@ func main() {
 				if *debug {
 					fmt.Print(".")
 				}
-				time.Sleep(nextCycleStopTime.Sub(time.Now()))
+				sleepTime := nextCycleStopTime.Sub(time.Now())
+				time.Sleep(sleepTime)
 				nextCycleStopTime = time.Now().Add(interval)
-				runtime.GC() // An opportune time to take out the garbage.
+				if sleepTime < 0 { // There was no time to rest.
+					runtime.GC() // An opportune time to take out the garbage.
+				}
 			}
 		}
 	}
