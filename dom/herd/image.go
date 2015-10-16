@@ -25,8 +25,7 @@ func (herd *Herd) getImageHaveLock(name string) *image.Image {
 	if name == "" {
 		return nil
 	}
-	image := herd.imagesByName[name]
-	if image != nil {
+	if image := herd.imagesByName[name]; image != nil {
 		return image
 	}
 	connection, err := rpc.DialHTTP("tcp", herd.imageServerAddress)
