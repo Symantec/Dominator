@@ -9,10 +9,12 @@ import (
 	"time"
 )
 
+var timeFormat string = "02 Jan 2006 15:04:05.99 MST"
+
 var startTime time.Time = time.Now()
 
 func writeHeader(writer io.Writer) {
-	fmt.Fprintf(writer, "Start time: %s<br>\n", startTime)
+	fmt.Fprintf(writer, "Start time: %s<br>\n", startTime.Format(timeFormat))
 	uptime := time.Since(startTime)
 	fmt.Fprintf(writer, "Uptime: %s<br>\n", uptime)
 	var rusage syscall.Rusage
