@@ -15,7 +15,8 @@ var startTime time.Time = time.Now()
 
 func writeHeader(writer io.Writer) {
 	fmt.Fprintf(writer, "Start time: %s<br>\n", startTime.Format(timeFormat))
-	uptime := time.Since(startTime)
+	uptime := time.Since(startTime) + time.Millisecond*50
+	uptime = (uptime / time.Millisecond / 100) * time.Millisecond * 100
 	fmt.Fprintf(writer, "Uptime: %s<br>\n", uptime)
 	var rusage syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
