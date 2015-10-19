@@ -5,9 +5,25 @@ import (
 )
 
 func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
+	numNew, numDeleted := herd.mdbUpdateNoLogging(mdb)
+	pluralNew := "s"
+	if numNew == 1 {
+		pluralNew = ""
+	}
+	pluralDeleted := "s"
+	if numDeleted == 1 {
+		pluralDeleted = ""
+	}
+	herd.logger.Printf("MDB update: %d new sub%s, %d removed sub%s",
+		numNew, pluralNew, numDeleted, pluralDeleted)
+}
+
+func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 	herd.waitForCompletion()
 	herd.Lock()
 	defer herd.Unlock()
+	numNew := 0
+	numDeleted := 0
 	herd.subsByIndex = make([]*Sub, 0, len(mdb.Machines))
 	// Mark for delete all current subs, then later unmark ones in the new MDB.
 	subsToDelete := make(map[string]bool)
@@ -21,6 +37,7 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 			sub.herd = herd
 			sub.hostname = machine.Hostname
 			herd.subsByName[machine.Hostname] = sub
+			numNew++
 		}
 		subsToDelete[sub.hostname] = false
 		herd.subsByIndex = append(herd.subsByIndex, sub)
@@ -33,6 +50,7 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 	for subHostname, toDelete := range subsToDelete {
 		if toDelete {
 			delete(herd.subsByName, subHostname)
+			numDeleted++
 		}
 	}
 	imageUseMap := make(map[string]bool) // Unreferenced by default.
@@ -46,4 +64,5 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 			delete(herd.imagesByName, name)
 		}
 	}
+	return numNew, numDeleted
 }
