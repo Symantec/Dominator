@@ -14,13 +14,15 @@ type GenericInode interface {
 
 type InodeTable map[uint64]GenericInode
 type FilenamesTable map[uint64][]string
+type HashToInodesTable map[hash.Hash][]uint64
 
 type FileSystem struct {
-	InodeTable       InodeTable
-	FilenamesTable   FilenamesTable
-	NumRegularInodes uint64
-	TotalDataBytes   uint64
-	DirectoryCount   uint64
+	InodeTable        InodeTable
+	FilenamesTable    FilenamesTable
+	HashToInodesTable HashToInodesTable
+	NumRegularInodes  uint64
+	TotalDataBytes    uint64
+	DirectoryCount    uint64
 	DirectoryInode
 }
 
@@ -30,6 +32,10 @@ func (fs *FileSystem) RebuildInodePointers() {
 
 func (fs *FileSystem) BuildFilenamesTable() {
 	fs.buildFilenamesTable()
+}
+
+func (fs *FileSystem) BuildHashToInodesTable() {
+	fs.buildHashToInodesTable()
 }
 
 func (fs *FileSystem) ComputeTotalDataBytes() {
