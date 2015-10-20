@@ -17,18 +17,19 @@ func (inode *DirectoryInode) rebuildInodePointers(fs *FileSystem) {
 	}
 }
 
-func (fs *FileSystem) buildFilenamesTable() {
-	fs.FilenamesTable = make(FilenamesTable)
-	fs.DirectoryInode.buildFilenamesTable(fs, "")
+func (fs *FileSystem) buildInodeToFilenamesTable() {
+	fs.InodeToFilenamesTable = make(InodeToFilenamesTable)
+	fs.DirectoryInode.buildInodeToFilenamesTable(fs, "")
 }
 
-func (inode *DirectoryInode) buildFilenamesTable(fs *FileSystem, name string) {
+func (inode *DirectoryInode) buildInodeToFilenamesTable(fs *FileSystem,
+	name string) {
 	for _, dirent := range inode.EntryList {
 		name := path.Join(name, dirent.Name)
-		fs.FilenamesTable[dirent.InodeNumber] = append(
-			fs.FilenamesTable[dirent.InodeNumber], name)
+		fs.InodeToFilenamesTable[dirent.InodeNumber] = append(
+			fs.InodeToFilenamesTable[dirent.InodeNumber], name)
 		if inode, ok := dirent.inode.(*DirectoryInode); ok {
-			inode.buildFilenamesTable(fs, name)
+			inode.buildInodeToFilenamesTable(fs, name)
 		}
 	}
 }
