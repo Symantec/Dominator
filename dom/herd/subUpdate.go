@@ -81,6 +81,21 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 	}
 }
 
+func addEntry(request *subproto.UpdateRequest, state *state,
+	requiredEntry *filesystem.DirectoryEntry, myPathName string) {
+	requiredInode := requiredEntry.Inode()
+	if requiredInode, ok := requiredInode.(*filesystem.DirectoryInode); ok {
+		var newdir subproto.Directory
+		newdir.Name = myPathName
+		newdir.Mode = requiredInode.Mode
+		newdir.Uid = requiredInode.Uid
+		newdir.Gid = requiredInode.Gid
+		request.DirectoriesToMake = append(request.DirectoriesToMake, newdir)
+	} else {
+		fmt.Printf("Add entry: %s...\n", myPathName) // HACK
+	}
+}
+
 func compareEntries(request *subproto.UpdateRequest, state *state,
 	subEntry, requiredEntry *filesystem.DirectoryEntry,
 	myPathName string, filter *filter.Filter) {
