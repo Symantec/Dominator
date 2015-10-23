@@ -32,10 +32,7 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 	subDirectory, requiredDirectory *filesystem.DirectoryInode,
 	myPathName string, filter *filter.Filter) {
 	// First look for entries that should be deleted.
-	makeSubDirectory := false
-	if subDirectory == nil {
-		makeSubDirectory = true
-	} else {
+	if subDirectory != nil {
 		for name, _ := range subDirectory.EntriesByName {
 			pathname := path.Join(myPathName, name)
 			if filter.Match(pathname) {
@@ -46,37 +43,33 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 				fmt.Printf("Delete: %s\n", pathname) // HACK
 			}
 		}
-		if !filesystem.CompareDirectoriesMetadata(subDirectory,
-			requiredDirectory, os.Stdout) {
-			fmt.Printf("Different directory: %s...\n", myPathName) // HACK
-			makeSubDirectory = true
-			// TODO(rgooch): Update metadata.
-		}
-	}
-	if makeSubDirectory {
-		var newdir subproto.Directory
-		newdir.Name = myPathName
-		newdir.Mode = requiredDirectory.Mode
-		newdir.Uid = requiredDirectory.Uid
-		newdir.Gid = requiredDirectory.Gid
-		request.DirectoriesToMake = append(request.DirectoriesToMake, newdir)
 	}
 	for name, requiredEntry := range requiredDirectory.EntriesByName {
 		pathname := path.Join(myPathName, name)
 		if filter.Match(pathname) {
 			continue
 		}
-		if subDirectory == nil {
-			compareEntries(request, state, nil, requiredEntry, pathname,
-				filter)
-		} else {
-			if subEntry, ok := subDirectory.EntriesByName[name]; ok {
-				compareEntries(request, state, subEntry, requiredEntry,
-					pathname, filter)
-			} else {
-				compareEntries(request, state, nil, requiredEntry,
-					pathname, filter)
+		var subEntry *filesystem.DirectoryEntry
+		if subDirectory != nil {
+			if se, ok := subDirectory.EntriesByName[name]; ok {
+				subEntry = se
 			}
+		}
+		if subEntry == nil {
+			addEntry(request, state, requiredEntry, pathname)
+		} else {
+			compareEntries(request, state, subEntry, requiredEntry, pathname,
+				filter)
+		}
+		// If a directory: descend (possibly with the directory for the sub).
+		requiredInode := requiredEntry.Inode()
+		if requiredInode, ok := requiredInode.(*filesystem.DirectoryInode); ok {
+			var subInode *filesystem.DirectoryInode
+			if si, ok := subEntry.Inode().(*filesystem.DirectoryInode); ok {
+				subInode = si
+			}
+			compareDirectories(request, state, requiredInode, subInode,
+				pathname, filter)
 		}
 	}
 }
@@ -85,14 +78,25 @@ func addEntry(request *subproto.UpdateRequest, state *state,
 	requiredEntry *filesystem.DirectoryEntry, myPathName string) {
 	requiredInode := requiredEntry.Inode()
 	if requiredInode, ok := requiredInode.(*filesystem.DirectoryInode); ok {
-		var newdir subproto.Directory
-		newdir.Name = myPathName
-		newdir.Mode = requiredInode.Mode
-		newdir.Uid = requiredInode.Uid
-		newdir.Gid = requiredInode.Gid
-		request.DirectoriesToMake = append(request.DirectoriesToMake, newdir)
+		makeDirectory(request, requiredInode, myPathName, true)
+		fmt.Printf("Add directory: %s...\n", myPathName) // HACK
 	} else {
 		fmt.Printf("Add entry: %s...\n", myPathName) // HACK
+		// TODO(rgooch): Add entry.
+	}
+}
+
+func makeDirectory(request *subproto.UpdateRequest,
+	requiredInode *filesystem.DirectoryInode, pathName string, create bool) {
+	var newdir subproto.Directory
+	newdir.Name = pathName
+	newdir.Mode = requiredInode.Mode
+	newdir.Uid = requiredInode.Uid
+	newdir.Gid = requiredInode.Gid
+	if create {
+		request.DirectoriesToMake = append(request.DirectoriesToMake, newdir)
+	} else {
+		request.DirectoriesToChange = append(request.DirectoriesToMake, newdir)
 	}
 }
 
@@ -124,11 +128,6 @@ func compareRegularFile(request *subproto.UpdateRequest, state *state,
 	subEntry *filesystem.DirectoryEntry,
 	requiredInode *filesystem.RegularInode, requiredInodeNumber uint64,
 	myPathName string) {
-	if subEntry == nil {
-		fmt.Printf("Add rfile: %s...\n", myPathName) // HACK
-		// TODO(rgooch): Add entry.
-		return
-	}
 	if subInode, ok := subEntry.Inode().(*filesystem.RegularInode); ok {
 		if requiredInum, ok :=
 			state.subInodeToRequiredInode[subEntry.InodeNumber]; ok {
@@ -206,16 +205,16 @@ func compareDirectory(request *subproto.UpdateRequest, state *state,
 	subEntry *filesystem.DirectoryEntry,
 	requiredInode *filesystem.DirectoryInode,
 	myPathName string, filter *filter.Filter) {
-	if subEntry == nil {
-		compareDirectories(request, state, nil, requiredInode, myPathName,
-			filter)
-		return
-	}
 	if subInode, ok := subEntry.Inode().(*filesystem.DirectoryInode); ok {
-		compareDirectories(request, state, subInode, requiredInode,
-			myPathName, filter)
+		if filesystem.CompareDirectoriesMetadata(subInode, requiredInode,
+			os.Stdout) {
+			return
+		}
+		makeDirectory(request, requiredInode, myPathName, false)
+		fmt.Printf("Different directory: %s...\n", myPathName) // HACK
 	} else {
-		compareDirectories(request, state, nil, requiredInode, myPathName,
-			filter)
+		request.PathsToDelete = append(request.PathsToDelete, myPathName)
+		makeDirectory(request, requiredInode, myPathName, true)
+		fmt.Printf("Replace non-directory: %s...\n", myPathName) // HACK
 	}
 }
