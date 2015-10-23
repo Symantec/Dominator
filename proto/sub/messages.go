@@ -50,9 +50,10 @@ type Directory struct {
 }
 
 type UpdateRequest struct {
-	PathsToDelete     []string
-	DirectoriesToMake []Directory
-	Triggers          *triggers.Triggers
+	PathsToDelete       []string
+	DirectoriesToMake   []Directory
+	DirectoriesToChange []Directory
+	Triggers            *triggers.Triggers
 }
 
 type UpdateResponse struct{}
