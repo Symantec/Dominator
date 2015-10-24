@@ -142,7 +142,7 @@ func (sub *Sub) fetchMissingObjects(connection *rpc.Client, imageName string) (
 	var request subproto.FetchRequest
 	var reply subproto.FetchResponse
 	request.ServerAddress = sub.herd.imageServerAddress
-	for hash, _ := range missingObjects {
+	for hash := range missingObjects {
 		request.Hashes = append(request.Hashes, hash)
 	}
 	if err := connection.Call("Subd.Fetch", request, &reply); err != nil {

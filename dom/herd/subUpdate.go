@@ -33,7 +33,7 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 	myPathName string, filter *filter.Filter) {
 	// First look for entries that should be deleted.
 	if subDirectory != nil {
-		for name, _ := range subDirectory.EntriesByName {
+		for name := range subDirectory.EntriesByName {
 			pathname := path.Join(myPathName, name)
 			if filter.Match(pathname) {
 				continue

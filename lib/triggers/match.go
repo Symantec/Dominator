@@ -9,7 +9,7 @@ func (triggers *Triggers) match(line string) {
 			triggers.unmatchedTriggers[trigger] = true
 		}
 	}
-	for trigger, _ := range triggers.unmatchedTriggers {
+	for trigger := range triggers.unmatchedTriggers {
 		for _, regex := range trigger.matchRegexes {
 			if regex.MatchString(line) {
 				triggers.matchedTriggers[trigger] = true
@@ -22,7 +22,7 @@ func (triggers *Triggers) match(line string) {
 
 func (triggers *Triggers) getMatchedTriggers() []*Trigger {
 	mTriggers := make([]*Trigger, 0, len(triggers.matchedTriggers))
-	for trigger, _ := range triggers.matchedTriggers {
+	for trigger := range triggers.matchedTriggers {
 		mTriggers = append(mTriggers, trigger)
 	}
 	triggers.matchedTriggers = nil
