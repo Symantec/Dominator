@@ -65,10 +65,12 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 		requiredInode := requiredEntry.Inode()
 		if requiredInode, ok := requiredInode.(*filesystem.DirectoryInode); ok {
 			var subInode *filesystem.DirectoryInode
-			if si, ok := subEntry.Inode().(*filesystem.DirectoryInode); ok {
-				subInode = si
+			if subEntry != nil {
+				if si, ok := subEntry.Inode().(*filesystem.DirectoryInode); ok {
+					subInode = si
+				}
 			}
-			compareDirectories(request, state, requiredInode, subInode,
+			compareDirectories(request, state, subInode, requiredInode,
 				pathname, filter)
 		}
 	}
