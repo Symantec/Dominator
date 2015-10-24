@@ -120,8 +120,9 @@ func compareEntries(request *subproto.UpdateRequest, state *state,
 		compareDirectory(request, state, subEntry, requiredInode, myPathName,
 			filter)
 		return
+	default:
+		panic("Unsupported entry type")
 	}
-	panic("Unsupported entry type")
 }
 
 func compareRegularFile(request *subproto.UpdateRequest, state *state,
