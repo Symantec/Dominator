@@ -66,6 +66,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
 	} else {
 		fs.RebuildInodePointers()
+		fs.BuildInodeToFilenamesTable()
 		fs.BuildEntryMap()
 		sub.fileSystem = fs
 		sub.generationCount = reply.GenerationCount
