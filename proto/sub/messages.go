@@ -54,10 +54,16 @@ type Hardlink struct {
 	Target string
 }
 
+type Inode struct {
+	Name string
+	filesystem.GenericInode
+}
+
 type UpdateRequest struct {
 	PathsToDelete       []string
 	DirectoriesToMake   []Directory
 	DirectoriesToChange []Directory
+	InodesToChange      []Inode
 	HardlinksToMake     []Hardlink
 	Triggers            *triggers.Triggers
 }
