@@ -5,7 +5,6 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	subproto "github.com/Symantec/Dominator/proto/sub"
-	"os"
 	"path"
 	"syscall"
 	"time"
@@ -141,8 +140,8 @@ func compareRegularFile(request *subproto.UpdateRequest, state *state,
 		sameType = true
 		sameMetadata = filesystem.CompareRegularInodesMetadata(
 			subInode, requiredInode, nil)
-		sameData = filesystem.CompareRegularInodesData(subInode,
-			requiredInode, os.Stdout)
+		sameData = filesystem.CompareRegularInodesData(subInode, requiredInode,
+			nil)
 	}
 	return
 }
@@ -155,7 +154,7 @@ func compareSymlink(request *subproto.UpdateRequest, state *state,
 		sameMetadata = filesystem.CompareSymlinkInodesMetadata(subInode,
 			requiredInode, nil)
 		sameData = filesystem.CompareSymlinkInodesData(subInode, requiredInode,
-			os.Stdout)
+			nil)
 	}
 	return
 }
@@ -167,8 +166,7 @@ func compareFile(request *subproto.UpdateRequest, state *state,
 		sameType = true
 		sameMetadata = filesystem.CompareInodesMetadata(subInode, requiredInode,
 			nil)
-		sameData = filesystem.CompareInodesData(subInode, requiredInode,
-			os.Stdout)
+		sameData = filesystem.CompareInodesData(subInode, requiredInode, nil)
 	}
 	return
 }
