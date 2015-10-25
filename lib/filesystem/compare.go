@@ -179,6 +179,14 @@ func compareSymlinkInodes(left, right *SymlinkInode, logWriter io.Writer) bool {
 	if left == right {
 		return true
 	}
+	if !compareSymlinkInodesMetadata(left, right, logWriter) {
+		return false
+	}
+	return compareSymlinkInodesData(left, right, logWriter)
+}
+
+func compareSymlinkInodesMetadata(left, right *SymlinkInode,
+	logWriter io.Writer) bool {
 	if left.Uid != right.Uid {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "Uid: left vs. right: %d vs. %d\n",
@@ -193,6 +201,11 @@ func compareSymlinkInodes(left, right *SymlinkInode, logWriter io.Writer) bool {
 		}
 		return false
 	}
+	return true
+}
+
+func compareSymlinkInodesData(left, right *SymlinkInode,
+	logWriter io.Writer) bool {
 	if left.Symlink != right.Symlink {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "symlink: left vs. right: %s vs. %s\n",
@@ -204,6 +217,16 @@ func compareSymlinkInodes(left, right *SymlinkInode, logWriter io.Writer) bool {
 }
 
 func compareInodes(left, right *Inode, logWriter io.Writer) bool {
+	if left == right {
+		return true
+	}
+	if !compareInodesMetadata(left, right, logWriter) {
+		return false
+	}
+	return compareInodesData(left, right, logWriter)
+}
+
+func compareInodesMetadata(left, right *Inode, logWriter io.Writer) bool {
 	if left == right {
 		return true
 	}
@@ -240,6 +263,10 @@ func compareInodes(left, right *Inode, logWriter io.Writer) bool {
 		}
 		return false
 	}
+	return true
+}
+
+func compareInodesData(left, right *Inode, logWriter io.Writer) bool {
 	if left.Mode&syscall.S_IFMT == syscall.S_IFBLK ||
 		left.Mode&syscall.S_IFMT == syscall.S_IFCHR {
 		if left.Rdev != right.Rdev {

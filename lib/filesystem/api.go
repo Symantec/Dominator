@@ -13,14 +13,16 @@ type GenericInode interface {
 }
 
 type InodeTable map[uint64]GenericInode
-type FilenamesTable map[uint64][]string
+type InodeToFilenamesTable map[uint64][]string
+type HashToInodesTable map[hash.Hash][]uint64
 
 type FileSystem struct {
-	InodeTable       InodeTable
-	FilenamesTable   FilenamesTable
-	NumRegularInodes uint64
-	TotalDataBytes   uint64
-	DirectoryCount   uint64
+	InodeTable            InodeTable
+	InodeToFilenamesTable InodeToFilenamesTable
+	HashToInodesTable     HashToInodesTable
+	NumRegularInodes      uint64
+	TotalDataBytes        uint64
+	DirectoryCount        uint64
 	DirectoryInode
 }
 
@@ -28,8 +30,12 @@ func (fs *FileSystem) RebuildInodePointers() {
 	fs.rebuildInodePointers()
 }
 
-func (fs *FileSystem) BuildFilenamesTable() {
-	fs.buildFilenamesTable()
+func (fs *FileSystem) BuildInodeToFilenamesTable() {
+	fs.buildInodeToFilenamesTable()
+}
+
+func (fs *FileSystem) BuildHashToInodesTable() {
+	fs.buildHashToInodesTable()
 }
 
 func (fs *FileSystem) ComputeTotalDataBytes() {
@@ -158,6 +164,24 @@ func CompareSymlinkInodes(left, right *SymlinkInode, logWriter io.Writer) bool {
 	return compareSymlinkInodes(left, right, logWriter)
 }
 
+func CompareSymlinkInodesMetadata(left, right *SymlinkInode,
+	logWriter io.Writer) bool {
+	return compareSymlinkInodesMetadata(left, right, logWriter)
+}
+
+func CompareSymlinkInodesData(left, right *SymlinkInode,
+	logWriter io.Writer) bool {
+	return compareSymlinkInodesData(left, right, logWriter)
+}
+
 func CompareInodes(left, right *Inode, logWriter io.Writer) bool {
 	return compareInodes(left, right, logWriter)
+}
+
+func CompareInodesMetadata(left, right *Inode, logWriter io.Writer) bool {
+	return compareInodesMetadata(left, right, logWriter)
+}
+
+func CompareInodesData(left, right *Inode, logWriter io.Writer) bool {
+	return compareInodesData(left, right, logWriter)
 }

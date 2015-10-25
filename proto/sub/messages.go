@@ -49,10 +49,23 @@ type Directory struct {
 	Gid  uint32
 }
 
+type Hardlink struct {
+	Source string
+	Target string
+}
+
+type Inode struct {
+	Name string
+	filesystem.GenericInode
+}
+
 type UpdateRequest struct {
-	PathsToDelete     []string
-	DirectoriesToMake []Directory
-	Triggers          *triggers.Triggers
+	PathsToDelete       []string
+	DirectoriesToMake   []Directory
+	DirectoriesToChange []Directory
+	InodesToChange      []Inode
+	HardlinksToMake     []Hardlink
+	Triggers            *triggers.Triggers
 }
 
 type UpdateResponse struct{}

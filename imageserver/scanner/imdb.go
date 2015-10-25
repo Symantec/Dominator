@@ -65,7 +65,7 @@ func (imdb *ImageDataBase) listImages() []string {
 	imdb.RLock()
 	defer imdb.RUnlock()
 	names := make([]string, 0)
-	for name, _ := range imdb.imageMap {
+	for name := range imdb.imageMap {
 		names = append(names, name)
 	}
 	return names
