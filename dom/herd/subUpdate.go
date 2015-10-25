@@ -7,6 +7,8 @@ import (
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"os"
 	"path"
+	"syscall"
+	"time"
 )
 
 type state struct {
@@ -22,10 +24,17 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 	request.Triggers = requiredImage.Triggers
 	var state state
 	state.subInodeToRequiredInode = make(map[uint64]uint64)
+	var rusageStart, rusageStop syscall.Rusage
+	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
 	compareDirectories(request, &state,
 		&subFS.DirectoryInode, &requiredFS.DirectoryInode,
 		"/", filter)
-	// TODO(rgooch): Implement this.
+	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStop) // HACK
+	cpuTime := time.Duration(rusageStop.Utime.Sec)*time.Second +
+		time.Duration(rusageStop.Utime.Usec)*time.Microsecond -
+		time.Duration(rusageStart.Utime.Sec)*time.Second -
+		time.Duration(rusageStart.Utime.Usec)*time.Microsecond
+	fmt.Printf("Build update request took: %s user CPU time\n", cpuTime)
 }
 
 func compareDirectories(request *subproto.UpdateRequest, state *state,
