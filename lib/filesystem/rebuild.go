@@ -19,7 +19,7 @@ func (inode *DirectoryInode) rebuildInodePointers(fs *FileSystem) {
 
 func (fs *FileSystem) buildInodeToFilenamesTable() {
 	fs.InodeToFilenamesTable = make(InodeToFilenamesTable)
-	fs.DirectoryInode.buildInodeToFilenamesTable(fs, "")
+	fs.DirectoryInode.buildInodeToFilenamesTable(fs, "/")
 }
 
 func (inode *DirectoryInode) buildInodeToFilenamesTable(fs *FileSystem,
