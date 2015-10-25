@@ -49,10 +49,16 @@ type Directory struct {
 	Gid  uint32
 }
 
+type Hardlink struct {
+	Source string
+	Target string
+}
+
 type UpdateRequest struct {
 	PathsToDelete       []string
 	DirectoriesToMake   []Directory
 	DirectoriesToChange []Directory
+	HardlinksToMake     []Hardlink
 	Triggers            *triggers.Triggers
 }
 
