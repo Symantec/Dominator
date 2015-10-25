@@ -164,6 +164,24 @@ func CompareSymlinkInodes(left, right *SymlinkInode, logWriter io.Writer) bool {
 	return compareSymlinkInodes(left, right, logWriter)
 }
 
+func CompareSymlinkInodesMetadata(left, right *SymlinkInode,
+	logWriter io.Writer) bool {
+	return compareSymlinkInodesMetadata(left, right, logWriter)
+}
+
+func CompareSymlinkInodesData(left, right *SymlinkInode,
+	logWriter io.Writer) bool {
+	return compareSymlinkInodesData(left, right, logWriter)
+}
+
 func CompareInodes(left, right *Inode, logWriter io.Writer) bool {
 	return compareInodes(left, right, logWriter)
+}
+
+func CompareInodesMetadata(left, right *Inode, logWriter io.Writer) bool {
+	return compareInodesMetadata(left, right, logWriter)
+}
+
+func CompareInodesData(left, right *Inode, logWriter io.Writer) bool {
+	return compareInodesData(left, right, logWriter)
 }
