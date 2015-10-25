@@ -12,22 +12,26 @@ import (
 )
 
 type state struct {
-	subInodeToRequiredInode map[uint64]uint64
+	requiredInodeToSubInode map[uint64]uint64
+	inodesChanged           map[uint64]bool // Required inode number.
+	subFS                   *filesystem.FileSystem
+	requiredFS              *filesystem.FileSystem
 }
 
 func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 	fmt.Println("buildUpdateRequest()") // TODO(rgooch): Delete debugging.
-	subFS := sub.fileSystem
+	var state state
+	state.subFS = &sub.fileSystem.FileSystem
 	requiredImage := sub.herd.getImage(sub.requiredImage)
-	requiredFS := requiredImage.FileSystem
+	state.requiredFS = requiredImage.FileSystem
 	filter := requiredImage.Filter
 	request.Triggers = requiredImage.Triggers
-	var state state
-	state.subInodeToRequiredInode = make(map[uint64]uint64)
+	state.requiredInodeToSubInode = make(map[uint64]uint64)
+	state.inodesChanged = make(map[uint64]bool)
 	var rusageStart, rusageStop syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
 	compareDirectories(request, &state,
-		&subFS.DirectoryInode, &requiredFS.DirectoryInode,
+		&state.subFS.DirectoryInode, &state.requiredFS.DirectoryInode,
 		"/", filter)
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStop) // HACK
 	cpuTime := time.Duration(rusageStop.Utime.Sec)*time.Second +
@@ -90,11 +94,131 @@ func addEntry(request *subproto.UpdateRequest, state *state,
 	requiredInode := requiredEntry.Inode()
 	if requiredInode, ok := requiredInode.(*filesystem.DirectoryInode); ok {
 		makeDirectory(request, requiredInode, myPathName, true)
-		fmt.Printf("Add directory: %s...\n", myPathName) // HACK
 	} else {
-		fmt.Printf("Add entry: %s...\n", myPathName) // HACK
-		// TODO(rgooch): Add entry.
+		addInode(request, state, requiredEntry, myPathName)
 	}
+}
+
+func compareEntries(request *subproto.UpdateRequest, state *state,
+	subEntry, requiredEntry *filesystem.DirectoryEntry,
+	myPathName string, filter *filter.Filter) {
+	var sameType, sameMetadata, sameData bool
+	switch requiredInode := requiredEntry.Inode().(type) {
+	case *filesystem.RegularInode:
+		sameType, sameMetadata, sameData =
+			compareRegularFile(request, state, subEntry, requiredInode,
+				myPathName)
+	case *filesystem.SymlinkInode:
+		sameType, sameMetadata, sameData =
+			compareSymlink(request, state, subEntry, requiredInode, myPathName)
+	case *filesystem.Inode:
+		sameType, sameMetadata, sameData =
+			compareFile(request, state, subEntry, requiredInode, myPathName)
+	case *filesystem.DirectoryInode:
+		compareDirectory(request, state, subEntry, requiredInode, myPathName,
+			filter)
+		return
+	default:
+		panic("Unsupported entry type")
+	}
+	if sameType && sameData && sameMetadata {
+		relink(request, state, subEntry, requiredEntry, myPathName)
+		return
+	}
+	if sameType && sameData {
+		updateMetadata(request, state, subEntry, requiredEntry, myPathName)
+		relink(request, state, subEntry, requiredEntry, myPathName)
+		return
+	}
+	request.PathsToDelete = append(request.PathsToDelete, myPathName)
+	addInode(request, state, requiredEntry, myPathName)
+}
+
+func compareRegularFile(request *subproto.UpdateRequest, state *state,
+	subEntry *filesystem.DirectoryEntry, requiredInode *filesystem.RegularInode,
+	myPathName string) (sameType, sameMetadata, sameData bool) {
+	if subInode, ok := subEntry.Inode().(*filesystem.RegularInode); ok {
+		sameType = true
+		sameMetadata = filesystem.CompareRegularInodesMetadata(
+			subInode, requiredInode, nil)
+		sameData = filesystem.CompareRegularInodesData(subInode,
+			requiredInode, os.Stdout)
+	}
+	return
+}
+
+func compareSymlink(request *subproto.UpdateRequest, state *state,
+	subEntry *filesystem.DirectoryEntry, requiredInode *filesystem.SymlinkInode,
+	myPathName string) (sameType, sameMetadata, sameData bool) {
+	if subInode, ok := subEntry.Inode().(*filesystem.SymlinkInode); ok {
+		sameType = true
+		sameMetadata = filesystem.CompareSymlinkInodesMetadata(subInode,
+			requiredInode, nil)
+		sameData = filesystem.CompareSymlinkInodesData(subInode, requiredInode,
+			os.Stdout)
+	}
+	return
+}
+
+func compareFile(request *subproto.UpdateRequest, state *state,
+	subEntry *filesystem.DirectoryEntry, requiredInode *filesystem.Inode,
+	myPathName string) (sameType, sameMetadata, sameData bool) {
+	if subInode, ok := subEntry.Inode().(*filesystem.Inode); ok {
+		sameType = true
+		sameMetadata = filesystem.CompareInodesMetadata(subInode, requiredInode,
+			nil)
+		sameData = filesystem.CompareInodesData(subInode, requiredInode,
+			os.Stdout)
+	}
+	return
+}
+
+func compareDirectory(request *subproto.UpdateRequest, state *state,
+	subEntry *filesystem.DirectoryEntry,
+	requiredInode *filesystem.DirectoryInode,
+	myPathName string, filter *filter.Filter) {
+	if subInode, ok := subEntry.Inode().(*filesystem.DirectoryInode); ok {
+		if filesystem.CompareDirectoriesMetadata(subInode, requiredInode, nil) {
+			return
+		}
+		makeDirectory(request, requiredInode, myPathName, false)
+	} else {
+		request.PathsToDelete = append(request.PathsToDelete, myPathName)
+		makeDirectory(request, requiredInode, myPathName, true)
+		fmt.Printf("Replace non-directory: %s...\n", myPathName) // HACK
+	}
+}
+
+func relink(request *subproto.UpdateRequest, state *state,
+	subEntry, requiredEntry *filesystem.DirectoryEntry, myPathName string) {
+	subInum, ok := state.requiredInodeToSubInode[requiredEntry.InodeNumber]
+	if !ok {
+		state.requiredInodeToSubInode[requiredEntry.InodeNumber] =
+			subEntry.InodeNumber
+		return
+	}
+	if subInum == subEntry.InodeNumber {
+		return
+	}
+	var hardlink subproto.Hardlink
+	hardlink.Source = myPathName
+	hardlink.Target = state.subFS.InodeToFilenamesTable[subInum][0]
+	request.HardlinksToMake = append(request.HardlinksToMake, hardlink)
+	fmt.Printf("Make link: %s => %s\n", hardlink.Source,
+		hardlink.Target) // HACK
+}
+
+func updateMetadata(request *subproto.UpdateRequest, state *state,
+	subEntry, requiredEntry *filesystem.DirectoryEntry, myPathName string) {
+	if changed := state.inodesChanged[requiredEntry.InodeNumber]; changed {
+		return
+	}
+	var inode subproto.Inode
+	inode.Name = myPathName
+	inode.GenericInode = requiredEntry.Inode()
+	request.InodesToChange = append(request.InodesToChange, inode)
+	state.inodesChanged[requiredEntry.InodeNumber] = true
+	fmt.Printf("Update metadata: %s\n", myPathName) // HACK
 }
 
 func makeDirectory(request *subproto.UpdateRequest,
@@ -106,127 +230,15 @@ func makeDirectory(request *subproto.UpdateRequest,
 	newdir.Gid = requiredInode.Gid
 	if create {
 		request.DirectoriesToMake = append(request.DirectoriesToMake, newdir)
+		fmt.Printf("Add directory: %s...\n", pathName) // HACK
 	} else {
 		request.DirectoriesToChange = append(request.DirectoriesToMake, newdir)
+		fmt.Printf("Change directory: %s...\n", pathName) // HACK
 	}
 }
 
-func compareEntries(request *subproto.UpdateRequest, state *state,
-	subEntry, requiredEntry *filesystem.DirectoryEntry,
-	myPathName string, filter *filter.Filter) {
-	switch requiredInode := requiredEntry.Inode().(type) {
-	case *filesystem.RegularInode:
-		compareRegularFile(request, state, subEntry,
-			requiredInode, requiredEntry.InodeNumber, myPathName)
-		return
-	case *filesystem.SymlinkInode:
-		compareSymlink(request, state, subEntry,
-			requiredInode, requiredEntry.InodeNumber, myPathName)
-		return
-	case *filesystem.Inode:
-		compareFile(request, state, subEntry,
-			requiredInode, requiredEntry.InodeNumber, myPathName)
-		return
-	case *filesystem.DirectoryInode:
-		compareDirectory(request, state, subEntry, requiredInode, myPathName,
-			filter)
-		return
-	default:
-		panic("Unsupported entry type")
-	}
-}
-
-func compareRegularFile(request *subproto.UpdateRequest, state *state,
-	subEntry *filesystem.DirectoryEntry,
-	requiredInode *filesystem.RegularInode, requiredInodeNumber uint64,
-	myPathName string) {
-	if subInode, ok := subEntry.Inode().(*filesystem.RegularInode); ok {
-		if requiredInum, ok :=
-			state.subInodeToRequiredInode[subEntry.InodeNumber]; ok {
-			if requiredInum != requiredInodeNumber {
-				//
-				fmt.Printf("Different links: %s...\n", myPathName) // HACK
-			}
-		} else {
-			state.subInodeToRequiredInode[subEntry.InodeNumber] =
-				requiredInodeNumber
-		}
-		sameMetadata := filesystem.CompareRegularInodesMetadata(
-			subInode, requiredInode, os.Stdout)
-		sameData := filesystem.CompareRegularInodesData(subInode,
-			requiredInode, os.Stdout)
-		if sameMetadata && sameData {
-			return
-		}
-		fmt.Printf("Different rfile: %s...\n", myPathName) // HACK
-	} else {
-		fmt.Printf("Delete+add rfile: %s...\n", myPathName) // HACK
-	}
-	// TODO(rgooch): Delete entry and replace.
-}
-
-func compareSymlink(request *subproto.UpdateRequest, state *state,
-	subEntry *filesystem.DirectoryEntry,
-	requiredInode *filesystem.SymlinkInode, requiredInodeNumber uint64,
-	myPathName string) {
-	if subInode, ok := subEntry.Inode().(*filesystem.SymlinkInode); ok {
-		if requiredInum, ok :=
-			state.subInodeToRequiredInode[subEntry.InodeNumber]; ok {
-			if requiredInum != requiredInodeNumber {
-				fmt.Printf("Different links: %s...\n", myPathName) // HACK
-			}
-		} else {
-			state.subInodeToRequiredInode[subEntry.InodeNumber] =
-				requiredInodeNumber
-		}
-		if filesystem.CompareSymlinkInodes(subInode, requiredInode, os.Stdout) {
-			return
-		}
-		fmt.Printf("Different symlink: %s...\n", myPathName) // HACK
-	} else {
-		fmt.Printf("Add symlink: %s...\n", myPathName) // HACK
-	}
-	// TODO(rgooch): Delete entry and replace.
-}
-
-func compareFile(request *subproto.UpdateRequest, state *state,
-	subEntry *filesystem.DirectoryEntry,
-	requiredInode *filesystem.Inode, requiredInodeNumber uint64,
-	myPathName string) {
-	if subInode, ok := subEntry.Inode().(*filesystem.Inode); ok {
-		if requiredInum, ok :=
-			state.subInodeToRequiredInode[subEntry.InodeNumber]; ok {
-			if requiredInum != requiredInodeNumber {
-				fmt.Printf("Different links: %s...\n", myPathName) // HACK
-			}
-		} else {
-			state.subInodeToRequiredInode[subEntry.InodeNumber] =
-				requiredInodeNumber
-		}
-		if filesystem.CompareInodes(subInode, requiredInode, os.Stdout) {
-			return
-		}
-		fmt.Printf("Different file: %s...\n", myPathName) // HACK
-	} else {
-		fmt.Printf("Add file: %s...\n", myPathName) // HACK
-	}
-	// TODO(rgooch): Delete entry and replace.
-}
-
-func compareDirectory(request *subproto.UpdateRequest, state *state,
-	subEntry *filesystem.DirectoryEntry,
-	requiredInode *filesystem.DirectoryInode,
-	myPathName string, filter *filter.Filter) {
-	if subInode, ok := subEntry.Inode().(*filesystem.DirectoryInode); ok {
-		if filesystem.CompareDirectoriesMetadata(subInode, requiredInode,
-			os.Stdout) {
-			return
-		}
-		makeDirectory(request, requiredInode, myPathName, false)
-		fmt.Printf("Different directory: %s...\n", myPathName) // HACK
-	} else {
-		request.PathsToDelete = append(request.PathsToDelete, myPathName)
-		makeDirectory(request, requiredInode, myPathName, true)
-		fmt.Printf("Replace non-directory: %s...\n", myPathName) // HACK
-	}
+func addInode(request *subproto.UpdateRequest, state *state,
+	requiredEntry *filesystem.DirectoryEntry, myPathName string) {
+	fmt.Printf("Add entry: %s...\n", myPathName) // HACK
+	// TODO(rgooch): Add entry.
 }
