@@ -146,6 +146,11 @@ func CompareDirectoryEntries(left, right *DirectoryEntry,
 	return compareDirectoryEntries(left, right, logWriter)
 }
 
+func CompareInodes(left, right GenericInode, logWriter io.Writer) (
+	sameType, sameMetadata, sameData bool) {
+	return compareInodes(left, right, logWriter)
+}
+
 func CompareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
 	return compareRegularInodes(left, right, logWriter)
 }

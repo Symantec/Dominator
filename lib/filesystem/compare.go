@@ -106,6 +106,44 @@ func compareDirectoryEntries(left, right *DirectoryEntry,
 	return false
 }
 
+func compareInodes(left, right GenericInode, logWriter io.Writer) (
+	sameType, sameMetadata, sameData bool) {
+	if left == right {
+		return true, true, true
+	}
+	switch left := left.(type) {
+	case *RegularInode:
+		if right, ok := right.(*RegularInode); ok {
+			sameType = true
+			sameMetadata = compareRegularInodesMetadata(left, right, logWriter)
+			sameData = compareRegularInodesData(left, right, logWriter)
+		}
+	case *SymlinkInode:
+		if right, ok := right.(*SymlinkInode); ok {
+			sameType = true
+			sameMetadata = compareSymlinkInodesMetadata(left, right, logWriter)
+			sameData = compareSymlinkInodesData(left, right, logWriter)
+		}
+	case *SpecialInode:
+		if right, ok := right.(*SpecialInode); ok {
+			sameType = true
+			sameMetadata = compareSpecialInodesMetadata(left, right, logWriter)
+			sameData = compareSpecialInodesData(left, right, logWriter)
+		}
+	case *DirectoryInode:
+		if right, ok := right.(*DirectoryInode); ok {
+			sameType = true
+			sameMetadata = compareDirectoriesMetadata(left, right, logWriter)
+		}
+	default:
+		panic("Unsupported entry type")
+	}
+	if !sameType && logWriter != nil {
+		fmt.Fprintln(logWriter, "types: left vs. right differ")
+	}
+	return
+}
+
 func compareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
 	if left == right {
 		return true
