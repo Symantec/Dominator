@@ -90,9 +90,9 @@ func compareDirectoryEntries(left, right *DirectoryEntry,
 		if right, ok := right.inode.(*SymlinkInode); ok {
 			return compareSymlinkInodes(left, right, logWriter)
 		}
-	case *Inode:
-		if right, ok := right.inode.(*Inode); ok {
-			return compareInodes(left, right, logWriter)
+	case *SpecialInode:
+		if right, ok := right.inode.(*SpecialInode); ok {
+			return compareSpecialInodes(left, right, logWriter)
 		}
 	case *DirectoryInode:
 		if right, ok := right.inode.(*DirectoryInode); ok {
@@ -216,17 +216,18 @@ func compareSymlinkInodesData(left, right *SymlinkInode,
 	return true
 }
 
-func compareInodes(left, right *Inode, logWriter io.Writer) bool {
+func compareSpecialInodes(left, right *SpecialInode, logWriter io.Writer) bool {
 	if left == right {
 		return true
 	}
-	if !compareInodesMetadata(left, right, logWriter) {
+	if !compareSpecialInodesMetadata(left, right, logWriter) {
 		return false
 	}
-	return compareInodesData(left, right, logWriter)
+	return compareSpecialInodesData(left, right, logWriter)
 }
 
-func compareInodesMetadata(left, right *Inode, logWriter io.Writer) bool {
+func compareSpecialInodesMetadata(left, right *SpecialInode,
+	logWriter io.Writer) bool {
 	if left == right {
 		return true
 	}
@@ -266,7 +267,8 @@ func compareInodesMetadata(left, right *Inode, logWriter io.Writer) bool {
 	return true
 }
 
-func compareInodesData(left, right *Inode, logWriter io.Writer) bool {
+func compareSpecialInodesData(left, right *SpecialInode,
+	logWriter io.Writer) bool {
 	if left.Mode&syscall.S_IFMT == syscall.S_IFBLK ||
 		left.Mode&syscall.S_IFMT == syscall.S_IFCHR {
 		if left.Rdev != right.Rdev {

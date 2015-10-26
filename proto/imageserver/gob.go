@@ -8,6 +8,6 @@ import (
 func init() {
 	gob.Register(&filesystem.RegularInode{})
 	gob.Register(&filesystem.SymlinkInode{})
-	gob.Register(&filesystem.Inode{})
+	gob.Register(&filesystem.SpecialInode{})
 	gob.Register(&filesystem.DirectoryInode{})
 }

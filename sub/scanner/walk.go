@@ -41,8 +41,8 @@ func makeSymlinkInode(stat *syscall.Stat_t) *filesystem.SymlinkInode {
 	return &inode
 }
 
-func makeInode(stat *syscall.Stat_t) *filesystem.Inode {
-	var inode filesystem.Inode
+func makeSpecialInode(stat *syscall.Stat_t) *filesystem.SpecialInode {
+	var inode filesystem.SpecialInode
 	inode.Mode = filesystem.FileMode(stat.Mode)
 	inode.Uid = stat.Uid
 	inode.Gid = stat.Gid
@@ -156,7 +156,7 @@ func scanDirectory(directory, oldDirectory *filesystem.DirectoryInode,
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFSOCK {
 			continue
 		} else {
-			err = addFile(dirent, fileSystem, oldFS, &stat)
+			err = addSpecialFile(dirent, fileSystem, oldFS, &stat)
 		}
 		if err != nil {
 			if err == syscall.ENOENT {
@@ -275,20 +275,20 @@ func addSymlink(dirent *filesystem.DirectoryEntry,
 	return nil
 }
 
-func addFile(dirent *filesystem.DirectoryEntry, fileSystem, oldFS *FileSystem,
-	stat *syscall.Stat_t) error {
+func addSpecialFile(dirent *filesystem.DirectoryEntry,
+	fileSystem, oldFS *FileSystem, stat *syscall.Stat_t) error {
 	if inode, ok := fileSystem.InodeTable[stat.Ino]; ok {
-		if inode, ok := inode.(*filesystem.Inode); ok {
+		if inode, ok := inode.(*filesystem.SpecialInode); ok {
 			dirent.SetInode(inode)
 			return nil
 		}
 		return errors.New("Inode changed type")
 	}
-	inode := makeInode(stat)
+	inode := makeSpecialInode(stat)
 	if oldFS != nil && oldFS.InodeTable != nil {
 		if oldInode, found := oldFS.InodeTable[stat.Ino]; found {
-			if oldInode, ok := oldInode.(*filesystem.Inode); ok {
-				if filesystem.CompareInodes(inode, oldInode, nil) {
+			if oldInode, ok := oldInode.(*filesystem.SpecialInode); ok {
+				if filesystem.CompareSpecialInodes(inode, oldInode, nil) {
 					inode = oldInode
 				}
 			}

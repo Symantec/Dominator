@@ -89,13 +89,13 @@ func (decoderData *decoderData) addHeader(tarReader *tar.Reader,
 	} else if header.Typeflag == tar.TypeSymlink {
 		return decoderData.addSymlink(header, parentDir, leafName)
 	} else if header.Typeflag == tar.TypeChar {
-		return decoderData.addFile(header, parentDir, leafName)
+		return decoderData.addSpecialFile(header, parentDir, leafName)
 	} else if header.Typeflag == tar.TypeBlock {
-		return decoderData.addFile(header, parentDir, leafName)
+		return decoderData.addSpecialFile(header, parentDir, leafName)
 	} else if header.Typeflag == tar.TypeDir {
 		return decoderData.addDirectory(header, parentDir, leafName)
 	} else if header.Typeflag == tar.TypeFifo {
-		return decoderData.addFile(header, parentDir, leafName)
+		return decoderData.addSpecialFile(header, parentDir, leafName)
 	} else {
 		return errors.New(fmt.Sprintf("Unsupported file type: %v",
 			header.Typeflag))
@@ -174,9 +174,9 @@ func (decoderData *decoderData) addSymlink(header *tar.Header,
 	return nil
 }
 
-func (decoderData *decoderData) addFile(header *tar.Header,
+func (decoderData *decoderData) addSpecialFile(header *tar.Header,
 	parent *filesystem.DirectoryInode, name string) error {
-	var newInode filesystem.Inode
+	var newInode filesystem.SpecialInode
 	if header.Typeflag == tar.TypeChar {
 		newInode.Mode = filesystem.FileMode((header.Mode & ^syscall.S_IFMT) |
 			syscall.S_IFCHR)

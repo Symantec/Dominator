@@ -110,9 +110,10 @@ func compareEntries(request *subproto.UpdateRequest, state *state,
 	case *filesystem.SymlinkInode:
 		sameType, sameMetadata, sameData =
 			compareSymlink(request, state, subEntry, requiredInode, myPathName)
-	case *filesystem.Inode:
+	case *filesystem.SpecialInode:
 		sameType, sameMetadata, sameData =
-			compareFile(request, state, subEntry, requiredInode, myPathName)
+			compareSpecialFile(request, state, subEntry, requiredInode,
+				myPathName)
 	case *filesystem.DirectoryInode:
 		compareDirectory(request, state, subEntry, requiredInode, myPathName,
 			filter)
@@ -159,14 +160,15 @@ func compareSymlink(request *subproto.UpdateRequest, state *state,
 	return
 }
 
-func compareFile(request *subproto.UpdateRequest, state *state,
-	subEntry *filesystem.DirectoryEntry, requiredInode *filesystem.Inode,
+func compareSpecialFile(request *subproto.UpdateRequest, state *state,
+	subEntry *filesystem.DirectoryEntry, requiredInode *filesystem.SpecialInode,
 	myPathName string) (sameType, sameMetadata, sameData bool) {
-	if subInode, ok := subEntry.Inode().(*filesystem.Inode); ok {
+	if subInode, ok := subEntry.Inode().(*filesystem.SpecialInode); ok {
 		sameType = true
-		sameMetadata = filesystem.CompareInodesMetadata(subInode, requiredInode,
+		sameMetadata = filesystem.CompareSpecialInodesMetadata(subInode,
+			requiredInode, nil)
+		sameData = filesystem.CompareSpecialInodesData(subInode, requiredInode,
 			nil)
-		sameData = filesystem.CompareInodesData(subInode, requiredInode, nil)
 	}
 	return
 }
