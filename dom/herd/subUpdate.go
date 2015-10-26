@@ -101,25 +101,22 @@ func addEntry(request *subproto.UpdateRequest, state *state,
 func compareEntries(request *subproto.UpdateRequest, state *state,
 	subEntry, requiredEntry *filesystem.DirectoryEntry,
 	myPathName string, filter *filter.Filter) {
-	var sameType, sameMetadata, sameData bool
-	switch requiredInode := requiredEntry.Inode().(type) {
-	case *filesystem.RegularInode:
-		sameType, sameMetadata, sameData =
-			compareRegularFile(request, state, subEntry, requiredInode,
-				myPathName)
-	case *filesystem.SymlinkInode:
-		sameType, sameMetadata, sameData =
-			compareSymlink(request, state, subEntry, requiredInode, myPathName)
-	case *filesystem.SpecialInode:
-		sameType, sameMetadata, sameData =
-			compareSpecialFile(request, state, subEntry, requiredInode,
-				myPathName)
-	case *filesystem.DirectoryInode:
-		compareDirectory(request, state, subEntry, requiredInode, myPathName,
-			filter)
+	subInode := subEntry.Inode()
+	requiredInode := requiredEntry.Inode()
+	sameType, sameMetadata, sameData := filesystem.CompareInodes(
+		subInode, requiredInode, nil)
+	if requiredInode, ok := requiredInode.(*filesystem.DirectoryInode); ok {
+		if sameMetadata {
+			return
+		}
+		if sameType {
+			makeDirectory(request, requiredInode, myPathName, false)
+		} else {
+			request.PathsToDelete = append(request.PathsToDelete, myPathName)
+			makeDirectory(request, requiredInode, myPathName, true)
+			fmt.Printf("Replace non-directory: %s...\n", myPathName) // HACK
+		}
 		return
-	default:
-		panic("Unsupported entry type")
 	}
 	if sameType && sameData && sameMetadata {
 		relink(request, state, subEntry, requiredEntry, myPathName)
@@ -132,61 +129,6 @@ func compareEntries(request *subproto.UpdateRequest, state *state,
 	}
 	request.PathsToDelete = append(request.PathsToDelete, myPathName)
 	addInode(request, state, requiredEntry, myPathName)
-}
-
-func compareRegularFile(request *subproto.UpdateRequest, state *state,
-	subEntry *filesystem.DirectoryEntry, requiredInode *filesystem.RegularInode,
-	myPathName string) (sameType, sameMetadata, sameData bool) {
-	if subInode, ok := subEntry.Inode().(*filesystem.RegularInode); ok {
-		sameType = true
-		sameMetadata = filesystem.CompareRegularInodesMetadata(
-			subInode, requiredInode, nil)
-		sameData = filesystem.CompareRegularInodesData(subInode, requiredInode,
-			nil)
-	}
-	return
-}
-
-func compareSymlink(request *subproto.UpdateRequest, state *state,
-	subEntry *filesystem.DirectoryEntry, requiredInode *filesystem.SymlinkInode,
-	myPathName string) (sameType, sameMetadata, sameData bool) {
-	if subInode, ok := subEntry.Inode().(*filesystem.SymlinkInode); ok {
-		sameType = true
-		sameMetadata = filesystem.CompareSymlinkInodesMetadata(subInode,
-			requiredInode, nil)
-		sameData = filesystem.CompareSymlinkInodesData(subInode, requiredInode,
-			nil)
-	}
-	return
-}
-
-func compareSpecialFile(request *subproto.UpdateRequest, state *state,
-	subEntry *filesystem.DirectoryEntry, requiredInode *filesystem.SpecialInode,
-	myPathName string) (sameType, sameMetadata, sameData bool) {
-	if subInode, ok := subEntry.Inode().(*filesystem.SpecialInode); ok {
-		sameType = true
-		sameMetadata = filesystem.CompareSpecialInodesMetadata(subInode,
-			requiredInode, nil)
-		sameData = filesystem.CompareSpecialInodesData(subInode, requiredInode,
-			nil)
-	}
-	return
-}
-
-func compareDirectory(request *subproto.UpdateRequest, state *state,
-	subEntry *filesystem.DirectoryEntry,
-	requiredInode *filesystem.DirectoryInode,
-	myPathName string, filter *filter.Filter) {
-	if subInode, ok := subEntry.Inode().(*filesystem.DirectoryInode); ok {
-		if filesystem.CompareDirectoriesMetadata(subInode, requiredInode, nil) {
-			return
-		}
-		makeDirectory(request, requiredInode, myPathName, false)
-	} else {
-		request.PathsToDelete = append(request.PathsToDelete, myPathName)
-		makeDirectory(request, requiredInode, myPathName, true)
-		fmt.Printf("Replace non-directory: %s...\n", myPathName) // HACK
-	}
 }
 
 func relink(request *subproto.UpdateRequest, state *state,
