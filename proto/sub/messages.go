@@ -64,6 +64,7 @@ type UpdateRequest struct {
 	DirectoriesToMake   []Directory
 	DirectoriesToChange []Directory
 	InodesToChange      []Inode
+	InodesToMake        []Inode
 	HardlinksToMake     []Hardlink
 	Triggers            *triggers.Triggers
 }
