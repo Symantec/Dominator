@@ -14,7 +14,8 @@ type state struct {
 	subFS                   *filesystem.FileSystem
 	requiredFS              *filesystem.FileSystem
 	requiredInodeToSubInode map[uint64]uint64
-	inodesChanged           map[uint64]bool // Required inode number.
+	inodesChanged           map[uint64]bool   // Required inode number.
+	inodesCreated           map[uint64]string // Required inode number.
 	subFilenameToInode      map[string]uint64
 }
 
@@ -28,6 +29,7 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 	request.Triggers = requiredImage.Triggers
 	state.requiredInodeToSubInode = make(map[uint64]uint64)
 	state.inodesChanged = make(map[uint64]bool)
+	state.inodesCreated = make(map[uint64]string)
 	var rusageStart, rusageStop syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
 	compareDirectories(request, &state,
@@ -157,7 +159,7 @@ func makeHardlink(request *subproto.UpdateRequest, source, target string) {
 
 func updateMetadata(request *subproto.UpdateRequest, state *state,
 	requiredEntry *filesystem.DirectoryEntry, myPathName string) {
-	if changed := state.inodesChanged[requiredEntry.InodeNumber]; changed {
+	if state.inodesChanged[requiredEntry.InodeNumber] {
 		return
 	}
 	var inode subproto.Inode
@@ -187,6 +189,10 @@ func makeDirectory(request *subproto.UpdateRequest,
 func addInode(request *subproto.UpdateRequest, state *state,
 	requiredEntry *filesystem.DirectoryEntry, myPathName string) {
 	requiredInode := requiredEntry.Inode()
+	if name, ok := state.inodesCreated[requiredEntry.InodeNumber]; ok {
+		makeHardlink(request, myPathName, name)
+		return
+	}
 	// Try to find a sibling inode.
 	names := state.requiredFS.InodeToFilenamesTable[requiredEntry.InodeNumber]
 	if len(names) > 1 {
@@ -198,7 +204,7 @@ func addInode(request *subproto.UpdateRequest, state *state,
 				_, sameMetadata, sameData := filesystem.CompareInodes(
 					subInode, requiredInode, nil)
 				if sameMetadata && sameData {
-					makeHardlink(request, name, myPathName)
+					makeHardlink(request, myPathName, name)
 					return
 				}
 				if sameData {
@@ -209,10 +215,15 @@ func addInode(request *subproto.UpdateRequest, state *state,
 		}
 		if sameDataInode != nil {
 			updateMetadata(request, state, requiredEntry, sameDataName)
-			makeHardlink(request, sameDataName, myPathName)
+			makeHardlink(request, myPathName, sameDataName)
 			return
 		}
 	}
+	var inode subproto.Inode
+	inode.Name = myPathName
+	inode.GenericInode = requiredEntry.Inode()
+	request.InodesToMake = append(request.InodesToMake, inode)
+	state.inodesCreated[requiredEntry.InodeNumber] = myPathName
 	fmt.Printf("Add entry: %s...\n", myPathName) // HACK
 	// TODO(rgooch): Add entry.
 }
