@@ -79,7 +79,7 @@ func (inode *SymlinkInode) list(w io.Writer, name string,
 	return nil
 }
 
-func (inode *Inode) list(w io.Writer, name string,
+func (inode *SpecialInode) list(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int) error {
 	var data string
 	data = ""

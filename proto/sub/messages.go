@@ -50,8 +50,8 @@ type Directory struct {
 }
 
 type Hardlink struct {
-	Source string
-	Target string
+	NewLink string
+	Target  string
 }
 
 type Inode struct {
@@ -64,6 +64,7 @@ type UpdateRequest struct {
 	DirectoriesToMake   []Directory
 	DirectoriesToChange []Directory
 	InodesToChange      []Inode
+	InodesToMake        []Inode
 	HardlinksToMake     []Hardlink
 	Triggers            *triggers.Triggers
 }

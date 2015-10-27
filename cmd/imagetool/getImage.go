@@ -142,7 +142,7 @@ func writeInodes(inodeTable filesystem.InodeTable, inodesDir string) error {
 			if err != nil && !os.IsPermission(err) {
 				return err
 			}
-		case *filesystem.Inode:
+		case *filesystem.SpecialInode:
 			var err error
 			if inode.Mode&syscall.S_IFBLK != 0 {
 				err = syscall.Mknod(filename,

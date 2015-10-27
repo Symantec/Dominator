@@ -107,7 +107,7 @@ func (inode *SymlinkInode) List(w io.Writer, name string,
 	return inode.list(w, name, numLinksTable, numLinks)
 }
 
-type Inode struct {
+type SpecialInode struct {
 	Mode             FileMode
 	Uid              uint32
 	Gid              uint32
@@ -116,7 +116,7 @@ type Inode struct {
 	Rdev             uint64
 }
 
-func (inode *Inode) List(w io.Writer, name string,
+func (inode *SpecialInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int) error {
 	return inode.list(w, name, numLinksTable, numLinks)
 }
@@ -144,6 +144,11 @@ func CompareDirectoriesMetadata(left, right *DirectoryInode,
 func CompareDirectoryEntries(left, right *DirectoryEntry,
 	logWriter io.Writer) bool {
 	return compareDirectoryEntries(left, right, logWriter)
+}
+
+func CompareInodes(left, right GenericInode, logWriter io.Writer) (
+	sameType, sameMetadata, sameData bool) {
+	return compareInodes(left, right, logWriter)
 }
 
 func CompareRegularInodes(left, right *RegularInode, logWriter io.Writer) bool {
@@ -174,14 +179,16 @@ func CompareSymlinkInodesData(left, right *SymlinkInode,
 	return compareSymlinkInodesData(left, right, logWriter)
 }
 
-func CompareInodes(left, right *Inode, logWriter io.Writer) bool {
-	return compareInodes(left, right, logWriter)
+func CompareSpecialInodes(left, right *SpecialInode, logWriter io.Writer) bool {
+	return compareSpecialInodes(left, right, logWriter)
 }
 
-func CompareInodesMetadata(left, right *Inode, logWriter io.Writer) bool {
-	return compareInodesMetadata(left, right, logWriter)
+func CompareSpecialInodesMetadata(left, right *SpecialInode,
+	logWriter io.Writer) bool {
+	return compareSpecialInodesMetadata(left, right, logWriter)
 }
 
-func CompareInodesData(left, right *Inode, logWriter io.Writer) bool {
-	return compareInodesData(left, right, logWriter)
+func CompareSpecialInodesData(left, right *SpecialInode,
+	logWriter io.Writer) bool {
+	return compareSpecialInodesData(left, right, logWriter)
 }

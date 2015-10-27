@@ -5,17 +5,18 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	subproto "github.com/Symantec/Dominator/proto/sub"
-	"os"
 	"path"
 	"syscall"
 	"time"
 )
 
 type state struct {
-	requiredInodeToSubInode map[uint64]uint64
-	inodesChanged           map[uint64]bool // Required inode number.
 	subFS                   *filesystem.FileSystem
 	requiredFS              *filesystem.FileSystem
+	requiredInodeToSubInode map[uint64]uint64
+	inodesChanged           map[uint64]bool   // Required inode number.
+	inodesCreated           map[uint64]string // Required inode number.
+	subFilenameToInode      map[string]uint64
 }
 
 func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
@@ -28,6 +29,7 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 	request.Triggers = requiredImage.Triggers
 	state.requiredInodeToSubInode = make(map[uint64]uint64)
 	state.inodesChanged = make(map[uint64]bool)
+	state.inodesCreated = make(map[uint64]string)
 	var rusageStart, rusageStop syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
 	compareDirectories(request, &state,
@@ -102,91 +104,34 @@ func addEntry(request *subproto.UpdateRequest, state *state,
 func compareEntries(request *subproto.UpdateRequest, state *state,
 	subEntry, requiredEntry *filesystem.DirectoryEntry,
 	myPathName string, filter *filter.Filter) {
-	var sameType, sameMetadata, sameData bool
-	switch requiredInode := requiredEntry.Inode().(type) {
-	case *filesystem.RegularInode:
-		sameType, sameMetadata, sameData =
-			compareRegularFile(request, state, subEntry, requiredInode,
-				myPathName)
-	case *filesystem.SymlinkInode:
-		sameType, sameMetadata, sameData =
-			compareSymlink(request, state, subEntry, requiredInode, myPathName)
-	case *filesystem.Inode:
-		sameType, sameMetadata, sameData =
-			compareFile(request, state, subEntry, requiredInode, myPathName)
-	case *filesystem.DirectoryInode:
-		compareDirectory(request, state, subEntry, requiredInode, myPathName,
-			filter)
+	subInode := subEntry.Inode()
+	requiredInode := requiredEntry.Inode()
+	sameType, sameMetadata, sameData := filesystem.CompareInodes(
+		subInode, requiredInode, nil)
+	if requiredInode, ok := requiredInode.(*filesystem.DirectoryInode); ok {
+		if sameMetadata {
+			return
+		}
+		if sameType {
+			makeDirectory(request, requiredInode, myPathName, false)
+		} else {
+			request.PathsToDelete = append(request.PathsToDelete, myPathName)
+			makeDirectory(request, requiredInode, myPathName, true)
+			fmt.Printf("Replace non-directory: %s...\n", myPathName) // HACK
+		}
 		return
-	default:
-		panic("Unsupported entry type")
 	}
 	if sameType && sameData && sameMetadata {
 		relink(request, state, subEntry, requiredEntry, myPathName)
 		return
 	}
 	if sameType && sameData {
-		updateMetadata(request, state, subEntry, requiredEntry, myPathName)
+		updateMetadata(request, state, requiredEntry, myPathName)
 		relink(request, state, subEntry, requiredEntry, myPathName)
 		return
 	}
 	request.PathsToDelete = append(request.PathsToDelete, myPathName)
 	addInode(request, state, requiredEntry, myPathName)
-}
-
-func compareRegularFile(request *subproto.UpdateRequest, state *state,
-	subEntry *filesystem.DirectoryEntry, requiredInode *filesystem.RegularInode,
-	myPathName string) (sameType, sameMetadata, sameData bool) {
-	if subInode, ok := subEntry.Inode().(*filesystem.RegularInode); ok {
-		sameType = true
-		sameMetadata = filesystem.CompareRegularInodesMetadata(
-			subInode, requiredInode, nil)
-		sameData = filesystem.CompareRegularInodesData(subInode,
-			requiredInode, os.Stdout)
-	}
-	return
-}
-
-func compareSymlink(request *subproto.UpdateRequest, state *state,
-	subEntry *filesystem.DirectoryEntry, requiredInode *filesystem.SymlinkInode,
-	myPathName string) (sameType, sameMetadata, sameData bool) {
-	if subInode, ok := subEntry.Inode().(*filesystem.SymlinkInode); ok {
-		sameType = true
-		sameMetadata = filesystem.CompareSymlinkInodesMetadata(subInode,
-			requiredInode, nil)
-		sameData = filesystem.CompareSymlinkInodesData(subInode, requiredInode,
-			os.Stdout)
-	}
-	return
-}
-
-func compareFile(request *subproto.UpdateRequest, state *state,
-	subEntry *filesystem.DirectoryEntry, requiredInode *filesystem.Inode,
-	myPathName string) (sameType, sameMetadata, sameData bool) {
-	if subInode, ok := subEntry.Inode().(*filesystem.Inode); ok {
-		sameType = true
-		sameMetadata = filesystem.CompareInodesMetadata(subInode, requiredInode,
-			nil)
-		sameData = filesystem.CompareInodesData(subInode, requiredInode,
-			os.Stdout)
-	}
-	return
-}
-
-func compareDirectory(request *subproto.UpdateRequest, state *state,
-	subEntry *filesystem.DirectoryEntry,
-	requiredInode *filesystem.DirectoryInode,
-	myPathName string, filter *filter.Filter) {
-	if subInode, ok := subEntry.Inode().(*filesystem.DirectoryInode); ok {
-		if filesystem.CompareDirectoriesMetadata(subInode, requiredInode, nil) {
-			return
-		}
-		makeDirectory(request, requiredInode, myPathName, false)
-	} else {
-		request.PathsToDelete = append(request.PathsToDelete, myPathName)
-		makeDirectory(request, requiredInode, myPathName, true)
-		fmt.Printf("Replace non-directory: %s...\n", myPathName) // HACK
-	}
 }
 
 func relink(request *subproto.UpdateRequest, state *state,
@@ -200,17 +145,21 @@ func relink(request *subproto.UpdateRequest, state *state,
 	if subInum == subEntry.InodeNumber {
 		return
 	}
+	makeHardlink(request,
+		myPathName, state.subFS.InodeToFilenamesTable[subInum][0])
+}
+
+func makeHardlink(request *subproto.UpdateRequest, newLink, target string) {
 	var hardlink subproto.Hardlink
-	hardlink.Source = myPathName
-	hardlink.Target = state.subFS.InodeToFilenamesTable[subInum][0]
+	hardlink.NewLink = newLink
+	hardlink.Target = target
 	request.HardlinksToMake = append(request.HardlinksToMake, hardlink)
-	fmt.Printf("Make link: %s => %s\n", hardlink.Source,
-		hardlink.Target) // HACK
+	fmt.Printf("Make link: %s => %s\n", newLink, target) // HACK
 }
 
 func updateMetadata(request *subproto.UpdateRequest, state *state,
-	subEntry, requiredEntry *filesystem.DirectoryEntry, myPathName string) {
-	if changed := state.inodesChanged[requiredEntry.InodeNumber]; changed {
+	requiredEntry *filesystem.DirectoryEntry, myPathName string) {
+	if state.inodesChanged[requiredEntry.InodeNumber] {
 		return
 	}
 	var inode subproto.Inode
@@ -239,6 +188,57 @@ func makeDirectory(request *subproto.UpdateRequest,
 
 func addInode(request *subproto.UpdateRequest, state *state,
 	requiredEntry *filesystem.DirectoryEntry, myPathName string) {
+	requiredInode := requiredEntry.Inode()
+	if name, ok := state.inodesCreated[requiredEntry.InodeNumber]; ok {
+		makeHardlink(request, myPathName, name)
+		return
+	}
+	// Try to find a sibling inode.
+	names := state.requiredFS.InodeToFilenamesTable[requiredEntry.InodeNumber]
+	if len(names) > 1 {
+		var sameDataInode filesystem.GenericInode
+		var sameDataName string
+		for _, name := range names {
+			if inum, found := state.getSubInodeFromFilename(name); found {
+				subInode := state.subFS.InodeTable[inum]
+				_, sameMetadata, sameData := filesystem.CompareInodes(
+					subInode, requiredInode, nil)
+				if sameMetadata && sameData {
+					makeHardlink(request, myPathName, name)
+					return
+				}
+				if sameData {
+					sameDataInode = subInode
+					sameDataName = name
+				}
+			}
+		}
+		if sameDataInode != nil {
+			updateMetadata(request, state, requiredEntry, sameDataName)
+			makeHardlink(request, myPathName, sameDataName)
+			return
+		}
+	}
+	var inode subproto.Inode
+	inode.Name = myPathName
+	inode.GenericInode = requiredEntry.Inode()
+	request.InodesToMake = append(request.InodesToMake, inode)
+	state.inodesCreated[requiredEntry.InodeNumber] = myPathName
 	fmt.Printf("Add entry: %s...\n", myPathName) // HACK
 	// TODO(rgooch): Add entry.
+}
+
+func (state *state) getSubInodeFromFilename(name string) (uint64, bool) {
+	if state.subFilenameToInode == nil {
+		fmt.Println("Making subFilenameToInode map...") // HACK
+		state.subFilenameToInode = make(map[string]uint64)
+		for inum, names := range state.subFS.InodeToFilenamesTable {
+			for _, n := range names {
+				state.subFilenameToInode[n] = inum
+			}
+		}
+		fmt.Println("Made subFilenameToInode map") // HACK
+	}
+	inum, ok := state.subFilenameToInode[name]
+	return inum, ok
 }
