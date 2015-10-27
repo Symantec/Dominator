@@ -50,8 +50,8 @@ type Directory struct {
 }
 
 type Hardlink struct {
-	Source string
-	Target string
+	NewLink string
+	Target  string
 }
 
 type Inode struct {

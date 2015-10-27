@@ -149,12 +149,12 @@ func relink(request *subproto.UpdateRequest, state *state,
 		myPathName, state.subFS.InodeToFilenamesTable[subInum][0])
 }
 
-func makeHardlink(request *subproto.UpdateRequest, source, target string) {
+func makeHardlink(request *subproto.UpdateRequest, newLink, target string) {
 	var hardlink subproto.Hardlink
-	hardlink.Source = source
+	hardlink.NewLink = newLink
 	hardlink.Target = target
 	request.HardlinksToMake = append(request.HardlinksToMake, hardlink)
-	fmt.Printf("Make link: %s => %s\n", source, target) // HACK
+	fmt.Printf("Make link: %s => %s\n", newLink, target) // HACK
 }
 
 func updateMetadata(request *subproto.UpdateRequest, state *state,
