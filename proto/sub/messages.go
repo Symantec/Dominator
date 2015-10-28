@@ -42,6 +42,11 @@ type SetConfigurationRequest Configuration
 
 type SetConfigurationResponse common.StatusResponse
 
+type FileToCopyToCache struct {
+	Name string
+	Hash hash.Hash
+}
+
 type Directory struct {
 	Name string
 	Mode filesystem.FileMode
@@ -61,11 +66,13 @@ type Inode struct {
 
 type UpdateRequest struct {
 	PathsToDelete       []string
+	FilesToCopyToCache  []FileToCopyToCache
 	DirectoriesToMake   []Directory
 	DirectoriesToChange []Directory
 	InodesToChange      []Inode
 	InodesToMake        []Inode
 	HardlinksToMake     []Hardlink
+	MultiplyUsedObjects map[hash.Hash]uint64
 	Triggers            *triggers.Triggers
 }
 
