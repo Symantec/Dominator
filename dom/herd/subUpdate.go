@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Symantec/Dominator/lib/hash"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"path"
 	"syscall"
@@ -17,6 +18,7 @@ type state struct {
 	inodesChanged           map[uint64]bool   // Required inode number.
 	inodesCreated           map[uint64]string // Required inode number.
 	subFilenameToInode      map[string]uint64
+	subObjectCacheUsage     map[hash.Hash]uint64
 }
 
 func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
@@ -30,11 +32,27 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 	state.requiredInodeToSubInode = make(map[uint64]uint64)
 	state.inodesChanged = make(map[uint64]bool)
 	state.inodesCreated = make(map[uint64]string)
+	state.subObjectCacheUsage = make(map[hash.Hash]uint64,
+		len(sub.fileSystem.ObjectCache))
 	var rusageStart, rusageStop syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
+	// Populate subObjectCacheUsage.
+	for _, hash := range sub.fileSystem.ObjectCache {
+		state.subObjectCacheUsage[hash] = 0
+	}
 	compareDirectories(request, &state,
 		&state.subFS.DirectoryInode, &state.requiredFS.DirectoryInode,
 		"/", filter)
+	// Look for multiply used objects and tell the sub.
+	for obj, useCount := range state.subObjectCacheUsage {
+		if useCount > 1 {
+			if request.MultiplyUsedObjects == nil {
+				request.MultiplyUsedObjects = make(map[hash.Hash]uint64)
+			}
+			request.MultiplyUsedObjects[obj] = useCount
+			fmt.Printf("%d uses of object: %x\n", useCount, obj) // HACK
+		}
+	}
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStop) // HACK
 	cpuTime := time.Duration(rusageStop.Utime.Sec)*time.Second +
 		time.Duration(rusageStop.Utime.Usec)*time.Microsecond -
@@ -219,13 +237,40 @@ func addInode(request *subproto.UpdateRequest, state *state,
 			return
 		}
 	}
+	if inode, ok := requiredEntry.Inode().(*filesystem.RegularInode); ok {
+		if inode.Size > 0 {
+			if _, ok := state.subObjectCacheUsage[inode.Hash]; ok {
+				state.subObjectCacheUsage[inode.Hash]++
+				if state.subObjectCacheUsage[inode.Hash] > 1 {
+					fmt.Printf("Duplicate use of hash for: %s\n",
+						myPathName) // HACK
+				}
+			} else {
+				// Not in object cache: grab it from file-system.
+				if state.subFS.HashToInodesTable == nil {
+					state.subFS.BuildHashToInodesTable()
+				}
+				if ilist, ok := state.subFS.HashToInodesTable[inode.Hash]; ok {
+					var fileToCopy subproto.FileToCopyToCache
+					fileToCopy.Name =
+						state.subFS.InodeToFilenamesTable[ilist[0]][0]
+					fileToCopy.Hash = inode.Hash
+					request.FilesToCopyToCache = append(
+						request.FilesToCopyToCache, fileToCopy)
+					fmt.Printf("Copy: %s to cache\n", fileToCopy.Name) // HACK
+					state.subObjectCacheUsage[inode.Hash] = 1
+				} else {
+					panic("No object in cache for: " + myPathName)
+				}
+			}
+		}
+	}
 	var inode subproto.Inode
 	inode.Name = myPathName
 	inode.GenericInode = requiredEntry.Inode()
 	request.InodesToMake = append(request.InodesToMake, inode)
 	state.inodesCreated[requiredEntry.InodeNumber] = myPathName
 	fmt.Printf("Add entry: %s...\n", myPathName) // HACK
-	// TODO(rgooch): Add entry.
 }
 
 func (state *state) getSubInodeFromFilename(name string) (uint64, bool) {
