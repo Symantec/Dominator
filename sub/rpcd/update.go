@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
 	"os"
@@ -52,13 +53,34 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 		}
 	}
 	if len(oldTriggers.Triggers) > 0 {
-		processDeletes(request, rootDirectoryName, &oldTriggers, false)
-		processMakeDirectories(request, rootDirectoryName, &oldTriggers, false)
+		processMakeInodes(request.InodesToMake, rootDirectoryName,
+			request.MultiplyUsedObjects, &oldTriggers, false)
+		processHardlinksToMake(request.HardlinksToMake, rootDirectoryName,
+			&oldTriggers, false)
+		processDeletes(request.PathsToDelete, rootDirectoryName, &oldTriggers,
+			false)
+		processMakeDirectories(request.DirectoriesToMake, rootDirectoryName,
+			&oldTriggers, false)
+		processChangeDirectories(request.DirectoriesToChange, rootDirectoryName,
+			&oldTriggers, false)
+		processChangeInodes(request.InodesToChange, rootDirectoryName,
+			&oldTriggers, false)
 		matchedOldTriggers := oldTriggers.GetMatchedTriggers()
 		runTriggers(matchedOldTriggers, "stop")
 	}
-	processDeletes(request, rootDirectoryName, request.Triggers, true)
-	processMakeDirectories(request, rootDirectoryName, request.Triggers, true)
+	processFilesToCopyToCache(request.FilesToCopyToCache, rootDirectoryName)
+	processMakeInodes(request.InodesToMake, rootDirectoryName,
+		request.MultiplyUsedObjects, request.Triggers, true)
+	processHardlinksToMake(request.HardlinksToMake, rootDirectoryName,
+		request.Triggers, true)
+	processDeletes(request.PathsToDelete, rootDirectoryName, request.Triggers,
+		true)
+	processMakeDirectories(request.DirectoriesToMake, rootDirectoryName,
+		request.Triggers, true)
+	processChangeDirectories(request.DirectoriesToChange, rootDirectoryName,
+		request.Triggers, true)
+	processChangeInodes(request.InodesToChange, rootDirectoryName,
+		request.Triggers, true)
 	matchedNewTriggers := request.Triggers.GetMatchedTriggers()
 	file, err = os.Create(oldTriggersFilename)
 	if err == nil {
@@ -84,9 +106,36 @@ func clearUpdateInProgress() {
 	updateInProgress = false
 }
 
-func processDeletes(request sub.UpdateRequest, rootDirectoryName string,
+func processFilesToCopyToCache(filesToCopyToCache []sub.FileToCopyToCache,
+	rootDirectoryName string) {
+	for _, fileToCopy := range filesToCopyToCache {
+		// TODO(rgooch): Remove debugging.
+		fmt.Printf("Copy: %s to cache\n", fileToCopy.Name)
+		// TODO(rgooch): Implement.
+	}
+}
+
+func processMakeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
+	multiplyUsedObjects map[hash.Hash]uint64, triggers *triggers.Triggers,
+	takeAction bool) {
+	for _, inode := range inodesToMake {
+		// TODO(rgooch): Remove debugging.
+		fmt.Printf("Make inode: %s\n", inode.Name)
+		// TODO(rgooch): Implement.
+	}
+}
+
+func processHardlinksToMake(hardlinksToMake []sub.Hardlink,
+	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
+	for _, hardlink := range hardlinksToMake {
+		fmt.Printf("Link: %s => %s\n", hardlink.NewLink, hardlink.Target)
+		// TODO(rgooch): Implement.
+	}
+}
+
+func processDeletes(pathsToDelete []string, rootDirectoryName string,
 	triggers *triggers.Triggers, takeAction bool) {
-	for _, pathname := range request.PathsToDelete {
+	for _, pathname := range pathsToDelete {
 		fullPathname := path.Join(rootDirectoryName, pathname)
 		triggers.Match(pathname)
 		if takeAction {
@@ -97,9 +146,9 @@ func processDeletes(request sub.UpdateRequest, rootDirectoryName string,
 	}
 }
 
-func processMakeDirectories(request sub.UpdateRequest, rootDirectoryName string,
-	triggers *triggers.Triggers, takeAction bool) {
-	for _, newdir := range request.DirectoriesToMake {
+func processMakeDirectories(directoriesToMake []sub.Directory,
+	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
+	for _, newdir := range directoriesToMake {
 		if scannerConfiguration.ScanFilter.Match(newdir.Name) {
 			continue
 		}
@@ -116,6 +165,24 @@ func processMakeDirectories(request sub.UpdateRequest, rootDirectoryName string,
 			fmt.Printf("Mkdir: %s\n", fullPathname)
 			// TODO(rgooch): Implement.
 		}
+	}
+}
+
+func processChangeDirectories(directoriesToChange []sub.Directory,
+	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
+	for _, directory := range directoriesToChange {
+		// TODO(rgooch): Remove debugging.
+		fmt.Printf("Change directory: %s\n", directory.Name)
+		// TODO(rgooch): Implement.
+	}
+}
+
+func processChangeInodes(inodesToChange []sub.Inode,
+	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
+	for _, inode := range inodesToChange {
+		// TODO(rgooch): Remove debugging.
+		fmt.Printf("Change inode: %s\n", inode.Name)
+		// TODO(rgooch): Implement.
 	}
 }
 

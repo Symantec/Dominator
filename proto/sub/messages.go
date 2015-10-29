@@ -67,12 +67,12 @@ type Inode struct {
 type UpdateRequest struct {
 	// The ordering here reflects the ordering that the sub is expected to use.
 	FilesToCopyToCache  []FileToCopyToCache
+	InodesToMake        []Inode
 	HardlinksToMake     []Hardlink
 	PathsToDelete       []string
 	DirectoriesToMake   []Directory
 	DirectoriesToChange []Directory
 	InodesToChange      []Inode
-	InodesToMake        []Inode
 	MultiplyUsedObjects map[hash.Hash]uint64
 	Triggers            *triggers.Triggers
 }
