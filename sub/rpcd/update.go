@@ -39,6 +39,7 @@ func (t *rpcType) Update(request sub.UpdateRequest,
 
 func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 	defer clearUpdateInProgress()
+	startTime := time.Now()
 	var oldTriggers triggers.Triggers
 	file, err := os.Open(oldTriggersFilename)
 	if err == nil {
@@ -95,9 +96,11 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 		file.Close()
 	}
 	runTriggers(matchedNewTriggers, "start")
+	timeTaken := time.Since(startTime)
+	logger.Printf("Update() completed in %s\n", timeTaken)
 	// TODO(rgooch): Remove debugging hack and implement.
 	time.Sleep(time.Second * 15)
-	logger.Printf("Update() complete\n")
+	logger.Printf("Post-Update() debugging sleep complete\n")
 }
 
 func clearUpdateInProgress() {
@@ -109,8 +112,7 @@ func clearUpdateInProgress() {
 func processFilesToCopyToCache(filesToCopyToCache []sub.FileToCopyToCache,
 	rootDirectoryName string) {
 	for _, fileToCopy := range filesToCopyToCache {
-		// TODO(rgooch): Remove debugging.
-		fmt.Printf("Copy: %s to cache\n", fileToCopy.Name)
+		logger.Printf("Copy: %s to cache\n", fileToCopy.Name)
 		// TODO(rgooch): Implement.
 	}
 }
@@ -121,9 +123,10 @@ func processMakeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
 	for _, inode := range inodesToMake {
 		fullPathname := path.Join(rootDirectoryName, inode.Name)
 		triggers.Match(inode.Name)
-		// TODO(rgooch): Remove debugging.
-		fmt.Printf("Make inode: %s\n", fullPathname)
-		// TODO(rgooch): Implement.
+		if takeAction {
+			logger.Printf("Make inode: %s\n", fullPathname)
+			// TODO(rgooch): Implement.
+		}
 	}
 }
 
@@ -131,10 +134,12 @@ func processHardlinksToMake(hardlinksToMake []sub.Hardlink,
 	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
 	for _, hardlink := range hardlinksToMake {
 		triggers.Match(hardlink.NewLink)
-		fmt.Printf("Link: %s => %s\n", hardlink.NewLink, hardlink.Target)
-		// TODO(rgooch): Implement.
-		// err := os.Link(path.Join(rootDirectoryName, hardlink.Target),
-		//	path.Join(rootDirectoryName, hardlink.NewLink))
+		if takeAction {
+			logger.Printf("Link: %s => %s\n", hardlink.NewLink, hardlink.Target)
+			// TODO(rgooch): Implement.
+			// err := os.Link(path.Join(rootDirectoryName, hardlink.Target),
+			//	path.Join(rootDirectoryName, hardlink.NewLink))
+		}
 	}
 }
 
@@ -144,8 +149,7 @@ func processDeletes(pathsToDelete []string, rootDirectoryName string,
 		fullPathname := path.Join(rootDirectoryName, pathname)
 		triggers.Match(pathname)
 		if takeAction {
-			// TODO(rgooch): Remove debugging.
-			fmt.Printf("Delete: %s\n", fullPathname)
+			logger.Printf("Delete: %s\n", fullPathname)
 			// TODO(rgooch): Implement.
 		}
 	}
@@ -160,8 +164,7 @@ func processMakeDirectories(directoriesToMake []sub.Directory,
 		fullPathname := path.Join(rootDirectoryName, newdir.Name)
 		triggers.Match(newdir.Name)
 		if takeAction {
-			// TODO(rgooch): Remove debugging.
-			fmt.Printf("Mkdir: %s\n", fullPathname)
+			logger.Printf("Mkdir: %s\n", fullPathname)
 			// TODO(rgooch): Implement.
 		}
 	}
@@ -170,18 +173,20 @@ func processMakeDirectories(directoriesToMake []sub.Directory,
 func processChangeDirectories(directoriesToChange []sub.Directory,
 	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
 	for _, directory := range directoriesToChange {
-		// TODO(rgooch): Remove debugging.
-		fmt.Printf("Change directory: %s\n", directory.Name)
-		// TODO(rgooch): Implement.
+		if takeAction {
+			logger.Printf("Change directory: %s\n", directory.Name)
+			// TODO(rgooch): Implement.
+		}
 	}
 }
 
 func processChangeInodes(inodesToChange []sub.Inode,
 	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
 	for _, inode := range inodesToChange {
-		// TODO(rgooch): Remove debugging.
-		fmt.Printf("Change inode: %s\n", inode.Name)
-		// TODO(rgooch): Implement.
+		if takeAction {
+			logger.Printf("Change inode: %s\n", inode.Name)
+			// TODO(rgooch): Implement.
+		}
 	}
 }
 
