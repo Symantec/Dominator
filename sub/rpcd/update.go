@@ -53,6 +53,7 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 			logger.Printf("Error decoding old triggers: %s", err.Error())
 		}
 	}
+	processFilesToCopyToCache(request.FilesToCopyToCache, rootDirectoryName)
 	if len(oldTriggers.Triggers) > 0 {
 		processMakeInodes(request.InodesToMake, rootDirectoryName,
 			request.MultiplyUsedObjects, &oldTriggers, false)
@@ -69,7 +70,6 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 		matchedOldTriggers := oldTriggers.GetMatchedTriggers()
 		runTriggers(matchedOldTriggers, "stop")
 	}
-	processFilesToCopyToCache(request.FilesToCopyToCache, rootDirectoryName)
 	processMakeInodes(request.InodesToMake, rootDirectoryName,
 		request.MultiplyUsedObjects, request.Triggers, true)
 	processHardlinksToMake(request.HardlinksToMake, rootDirectoryName,
