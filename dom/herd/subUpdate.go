@@ -53,12 +53,15 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 			fmt.Printf("%d uses of object: %x\n", useCount, obj) // HACK
 		}
 	}
-	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStop) // HACK
-	cpuTime := time.Duration(rusageStop.Utime.Sec)*time.Second +
+	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStop)
+	sub.lastComputeUpdateCpuDuration = time.Duration(
+		rusageStop.Utime.Sec)*time.Second +
 		time.Duration(rusageStop.Utime.Usec)*time.Microsecond -
 		time.Duration(rusageStart.Utime.Sec)*time.Second -
 		time.Duration(rusageStart.Utime.Usec)*time.Microsecond
-	fmt.Printf("Build update request took: %s user CPU time\n", cpuTime)
+	sub.herd.logger.Printf(
+		"buildUpdateRequest(%s) took: %s user CPU time\n",
+		sub.hostname, sub.lastComputeUpdateCpuDuration)
 }
 
 func compareDirectories(request *subproto.UpdateRequest, state *state,
