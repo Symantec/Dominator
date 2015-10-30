@@ -119,8 +119,10 @@ func processMakeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
 	multiplyUsedObjects map[hash.Hash]uint64, triggers *triggers.Triggers,
 	takeAction bool) {
 	for _, inode := range inodesToMake {
+		fullPathname := path.Join(rootDirectoryName, inode.Name)
+		triggers.Match(inode.Name)
 		// TODO(rgooch): Remove debugging.
-		fmt.Printf("Make inode: %s\n", inode.Name)
+		fmt.Printf("Make inode: %s\n", fullPathname)
 		// TODO(rgooch): Implement.
 	}
 }
@@ -128,8 +130,11 @@ func processMakeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
 func processHardlinksToMake(hardlinksToMake []sub.Hardlink,
 	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
 	for _, hardlink := range hardlinksToMake {
+		triggers.Match(hardlink.NewLink)
 		fmt.Printf("Link: %s => %s\n", hardlink.NewLink, hardlink.Target)
 		// TODO(rgooch): Implement.
+		// err := os.Link(path.Join(rootDirectoryName, hardlink.Target),
+		//	path.Join(rootDirectoryName, hardlink.NewLink))
 	}
 }
 
@@ -149,13 +154,7 @@ func processDeletes(pathsToDelete []string, rootDirectoryName string,
 func processMakeDirectories(directoriesToMake []sub.Directory,
 	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
 	for _, newdir := range directoriesToMake {
-		if scannerConfiguration.ScanFilter.Match(newdir.Name) {
-			continue
-		}
-		if newdir.Name == "/.subd" {
-			continue
-		}
-		if strings.HasPrefix(newdir.Name, "/.subd/") {
+		if skipPath(newdir.Name) {
 			continue
 		}
 		fullPathname := path.Join(rootDirectoryName, newdir.Name)
@@ -184,6 +183,19 @@ func processChangeInodes(inodesToChange []sub.Inode,
 		fmt.Printf("Change inode: %s\n", inode.Name)
 		// TODO(rgooch): Implement.
 	}
+}
+
+func skipPath(pathname string) bool {
+	if scannerConfiguration.ScanFilter.Match(pathname) {
+		return true
+	}
+	if pathname == "/.subd" {
+		return true
+	}
+	if strings.HasPrefix(pathname, "/.subd/") {
+		return true
+	}
+	return false
 }
 
 func runTriggers(triggers []*triggers.Trigger, action string) {
