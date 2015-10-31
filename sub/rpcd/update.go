@@ -6,12 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
+	"io"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -112,9 +115,37 @@ func clearUpdateInProgress() {
 func processFilesToCopyToCache(filesToCopyToCache []sub.FileToCopyToCache,
 	rootDirectoryName string) {
 	for _, fileToCopy := range filesToCopyToCache {
-		logger.Printf("Copy: %s to cache\n", fileToCopy.Name)
-		// TODO(rgooch): Implement.
+		sourcePathname := path.Join(rootDirectoryName, fileToCopy.Name)
+		destPathname := path.Join(objectsDir,
+			objectcache.HashToFilename(fileToCopy.Hash))
+		if copyFile(destPathname, sourcePathname) {
+			logger.Printf("Copied: %s to cache\n", sourcePathname)
+		}
 	}
+}
+
+func copyFile(destPathname, sourcePathname string) bool {
+	sourceFile, err := os.Open(sourcePathname)
+	if err != nil {
+		logger.Println(err)
+		return false
+	}
+	defer sourceFile.Close()
+	dirname := path.Dir(destPathname)
+	if err := os.MkdirAll(dirname, syscall.S_IRWXU); err != nil {
+		return false
+	}
+	destFile, err := os.Create(destPathname)
+	if err != nil {
+		logger.Println(err)
+		return false
+	}
+	defer destFile.Close()
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func processMakeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
