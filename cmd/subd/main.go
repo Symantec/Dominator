@@ -37,8 +37,8 @@ var (
 		"Name of root of directory tree to manage")
 	showStats = flag.Bool("showStats", false,
 		"If true, show statistics after each cycle")
-	subdDir = flag.String("subdDir", "/.subd",
-		"Name of subd private directory. This must be on the same file-system as rootDir")
+	subdDir = flag.String("subdDir", ".subd",
+		"Name of subd private directory, relative to rootDir. This must be on the same file-system as rootDir")
 	unshare = flag.Bool("unshare", true, "Internal use only.")
 )
 
@@ -212,6 +212,7 @@ func writePidfile() {
 
 func main() {
 	flag.Parse()
+	*subdDir = path.Join(*rootDir, *subdDir)
 	workingRootDir := path.Join(*subdDir, "root")
 	objectsDir := path.Join(*subdDir, "objects")
 	tmpDir := path.Join(*subdDir, "tmp")
