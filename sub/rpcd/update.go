@@ -166,10 +166,15 @@ func processHardlinksToMake(hardlinksToMake []sub.Hardlink,
 	for _, hardlink := range hardlinksToMake {
 		triggers.Match(hardlink.NewLink)
 		if takeAction {
-			logger.Printf("Link: %s => %s\n", hardlink.NewLink, hardlink.Target)
-			// TODO(rgooch): Implement.
-			// err := os.Link(path.Join(rootDirectoryName, hardlink.Target),
-			//	path.Join(rootDirectoryName, hardlink.NewLink))
+			targetPathname := path.Join(rootDirectoryName, hardlink.Target)
+			linkPathname := path.Join(rootDirectoryName, hardlink.NewLink)
+			err := os.Link(targetPathname, linkPathname)
+			if err != nil {
+				logger.Println(err)
+			} else {
+				logger.Printf("Linked: %s => %s\n",
+					linkPathname, targetPathname)
+			}
 		}
 	}
 }
@@ -180,8 +185,12 @@ func processDeletes(pathsToDelete []string, rootDirectoryName string,
 		fullPathname := path.Join(rootDirectoryName, pathname)
 		triggers.Match(pathname)
 		if takeAction {
-			logger.Printf("Delete: %s\n", fullPathname)
-			// TODO(rgooch): Implement.
+			err := os.RemoveAll(fullPathname)
+			if err != nil {
+				logger.Println(err)
+			} else {
+				logger.Printf("Deleted: %s\n", fullPathname)
+			}
 		}
 	}
 }
