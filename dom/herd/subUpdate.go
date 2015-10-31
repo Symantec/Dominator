@@ -76,7 +76,6 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 			}
 			if _, ok := requiredDirectory.EntriesByName[name]; !ok {
 				request.PathsToDelete = append(request.PathsToDelete, pathname)
-				fmt.Printf("Delete: %s\n", pathname) // HACK
 			}
 		}
 	}
@@ -138,7 +137,6 @@ func compareEntries(request *subproto.UpdateRequest, state *state,
 		} else {
 			request.PathsToDelete = append(request.PathsToDelete, myPathName)
 			makeDirectory(request, requiredInode, myPathName, true)
-			fmt.Printf("Replace non-directory: %s...\n", myPathName) // HACK
 		}
 		return
 	}
@@ -175,7 +173,6 @@ func makeHardlink(request *subproto.UpdateRequest, newLink, target string) {
 	hardlink.NewLink = newLink
 	hardlink.Target = target
 	request.HardlinksToMake = append(request.HardlinksToMake, hardlink)
-	fmt.Printf("Make link: %s => %s\n", newLink, target) // HACK
 }
 
 func updateMetadata(request *subproto.UpdateRequest, state *state,
@@ -188,7 +185,6 @@ func updateMetadata(request *subproto.UpdateRequest, state *state,
 	inode.GenericInode = requiredEntry.Inode()
 	request.InodesToChange = append(request.InodesToChange, inode)
 	state.inodesChanged[requiredEntry.InodeNumber] = true
-	fmt.Printf("Update metadata: %s\n", myPathName) // HACK
 }
 
 func makeDirectory(request *subproto.UpdateRequest,
@@ -200,10 +196,8 @@ func makeDirectory(request *subproto.UpdateRequest,
 	newdir.Gid = requiredInode.Gid
 	if create {
 		request.DirectoriesToMake = append(request.DirectoriesToMake, newdir)
-		fmt.Printf("Add directory: %s...\n", pathName) // HACK
 	} else {
 		request.DirectoriesToChange = append(request.DirectoriesToMake, newdir)
-		fmt.Printf("Change directory: %s...\n", pathName) // HACK
 	}
 }
 
@@ -260,7 +254,6 @@ func addInode(request *subproto.UpdateRequest, state *state,
 					fileToCopy.Hash = inode.Hash
 					request.FilesToCopyToCache = append(
 						request.FilesToCopyToCache, fileToCopy)
-					fmt.Printf("Copy: %s to cache\n", fileToCopy.Name) // HACK
 					state.subObjectCacheUsage[inode.Hash] = 1
 				} else {
 					panic("No object in cache for: " + myPathName)
@@ -273,7 +266,6 @@ func addInode(request *subproto.UpdateRequest, state *state,
 	inode.GenericInode = requiredEntry.Inode()
 	request.InodesToMake = append(request.InodesToMake, inode)
 	state.inodesCreated[requiredEntry.InodeNumber] = myPathName
-	fmt.Printf("Add entry: %s...\n", myPathName) // HACK
 }
 
 func (state *state) getSubInodeFromFilename(name string) (uint64, bool) {
