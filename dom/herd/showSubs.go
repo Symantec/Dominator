@@ -48,6 +48,7 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
 	fmt.Fprintln(writer, "    <th>Staleness</th>")
 	fmt.Fprintln(writer, "    <th>Short Poll</th>")
 	fmt.Fprintln(writer, "    <th>Full Poll</th>")
+	fmt.Fprintln(writer, "    <th>Update Compute</th>")
 	fmt.Fprintln(writer, "  </tr>")
 	subs := herd.getSelectedSubs(selectFunc)
 	for _, sub := range subs {
@@ -112,6 +113,12 @@ func showSub(writer io.Writer, sub *Sub) {
 	} else {
 		fmt.Fprintf(writer, "    <td>%.fms</td>\n",
 			sub.lastFullPollDuration.Seconds()*1e3)
+	}
+	if sub.lastComputeUpdateCpuDuration < 1 {
+		fmt.Fprintf(writer, "    <td></td>\n")
+	} else {
+		fmt.Fprintf(writer, "    <td>%.fms</td>\n",
+			sub.lastComputeUpdateCpuDuration.Seconds()*1e3)
 	}
 	fmt.Fprintf(writer, "  </tr>\n")
 }

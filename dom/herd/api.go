@@ -46,6 +46,7 @@ type Sub struct {
 	lastPollSucceededTime        time.Time
 	lastShortPollDuration        time.Duration
 	lastFullPollDuration         time.Duration
+	lastComputeUpdateCpuDuration time.Duration
 }
 
 type Herd struct {
