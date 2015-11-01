@@ -189,15 +189,17 @@ func updateMetadata(request *subproto.UpdateRequest, state *state,
 
 func makeDirectory(request *subproto.UpdateRequest,
 	requiredInode *filesystem.DirectoryInode, pathName string, create bool) {
-	var newdir subproto.Directory
-	newdir.Name = pathName
-	newdir.Mode = requiredInode.Mode
-	newdir.Uid = requiredInode.Uid
-	newdir.Gid = requiredInode.Gid
+	var newInode subproto.Inode
+	newInode.Name = pathName
+	var newDirectoryInode filesystem.DirectoryInode
+	newDirectoryInode.Mode = requiredInode.Mode
+	newDirectoryInode.Uid = requiredInode.Uid
+	newDirectoryInode.Gid = requiredInode.Gid
+	newInode.GenericInode = &newDirectoryInode
 	if create {
-		request.DirectoriesToMake = append(request.DirectoriesToMake, newdir)
+		request.DirectoriesToMake = append(request.DirectoriesToMake, newInode)
 	} else {
-		request.DirectoriesToChange = append(request.DirectoriesToMake, newdir)
+		request.InodesToChange = append(request.InodesToChange, newInode)
 	}
 }
 

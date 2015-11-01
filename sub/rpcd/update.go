@@ -67,8 +67,6 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 			false)
 		processMakeDirectories(request.DirectoriesToMake, rootDirectoryName,
 			&oldTriggers, false)
-		processChangeDirectories(request.DirectoriesToChange, rootDirectoryName,
-			&oldTriggers, false)
 		processChangeInodes(request.InodesToChange, rootDirectoryName,
 			&oldTriggers, false)
 		matchedOldTriggers := oldTriggers.GetMatchedTriggers()
@@ -81,8 +79,6 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 	processDeletes(request.PathsToDelete, rootDirectoryName, request.Triggers,
 		true)
 	processMakeDirectories(request.DirectoriesToMake, rootDirectoryName,
-		request.Triggers, true)
-	processChangeDirectories(request.DirectoriesToChange, rootDirectoryName,
 		request.Triggers, true)
 	processChangeInodes(request.InodesToChange, rootDirectoryName,
 		request.Triggers, true)
@@ -222,7 +218,7 @@ func processDeletes(pathsToDelete []string, rootDirectoryName string,
 	}
 }
 
-func processMakeDirectories(directoriesToMake []sub.Directory,
+func processMakeDirectories(directoriesToMake []sub.Inode,
 	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
 	for _, newdir := range directoriesToMake {
 		if skipPath(newdir.Name) {
@@ -231,36 +227,15 @@ func processMakeDirectories(directoriesToMake []sub.Directory,
 		fullPathname := path.Join(rootDirectoryName, newdir.Name)
 		triggers.Match(newdir.Name)
 		if takeAction {
-			err := os.Mkdir(fullPathname, os.FileMode(newdir.Mode))
-			if err != nil {
-				logger.Println(err)
+			inode, ok := newdir.GenericInode.(*filesystem.DirectoryInode)
+			if !ok {
+				logger.Println("%s is not a directory!\n", newdir.Name)
 				continue
 			}
-			err = os.Lchown(fullPathname, int(newdir.Uid), int(newdir.Gid))
-			if err != nil {
+			if err := inode.Write(fullPathname); err != nil {
 				logger.Println(err)
 			} else {
 				logger.Printf("Made directory: %s\n", fullPathname)
-			}
-		}
-	}
-}
-
-func processChangeDirectories(directoriesToChange []sub.Directory,
-	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
-	for _, dir := range directoriesToChange {
-		fullPathname := path.Join(rootDirectoryName, dir.Name)
-		triggers.Match(dir.Name)
-		if takeAction {
-			err := os.Lchown(fullPathname, int(dir.Uid), int(dir.Gid))
-			if err != nil {
-				logger.Println(err)
-				continue
-			}
-			if err = os.Chmod(fullPathname, os.FileMode(dir.Mode)); err != nil {
-				logger.Println(err)
-			} else {
-				logger.Printf("Changed directory: %s\n", fullPathname)
 			}
 		}
 	}
