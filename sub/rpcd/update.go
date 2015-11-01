@@ -156,9 +156,37 @@ func processMakeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
 		fullPathname := path.Join(rootDirectoryName, inode.Name)
 		triggers.Match(inode.Name)
 		if takeAction {
-			logger.Printf("Make inode: %s\n", fullPathname)
-			// TODO(rgooch): Implement.
+			switch inode := inode.GenericInode.(type) {
+			case *filesystem.RegularInode:
+				makeRegularInode(fullPathname, inode)
+			case *filesystem.SymlinkInode:
+				makeSymlinkInode(fullPathname, inode)
+			case *filesystem.SpecialInode:
+				makeSpecialInode(fullPathname, inode)
+			}
 		}
+	}
+}
+
+func makeRegularInode(fullPathname string, inode *filesystem.RegularInode) {
+	logger.Printf("Make inode: %s\n", fullPathname)
+	// TODO(rgooch): Implement.
+}
+
+func makeSymlinkInode(fullPathname string, inode *filesystem.SymlinkInode) {
+	if err := inode.Write(fullPathname); err != nil {
+		logger.Println(err)
+	} else {
+		logger.Printf("Made symlink inode: %s -> %s\n",
+			fullPathname, inode.Symlink)
+	}
+}
+
+func makeSpecialInode(fullPathname string, inode *filesystem.SpecialInode) {
+	if err := inode.Write(fullPathname); err != nil {
+		logger.Println(err)
+	} else {
+		logger.Printf("Made special inode: %s\n", fullPathname)
 	}
 }
 
@@ -169,8 +197,7 @@ func processHardlinksToMake(hardlinksToMake []sub.Hardlink,
 		if takeAction {
 			targetPathname := path.Join(rootDirectoryName, hardlink.Target)
 			linkPathname := path.Join(rootDirectoryName, hardlink.NewLink)
-			err := os.Link(targetPathname, linkPathname)
-			if err != nil {
+			if err := os.Link(targetPathname, linkPathname); err != nil {
 				logger.Println(err)
 			} else {
 				logger.Printf("Linked: %s => %s\n",
@@ -186,8 +213,7 @@ func processDeletes(pathsToDelete []string, rootDirectoryName string,
 		fullPathname := path.Join(rootDirectoryName, pathname)
 		triggers.Match(pathname)
 		if takeAction {
-			err := os.RemoveAll(fullPathname)
-			if err != nil {
+			if err := os.RemoveAll(fullPathname); err != nil {
 				logger.Println(err)
 			} else {
 				logger.Printf("Deleted: %s\n", fullPathname)
@@ -231,8 +257,7 @@ func processChangeDirectories(directoriesToChange []sub.Directory,
 				logger.Println(err)
 				continue
 			}
-			err = os.Chmod(fullPathname, os.FileMode(dir.Mode))
-			if err != nil {
+			if err = os.Chmod(fullPathname, os.FileMode(dir.Mode)); err != nil {
 				logger.Println(err)
 			} else {
 				logger.Printf("Changed directory: %s\n", fullPathname)
