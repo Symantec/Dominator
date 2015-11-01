@@ -8,6 +8,8 @@ import (
 type NumLinksTable map[uint64]int
 
 type GenericInode interface {
+	GetUid() uint32
+	GetGid() uint32
 	List(w io.Writer, name string, numLinksTable NumLinksTable,
 		numLinks int) error
 }
@@ -58,6 +60,14 @@ func (directory *DirectoryInode) BuildEntryMap() {
 	directory.buildEntryMap()
 }
 
+func (inode *DirectoryInode) GetUid() uint32 {
+	return inode.Uid
+}
+
+func (inode *DirectoryInode) GetGid() uint32 {
+	return inode.Gid
+}
+
 func (inode *DirectoryInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int) error {
 	return inode.list(w, name, numLinksTable, numLinks)
@@ -91,6 +101,14 @@ type RegularInode struct {
 	Hash             hash.Hash
 }
 
+func (inode *RegularInode) GetUid() uint32 {
+	return inode.Uid
+}
+
+func (inode *RegularInode) GetGid() uint32 {
+	return inode.Gid
+}
+
 func (inode *RegularInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int) error {
 	return inode.list(w, name, numLinksTable, numLinks)
@@ -100,6 +118,14 @@ type SymlinkInode struct {
 	Uid     uint32
 	Gid     uint32
 	Symlink string
+}
+
+func (inode *SymlinkInode) GetUid() uint32 {
+	return inode.Uid
+}
+
+func (inode *SymlinkInode) GetGid() uint32 {
+	return inode.Gid
 }
 
 func (inode *SymlinkInode) List(w io.Writer, name string,
@@ -114,6 +140,14 @@ type SpecialInode struct {
 	MtimeNanoSeconds int32
 	MtimeSeconds     int64
 	Rdev             uint64
+}
+
+func (inode *SpecialInode) GetUid() uint32 {
+	return inode.Uid
+}
+
+func (inode *SpecialInode) GetGid() uint32 {
+	return inode.Gid
 }
 
 func (inode *SpecialInode) List(w io.Writer, name string,
