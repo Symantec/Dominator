@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"syscall"
+	"time"
 )
 
 var dirPerms os.FileMode = syscall.S_IRWXU
@@ -132,6 +133,10 @@ func writeInodes(inodeTable filesystem.InodeTable, inodesDir string) error {
 				return err
 			}
 			if err := syscall.Chmod(filename, uint32(inode.Mode)); err != nil {
+				return err
+			}
+			t := time.Unix(inode.MtimeSeconds, int64(inode.MtimeNanoSeconds))
+			if err := os.Chtimes(filename, t, t); err != nil {
 				return err
 			}
 		case *filesystem.SymlinkInode:
