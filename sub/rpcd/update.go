@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/triggers"
@@ -243,9 +244,40 @@ func processChangeDirectories(directoriesToChange []sub.Directory,
 func processChangeInodes(inodesToChange []sub.Inode,
 	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
 	for _, inode := range inodesToChange {
+		fullPathname := path.Join(rootDirectoryName, inode.Name)
+		triggers.Match(inode.Name)
 		if takeAction {
-			logger.Printf("Change inode: %s\n", inode.Name)
-			// TODO(rgooch): Implement.
+			err := os.Chown(fullPathname,
+				int(inode.GetUid()), int(inode.GetGid()))
+			if err != nil {
+				logger.Println(err)
+				continue
+			}
+			switch inode := inode.GenericInode.(type) {
+			case *filesystem.RegularInode:
+				err = os.Chmod(fullPathname, os.FileMode(inode.Mode))
+				if err != nil {
+					logger.Println(err)
+					continue
+				}
+				t := time.Unix(inode.MtimeSeconds,
+					int64(inode.MtimeNanoSeconds))
+				err = os.Chtimes(fullPathname, t, t)
+			case *filesystem.SpecialInode:
+				err = os.Chmod(fullPathname, os.FileMode(inode.Mode))
+				if err != nil {
+					logger.Println(err)
+					continue
+				}
+				t := time.Unix(inode.MtimeSeconds,
+					int64(inode.MtimeNanoSeconds))
+				err = os.Chtimes(fullPathname, t, t)
+			}
+			if err != nil {
+				logger.Println(err)
+				continue
+			}
+			logger.Printf("Changed inode: %s\n", fullPathname)
 		}
 	}
 }
