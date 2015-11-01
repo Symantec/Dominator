@@ -12,6 +12,7 @@ type GenericInode interface {
 	GetGid() uint32
 	List(w io.Writer, name string, numLinksTable NumLinksTable,
 		numLinks int) error
+	WriteMetadata(name string) error
 }
 
 type InodeTable map[uint64]GenericInode
@@ -77,6 +78,10 @@ func (inode *DirectoryInode) Write(name string) error {
 	return inode.write(name)
 }
 
+func (inode *DirectoryInode) WriteMetadata(name string) error {
+	return inode.writeMetadata(name)
+}
+
 type DirectoryEntry struct {
 	Name        string
 	InodeNumber uint64
@@ -118,6 +123,10 @@ func (inode *RegularInode) List(w io.Writer, name string,
 	return inode.list(w, name, numLinksTable, numLinks)
 }
 
+func (inode *RegularInode) WriteMetadata(name string) error {
+	return inode.writeMetadata(name)
+}
+
 type SymlinkInode struct {
 	Uid     uint32
 	Gid     uint32
@@ -139,6 +148,10 @@ func (inode *SymlinkInode) List(w io.Writer, name string,
 
 func (inode *SymlinkInode) Write(name string) error {
 	return inode.write(name)
+}
+
+func (inode *SymlinkInode) WriteMetadata(name string) error {
+	return inode.writeMetadata(name)
 }
 
 type SpecialInode struct {
@@ -165,6 +178,10 @@ func (inode *SpecialInode) List(w io.Writer, name string,
 
 func (inode *SpecialInode) Write(name string) error {
 	return inode.write(name)
+}
+
+func (inode *SpecialInode) WriteMetadata(name string) error {
+	return inode.writeMetadata(name)
 }
 
 type FileMode uint32

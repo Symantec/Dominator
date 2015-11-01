@@ -272,33 +272,7 @@ func processChangeInodes(inodesToChange []sub.Inode,
 		fullPathname := path.Join(rootDirectoryName, inode.Name)
 		triggers.Match(inode.Name)
 		if takeAction {
-			err := os.Lchown(fullPathname,
-				int(inode.GetUid()), int(inode.GetGid()))
-			if err != nil {
-				logger.Println(err)
-				continue
-			}
-			switch inode := inode.GenericInode.(type) {
-			case *filesystem.RegularInode:
-				err = os.Chmod(fullPathname, os.FileMode(inode.Mode))
-				if err != nil {
-					logger.Println(err)
-					continue
-				}
-				t := time.Unix(inode.MtimeSeconds,
-					int64(inode.MtimeNanoSeconds))
-				err = os.Chtimes(fullPathname, t, t)
-			case *filesystem.SpecialInode:
-				err = os.Chmod(fullPathname, os.FileMode(inode.Mode))
-				if err != nil {
-					logger.Println(err)
-					continue
-				}
-				t := time.Unix(inode.MtimeSeconds,
-					int64(inode.MtimeNanoSeconds))
-				err = os.Chtimes(fullPathname, t, t)
-			}
-			if err != nil {
+			if err := inode.WriteMetadata(fullPathname); err != nil {
 				logger.Println(err)
 				continue
 			}

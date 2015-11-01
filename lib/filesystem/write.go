@@ -9,14 +9,26 @@ import (
 
 var modePerm FileMode = syscall.S_IRWXU | syscall.S_IRWXG | syscall.S_IRWXO
 
+func (inode *RegularInode) writeMetadata(name string) error {
+	if err := os.Lchown(name, int(inode.Uid), int(inode.Gid)); err != nil {
+		return err
+	}
+	if err := syscall.Chmod(name, uint32(inode.Mode)); err != nil {
+		return err
+	}
+	t := time.Unix(inode.MtimeSeconds, int64(inode.MtimeNanoSeconds))
+	return os.Chtimes(name, t, t)
+}
+
 func (inode *SymlinkInode) write(name string) error {
 	if err := os.Symlink(inode.Symlink, name); err != nil {
 		return err
 	}
-	if err := os.Lchown(name, int(inode.Uid), int(inode.Gid)); err != nil {
-		return err
-	}
-	return nil
+	return inode.writeMetadata(name)
+}
+
+func (inode *SymlinkInode) writeMetadata(name string) error {
+	return os.Lchown(name, int(inode.Uid), int(inode.Gid))
 }
 
 func (inode *SpecialInode) write(name string) error {
@@ -41,6 +53,17 @@ func (inode *SpecialInode) write(name string) error {
 	return nil
 }
 
+func (inode *SpecialInode) writeMetadata(name string) error {
+	if err := os.Lchown(name, int(inode.Uid), int(inode.Gid)); err != nil {
+		return err
+	}
+	if err := syscall.Chmod(name, uint32(inode.Mode)); err != nil {
+		return err
+	}
+	t := time.Unix(inode.MtimeSeconds, int64(inode.MtimeNanoSeconds))
+	return os.Chtimes(name, t, t)
+}
+
 func (inode *DirectoryInode) write(name string) error {
 	if err := syscall.Mkdir(name, uint32(inode.Mode)); err != nil {
 		return err
@@ -54,4 +77,11 @@ func (inode *DirectoryInode) write(name string) error {
 		}
 	}
 	return nil
+}
+
+func (inode *DirectoryInode) writeMetadata(name string) error {
+	if err := os.Lchown(name, int(inode.Uid), int(inode.Gid)); err != nil {
+		return err
+	}
+	return syscall.Chmod(name, uint32(inode.Mode))
 }
