@@ -204,18 +204,38 @@ func processMakeDirectories(directoriesToMake []sub.Directory,
 		fullPathname := path.Join(rootDirectoryName, newdir.Name)
 		triggers.Match(newdir.Name)
 		if takeAction {
-			logger.Printf("Mkdir: %s\n", fullPathname)
-			// TODO(rgooch): Implement.
+			err := os.Mkdir(fullPathname, os.FileMode(newdir.Mode))
+			if err != nil {
+				logger.Println(err)
+				continue
+			}
+			err = os.Chown(fullPathname, int(newdir.Uid), int(newdir.Gid))
+			if err != nil {
+				logger.Println(err)
+			} else {
+				logger.Printf("Made directory: %s\n", fullPathname)
+			}
 		}
 	}
 }
 
 func processChangeDirectories(directoriesToChange []sub.Directory,
 	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
-	for _, directory := range directoriesToChange {
+	for _, dir := range directoriesToChange {
+		fullPathname := path.Join(rootDirectoryName, dir.Name)
+		triggers.Match(dir.Name)
 		if takeAction {
-			logger.Printf("Change directory: %s\n", directory.Name)
-			// TODO(rgooch): Implement.
+			err := os.Chown(fullPathname, int(dir.Uid), int(dir.Gid))
+			if err != nil {
+				logger.Println(err)
+				continue
+			}
+			err = os.Chmod(fullPathname, os.FileMode(dir.Mode))
+			if err != nil {
+				logger.Println(err)
+			} else {
+				logger.Printf("Changed directory: %s\n", fullPathname)
+			}
 		}
 	}
 }
