@@ -73,6 +73,10 @@ func (inode *DirectoryInode) List(w io.Writer, name string,
 	return inode.list(w, name, numLinksTable, numLinks)
 }
 
+func (inode *DirectoryInode) Write(name string) error {
+	return inode.write(name)
+}
+
 type DirectoryEntry struct {
 	Name        string
 	InodeNumber uint64
@@ -133,6 +137,10 @@ func (inode *SymlinkInode) List(w io.Writer, name string,
 	return inode.list(w, name, numLinksTable, numLinks)
 }
 
+func (inode *SymlinkInode) Write(name string) error {
+	return inode.write(name)
+}
+
 type SpecialInode struct {
 	Mode             FileMode
 	Uid              uint32
@@ -153,6 +161,10 @@ func (inode *SpecialInode) GetGid() uint32 {
 func (inode *SpecialInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int) error {
 	return inode.list(w, name, numLinksTable, numLinks)
+}
+
+func (inode *SpecialInode) Write(name string) error {
+	return inode.write(name)
 }
 
 type FileMode uint32
