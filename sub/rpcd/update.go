@@ -210,7 +210,7 @@ func processMakeDirectories(directoriesToMake []sub.Directory,
 				logger.Println(err)
 				continue
 			}
-			err = os.Chown(fullPathname, int(newdir.Uid), int(newdir.Gid))
+			err = os.Lchown(fullPathname, int(newdir.Uid), int(newdir.Gid))
 			if err != nil {
 				logger.Println(err)
 			} else {
@@ -226,7 +226,7 @@ func processChangeDirectories(directoriesToChange []sub.Directory,
 		fullPathname := path.Join(rootDirectoryName, dir.Name)
 		triggers.Match(dir.Name)
 		if takeAction {
-			err := os.Chown(fullPathname, int(dir.Uid), int(dir.Gid))
+			err := os.Lchown(fullPathname, int(dir.Uid), int(dir.Gid))
 			if err != nil {
 				logger.Println(err)
 				continue
@@ -247,7 +247,7 @@ func processChangeInodes(inodesToChange []sub.Inode,
 		fullPathname := path.Join(rootDirectoryName, inode.Name)
 		triggers.Match(inode.Name)
 		if takeAction {
-			err := os.Chown(fullPathname,
+			err := os.Lchown(fullPathname,
 				int(inode.GetUid()), int(inode.GetGid()))
 			if err != nil {
 				logger.Println(err)
