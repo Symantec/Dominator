@@ -58,6 +58,7 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 		}
 	}
 	copyFilesToCache(request.FilesToCopyToCache, rootDirectoryName)
+	makeObjectCopies(request.MultiplyUsedObjects)
 	if len(oldTriggers.Triggers) > 0 {
 		makeInodes(request.InodesToMake, rootDirectoryName,
 			request.MultiplyUsedObjects, &oldTriggers, false)
@@ -141,6 +142,22 @@ func copyFile(destPathname, sourcePathname string) bool {
 		return false
 	}
 	return true
+}
+
+func makeObjectCopies(multiplyUsedObjects map[hash.Hash]uint64) {
+	for hash, numCopies := range multiplyUsedObjects {
+		if numCopies < 2 {
+			continue
+		}
+		objectPathname := path.Join(objectsDir,
+			objectcache.HashToFilename(hash))
+		for numCopies--; numCopies > 0; numCopies-- {
+			ext := strings.Repeat("~", int(numCopies))
+			if copyFile(objectPathname+ext, objectPathname) {
+				logger.Printf("Copied object: %x%s\n", hash, ext)
+			}
+		}
+	}
 }
 
 func makeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
