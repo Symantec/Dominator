@@ -57,31 +57,29 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 			logger.Printf("Error decoding old triggers: %s", err.Error())
 		}
 	}
-	processFilesToCopyToCache(request.FilesToCopyToCache, rootDirectoryName)
+	copyFilesToCache(request.FilesToCopyToCache, rootDirectoryName)
 	if len(oldTriggers.Triggers) > 0 {
-		processMakeInodes(request.InodesToMake, rootDirectoryName,
+		makeInodes(request.InodesToMake, rootDirectoryName,
 			request.MultiplyUsedObjects, &oldTriggers, false)
-		processHardlinksToMake(request.HardlinksToMake, rootDirectoryName,
+		makeHardlinks(request.HardlinksToMake, rootDirectoryName,
 			&oldTriggers, false)
-		processDeletes(request.PathsToDelete, rootDirectoryName, &oldTriggers,
+		doDeletes(request.PathsToDelete, rootDirectoryName, &oldTriggers, false)
+		makeDirectories(request.DirectoriesToMake, rootDirectoryName,
+			&oldTriggers, false)
+		changeInodes(request.InodesToChange, rootDirectoryName, &oldTriggers,
 			false)
-		processMakeDirectories(request.DirectoriesToMake, rootDirectoryName,
-			&oldTriggers, false)
-		processChangeInodes(request.InodesToChange, rootDirectoryName,
-			&oldTriggers, false)
 		matchedOldTriggers := oldTriggers.GetMatchedTriggers()
 		runTriggers(matchedOldTriggers, "stop")
 	}
-	processMakeInodes(request.InodesToMake, rootDirectoryName,
+	makeInodes(request.InodesToMake, rootDirectoryName,
 		request.MultiplyUsedObjects, request.Triggers, true)
-	processHardlinksToMake(request.HardlinksToMake, rootDirectoryName,
+	makeHardlinks(request.HardlinksToMake, rootDirectoryName,
 		request.Triggers, true)
-	processDeletes(request.PathsToDelete, rootDirectoryName, request.Triggers,
+	doDeletes(request.PathsToDelete, rootDirectoryName, request.Triggers, true)
+	makeDirectories(request.DirectoriesToMake, rootDirectoryName,
+		request.Triggers, true)
+	changeInodes(request.InodesToChange, rootDirectoryName, request.Triggers,
 		true)
-	processMakeDirectories(request.DirectoriesToMake, rootDirectoryName,
-		request.Triggers, true)
-	processChangeInodes(request.InodesToChange, rootDirectoryName,
-		request.Triggers, true)
 	matchedNewTriggers := request.Triggers.GetMatchedTriggers()
 	file, err = os.Create(oldTriggersFilename)
 	if err == nil {
@@ -109,7 +107,7 @@ func clearUpdateInProgress() {
 	updateInProgress = false
 }
 
-func processFilesToCopyToCache(filesToCopyToCache []sub.FileToCopyToCache,
+func copyFilesToCache(filesToCopyToCache []sub.FileToCopyToCache,
 	rootDirectoryName string) {
 	for _, fileToCopy := range filesToCopyToCache {
 		sourcePathname := path.Join(rootDirectoryName, fileToCopy.Name)
@@ -145,7 +143,7 @@ func copyFile(destPathname, sourcePathname string) bool {
 	return true
 }
 
-func processMakeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
+func makeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
 	multiplyUsedObjects map[hash.Hash]uint64, triggers *triggers.Triggers,
 	takeAction bool) {
 	for _, inode := range inodesToMake {
@@ -186,8 +184,8 @@ func makeSpecialInode(fullPathname string, inode *filesystem.SpecialInode) {
 	}
 }
 
-func processHardlinksToMake(hardlinksToMake []sub.Hardlink,
-	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
+func makeHardlinks(hardlinksToMake []sub.Hardlink, rootDirectoryName string,
+	triggers *triggers.Triggers, takeAction bool) {
 	for _, hardlink := range hardlinksToMake {
 		triggers.Match(hardlink.NewLink)
 		if takeAction {
@@ -203,7 +201,7 @@ func processHardlinksToMake(hardlinksToMake []sub.Hardlink,
 	}
 }
 
-func processDeletes(pathsToDelete []string, rootDirectoryName string,
+func doDeletes(pathsToDelete []string, rootDirectoryName string,
 	triggers *triggers.Triggers, takeAction bool) {
 	for _, pathname := range pathsToDelete {
 		fullPathname := path.Join(rootDirectoryName, pathname)
@@ -218,8 +216,8 @@ func processDeletes(pathsToDelete []string, rootDirectoryName string,
 	}
 }
 
-func processMakeDirectories(directoriesToMake []sub.Inode,
-	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
+func makeDirectories(directoriesToMake []sub.Inode, rootDirectoryName string,
+	triggers *triggers.Triggers, takeAction bool) {
 	for _, newdir := range directoriesToMake {
 		if skipPath(newdir.Name) {
 			continue
@@ -241,8 +239,8 @@ func processMakeDirectories(directoriesToMake []sub.Inode,
 	}
 }
 
-func processChangeInodes(inodesToChange []sub.Inode,
-	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
+func changeInodes(inodesToChange []sub.Inode, rootDirectoryName string,
+	triggers *triggers.Triggers, takeAction bool) {
 	for _, inode := range inodesToChange {
 		fullPathname := path.Join(rootDirectoryName, inode.Name)
 		triggers.Match(inode.Name)
