@@ -49,10 +49,11 @@ func sanityCheck() bool {
 			*rootDir, err)
 		return false
 	}
-	s_devnum, err := fsbench.GetDevnumForFile(*subdDir)
+	subdDirPathname := path.Join(*rootDir, *subdDir)
+	s_devnum, err := fsbench.GetDevnumForFile(subdDirPathname)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to get device number for: %s\t%s\n",
-			*subdDir, err)
+			subdDirPathname, err)
 		return false
 	}
 	if r_devnum != s_devnum {
@@ -212,19 +213,16 @@ func writePidfile() {
 
 func main() {
 	flag.Parse()
-	*subdDir = path.Join(*rootDir, *subdDir)
-	workingRootDir := path.Join(*subdDir, "root")
-	objectsDir := path.Join(*subdDir, "objects")
-	tmpDir := path.Join(*subdDir, "tmp")
-	netbenchFilename := path.Join(*subdDir, "netbench")
-	oldTriggersFilename := path.Join(*subdDir, "triggers.previous")
+	subdDirPathname := path.Join(*rootDir, *subdDir)
+	workingRootDir := path.Join(subdDirPathname, "root")
+	objectsDir := path.Join(workingRootDir, *subdDir, "objects")
+	tmpDir := path.Join(subdDirPathname, "tmp")
+	netbenchFilename := path.Join(subdDirPathname, "netbench")
+	oldTriggersFilename := path.Join(subdDirPathname, "triggers.previous")
 	if !createDirectory(workingRootDir) {
 		os.Exit(1)
 	}
 	if !sanityCheck() {
-		os.Exit(1)
-	}
-	if !createDirectory(objectsDir) {
 		os.Exit(1)
 	}
 	if !createDirectory(tmpDir) {
@@ -234,6 +232,9 @@ func main() {
 		os.Exit(1)
 	}
 	if !unshareAndBind(workingRootDir) {
+		os.Exit(1)
+	}
+	if !createDirectory(objectsDir) {
 		os.Exit(1)
 	}
 	runtime.GOMAXPROCS(int(*maxThreads))

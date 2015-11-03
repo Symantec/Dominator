@@ -169,7 +169,7 @@ func makeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
 		if takeAction {
 			switch inode := inode.GenericInode.(type) {
 			case *filesystem.RegularInode:
-				makeRegularInode(fullPathname, inode)
+				makeRegularInode(fullPathname, inode, multiplyUsedObjects)
 			case *filesystem.SymlinkInode:
 				makeSymlinkInode(fullPathname, inode)
 			case *filesystem.SpecialInode:
@@ -179,9 +179,33 @@ func makeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
 	}
 }
 
-func makeRegularInode(fullPathname string, inode *filesystem.RegularInode) {
-	logger.Printf("Make inode: %s\n", fullPathname)
-	// TODO(rgooch): Implement.
+func makeRegularInode(fullPathname string, inode *filesystem.RegularInode,
+	multiplyUsedObjects map[hash.Hash]uint64) {
+	var err error
+	if inode.Size > 0 {
+		objectPathname := path.Join(objectsDir,
+			objectcache.HashToFilename(inode.Hash))
+		numCopies := multiplyUsedObjects[inode.Hash]
+		if numCopies > 1 {
+			numCopies--
+			objectPathname += strings.Repeat("~", int(numCopies))
+			if numCopies < 2 {
+				delete(multiplyUsedObjects, inode.Hash)
+			}
+		}
+		err = os.Rename(objectPathname, fullPathname)
+	} else {
+		_, err = os.Create(fullPathname)
+	}
+	if err != nil {
+		logger.Println(err)
+		return
+	}
+	if err := inode.WriteMetadata(fullPathname); err != nil {
+		logger.Println(err)
+	} else {
+		logger.Printf("Made inode: %s\n", fullPathname)
+	}
 }
 
 func makeSymlinkInode(fullPathname string, inode *filesystem.SymlinkInode) {
