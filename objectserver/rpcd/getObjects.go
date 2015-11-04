@@ -66,17 +66,21 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	encoder.Encode(response)
 	bufrw.Flush()
-	for range request.Hashes {
-		_, reader, err := objectsReader.NextObject()
+	for _, hash := range request.Hashes {
+		length, reader, err := objectsReader.NextObject()
 		if err != nil {
 			logger.Println(err)
 			return
 		}
-		_, err = io.Copy(conn, reader)
+		nCopied, err := io.Copy(conn, reader)
 		reader.Close()
 		if err != nil {
 			logger.Printf("Error copying:\t%s\n", err)
 			return
+		}
+		if nCopied != int64(length) {
+			logger.Printf("Expected length: %d, got: %d for: %x\n",
+				length, nCopied, hash)
 		}
 	}
 }
