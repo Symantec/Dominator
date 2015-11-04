@@ -135,7 +135,6 @@ func compareEntries(request *subproto.UpdateRequest, state *state,
 		if sameType {
 			makeDirectory(request, requiredInode, myPathName, false)
 		} else {
-			request.PathsToDelete = append(request.PathsToDelete, myPathName)
 			makeDirectory(request, requiredInode, myPathName, true)
 		}
 		return
@@ -149,7 +148,6 @@ func compareEntries(request *subproto.UpdateRequest, state *state,
 		relink(request, state, subEntry, requiredEntry, myPathName)
 		return
 	}
-	request.PathsToDelete = append(request.PathsToDelete, myPathName)
 	addInode(request, state, requiredEntry, myPathName)
 }
 
