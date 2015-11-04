@@ -81,6 +81,7 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 		if nCopied != int64(length) {
 			logger.Printf("Expected length: %d, got: %d for: %x\n",
 				length, nCopied, hash)
+			return
 		}
 	}
 }
