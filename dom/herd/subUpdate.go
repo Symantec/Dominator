@@ -50,7 +50,6 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 				request.MultiplyUsedObjects = make(map[hash.Hash]uint64)
 			}
 			request.MultiplyUsedObjects[obj] = useCount
-			fmt.Printf("%d uses of object: %x\n", useCount, obj) // HACK
 		}
 	}
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStop)
@@ -238,10 +237,6 @@ func addInode(request *subproto.UpdateRequest, state *state,
 		if inode.Size > 0 {
 			if _, ok := state.subObjectCacheUsage[inode.Hash]; ok {
 				state.subObjectCacheUsage[inode.Hash]++
-				if state.subObjectCacheUsage[inode.Hash] > 1 {
-					fmt.Printf("Duplicate use of hash for: %s\n",
-						myPathName) // HACK
-				}
 			} else {
 				// Not in object cache: grab it from file-system.
 				if state.subFS.HashToInodesTable == nil {
