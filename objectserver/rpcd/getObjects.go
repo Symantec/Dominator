@@ -84,6 +84,7 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+	logger.Printf("GetObjects() sent: %d objects\n", len(request.Hashes))
 }
 
 func releaseSemaphore(semaphore chan bool) {
