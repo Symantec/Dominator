@@ -22,7 +22,6 @@ type state struct {
 }
 
 func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
-	fmt.Println("buildUpdateRequest()") // TODO(rgooch): Delete debugging.
 	var state state
 	state.subFS = &sub.fileSystem.FileSystem
 	requiredImage := sub.herd.getImage(sub.requiredImage)
