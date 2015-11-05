@@ -21,7 +21,8 @@ type state struct {
 	subObjectCacheUsage     map[hash.Hash]uint64
 }
 
-func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
+// Returns true if no update needs to be performed.
+func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) bool {
 	var state state
 	state.subFS = &sub.fileSystem.FileSystem
 	requiredImage := sub.herd.getImage(sub.requiredImage)
@@ -57,9 +58,18 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 		time.Duration(rusageStop.Utime.Usec)*time.Microsecond -
 		time.Duration(rusageStart.Utime.Sec)*time.Second -
 		time.Duration(rusageStart.Utime.Usec)*time.Microsecond
-	sub.herd.logger.Printf(
-		"buildUpdateRequest(%s) took: %s user CPU time\n",
-		sub.hostname, sub.lastComputeUpdateCpuDuration)
+	if len(request.FilesToCopyToCache) > 0 ||
+		len(request.InodesToMake) > 0 ||
+		len(request.HardlinksToMake) > 0 ||
+		len(request.PathsToDelete) > 0 ||
+		len(request.DirectoriesToMake) > 0 ||
+		len(request.InodesToChange) > 0 {
+		sub.herd.logger.Printf(
+			"buildUpdateRequest(%s) took: %s user CPU time\n",
+			sub.hostname, sub.lastComputeUpdateCpuDuration)
+		return false
+	}
+	return true
 }
 
 func compareDirectories(request *subproto.UpdateRequest, state *state,
