@@ -21,10 +21,17 @@ func (inode *RegularInode) writeMetadata(name string) error {
 }
 
 func (inode *SymlinkInode) write(name string) error {
-	if err := os.Symlink(inode.Symlink, name); err != nil {
-		return err
+	if inode.make(name) != nil {
+		os.RemoveAll(name)
+		if err := inode.make(name); err != nil {
+			return err
+		}
 	}
 	return inode.writeMetadata(name)
+}
+
+func (inode *SymlinkInode) make(name string) error {
+	return os.Symlink(inode.Symlink, name)
 }
 
 func (inode *SymlinkInode) writeMetadata(name string) error {
@@ -32,25 +39,23 @@ func (inode *SymlinkInode) writeMetadata(name string) error {
 }
 
 func (inode *SpecialInode) write(name string) error {
-	var err error
+	if inode.make(name) != nil {
+		os.RemoveAll(name)
+		if err := inode.make(name); err != nil {
+			return err
+		}
+	}
+	return inode.writeMetadata(name)
+}
+
+func (inode *SpecialInode) make(name string) error {
 	if inode.Mode&syscall.S_IFBLK != 0 || inode.Mode&syscall.S_IFCHR != 0 {
-		err = syscall.Mknod(name, uint32(inode.Mode), int(inode.Rdev))
+		return syscall.Mknod(name, uint32(inode.Mode), int(inode.Rdev))
 	} else if inode.Mode&syscall.S_IFIFO != 0 {
-		err = syscall.Mkfifo(name, uint32(inode.Mode))
+		return syscall.Mkfifo(name, uint32(inode.Mode))
 	} else {
 		return errors.New("unsupported mode")
 	}
-	if err != nil {
-		return err
-	}
-	if err := os.Lchown(name, int(inode.Uid), int(inode.Gid)); err != nil {
-		return err
-	}
-	t := time.Unix(inode.MtimeSeconds, int64(inode.MtimeNanoSeconds))
-	if err := os.Chtimes(name, t, t); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (inode *SpecialInode) writeMetadata(name string) error {
@@ -65,8 +70,11 @@ func (inode *SpecialInode) writeMetadata(name string) error {
 }
 
 func (inode *DirectoryInode) write(name string) error {
-	if err := syscall.Mkdir(name, uint32(inode.Mode)); err != nil {
-		return err
+	if inode.make(name) != nil {
+		os.RemoveAll(name)
+		if err := inode.make(name); err != nil {
+			return err
+		}
 	}
 	if err := os.Lchown(name, int(inode.Uid), int(inode.Gid)); err != nil {
 		return err
@@ -77,6 +85,10 @@ func (inode *DirectoryInode) write(name string) error {
 		}
 	}
 	return nil
+}
+
+func (inode *DirectoryInode) make(name string) error {
+	return syscall.Mkdir(name, uint32(inode.Mode))
 }
 
 func (inode *DirectoryInode) writeMetadata(name string) error {
