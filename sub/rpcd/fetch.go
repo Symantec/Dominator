@@ -26,7 +26,7 @@ func (t *rpcType) Fetch(request sub.FetchRequest,
 		return errors.New("fetch already in progress")
 	}
 	if updateInProgress {
-		logger.Println("Error: update progress")
+		logger.Println("Error: update in progress")
 		return errors.New("update in progress")
 	}
 	fetchInProgress = true
@@ -58,7 +58,7 @@ func doFetch(request sub.FetchRequest) {
 			logger.Println(err)
 			return
 		}
-		err = readOne(hash, networkReaderContext.NewReader(reader))
+		err = readOne(hash, length, networkReaderContext.NewReader(reader))
 		reader.Close()
 		if err != nil {
 			logger.Println(err)
@@ -97,7 +97,7 @@ func enoughBytesForBenchmark(objectServer *objectclient.ObjectClient,
 	return false
 }
 
-func readOne(hash hash.Hash, reader io.Reader) error {
+func readOne(hash hash.Hash, length uint64, reader io.Reader) error {
 	filename := path.Join(objectsDir, objectcache.HashToFilename(hash))
 	dirname := path.Dir(filename)
 	if err := os.MkdirAll(dirname, syscall.S_IRWXU); err != nil {
@@ -110,8 +110,13 @@ func readOne(hash hash.Hash, reader io.Reader) error {
 	defer file.Close()
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
-	if _, err = io.Copy(writer, reader); err != nil {
+	var nCopied int64
+	if nCopied, err = io.Copy(writer, reader); err != nil {
 		return errors.New(fmt.Sprintf("error copying: %s", err.Error()))
+	}
+	if nCopied != int64(length) {
+		return errors.New(fmt.Sprintf("expected length: %d, got: %d for: %x\n",
+			length, nCopied, hash))
 	}
 	return nil
 }
