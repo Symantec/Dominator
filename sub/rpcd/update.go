@@ -204,7 +204,11 @@ func makeRegularInode(fullPathname string, inode *filesystem.RegularInode,
 	if err := inode.WriteMetadata(fullPathname); err != nil {
 		logger.Println(err)
 	} else {
-		logger.Printf("Made inode: %s\n", fullPathname)
+		if inode.Size > 0 {
+			logger.Printf("Made inode: %s from: %x\n", fullPathname, inode.Hash)
+		} else {
+			logger.Printf("Made empty inode: %s\n", fullPathname)
+		}
 	}
 }
 
