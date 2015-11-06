@@ -29,6 +29,8 @@ var (
 		"If true, do not run any triggers. For debugging only")
 )
 
+var lastUpdateHadTriggerFailures bool
+
 func (t *rpcType) Update(request sub.UpdateRequest,
 	reply *sub.UpdateResponse) error {
 	if *readOnly || *disableUpdates {
@@ -74,6 +76,7 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 	}
 	copyFilesToCache(request.FilesToCopyToCache, rootDirectoryName)
 	makeObjectCopies(request.MultiplyUsedObjects)
+	lastUpdateHadTriggerFailures = false
 	if len(oldTriggers.Triggers) > 0 {
 		makeInodes(request.InodesToMake, rootDirectoryName,
 			request.MultiplyUsedObjects, &oldTriggers, false)
@@ -85,7 +88,9 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 		changeInodes(request.InodesToChange, rootDirectoryName, &oldTriggers,
 			false)
 		matchedOldTriggers := oldTriggers.GetMatchedTriggers()
-		runTriggers(matchedOldTriggers, "stop")
+		if runTriggers(matchedOldTriggers, "stop") {
+			lastUpdateHadTriggerFailures = true
+		}
 	}
 	makeInodes(request.InodesToMake, rootDirectoryName,
 		request.MultiplyUsedObjects, request.Triggers, true)
@@ -109,7 +114,9 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 		}
 		file.Close()
 	}
-	runTriggers(matchedNewTriggers, "start")
+	if runTriggers(matchedNewTriggers, "start") {
+		lastUpdateHadTriggerFailures = true
+	}
 	timeTaken := time.Since(startTime)
 	logger.Printf("Update() completed in %s\n", timeTaken)
 	// TODO(rgooch): Remove debugging hack and implement.
@@ -327,7 +334,8 @@ func skipPath(pathname string) bool {
 	return false
 }
 
-func runTriggers(triggers []*triggers.Trigger, action string) {
+func runTriggers(triggers []*triggers.Trigger, action string) bool {
+	hadFailures := false
 	logPrefix := ""
 	if *disableTriggers {
 		logPrefix = "Disabled: "
@@ -338,14 +346,15 @@ func runTriggers(triggers []*triggers.Trigger, action string) {
 			if trigger.Service == "reboot" {
 				logger.Print(logPrefix, "Rebooting")
 				if *disableTriggers {
-					return
+					return hadFailures
 				}
 				cmd := exec.Command("reboot")
 				cmd.Stdout = os.Stdout
 				if err := cmd.Run(); err != nil {
+					hadFailures = true
 					logger.Print(err)
 				}
-				return
+				return hadFailures
 			}
 		}
 	}
@@ -363,8 +372,9 @@ func runTriggers(triggers []*triggers.Trigger, action string) {
 			trigger.Service)
 		cmd.Stdout = os.Stdout
 		if err := cmd.Run(); err != nil {
+			hadFailures = true
 			logger.Print(err)
 		}
-		// TODO(rgooch): Implement.
 	}
+	return hadFailures
 }
