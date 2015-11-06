@@ -70,3 +70,9 @@ type UpdateRequest struct {
 }
 
 type UpdateResponse struct{}
+
+type CleanupRequest struct {
+	Hashes []hash.Hash
+}
+
+type CleanupResponse struct{}
