@@ -31,11 +31,12 @@ type PollRequest struct {
 }
 
 type PollResponse struct {
-	NetworkSpeed     uint64
-	FetchInProgress  bool // Fetch() and Update() are mutually exclusive.
-	UpdateInProgress bool
-	GenerationCount  uint64
-	FileSystem       *scanner.FileSystem
+	NetworkSpeed                 uint64
+	FetchInProgress              bool // Fetch() and Update() mutually exclusive
+	UpdateInProgress             bool
+	LastUpdateHadTriggerFailures bool
+	GenerationCount              uint64
+	FileSystem                   *scanner.FileSystem
 }
 
 type SetConfigurationRequest Configuration

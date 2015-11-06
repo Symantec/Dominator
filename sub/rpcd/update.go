@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
@@ -19,8 +20,24 @@ import (
 	"time"
 )
 
+var (
+	readOnly = flag.Bool("readOnly", false,
+		"If true, refuse all Fetch and Update requests. For debugging only")
+	disableUpdates = flag.Bool("disableUpdates", false,
+		"If true, refuse all Update requests. For debugging only")
+	disableTriggers = flag.Bool("disableTriggers", false,
+		"If true, do not run any triggers. For debugging only")
+)
+
+var lastUpdateHadTriggerFailures bool
+
 func (t *rpcType) Update(request sub.UpdateRequest,
 	reply *sub.UpdateResponse) error {
+	if *readOnly || *disableUpdates {
+		txt := "Update() rejected due to read-only mode"
+		logger.Println(txt)
+		return errors.New(txt)
+	}
 	rwLock.Lock()
 	defer rwLock.Unlock()
 	fs := fileSystemHistory.FileSystem()
@@ -59,6 +76,7 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 	}
 	copyFilesToCache(request.FilesToCopyToCache, rootDirectoryName)
 	makeObjectCopies(request.MultiplyUsedObjects)
+	lastUpdateHadTriggerFailures = false
 	if len(oldTriggers.Triggers) > 0 {
 		makeInodes(request.InodesToMake, rootDirectoryName,
 			request.MultiplyUsedObjects, &oldTriggers, false)
@@ -70,7 +88,9 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 		changeInodes(request.InodesToChange, rootDirectoryName, &oldTriggers,
 			false)
 		matchedOldTriggers := oldTriggers.GetMatchedTriggers()
-		runTriggers(matchedOldTriggers, "stop")
+		if runTriggers(matchedOldTriggers, "stop") {
+			lastUpdateHadTriggerFailures = true
+		}
 	}
 	makeInodes(request.InodesToMake, rootDirectoryName,
 		request.MultiplyUsedObjects, request.Triggers, true)
@@ -94,7 +114,9 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 		}
 		file.Close()
 	}
-	runTriggers(matchedNewTriggers, "start")
+	if runTriggers(matchedNewTriggers, "start") {
+		lastUpdateHadTriggerFailures = true
+	}
 	timeTaken := time.Since(startTime)
 	logger.Printf("Update() completed in %s\n", timeTaken)
 	// TODO(rgooch): Remove debugging hack and implement.
@@ -312,19 +334,27 @@ func skipPath(pathname string) bool {
 	return false
 }
 
-func runTriggers(triggers []*triggers.Trigger, action string) {
+func runTriggers(triggers []*triggers.Trigger, action string) bool {
+	hadFailures := false
+	logPrefix := ""
+	if *disableTriggers {
+		logPrefix = "Disabled: "
+	}
 	// For "start" action, if there is a reboot trigger, just do that one.
 	if action == "start" {
 		for _, trigger := range triggers {
 			if trigger.Service == "reboot" {
-				logger.Print("Rebooting")
-				// TODO(rgooch): Remove debugging output.
-				cmd := exec.Command("echo", "reboot")
+				logger.Print(logPrefix, "Rebooting")
+				if *disableTriggers {
+					return hadFailures
+				}
+				cmd := exec.Command("reboot")
 				cmd.Stdout = os.Stdout
 				if err := cmd.Run(); err != nil {
+					hadFailures = true
 					logger.Print(err)
 				}
-				return
+				return hadFailures
 			}
 		}
 	}
@@ -333,14 +363,18 @@ func runTriggers(triggers []*triggers.Trigger, action string) {
 		if trigger.Service == "reboot" && action == "stop" {
 			continue
 		}
-		logger.Printf("Action: service %s %s\n", trigger.Service, action)
-		// TODO(rgooch): Remove debugging output.
-		cmd := exec.Command("run-in-mntns", ppid, "echo", "service", action,
+		logger.Printf("%sAction: service %s %s\n",
+			logPrefix, trigger.Service, action)
+		if *disableTriggers {
+			continue
+		}
+		cmd := exec.Command("run-in-mntns", ppid, "service", action,
 			trigger.Service)
 		cmd.Stdout = os.Stdout
 		if err := cmd.Run(); err != nil {
+			hadFailures = true
 			logger.Print(err)
 		}
-		// TODO(rgooch): Implement.
 	}
+	return hadFailures
 }
