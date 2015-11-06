@@ -1,7 +1,6 @@
 package herd
 
 import (
-	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
@@ -274,14 +273,12 @@ func addInode(request *subproto.UpdateRequest, state *state,
 
 func (state *state) getSubInodeFromFilename(name string) (uint64, bool) {
 	if state.subFilenameToInode == nil {
-		fmt.Println("Making subFilenameToInode map...") // HACK
 		state.subFilenameToInode = make(map[string]uint64)
 		for inum, names := range state.subFS.InodeToFilenamesTable {
 			for _, n := range names {
 				state.subFilenameToInode[n] = inum
 			}
 		}
-		fmt.Println("Made subFilenameToInode map") // HACK
 	}
 	inum, ok := state.subFilenameToInode[name]
 	return inum, ok
