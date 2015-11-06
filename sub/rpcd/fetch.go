@@ -3,6 +3,7 @@ package rpcd
 import (
 	"bufio"
 	"errors"
+	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/hash"
@@ -14,6 +15,11 @@ import (
 	"path"
 	"syscall"
 	"time"
+)
+
+var (
+	exitOnFetchFailure = flag.Bool("exitOnFetchFailure", false,
+		"If true, exit if there are fetch failures. For debugging only")
 )
 
 func (t *rpcType) Fetch(request sub.FetchRequest,
@@ -48,6 +54,9 @@ func doFetch(request sub.FetchRequest) {
 	objectsReader, err := objectServer.GetObjects(request.Hashes)
 	if err != nil {
 		logger.Printf("Error getting object reader:\t%s\n", err.Error())
+		if *exitOnFetchFailure {
+			os.Exit(1)
+		}
 		return
 	}
 	var totalLength uint64
@@ -56,12 +65,18 @@ func doFetch(request sub.FetchRequest) {
 		length, reader, err := objectsReader.NextObject()
 		if err != nil {
 			logger.Println(err)
+			if *exitOnFetchFailure {
+				os.Exit(1)
+			}
 			return
 		}
 		err = readOne(hash, length, networkReaderContext.NewReader(reader))
 		reader.Close()
 		if err != nil {
 			logger.Println(err)
+			if *exitOnFetchFailure {
+				os.Exit(1)
+			}
 			return
 		}
 		totalLength += length
