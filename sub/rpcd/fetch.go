@@ -24,6 +24,11 @@ var (
 
 func (t *rpcType) Fetch(request sub.FetchRequest,
 	reply *sub.FetchResponse) error {
+	if *readOnly {
+		txt := "Fetch() rejected due to read-only mode"
+		logger.Println(txt)
+		return errors.New(txt)
+	}
 	rwLock.Lock()
 	defer rwLock.Unlock()
 	logger.Printf("Fetch() %d objects\n", len(request.Hashes))
