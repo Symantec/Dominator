@@ -72,8 +72,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		sub.generationCount = reply.GenerationCount
 		sub.lastFullPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
-		// TODO(rgooch): Remove debugging output.
-		fmt.Printf("Polled: %s, GenerationCount=%d\n",
+		logger.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)
 	}
 	if sub.fileSystem == nil {
@@ -107,6 +106,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		return
 	}
 	sub.status = statusSynced
+	sub.cleanup(connection, sub.plannedImage)
 }
 
 // Returns true if all required objects are available.
@@ -159,10 +159,53 @@ func (sub *Sub) sendUpdate(connection *rpc.Client) (bool, uint) {
 	logger := sub.herd.logger
 	var request subproto.UpdateRequest
 	var reply subproto.UpdateResponse
-	sub.buildUpdateRequest(&request)
+	if sub.buildUpdateRequest(&request) {
+		return true, statusSynced
+	}
 	if err := connection.Call("Subd.Update", request, &reply); err != nil {
 		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
 		return false, statusFailedToUpdate
 	}
 	return false, statusUpdating
+}
+
+func (sub *Sub) cleanup(connection *rpc.Client, plannedImageName string) {
+	logger := sub.herd.logger
+	unusedObjects := make(map[hash.Hash]bool)
+	for _, hash := range sub.fileSystem.ObjectCache {
+		unusedObjects[hash] = false // Potential cleanup candidate.
+	}
+	for _, inode := range sub.fileSystem.InodeTable {
+		if inode, ok := inode.(*filesystem.RegularInode); ok {
+			if inode.Size > 0 {
+				if _, ok := unusedObjects[inode.Hash]; ok {
+					unusedObjects[inode.Hash] = true // Must clean this one up.
+				}
+			}
+		}
+	}
+	image := sub.herd.getImage(plannedImageName)
+	if image != nil {
+		for _, inode := range image.FileSystem.InodeTable {
+			if inode, ok := inode.(*filesystem.RegularInode); ok {
+				if inode.Size > 0 {
+					if clean, ok := unusedObjects[inode.Hash]; !clean && ok {
+						delete(unusedObjects, inode.Hash)
+					}
+				}
+			}
+		}
+	}
+	if len(unusedObjects) < 1 {
+		return
+	}
+	var request subproto.CleanupRequest
+	var reply subproto.CleanupResponse
+	request.Hashes = make([]hash.Hash, 0, len(unusedObjects))
+	for hash := range unusedObjects {
+		request.Hashes = append(request.Hashes, hash)
+	}
+	if err := connection.Call("Subd.Cleanup", request, &reply); err != nil {
+		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
+	}
 }

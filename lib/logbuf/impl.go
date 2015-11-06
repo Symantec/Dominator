@@ -1,11 +1,21 @@
 package logbuf
 
 import (
+	"flag"
 	"fmt"
 	"io"
+	"os"
+)
+
+var (
+	alsoLogToStderr = flag.Bool("alsoLogToStderr", false,
+		"If true, also write logs to stderr")
 )
 
 func (lb *LogBuffer) write(p []byte) (n int, err error) {
+	if *alsoLogToStderr {
+		os.Stderr.Write(p)
+	}
 	lb.rwMutex.Lock()
 	defer lb.rwMutex.Unlock()
 	val := make([]byte, len(p))

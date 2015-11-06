@@ -54,7 +54,7 @@ func getImageAndWrite(imageClient *rpc.Client,
 	if err := writeInodes(fs.InodeTable, inodesDir); err != nil {
 		return err
 	}
-	if err = makeDir(&fs.DirectoryInode, dirname); err != nil {
+	if err = fs.DirectoryInode.Write(dirname); err != nil {
 		return err
 	}
 	return buildTree(&fs.DirectoryInode, dirname, inodesDir)
@@ -127,65 +127,24 @@ func writeInodes(inodeTable filesystem.InodeTable, inodesDir string) error {
 					return err
 				}
 			}
-			err := os.Lchown(filename, int(inode.Uid), int(inode.Gid))
-			if err != nil && !os.IsPermission(err) {
-				return err
-			}
-			if err := os.Chmod(filename, os.FileMode(inode.Mode)); err != nil {
+			if err := inode.WriteMetadata(filename); err != nil {
 				return err
 			}
 		case *filesystem.SymlinkInode:
-			if err := os.Symlink(inode.Symlink, filename); err != nil {
-				return err
-			}
-			err := os.Lchown(filename, int(inode.Uid), int(inode.Gid))
-			if err != nil && !os.IsPermission(err) {
+			if err := inode.Write(filename); err != nil {
 				return err
 			}
 		case *filesystem.SpecialInode:
-			var err error
-			if inode.Mode&syscall.S_IFBLK != 0 {
-				err = syscall.Mknod(filename,
-					syscall.S_IFBLK|uint32(inode.Mode), int(inode.Rdev))
-			} else if inode.Mode&syscall.S_IFCHR != 0 {
-				err = syscall.Mknod(filename,
-					syscall.S_IFCHR|uint32(inode.Mode), int(inode.Rdev))
-			} else if inode.Mode&syscall.S_IFIFO != 0 {
-				err = syscall.Mkfifo(filename, uint32(inode.Mode))
-			} else {
-				return errors.New("unsupported mode")
-			}
-			if err != nil {
-				if os.IsPermission(err) {
-					continue
-				}
-				return err
-			}
-			err = os.Lchown(filename, int(inode.Uid), int(inode.Gid))
-			if err != nil && !os.IsPermission(err) {
+			if err := inode.Write(filename); err != nil {
 				return err
 			}
 		case *filesystem.DirectoryInode:
-			if err := makeDir(inode, filename); err != nil {
+			if err := inode.Write(filename); err != nil {
 				return err
 			}
 		default:
 			return errors.New("unsupported inode type")
 		}
-	}
-	return nil
-}
-
-func makeDir(inode *filesystem.DirectoryInode, pathname string) error {
-	if err := os.Mkdir(pathname, dirPerms); err != nil {
-		return err
-	}
-	err := os.Lchown(pathname, int(inode.Uid), int(inode.Gid))
-	if err != nil && !os.IsPermission(err) {
-		return err
-	}
-	if err := os.Chmod(pathname, os.FileMode(inode.Mode)); err != nil {
-		return err
 	}
 	return nil
 }

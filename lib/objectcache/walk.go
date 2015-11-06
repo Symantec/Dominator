@@ -16,13 +16,6 @@ func validatePath(fileName string) bool {
 	return true
 }
 
-func cleanPath(directoryName string, fileName string) error {
-	if !validatePath(fileName) {
-		return os.RemoveAll(path.Join(directoryName, fileName))
-	}
-	return nil
-}
-
 func addCacheEntry(fileName string, cache ObjectCache) (ObjectCache, error) {
 	hash, err := filenameToHash(fileName)
 	if err != nil {
@@ -43,14 +36,20 @@ func scanObjectCache(cacheDirectoryName string, subpath string,
 	if err != nil {
 		return nil, err
 	}
-	for _, name := range names {
-		if err = cleanPath(cacheDirectoryName, name); err != nil {
-			return nil, err
-		}
-	}
 	sort.Strings(names)
 	for _, name := range names {
-		fi, err := os.Lstat(path.Join(myPathName, name))
+		lastChar := name[len(name)-1]
+		if lastChar == '~' || lastChar == '^' {
+			continue
+		}
+		pathname := path.Join(myPathName, name)
+		if !validatePath(name) {
+			if err := os.RemoveAll(pathname); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		fi, err := os.Lstat(pathname)
 		if err != nil {
 			continue
 		}

@@ -1,7 +1,6 @@
 package herd
 
 import (
-	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
@@ -21,8 +20,8 @@ type state struct {
 	subObjectCacheUsage     map[hash.Hash]uint64
 }
 
-func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
-	fmt.Println("buildUpdateRequest()") // TODO(rgooch): Delete debugging.
+// Returns true if no update needs to be performed.
+func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) bool {
 	var state state
 	state.subFS = &sub.fileSystem.FileSystem
 	requiredImage := sub.herd.getImage(sub.requiredImage)
@@ -50,7 +49,6 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 				request.MultiplyUsedObjects = make(map[hash.Hash]uint64)
 			}
 			request.MultiplyUsedObjects[obj] = useCount
-			fmt.Printf("%d uses of object: %x\n", useCount, obj) // HACK
 		}
 	}
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStop)
@@ -59,9 +57,18 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) {
 		time.Duration(rusageStop.Utime.Usec)*time.Microsecond -
 		time.Duration(rusageStart.Utime.Sec)*time.Second -
 		time.Duration(rusageStart.Utime.Usec)*time.Microsecond
-	sub.herd.logger.Printf(
-		"buildUpdateRequest(%s) took: %s user CPU time\n",
-		sub.hostname, sub.lastComputeUpdateCpuDuration)
+	if len(request.FilesToCopyToCache) > 0 ||
+		len(request.InodesToMake) > 0 ||
+		len(request.HardlinksToMake) > 0 ||
+		len(request.PathsToDelete) > 0 ||
+		len(request.DirectoriesToMake) > 0 ||
+		len(request.InodesToChange) > 0 {
+		sub.herd.logger.Printf(
+			"buildUpdateRequest(%s) took: %s user CPU time\n",
+			sub.hostname, sub.lastComputeUpdateCpuDuration)
+		return false
+	}
+	return true
 }
 
 func compareDirectories(request *subproto.UpdateRequest, state *state,
@@ -135,7 +142,6 @@ func compareEntries(request *subproto.UpdateRequest, state *state,
 		if sameType {
 			makeDirectory(request, requiredInode, myPathName, false)
 		} else {
-			request.PathsToDelete = append(request.PathsToDelete, myPathName)
 			makeDirectory(request, requiredInode, myPathName, true)
 		}
 		return
@@ -149,7 +155,6 @@ func compareEntries(request *subproto.UpdateRequest, state *state,
 		relink(request, state, subEntry, requiredEntry, myPathName)
 		return
 	}
-	request.PathsToDelete = append(request.PathsToDelete, myPathName)
 	addInode(request, state, requiredEntry, myPathName)
 }
 
@@ -189,15 +194,17 @@ func updateMetadata(request *subproto.UpdateRequest, state *state,
 
 func makeDirectory(request *subproto.UpdateRequest,
 	requiredInode *filesystem.DirectoryInode, pathName string, create bool) {
-	var newdir subproto.Directory
-	newdir.Name = pathName
-	newdir.Mode = requiredInode.Mode
-	newdir.Uid = requiredInode.Uid
-	newdir.Gid = requiredInode.Gid
+	var newInode subproto.Inode
+	newInode.Name = pathName
+	var newDirectoryInode filesystem.DirectoryInode
+	newDirectoryInode.Mode = requiredInode.Mode
+	newDirectoryInode.Uid = requiredInode.Uid
+	newDirectoryInode.Gid = requiredInode.Gid
+	newInode.GenericInode = &newDirectoryInode
 	if create {
-		request.DirectoriesToMake = append(request.DirectoriesToMake, newdir)
+		request.DirectoriesToMake = append(request.DirectoriesToMake, newInode)
 	} else {
-		request.DirectoriesToChange = append(request.DirectoriesToMake, newdir)
+		request.InodesToChange = append(request.InodesToChange, newInode)
 	}
 }
 
@@ -238,10 +245,6 @@ func addInode(request *subproto.UpdateRequest, state *state,
 		if inode.Size > 0 {
 			if _, ok := state.subObjectCacheUsage[inode.Hash]; ok {
 				state.subObjectCacheUsage[inode.Hash]++
-				if state.subObjectCacheUsage[inode.Hash] > 1 {
-					fmt.Printf("Duplicate use of hash for: %s\n",
-						myPathName) // HACK
-				}
 			} else {
 				// Not in object cache: grab it from file-system.
 				if state.subFS.HashToInodesTable == nil {
@@ -270,14 +273,12 @@ func addInode(request *subproto.UpdateRequest, state *state,
 
 func (state *state) getSubInodeFromFilename(name string) (uint64, bool) {
 	if state.subFilenameToInode == nil {
-		fmt.Println("Making subFilenameToInode map...") // HACK
 		state.subFilenameToInode = make(map[string]uint64)
 		for inum, names := range state.subFS.InodeToFilenamesTable {
 			for _, n := range names {
 				state.subFilenameToInode[n] = inum
 			}
 		}
-		fmt.Println("Made subFilenameToInode map") // HACK
 	}
 	inum, ok := state.subFilenameToInode[name]
 	return inum, ok

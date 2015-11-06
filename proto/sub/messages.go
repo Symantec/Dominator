@@ -47,13 +47,6 @@ type FileToCopyToCache struct {
 	Hash hash.Hash
 }
 
-type Directory struct {
-	Name string
-	Mode filesystem.FileMode
-	Uid  uint32
-	Gid  uint32
-}
-
 type Hardlink struct {
 	NewLink string
 	Target  string
@@ -70,11 +63,16 @@ type UpdateRequest struct {
 	InodesToMake        []Inode
 	HardlinksToMake     []Hardlink
 	PathsToDelete       []string
-	DirectoriesToMake   []Directory
-	DirectoriesToChange []Directory
+	DirectoriesToMake   []Inode
 	InodesToChange      []Inode
 	MultiplyUsedObjects map[hash.Hash]uint64
 	Triggers            *triggers.Triggers
 }
 
 type UpdateResponse struct{}
+
+type CleanupRequest struct {
+	Hashes []hash.Hash
+}
+
+type CleanupResponse struct{}

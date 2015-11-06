@@ -8,8 +8,11 @@ import (
 type NumLinksTable map[uint64]int
 
 type GenericInode interface {
+	GetUid() uint32
+	GetGid() uint32
 	List(w io.Writer, name string, numLinksTable NumLinksTable,
 		numLinks int) error
+	WriteMetadata(name string) error
 }
 
 type InodeTable map[uint64]GenericInode
@@ -58,9 +61,25 @@ func (directory *DirectoryInode) BuildEntryMap() {
 	directory.buildEntryMap()
 }
 
+func (inode *DirectoryInode) GetUid() uint32 {
+	return inode.Uid
+}
+
+func (inode *DirectoryInode) GetGid() uint32 {
+	return inode.Gid
+}
+
 func (inode *DirectoryInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int) error {
 	return inode.list(w, name, numLinksTable, numLinks)
+}
+
+func (inode *DirectoryInode) Write(name string) error {
+	return inode.write(name)
+}
+
+func (inode *DirectoryInode) WriteMetadata(name string) error {
+	return inode.writeMetadata(name)
 }
 
 type DirectoryEntry struct {
@@ -91,9 +110,21 @@ type RegularInode struct {
 	Hash             hash.Hash
 }
 
+func (inode *RegularInode) GetUid() uint32 {
+	return inode.Uid
+}
+
+func (inode *RegularInode) GetGid() uint32 {
+	return inode.Gid
+}
+
 func (inode *RegularInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int) error {
 	return inode.list(w, name, numLinksTable, numLinks)
+}
+
+func (inode *RegularInode) WriteMetadata(name string) error {
+	return inode.writeMetadata(name)
 }
 
 type SymlinkInode struct {
@@ -102,9 +133,25 @@ type SymlinkInode struct {
 	Symlink string
 }
 
+func (inode *SymlinkInode) GetUid() uint32 {
+	return inode.Uid
+}
+
+func (inode *SymlinkInode) GetGid() uint32 {
+	return inode.Gid
+}
+
 func (inode *SymlinkInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int) error {
 	return inode.list(w, name, numLinksTable, numLinks)
+}
+
+func (inode *SymlinkInode) Write(name string) error {
+	return inode.write(name)
+}
+
+func (inode *SymlinkInode) WriteMetadata(name string) error {
+	return inode.writeMetadata(name)
 }
 
 type SpecialInode struct {
@@ -116,9 +163,25 @@ type SpecialInode struct {
 	Rdev             uint64
 }
 
+func (inode *SpecialInode) GetUid() uint32 {
+	return inode.Uid
+}
+
+func (inode *SpecialInode) GetGid() uint32 {
+	return inode.Gid
+}
+
 func (inode *SpecialInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int) error {
 	return inode.list(w, name, numLinksTable, numLinks)
+}
+
+func (inode *SpecialInode) Write(name string) error {
+	return inode.write(name)
+}
+
+func (inode *SpecialInode) WriteMetadata(name string) error {
+	return inode.writeMetadata(name)
 }
 
 type FileMode uint32
