@@ -60,6 +60,8 @@ func (t *rpcType) Update(request sub.UpdateRequest,
 
 func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 	defer clearUpdateInProgress()
+	disableScannerFunc(true)
+	defer disableScannerFunc(false)
 	startTime := time.Now()
 	var oldTriggers triggers.Triggers
 	file, err := os.Open(oldTriggersFilename)

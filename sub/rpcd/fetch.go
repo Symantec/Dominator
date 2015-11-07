@@ -47,6 +47,8 @@ func (t *rpcType) Fetch(request sub.FetchRequest,
 
 func doFetch(request sub.FetchRequest) {
 	defer clearFetchInProgress()
+	disableScannerFunc(true)
+	defer disableScannerFunc(false)
 	objectServer := objectclient.NewObjectClient(request.ServerAddress)
 	benchmark := false
 	if networkReaderContext.MaximumSpeed() < 1 {

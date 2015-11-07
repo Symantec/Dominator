@@ -10,6 +10,8 @@ import (
 
 func (t *rpcType) Cleanup(request sub.CleanupRequest,
 	reply *sub.CleanupResponse) error {
+	disableScannerFunc(true)
+	defer disableScannerFunc(false)
 	rwLock.Lock()
 	defer rwLock.Unlock()
 	logger.Printf("Cleanup(): %d objects\n", len(request.Hashes))

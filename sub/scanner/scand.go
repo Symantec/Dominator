@@ -6,12 +6,18 @@ import (
 	"syscall"
 )
 
+var disableScanRequest chan bool
+var disableScanAcknowledge chan bool
+
 func startScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
-	configuration *Configuration, logger *log.Logger) chan *FileSystem {
+	configuration *Configuration, logger *log.Logger) (
+	chan *FileSystem, func(disableScanner bool)) {
 	fsChannel := make(chan *FileSystem)
+	disableScanRequest = make(chan bool, 1)
+	disableScanAcknowledge = make(chan bool)
 	go scannerDaemon(rootDirectoryName, cacheDirectoryName, configuration,
 		fsChannel, logger)
-	return fsChannel
+	return fsChannel, doDisableScanner
 }
 
 func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
@@ -25,6 +31,11 @@ func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 			configuration, &oldFS)
 		if err != nil {
 			logger.Printf("Error scanning\t%s\n", err)
+			if err.Error() == "DisableScan" {
+				disableScanAcknowledge <- true
+				<-disableScanAcknowledge
+				continue
+			}
 		} else {
 			oldFS.InodeTable = fs.InodeTable
 			oldFS.DirectoryInode = fs.DirectoryInode
@@ -36,4 +47,21 @@ func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 			}
 		}
 	}
+}
+
+func doDisableScanner(disableScanner bool) {
+	if disableScanner {
+		disableScanRequest <- true
+		<-disableScanAcknowledge
+	} else {
+		disableScanAcknowledge <- true
+	}
+}
+
+func checkScanDisableRequest() bool {
+	if len(disableScanRequest) > 0 {
+		<-disableScanRequest
+		return true
+	}
+	return false
 }

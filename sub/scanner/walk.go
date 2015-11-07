@@ -134,6 +134,9 @@ func scanDirectory(directory, oldDirectory *filesystem.DirectoryInode,
 		if stat.Dev != fileSystem.dev {
 			continue
 		}
+		if checkScanDisableRequest() {
+			return errors.New("DisableScan"), false
+		}
 		myGC()
 		dirent := new(filesystem.DirectoryEntry)
 		dirent.Name = name
