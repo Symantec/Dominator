@@ -103,8 +103,10 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	}
 	if idle, status := sub.fetchMissingObjects(connection,
 		sub.plannedImage); !idle {
-		sub.status = status
-		return
+		if status != statusImageNotReady {
+			sub.status = status
+			return
+		}
 	}
 	sub.status = statusSynced
 	sub.cleanup(connection, sub.plannedImage)
