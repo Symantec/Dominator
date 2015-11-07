@@ -263,14 +263,15 @@ func main() {
 		fmt.Println(configuration.FsScanContext)
 	}
 	var fsh scanner.FileSystemHistory
-	fsChannel := scanner.StartScannerDaemon(workingRootDir, objectsDir,
-		&configuration, logger)
+	fsChannel, disableScanner := scanner.StartScannerDaemon(workingRootDir,
+		objectsDir, &configuration, logger)
 	networkReaderContext := rateio.NewReaderContext(
 		getCachedNetworkSpeed(netbenchFilename),
 		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 	configuration.NetworkReaderContext = networkReaderContext
 	rescanObjectCacheChannel := rpcd.Setup(&configuration, &fsh, objectsDir,
-		networkReaderContext, netbenchFilename, oldTriggersFilename, logger)
+		networkReaderContext, netbenchFilename, oldTriggersFilename,
+		disableScanner, logger)
 	httpd.AddHtmlWriter(&fsh)
 	httpd.AddHtmlWriter(&configuration)
 	httpd.AddHtmlWriter(circularBuffer)
