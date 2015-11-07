@@ -166,6 +166,7 @@ func (sub *Sub) sendUpdate(connection *rpc.Client) (bool, uint) {
 		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
 		return false, statusFailedToUpdate
 	}
+	sub.generationCountAtChangeStart = sub.generationCount
 	return false, statusUpdating
 }
 
@@ -207,5 +208,7 @@ func (sub *Sub) cleanup(connection *rpc.Client, plannedImageName string) {
 	}
 	if err := connection.Call("Subd.Cleanup", request, &reply); err != nil {
 		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
+	} else {
+		sub.generationCountAtChangeStart = sub.generationCount
 	}
 }
