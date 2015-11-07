@@ -89,6 +89,8 @@ func showSub(writer io.Writer, sub *Sub) {
 		status = "fetch failed"
 	case sub.status == statusWaitingForNextPoll:
 		status = "waiting for next poll"
+	case sub.status == statusComputingUpdate:
+		status = "computing update"
 	case sub.status == statusUpdating:
 		status = "updating"
 	case sub.status == statusFailedToUpdate:

@@ -96,6 +96,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		sub.status = status
 		return
 	}
+	sub.status = statusComputingUpdate
 	if idle, status := sub.sendUpdate(connection); !idle {
 		sub.status = status
 		return

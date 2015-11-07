@@ -22,6 +22,7 @@ const (
 	statusFetching
 	statusFailedToFetch
 	statusWaitingForNextPoll
+	statusComputingUpdate
 	statusUpdating
 	statusFailedToUpdate
 	statusSynced
