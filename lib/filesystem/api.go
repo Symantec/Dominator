@@ -29,8 +29,8 @@ type FileSystem struct {
 	DirectoryInode
 }
 
-func (fs *FileSystem) RebuildInodePointers() {
-	fs.rebuildInodePointers()
+func (fs *FileSystem) RebuildInodePointers() error {
+	return fs.rebuildInodePointers()
 }
 
 func (fs *FileSystem) BuildInodeToFilenamesTable() {
