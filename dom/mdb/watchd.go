@@ -24,6 +24,7 @@ func watchDaemon(mdbFileName string, mdbChannel chan *Mdb, logger *log.Logger) {
 			logger.Printf("Error stating file: %s\t%s\n", mdbFileName, err)
 			continue
 		}
+		stat.Atim = lastStat.Atim
 		if stat != lastStat {
 			file, err := os.Open(mdbFileName)
 			if err != nil {
