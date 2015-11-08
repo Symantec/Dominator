@@ -136,7 +136,7 @@ func compareInodes(left, right GenericInode, logWriter io.Writer) (
 			sameMetadata = compareDirectoriesMetadata(left, right, logWriter)
 		}
 	default:
-		panic("Unsupported entry type")
+		panic(fmt.Sprintf("Unsupported entry type: %T", left))
 	}
 	if !sameType && logWriter != nil {
 		fmt.Fprintln(logWriter, "types: left vs. right differ")
