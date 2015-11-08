@@ -11,6 +11,9 @@ func (fs *FileSystem) rebuildInodePointers() {
 func (inode *DirectoryInode) rebuildInodePointers(fs *FileSystem) {
 	for _, dirent := range inode.EntryList {
 		dirent.inode = fs.InodeTable[dirent.InodeNumber]
+		if dirent.inode == nil {
+			panic("No inode entry for: " + dirent.Name)
+		}
 		if inode, ok := dirent.inode.(*DirectoryInode); ok {
 			inode.rebuildInodePointers(fs)
 		}
