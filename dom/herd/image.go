@@ -43,12 +43,16 @@ func (herd *Herd) getImageHaveLock(name string) *image.Image {
 		return nil
 	}
 	if reply.Image != nil {
+		if err := reply.Image.FileSystem.RebuildInodePointers(); err != nil {
+			herd.logger.Printf("Error building inode pointers for image: %s %s",
+				name, err)
+			return nil
+		}
+		reply.Image.FileSystem.BuildEntryMap()
+		reply.Image.FileSystem.BuildInodeToFilenamesTable()
+		reply.Image.FileSystem.BuildHashToInodesTable()
+		herd.imagesByName[name] = reply.Image
 		herd.logger.Printf("Got image: %s\n", name)
 	}
-	reply.Image.FileSystem.RebuildInodePointers()
-	reply.Image.FileSystem.BuildEntryMap()
-	reply.Image.FileSystem.BuildInodeToFilenamesTable()
-	reply.Image.FileSystem.BuildHashToInodesTable()
-	herd.imagesByName[name] = reply.Image
 	return reply.Image
 }

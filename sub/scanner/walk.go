@@ -88,6 +88,9 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 		return nil, err
 	}
 	fileSystem.ComputeTotalDataBytes()
+	if err = fileSystem.RebuildInodePointers(); err != nil {
+		panic(err)
+	}
 	return &fileSystem, nil
 }
 
@@ -173,7 +176,8 @@ func scanDirectory(directory, oldDirectory *filesystem.DirectoryInode,
 		}
 		entryList = append(entryList, dirent)
 	}
-	if oldDirectory != nil && len(entryList) == copiedDirents {
+	if oldDirectory != nil && len(entryList) == copiedDirents &&
+		len(entryList) == len(oldDirectory.EntryList) {
 		directory.EntryList = oldDirectory.EntryList
 		return nil, true
 	} else {
@@ -224,7 +228,7 @@ func addRegularFile(dirent *filesystem.DirectoryEntry,
 			dirent.SetInode(inode)
 			return nil
 		}
-		return errors.New("Inode changed type")
+		return errors.New("Inode changed type: " + dirent.Name)
 	}
 	inode := makeRegularInode(stat)
 	if inode.Size > 0 {
@@ -256,7 +260,7 @@ func addSymlink(dirent *filesystem.DirectoryEntry,
 			dirent.SetInode(inode)
 			return nil
 		}
-		return errors.New("Inode changed type")
+		return errors.New("Inode changed type: " + dirent.Name)
 	}
 	inode := makeSymlinkInode(stat)
 	err := scanSymlinkInode(inode, fileSystem,
@@ -285,7 +289,7 @@ func addSpecialFile(dirent *filesystem.DirectoryEntry,
 			dirent.SetInode(inode)
 			return nil
 		}
-		return errors.New("Inode changed type")
+		return errors.New("Inode changed type: " + dirent.Name)
 	}
 	inode := makeSpecialInode(stat)
 	if oldFS != nil && oldFS.InodeTable != nil {

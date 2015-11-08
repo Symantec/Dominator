@@ -51,21 +51,22 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
 	fmt.Fprintln(writer, "    <th>Update Compute</th>")
 	fmt.Fprintln(writer, "  </tr>")
 	subs := herd.getSelectedSubs(selectFunc)
+	missingImages := make(map[string]bool)
 	for _, sub := range subs {
-		showSub(writer, sub)
+		showSub(writer, sub, missingImages)
 	}
 	fmt.Fprintln(writer, "</table>")
 	fmt.Fprintln(writer, "</body>")
 }
 
-func showSub(writer io.Writer, sub *Sub) {
+func showSub(writer io.Writer, sub *Sub, missingImages map[string]bool) {
 	fmt.Fprintf(writer, "  <tr>\n")
 	subURL := fmt.Sprintf("http://%s:%d/",
 		strings.SplitN(sub.hostname, "*", 2)[0], constants.SubPortNumber)
 	fmt.Fprintf(writer, "    <td><a href=\"%s\">%s</a></td>\n",
 		subURL, sub.hostname)
-	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.requiredImage)
-	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.plannedImage)
+	sub.herd.showImage(writer, sub.requiredImage, missingImages)
+	sub.herd.showImage(writer, sub.plannedImage, missingImages)
 	fmt.Fprintf(writer, "    <td>%v</td>\n", sub.busy)
 	var status string
 	switch {
@@ -89,6 +90,8 @@ func showSub(writer io.Writer, sub *Sub) {
 		status = "fetch failed"
 	case sub.status == statusWaitingForNextPoll:
 		status = "waiting for next poll"
+	case sub.status == statusComputingUpdate:
+		status = "computing update"
 	case sub.status == statusUpdating:
 		status = "updating"
 	case sub.status == statusFailedToUpdate:
@@ -121,4 +124,22 @@ func showSub(writer io.Writer, sub *Sub) {
 			sub.lastComputeUpdateCpuDuration.Seconds()*1e3)
 	}
 	fmt.Fprintf(writer, "  </tr>\n")
+}
+
+func (herd *Herd) showImage(writer io.Writer, name string,
+	missingImages map[string]bool) {
+	found := false
+	if !missingImages[name] {
+		if herd.getImage(name) == nil {
+			missingImages[name] = true
+		} else {
+			found = true
+		}
+	}
+	if found {
+		fmt.Fprintf(writer, "    <td>%s</td>\n", name)
+	} else {
+		fmt.Fprintf(writer, "    <td><font color=\"grey\">%s</font></td>\n",
+			name)
+	}
 }

@@ -121,9 +121,6 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 	}
 	timeTaken := time.Since(startTime)
 	logger.Printf("Update() completed in %s\n", timeTaken)
-	// TODO(rgooch): Remove debugging hack and implement.
-	time.Sleep(time.Second * 15)
-	logger.Printf("Post-Update() debugging sleep complete\n")
 }
 
 func clearUpdateInProgress() {

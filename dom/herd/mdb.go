@@ -41,6 +41,11 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 		}
 		subsToDelete[sub.hostname] = false
 		herd.subsByIndex = append(herd.subsByIndex, sub)
+		if sub.requiredImage != machine.RequiredImage ||
+			sub.plannedImage != machine.PlannedImage {
+			sub.generationCountAtChangeStart = 0
+			sub.generationCountAtLastSync = 0
+		}
 		sub.requiredImage = machine.RequiredImage
 		sub.plannedImage = machine.PlannedImage
 		herd.getImageHaveLock(sub.requiredImage) // Preload.

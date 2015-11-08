@@ -65,7 +65,12 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		sub.lastShortPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
 	} else {
-		fs.RebuildInodePointers()
+		if err := fs.RebuildInodePointers(); err != nil {
+			sub.status = statusFailedToPoll
+			logger.Printf("Error building pointers for: %s %s\n",
+				sub.hostname, err)
+			return
+		}
 		fs.BuildInodeToFilenamesTable()
 		fs.BuildEntryMap()
 		sub.fileSystem = fs
@@ -87,6 +92,10 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		sub.status = statusUpdating
 		return
 	}
+	if sub.generationCountAtLastSync == sub.generationCount {
+		sub.status = statusSynced
+		return
+	}
 	if sub.generationCountAtChangeStart == sub.generationCount {
 		sub.status = statusWaitingForNextPoll
 		return
@@ -96,17 +105,21 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		sub.status = status
 		return
 	}
+	sub.status = statusComputingUpdate
 	if idle, status := sub.sendUpdate(connection); !idle {
 		sub.status = status
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(connection,
 		sub.plannedImage); !idle {
-		sub.status = status
-		return
+		if status != statusImageNotReady {
+			sub.status = status
+			return
+		}
 	}
 	sub.status = statusSynced
 	sub.cleanup(connection, sub.plannedImage)
+	sub.generationCountAtLastSync = sub.generationCount
 }
 
 // Returns true if all required objects are available.

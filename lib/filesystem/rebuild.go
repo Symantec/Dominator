@@ -1,20 +1,40 @@
 package filesystem
 
 import (
+	"errors"
+	"fmt"
 	"path"
 )
 
-func (fs *FileSystem) rebuildInodePointers() {
-	fs.DirectoryInode.rebuildInodePointers(fs)
+func (fs *FileSystem) rebuildInodePointers() error {
+	return fs.DirectoryInode.rebuildInodePointers(fs)
 }
 
-func (inode *DirectoryInode) rebuildInodePointers(fs *FileSystem) {
+func (inode *DirectoryInode) rebuildInodePointers(fs *FileSystem) error {
 	for _, dirent := range inode.EntryList {
-		dirent.inode = fs.InodeTable[dirent.InodeNumber]
+		tableInode, ok := fs.InodeTable[dirent.InodeNumber]
+		if !ok {
+			return errors.New(fmt.Sprintf(
+				"%s: no entry in inode table for: %d %p",
+				dirent.Name, dirent.InodeNumber, dirent.inode))
+		}
+		if tableInode == nil {
+			return errors.New(fmt.Sprintf(
+				"%s: nil entry in inode table for: %d %p",
+				dirent.Name, dirent.InodeNumber, dirent.inode))
+		} else if dirent.inode != nil && dirent.inode != tableInode {
+			return errors.New(fmt.Sprintf(
+				"%s: changing inode entry for: %d from: %p to %p\n",
+				dirent.Name, dirent.InodeNumber, dirent.inode, tableInode))
+		}
+		dirent.inode = tableInode
 		if inode, ok := dirent.inode.(*DirectoryInode); ok {
-			inode.rebuildInodePointers(fs)
+			if err := inode.rebuildInodePointers(fs); err != nil {
+				return errors.New(dirent.Name + "/" + err.Error())
+			}
 		}
 	}
+	return nil
 }
 
 func (fs *FileSystem) buildInodeToFilenamesTable() {
