@@ -42,6 +42,7 @@ type Sub struct {
 	fileSystem                   *scanner.FileSystem
 	generationCount              uint64
 	generationCountAtChangeStart uint64
+	generationCountAtLastSync    uint64
 	status                       uint
 	lastPollStartTime            time.Time
 	lastPollSucceededTime        time.Time

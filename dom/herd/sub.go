@@ -87,6 +87,10 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		sub.status = statusUpdating
 		return
 	}
+	if sub.generationCountAtLastSync == sub.generationCount {
+		sub.status = statusSynced
+		return
+	}
 	if sub.generationCountAtChangeStart == sub.generationCount {
 		sub.status = statusWaitingForNextPoll
 		return
@@ -110,6 +114,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	}
 	sub.status = statusSynced
 	sub.cleanup(connection, sub.plannedImage)
+	sub.generationCountAtLastSync = sub.generationCount
 }
 
 // Returns true if all required objects are available.
