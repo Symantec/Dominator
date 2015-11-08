@@ -65,7 +65,12 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		sub.lastShortPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
 	} else {
-		fs.RebuildInodePointers()
+		if err := fs.RebuildInodePointers(); err != nil {
+			sub.status = statusFailedToPoll
+			logger.Printf("Error building pointers for: %s %s\n",
+				sub.hostname, err)
+			return
+		}
 		fs.BuildInodeToFilenamesTable()
 		fs.BuildEntryMap()
 		sub.fileSystem = fs
