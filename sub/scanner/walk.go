@@ -3,6 +3,7 @@ package scanner
 import (
 	"crypto/sha512"
 	"errors"
+	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
@@ -314,8 +315,16 @@ func scanRegularInode(inode *filesystem.RegularInode, fileSystem *FileSystem,
 	}
 	reader := fileSystem.configuration.FsScanContext.NewReader(f)
 	hash := sha512.New()
-	io.Copy(hash, reader)
+	nCopied, err := io.Copy(hash, reader)
 	f.Close()
+	if err != nil {
+		return err
+	}
+	if nCopied != int64(inode.Size) {
+		return errors.New(fmt.Sprintf(
+			"scanRegularInode(%s): read: %d, expected: %d bytes",
+			myPathName, nCopied, inode.Size))
+	}
 	copy(inode.Hash[:], hash.Sum(nil))
 	return nil
 }
