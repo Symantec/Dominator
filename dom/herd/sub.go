@@ -64,6 +64,8 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	if fs := reply.FileSystem; fs == nil {
 		sub.lastShortPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
+		shortPollDistribution.Add(
+			float64(sub.lastShortPollDuration.Nanoseconds()) * 1e-6)
 	} else {
 		if err := fs.RebuildInodePointers(); err != nil {
 			sub.status = statusFailedToPoll
@@ -77,6 +79,8 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		sub.generationCount = reply.GenerationCount
 		sub.lastFullPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
+		fullPollDistribution.Add(
+			float64(sub.lastFullPollDuration.Nanoseconds()) * 1e-6)
 		logger.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)
 	}
