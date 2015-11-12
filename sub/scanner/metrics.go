@@ -9,8 +9,8 @@ var latencyBucketer *tricorder.Bucketer
 var scanTimeDistribution *tricorder.Distribution
 
 func init() {
-	latencyBucketer = tricorder.NewExponentialBucketer(20, 1, 1.7)
-	scanTimeDistribution = tricorder.NewDistribution(latencyBucketer)
+	latencyBucketer = tricorder.NewGeometricBucketer(1, 100e3)
+	scanTimeDistribution = latencyBucketer.NewDistribution()
 	tricorder.RegisterMetric("/scan-time", scanTimeDistribution,
 		units.Second, "scan time")
 }
