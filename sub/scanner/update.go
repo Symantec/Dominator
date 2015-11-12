@@ -12,6 +12,7 @@ func (fsh *FileSystemHistory) update(newFS *FileSystem) {
 		return
 	}
 	fsh.durationOfLastScan = now.Sub(fsh.timeOfLastScan)
+	scanTimeDistribution.Add(fsh.durationOfLastScan.Seconds())
 	fsh.scanCount++
 	fsh.timeOfLastScan = now
 	if fsh.fileSystem == nil {

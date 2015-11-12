@@ -57,6 +57,8 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) bool {
 		time.Duration(rusageStop.Utime.Usec)*time.Microsecond -
 		time.Duration(rusageStart.Utime.Sec)*time.Second -
 		time.Duration(rusageStart.Utime.Usec)*time.Microsecond
+	computeCpuTimeDistribution.Add(
+		float64(sub.lastComputeUpdateCpuDuration.Nanoseconds()) * 1e-6)
 	if len(request.FilesToCopyToCache) > 0 ||
 		len(request.InodesToMake) > 0 ||
 		len(request.HardlinksToMake) > 0 ||
