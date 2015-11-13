@@ -64,8 +64,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	if fs := reply.FileSystem; fs == nil {
 		sub.lastShortPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
-		shortPollDistribution.Add(
-			float64(sub.lastShortPollDuration.Nanoseconds()) * 1e-6)
+		shortPollDistribution.Add(sub.lastShortPollDuration)
 	} else {
 		if err := fs.RebuildInodePointers(); err != nil {
 			sub.status = statusFailedToPoll
