@@ -78,8 +78,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		sub.generationCount = reply.GenerationCount
 		sub.lastFullPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
-		fullPollDistribution.Add(
-			float64(sub.lastFullPollDuration.Nanoseconds()) * 1e-6)
+		fullPollDistribution.Add(sub.lastFullPollDuration)
 		logger.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)
 	}
