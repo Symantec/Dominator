@@ -52,6 +52,10 @@ func (imdb *ImageDataBase) ListImages() []string {
 	return imdb.listImages()
 }
 
+func (imdb *ImageDataBase) CountImages() uint {
+	return imdb.countImages()
+}
+
 func (imdb *ImageDataBase) ObjectServer() objectserver.ObjectServer {
 	return imdb.objectServer
 }
