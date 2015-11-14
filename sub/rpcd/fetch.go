@@ -1,11 +1,11 @@
 package rpcd
 
 import (
-	"bufio"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectclient"
@@ -131,22 +131,7 @@ func readOne(hash hash.Hash, length uint64, reader io.Reader) error {
 	if err := os.MkdirAll(dirname, syscall.S_IRWXU); err != nil {
 		return err
 	}
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	writer := bufio.NewWriter(file)
-	defer writer.Flush()
-	var nCopied int64
-	if nCopied, err = io.Copy(writer, reader); err != nil {
-		return errors.New(fmt.Sprintf("error copying: %s", err.Error()))
-	}
-	if nCopied != int64(length) {
-		return errors.New(fmt.Sprintf("expected length: %d, got: %d for: %x\n",
-			length, nCopied, hash))
-	}
-	return nil
+	return fsutil.CopyToFile(filename, reader, int64(length))
 }
 
 func clearFetchInProgress() {

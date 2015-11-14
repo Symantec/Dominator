@@ -1,14 +1,13 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/objectserver"
-	"io"
 	"net/rpc"
 	"os"
 	"path"
@@ -104,22 +103,7 @@ func writeObject(objectsReader objectserver.ObjectsReader, hash hash.Hash,
 		return errors.New("mismatched lengths")
 	}
 	filename := path.Join(inodesDir, fmt.Sprintf("%d", inodeNumber))
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	writer := bufio.NewWriter(file)
-	defer writer.Flush()
-	var nCopied int64
-	if nCopied, err = io.Copy(writer, reader); err != nil {
-		return errors.New(fmt.Sprintf("error copying: %s", err.Error()))
-	}
-	if nCopied != int64(rlength) {
-		return errors.New(fmt.Sprintf("expected length: %d, got: %d for: %x\n",
-			rlength, nCopied, hash))
-	}
-	return nil
+	return fsutil.CopyToFile(filename, reader, int64(rlength))
 }
 
 func writeInodes(inodeTable filesystem.InodeTable, inodesDir string) error {
