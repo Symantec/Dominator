@@ -33,12 +33,20 @@ func watchDaemon(mdbFileName string, mdbChannel chan *Mdb, logger *log.Logger) {
 			}
 			decoder := json.NewDecoder(file)
 			var mdb Mdb
+			decodeStartTime := time.Now()
 			if err = decoder.Decode(&mdb.Machines); err != nil {
 				logger.Printf("Error decoding\t%s\n", err)
 				continue
 			}
+			sortStartTime := time.Now()
+			mdbDecodeTimeDistribution.Add(sortStartTime.Sub(decodeStartTime))
 			sort.Sort(&mdb)
+			compareStartTime := time.Now()
+			mdbSortTimeDistribution.Add(compareStartTime.Sub(sortStartTime))
 			if lastMdb == nil || !compare(lastMdb, &mdb) {
+				if lastMdb != nil {
+					mdbCompareTimeDistribution.Add(time.Since(compareStartTime))
+				}
 				mdbChannel <- &mdb
 				lastMdb = &mdb
 			}

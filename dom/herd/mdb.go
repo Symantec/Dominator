@@ -2,10 +2,13 @@ package herd
 
 import (
 	"github.com/Symantec/Dominator/dom/mdb"
+	"time"
 )
 
 func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
+	startTime := time.Now()
 	numNew, numDeleted := herd.mdbUpdateNoLogging(mdb)
+	mdbUpdateTimeDistribution.Add(time.Since(startTime))
 	pluralNew := "s"
 	if numNew == 1 {
 		pluralNew = ""
