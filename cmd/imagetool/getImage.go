@@ -77,14 +77,14 @@ func getHashes(fs *filesystem.FileSystem) ([]hash.Hash, []uint64, []uint64) {
 }
 
 func writeObjects(objectClient *objectclient.ObjectClient, hashes []hash.Hash,
-	inums []uint64, lenghts []uint64, inodesDir string) error {
+	inums []uint64, lengths []uint64, inodesDir string) error {
 	objectsReader, err := objectClient.GetObjects(hashes)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error getting object reader: %s\n",
 			err.Error()))
 	}
 	for index, hash := range hashes {
-		err = writeObject(objectsReader, hash, inums[index], lenghts[index],
+		err = writeObject(objectsReader, hash, inums[index], lengths[index],
 			inodesDir)
 		if err != nil {
 			return err
