@@ -10,6 +10,8 @@ import (
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/Dominator/objectserver/filesystem"
 	objectserverRpcd "github.com/Symantec/Dominator/objectserver/rpcd"
+	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
 	"log"
 	"net/rpc"
 	"os"
@@ -45,6 +47,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Cannot load image database\t%s\n", err)
 		os.Exit(1)
 	}
+	tricorder.RegisterMetric("/image-count",
+		func() uint { return imdb.CountImages() },
+		units.None, "number of images")
 	imageserverRpcd.Setup(imdb, logger)
 	rpcHtmlWriter := objectserverRpcd.Setup(objSrv, logger)
 	rpc.HandleHTTP()

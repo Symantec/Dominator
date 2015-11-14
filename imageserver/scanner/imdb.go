@@ -70,3 +70,9 @@ func (imdb *ImageDataBase) listImages() []string {
 	}
 	return names
 }
+
+func (imdb *ImageDataBase) countImages() uint {
+	imdb.RLock()
+	defer imdb.RUnlock()
+	return uint(len(imdb.imageMap))
+}

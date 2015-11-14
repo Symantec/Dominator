@@ -37,4 +37,5 @@ func writeHeader(writer io.Writer) {
 	fmt.Fprintf(writer, "System memory: %s (%s after GC)<br>\n",
 		format.FormatBytes(memStatsBeforeGC.Sys),
 		format.FormatBytes(memStatsAfterGC.Sys))
+	fmt.Fprintln(writer, "Raw <a href=\"metrics\">metrics</a>")
 }

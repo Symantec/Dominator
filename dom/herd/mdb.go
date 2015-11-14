@@ -2,6 +2,7 @@ package herd
 
 import (
 	"github.com/Symantec/Dominator/dom/mdb"
+	"time"
 )
 
 func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
@@ -22,6 +23,7 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 	herd.waitForCompletion()
 	herd.Lock()
 	defer herd.Unlock()
+	startTime := time.Now()
 	numNew := 0
 	numDeleted := 0
 	herd.subsByIndex = make([]*Sub, 0, len(mdb.Machines))
@@ -69,5 +71,6 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 			delete(herd.imagesByName, name)
 		}
 	}
+	mdbUpdateTimeDistribution.Add(time.Since(startTime))
 	return numNew, numDeleted
 }
