@@ -111,8 +111,13 @@ func writeObject(objectsReader objectserver.ObjectsReader, hash hash.Hash,
 	defer file.Close()
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
-	if _, err = io.Copy(writer, reader); err != nil {
+	var nCopied int64
+	if nCopied, err = io.Copy(writer, reader); err != nil {
 		return errors.New(fmt.Sprintf("error copying: %s", err.Error()))
+	}
+	if nCopied != int64(rlength) {
+		return errors.New(fmt.Sprintf("expected length: %d, got: %d for: %x\n",
+			rlength, nCopied, hash))
 	}
 	return nil
 }
