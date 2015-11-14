@@ -6,9 +6,7 @@ import (
 )
 
 func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
-	startTime := time.Now()
 	numNew, numDeleted := herd.mdbUpdateNoLogging(mdb)
-	mdbUpdateTimeDistribution.Add(time.Since(startTime))
 	pluralNew := "s"
 	if numNew == 1 {
 		pluralNew = ""
@@ -25,6 +23,7 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 	herd.waitForCompletion()
 	herd.Lock()
 	defer herd.Unlock()
+	startTime := time.Now()
 	numNew := 0
 	numDeleted := 0
 	herd.subsByIndex = make([]*Sub, 0, len(mdb.Machines))
@@ -72,5 +71,6 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 			delete(herd.imagesByName, name)
 		}
 	}
+	mdbUpdateTimeDistribution.Add(time.Since(startTime))
 	return numNew, numDeleted
 }
