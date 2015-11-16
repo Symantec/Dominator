@@ -36,6 +36,9 @@ func getObjects(objSrv objectserver.ObjectServer,
 		}
 		hashes = append(hashes, hashval)
 	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
 	objectsReader, err := objSrv.GetObjects(hashes)
 	if err != nil {
 		return err
