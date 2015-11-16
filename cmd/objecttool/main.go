@@ -27,6 +27,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  check  hash")
 	fmt.Fprintln(os.Stderr, "  get    hash baseOutputFilename")
+	fmt.Fprintln(os.Stderr, "  mget   hashesFile directory")
 }
 
 type commandFunc func(objectserver.ObjectServer, []string)
@@ -40,6 +41,7 @@ type subcommand struct {
 var subcommands = []subcommand{
 	{"check", 1, checkObjectSubcommand},
 	{"get", 2, getObjectSubcommand},
+	{"mget", 2, getObjectsSubcommand},
 }
 
 func main() {

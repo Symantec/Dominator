@@ -1,14 +1,13 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/objectserver"
-	"io"
 	"net/rpc"
 	"os"
 	"path"
@@ -77,14 +76,14 @@ func getHashes(fs *filesystem.FileSystem) ([]hash.Hash, []uint64, []uint64) {
 }
 
 func writeObjects(objectClient *objectclient.ObjectClient, hashes []hash.Hash,
-	inums []uint64, lenghts []uint64, inodesDir string) error {
+	inums []uint64, lengths []uint64, inodesDir string) error {
 	objectsReader, err := objectClient.GetObjects(hashes)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error getting object reader: %s\n",
 			err.Error()))
 	}
 	for index, hash := range hashes {
-		err = writeObject(objectsReader, hash, inums[index], lenghts[index],
+		err = writeObject(objectsReader, hash, inums[index], lengths[index],
 			inodesDir)
 		if err != nil {
 			return err
@@ -104,17 +103,7 @@ func writeObject(objectsReader objectserver.ObjectsReader, hash hash.Hash,
 		return errors.New("mismatched lengths")
 	}
 	filename := path.Join(inodesDir, fmt.Sprintf("%d", inodeNumber))
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	writer := bufio.NewWriter(file)
-	defer writer.Flush()
-	if _, err = io.Copy(writer, reader); err != nil {
-		return errors.New(fmt.Sprintf("error copying: %s", err.Error()))
-	}
-	return nil
+	return fsutil.CopyToFile(filename, reader, int64(rlength))
 }
 
 func writeInodes(inodeTable filesystem.InodeTable, inodesDir string) error {

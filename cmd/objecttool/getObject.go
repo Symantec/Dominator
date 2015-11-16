@@ -1,12 +1,11 @@
 package main
 
 import (
-	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/objectserver"
-	"io"
 	"os"
 )
 
@@ -37,17 +36,5 @@ func getObject(objSrv objectserver.ObjectServer, hashVal hash.Hash,
 	}
 	defer reader.Close()
 	filename := fmt.Sprintf("%s.%x", baseOutputFilename, hashVal)
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	ncopied, err := io.CopyN(file, reader, int64(size))
-	if err != nil {
-		return err
-	}
-	if uint64(ncopied) != size {
-		return errors.New(fmt.Sprintf("copied: %d, wanted: %d", ncopied, size))
-	}
-	return nil
+	return fsutil.CopyToFile(filename, reader, int64(size))
 }
