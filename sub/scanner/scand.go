@@ -11,7 +11,7 @@ var disableScanAcknowledge chan bool
 
 func startScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 	configuration *Configuration, logger *log.Logger) (
-	chan *FileSystem, func(disableScanner bool)) {
+	<-chan *FileSystem, func(disableScanner bool)) {
 	fsChannel := make(chan *FileSystem)
 	disableScanRequest = make(chan bool, 1)
 	disableScanAcknowledge = make(chan bool)
@@ -21,7 +21,7 @@ func startScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 }
 
 func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
-	configuration *Configuration, fsChannel chan *FileSystem,
+	configuration *Configuration, fsChannel chan<- *FileSystem,
 	logger *log.Logger) {
 	runtime.LockOSThread()
 	loweredPriority := false

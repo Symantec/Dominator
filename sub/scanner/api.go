@@ -102,7 +102,7 @@ func CompareFileSystems(left, right *FileSystem, logWriter io.Writer) bool {
 
 func StartScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 	configuration *Configuration, logger *log.Logger) (
-	chan *FileSystem, func(disableScanner bool)) {
+	<-chan *FileSystem, func(disableScanner bool)) {
 	return startScannerDaemon(rootDirectoryName, cacheDirectoryName,
 		configuration, logger)
 }
