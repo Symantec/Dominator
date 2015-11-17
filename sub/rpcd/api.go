@@ -24,7 +24,7 @@ func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 	objectsDirname string, netReaderContext *rateio.ReaderContext,
 	netbenchFname string, oldTriggersFname string,
 	disableScannerFunction func(disableScanner bool),
-	lg *log.Logger) chan bool {
+	lg *log.Logger) <-chan bool {
 	scannerConfiguration = configuration
 	fileSystemHistory = fsh
 	objectsDir = objectsDirname

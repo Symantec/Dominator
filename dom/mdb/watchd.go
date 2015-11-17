@@ -9,13 +9,14 @@ import (
 	"time"
 )
 
-func startMdbDaemon(mdbFileName string, logger *log.Logger) chan *Mdb {
+func startMdbDaemon(mdbFileName string, logger *log.Logger) <-chan *Mdb {
 	mdbChannel := make(chan *Mdb)
 	go watchDaemon(mdbFileName, mdbChannel, logger)
 	return mdbChannel
 }
 
-func watchDaemon(mdbFileName string, mdbChannel chan *Mdb, logger *log.Logger) {
+func watchDaemon(mdbFileName string, mdbChannel chan<- *Mdb,
+	logger *log.Logger) {
 	var lastStat syscall.Stat_t
 	var lastMdb *Mdb
 	for ; ; time.Sleep(time.Second) {
