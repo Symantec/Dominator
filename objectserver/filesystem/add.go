@@ -71,16 +71,24 @@ func (objSrv *ObjectServer) addObject(data []byte, expectedHash *hash.Hash) (
 	if err = os.MkdirAll(path.Dir(filename), 0755); err != nil {
 		return hash, false, err
 	}
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0660)
+	tmpFilename := filename + "~"
+	file, err := os.OpenFile(tmpFilename, os.O_CREATE|os.O_WRONLY, 0660)
 	if err != nil {
 		return hash, false, err
 	}
+	defer os.Remove(tmpFilename)
 	defer file.Close()
-	if _, err = file.Write(data); err != nil {
+	nWritten, err := file.Write(data)
+	if err != nil {
 		return hash, false, err
 	}
+	if nWritten != len(data) {
+		return hash, false, errors.New(fmt.Sprintf(
+			"expected length: %d, got: %d for: %s\n",
+			len(data), nWritten, tmpFilename))
+	}
 	objSrv.sizesMap[hash] = uint64(len(data))
-	return hash, true, nil
+	return hash, true, os.Rename(tmpFilename, filename)
 }
 
 func collisionCheck(data []byte, filename string, size int64) error {
