@@ -14,6 +14,7 @@ import (
 	"github.com/Symantec/Dominator/sub/httpd"
 	"github.com/Symantec/Dominator/sub/rpcd"
 	"github.com/Symantec/Dominator/sub/scanner"
+	"github.com/Symantec/tricorder/go/tricorder"
 	"io"
 	"log"
 	"os"
@@ -272,6 +273,18 @@ func main() {
 	rescanObjectCacheChannel := rpcd.Setup(&configuration, &fsh, objectsDir,
 		networkReaderContext, netbenchFilename, oldTriggersFilename,
 		disableScanner, logger)
+	configMetricsDir, err := tricorder.RegisterDirectory("/config")
+	if err != nil {
+		fmt.Fprintf(os.Stderr,
+			"Unable to create /config metrics directory\t%s\n",
+			err)
+		os.Exit(1)
+	}
+	configuration.RegisterMetrics(configMetricsDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to create config metrics\t%s\n", err)
+		os.Exit(1)
+	}
 	httpd.AddHtmlWriter(&fsh)
 	httpd.AddHtmlWriter(&configuration)
 	httpd.AddHtmlWriter(circularBuffer)

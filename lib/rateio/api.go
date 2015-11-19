@@ -1,6 +1,8 @@
 package rateio
 
 import (
+	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
 	"time"
 )
@@ -46,6 +48,11 @@ func (ctx *ReaderContext) SetSpeedPercent(percent uint) {
 
 func (ctx *ReaderContext) NewReader(rd io.Reader) *Reader {
 	return ctx.newReader(rd)
+}
+
+func (ctx *ReaderContext) RegisterMetrics(dir *tricorder.DirectorySpec,
+	unit units.Unit, description string) error {
+	return ctx.registerMetrics(dir, unit, description)
 }
 
 func (ctx *ReaderContext) String() string {

@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/rateio"
+	"github.com/Symantec/tricorder/go/tricorder"
 	"io"
 	"log"
 	"time"
@@ -21,6 +22,11 @@ type Configuration struct {
 
 func (configuration *Configuration) WriteHtml(writer io.Writer) {
 	configuration.writeHtml(writer)
+}
+
+func (configuration *Configuration) RegisterMetrics(
+	dir *tricorder.DirectorySpec) error {
+	return configuration.registerMetrics(dir)
 }
 
 type FileSystemHistory struct {
