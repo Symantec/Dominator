@@ -14,3 +14,13 @@ func init() {
 	tricorder.RegisterMetric("/scan-time", scanTimeDistribution,
 		units.Second, "scan time")
 }
+
+func (configuration *Configuration) registerMetrics(
+	dir *tricorder.DirectorySpec) error {
+	netDir, err := dir.RegisterDirectory("network")
+	if err != nil {
+		return err
+	}
+	return configuration.NetworkReaderContext.RegisterMetrics(netDir,
+		units.Byte, "network speed")
+}
