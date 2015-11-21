@@ -82,6 +82,7 @@ func writeObjects(objectClient *objectclient.ObjectClient, hashes []hash.Hash,
 		return errors.New(fmt.Sprintf("Error getting object reader: %s\n",
 			err.Error()))
 	}
+	defer objectsReader.Close()
 	for index, hash := range hashes {
 		err = writeObject(objectsReader, hash, inums[index], lengths[index],
 			inodesDir)
