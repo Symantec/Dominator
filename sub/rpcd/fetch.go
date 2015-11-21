@@ -72,6 +72,7 @@ func doFetch(request sub.FetchRequest) {
 		}
 		return
 	}
+	defer objectsReader.Close()
 	var totalLength uint64
 	timeStart := time.Now()
 	for _, hash := range request.Hashes {
