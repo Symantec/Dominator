@@ -30,6 +30,7 @@ func getObject(objSrv objectserver.ObjectServer, hashVal hash.Hash,
 	if err != nil {
 		return err
 	}
+	defer objectsReader.Close()
 	size, reader, err := objectsReader.NextObject()
 	if err != nil {
 		return err
