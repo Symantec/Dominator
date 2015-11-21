@@ -41,6 +41,10 @@ type ObjectsReader struct {
 	nextIndex int64
 }
 
+func (or *ObjectsReader) Close() error {
+	return or.conn.Close()
+}
+
 func (or *ObjectsReader) NextObject() (uint64, io.ReadCloser, error) {
 	return or.nextObject()
 }
