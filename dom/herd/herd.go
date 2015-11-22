@@ -1,16 +1,11 @@
 package herd
 
 import (
-	"flag"
 	"github.com/Symantec/Dominator/lib/image"
 	"log"
 	"runtime"
+	"syscall"
 	"time"
-)
-
-var (
-	maxConnAttempts = flag.Uint("maxConnAttempts", 1000,
-		"Maximum number of concurrent connection attempts")
 )
 
 func newHerd(imageServerAddress string, logger *log.Logger) *Herd {
@@ -19,22 +14,35 @@ func newHerd(imageServerAddress string, logger *log.Logger) *Herd {
 	herd.logger = logger
 	herd.subsByName = make(map[string]*Sub)
 	herd.imagesByName = make(map[string]*image.Image)
-	herd.makeConnectionSemaphore = make(chan bool, *maxConnAttempts)
+	// Limit concurrent connection attempts so that the file descriptor limit is
+	// not exceeded.
+	var rlim syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
+		panic(err)
+	}
+	maxConnAttempts := rlim.Cur - 50
+	maxConnAttempts = (maxConnAttempts / 100)
+	if maxConnAttempts < 1 {
+		maxConnAttempts = 1
+	} else {
+		maxConnAttempts *= 100
+	}
+	herd.connectionSemaphore = make(chan bool, maxConnAttempts)
 	herd.pollSemaphore = make(chan bool, runtime.NumCPU()*2)
 	herd.currentScanStartTime = time.Now()
 	return &herd
 }
 
 func (herd *Herd) decrementConnectionSemaphore() {
-	<-herd.makeConnectionSemaphore
+	<-herd.connectionSemaphore
 }
 
 func (herd *Herd) waitForCompletion() {
-	for count := 0; count < cap(herd.makeConnectionSemaphore); count++ {
-		herd.makeConnectionSemaphore <- true
+	for count := 0; count < cap(herd.connectionSemaphore); count++ {
+		herd.connectionSemaphore <- true
 	}
-	for count := 0; count < cap(herd.makeConnectionSemaphore); count++ {
-		<-herd.makeConnectionSemaphore
+	for count := 0; count < cap(herd.connectionSemaphore); count++ {
+		<-herd.connectionSemaphore
 	}
 }
 
@@ -52,7 +60,7 @@ func (herd *Herd) pollNextSub() bool {
 	if sub.busy { // Quick lockless check.
 		return false
 	}
-	herd.makeConnectionSemaphore <- true
+	herd.connectionSemaphore <- true
 	go func() {
 		defer herd.decrementConnectionSemaphore()
 		if !sub.tryMakeBusy() {
