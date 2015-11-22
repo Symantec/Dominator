@@ -11,12 +11,15 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"syscall"
 	"time"
 )
 
 var (
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
+	fdLimit = flag.Uint64("fdLimit", getFdLimit(),
+		"Maximum number of open file descriptors (this limits concurrent connection attempts)")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
 		"Hostname of image server")
 	imageServerPortNum = flag.Uint("imageServerPortNum",
@@ -38,8 +41,21 @@ func showMdb(mdb *mdb.Mdb) {
 	fmt.Println()
 }
 
+func getFdLimit() uint64 {
+	var rlim syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
+		panic(err)
+	}
+	return rlim.Max
+}
+
 func main() {
 	flag.Parse()
+	rlim := syscall.Rlimit{*fdLimit, *fdLimit}
+	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot set FD limit\t%s\n", err)
+		os.Exit(1)
+	}
 	if os.Geteuid() == 0 {
 		fmt.Fprintln(os.Stderr, "Do not run the Dominator as root")
 		os.Exit(1)
