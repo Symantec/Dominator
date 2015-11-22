@@ -20,10 +20,6 @@ import (
 var (
 	exitOnFetchFailure = flag.Bool("exitOnFetchFailure", false,
 		"If true, exit if there are fetch failures. For debugging only")
-	// TODO(rgooch): Remove this flag once data corruption is fixed, so that
-	//               scanning always continues during a fetch.
-	stopScanDuringFetch = flag.Bool("stopScanDuringFetch", true,
-		"If true, stop scan during fetching. This reduces the chance of fetch problems")
 )
 
 func (t *rpcType) Fetch(request sub.FetchRequest,
@@ -51,10 +47,6 @@ func (t *rpcType) Fetch(request sub.FetchRequest,
 
 func doFetch(request sub.FetchRequest) {
 	defer clearFetchInProgress()
-	if *stopScanDuringFetch {
-		disableScannerFunc(true)
-		defer disableScannerFunc(false)
-	}
 	objectServer := objectclient.NewObjectClient(request.ServerAddress)
 	benchmark := false
 	if networkReaderContext.MaximumSpeed() < 1 {
@@ -72,6 +64,7 @@ func doFetch(request sub.FetchRequest) {
 		}
 		return
 	}
+	defer objectsReader.Close()
 	var totalLength uint64
 	timeStart := time.Now()
 	for _, hash := range request.Hashes {

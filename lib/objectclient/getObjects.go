@@ -47,9 +47,15 @@ func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (
 	var reply objectserver.GetObjectsResponse
 	request.Exclusive = objClient.exclusiveGet
 	request.Hashes = hashes
-	decoder := gob.NewDecoder(conn)
 	encoder := gob.NewEncoder(conn)
 	encoder.Encode(request)
+	var objectsReader ObjectsReader
+	objectsReader.conn = conn
+	// Create a buffered reader and use it from now on, since otherwise
+	// gob.NewDecoder() will create one under the covers and we could lose some
+	// buffered data.
+	objectsReader.reader = bufio.NewReader(conn)
+	decoder := gob.NewDecoder(objectsReader.reader)
 	err = decoder.Decode(&reply)
 	if err != nil {
 		return nil, err
@@ -57,10 +63,8 @@ func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (
 	if reply.ResponseString != "" {
 		return nil, errors.New(reply.ResponseString)
 	}
-	var objectsReader ObjectsReader
 	objectsReader.nextIndex = -1
 	objectsReader.sizes = reply.ObjectSizes
-	objectsReader.conn = conn
 	return &objectsReader, nil
 }
 
@@ -70,5 +74,6 @@ func (or *ObjectsReader) nextObject() (uint64, io.ReadCloser, error) {
 		return 0, nil, errors.New("all objects have been consumed")
 	}
 	size := or.sizes[or.nextIndex]
-	return size, ioutil.NopCloser(&io.LimitedReader{or.conn, int64(size)}), nil
+	return size,
+		ioutil.NopCloser(&io.LimitedReader{or.reader, int64(size)}), nil
 }

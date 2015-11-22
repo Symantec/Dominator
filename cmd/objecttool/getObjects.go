@@ -43,6 +43,7 @@ func getObjects(objSrv objectserver.ObjectServer,
 	if err != nil {
 		return err
 	}
+	defer objectsReader.Close()
 	tmpDirname := outputDirectory + "~"
 	if err := os.Mkdir(tmpDirname, syscall.S_IRWXU); err != nil {
 		return err

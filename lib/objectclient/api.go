@@ -38,7 +38,12 @@ func (objClient *ObjectClient) SetExclusiveGetObjects(exclusive bool) {
 type ObjectsReader struct {
 	sizes     []uint64
 	conn      net.Conn
+	reader    io.Reader
 	nextIndex int64
+}
+
+func (or *ObjectsReader) Close() error {
+	return or.conn.Close()
 }
 
 func (or *ObjectsReader) NextObject() (uint64, io.ReadCloser, error) {

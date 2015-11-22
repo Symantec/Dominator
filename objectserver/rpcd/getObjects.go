@@ -64,6 +64,7 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 		encoder.Encode(response)
 		return
 	}
+	defer objectsReader.Close()
 	encoder.Encode(response)
 	bufrw.Flush()
 	for _, hash := range request.Hashes {

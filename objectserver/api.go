@@ -6,6 +6,7 @@ import (
 )
 
 type ObjectsReader interface {
+	Close() error
 	NextObject() (uint64, io.ReadCloser, error)
 }
 

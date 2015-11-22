@@ -48,12 +48,14 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 }
 
 func selectAliveSub(sub *Sub) bool {
-	switch {
-	case sub.status == statusConnecting:
+	switch sub.status {
+	case statusUnknown:
 		return false
-	case sub.status == statusFailedToConnect:
+	case statusConnecting:
 		return false
-	case sub.status == statusFailedToPoll:
+	case statusFailedToConnect:
+		return false
+	case statusFailedToPoll:
 		return false
 	}
 	return true

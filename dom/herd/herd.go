@@ -1,10 +1,16 @@
 package herd
 
 import (
+	"flag"
 	"github.com/Symantec/Dominator/lib/image"
 	"log"
 	"runtime"
 	"time"
+)
+
+var (
+	maxConnAttempts = flag.Uint("maxConnAttempts", 1000,
+		"Maximum number of concurrent connection attempts")
 )
 
 func newHerd(imageServerAddress string, logger *log.Logger) *Herd {
@@ -13,7 +19,7 @@ func newHerd(imageServerAddress string, logger *log.Logger) *Herd {
 	herd.logger = logger
 	herd.subsByName = make(map[string]*Sub)
 	herd.imagesByName = make(map[string]*image.Image)
-	herd.makeConnectionSemaphore = make(chan bool, 1000)
+	herd.makeConnectionSemaphore = make(chan bool, *maxConnAttempts)
 	herd.pollSemaphore = make(chan bool, runtime.NumCPU()*2)
 	herd.currentScanStartTime = time.Now()
 	return &herd
