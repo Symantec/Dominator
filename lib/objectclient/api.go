@@ -38,6 +38,7 @@ func (objClient *ObjectClient) SetExclusiveGetObjects(exclusive bool) {
 type ObjectsReader struct {
 	sizes     []uint64
 	conn      net.Conn
+	reader    io.Reader
 	nextIndex int64
 }
 
