@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/dom/herd"
@@ -9,8 +10,10 @@ import (
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"log"
 	"os"
+	"os/user"
 	"path"
 	"runtime"
+	"strconv"
 	"syscall"
 	"time"
 )
@@ -33,6 +36,8 @@ var (
 		"Port number to allocate and listen on for HTTP/RPC")
 	stateDir = flag.String("stateDir", "/var/lib/Dominator",
 		"Name of dominator state directory.")
+	username = flag.String("username", "",
+		"If running as root, username to switch to.")
 )
 
 func showMdb(mdb *mdb.Mdb) {
@@ -49,6 +54,32 @@ func getFdLimit() uint64 {
 	return rlim.Max
 }
 
+func setUser(username string) error {
+	if username == "" {
+		return errors.New("-username argument missing")
+	}
+	newUser, err := user.Lookup(username)
+	if err != nil {
+		return err
+	}
+	uid, err := strconv.Atoi(newUser.Uid)
+	if err != nil {
+		return err
+	}
+	gid, err := strconv.Atoi(newUser.Gid)
+	if err != nil {
+		return err
+	}
+	if uid == 0 {
+		return errors.New("Do not run the Dominator as root")
+		os.Exit(1)
+	}
+	if err := syscall.Setresgid(gid, gid, gid); err != nil {
+		return err
+	}
+	return syscall.Setresuid(uid, uid, uid)
+}
+
 func main() {
 	flag.Parse()
 	rlim := syscall.Rlimit{*fdLimit, *fdLimit}
@@ -57,8 +88,10 @@ func main() {
 		os.Exit(1)
 	}
 	if os.Geteuid() == 0 {
-		fmt.Fprintln(os.Stderr, "Do not run the Dominator as root")
-		os.Exit(1)
+		if err := setUser(*username); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 	fi, err := os.Lstat(*stateDir)
 	if err != nil {
