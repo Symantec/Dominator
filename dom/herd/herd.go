@@ -37,15 +37,6 @@ func (herd *Herd) decrementConnectionSemaphore() {
 	<-herd.connectionSemaphore
 }
 
-func (herd *Herd) waitForCompletion() {
-	for count := 0; count < cap(herd.connectionSemaphore); count++ {
-		herd.connectionSemaphore <- true
-	}
-	for count := 0; count < cap(herd.connectionSemaphore); count++ {
-		<-herd.connectionSemaphore
-	}
-}
-
 func (herd *Herd) pollNextSub() bool {
 	if herd.nextSubToPoll >= uint(len(herd.subsByIndex)) {
 		herd.nextSubToPoll = 0
