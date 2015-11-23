@@ -7,6 +7,7 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"net/rpc"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -82,10 +83,6 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		logger.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)
 	}
-	if sub.fileSystem == nil {
-		sub.status = statusSubNotReady
-		return
-	}
 	if reply.FetchInProgress {
 		sub.status = statusFetching
 		return
@@ -96,6 +93,10 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	}
 	if sub.generationCountAtLastSync == sub.generationCount {
 		sub.status = statusSynced
+		return
+	}
+	if sub.fileSystem == nil {
+		sub.status = statusSubNotReady
 		return
 	}
 	if sub.generationCountAtChangeStart == sub.generationCount {
@@ -122,6 +123,8 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	sub.status = statusSynced
 	sub.cleanup(connection, sub.plannedImage)
 	sub.generationCountAtLastSync = sub.generationCount
+	sub.fileSystem = nil // Mark memory for reclaim.
+	runtime.GC()         // Reclaim now.
 }
 
 // Returns true if all required objects are available.
