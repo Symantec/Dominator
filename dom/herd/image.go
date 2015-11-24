@@ -18,11 +18,15 @@ func (herd *Herd) getImage(name string) *image.Image {
 	}
 	herd.Lock()
 	defer herd.Unlock()
-	return herd.getImageHaveLock(name)
+	return herd.getImageHaveLock(name, nil)
 }
 
-func (herd *Herd) getImageHaveLock(name string) *image.Image {
+func (herd *Herd) getImageHaveLock(name string,
+	missingMap map[string]bool) *image.Image {
 	if name == "" {
+		return nil
+	}
+	if missingMap != nil && missingMap[name] {
 		return nil
 	}
 	if image := herd.imagesByName[name]; image != nil {
@@ -42,7 +46,11 @@ func (herd *Herd) getImageHaveLock(name string) *image.Image {
 		herd.logger.Printf("Error calling\t%s\n", err)
 		return nil
 	}
-	if reply.Image != nil {
+	if reply.Image == nil {
+		if missingMap != nil {
+			missingMap[name] = true
+		}
+	} else {
 		if err := reply.Image.FileSystem.RebuildInodePointers(); err != nil {
 			herd.logger.Printf("Error building inode pointers for image: %s %s",
 				name, err)
