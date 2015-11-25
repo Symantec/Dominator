@@ -20,7 +20,6 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 }
 
 func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
-	herd.waitForCompletion()
 	herd.Lock()
 	defer herd.Unlock()
 	startTime := time.Now()

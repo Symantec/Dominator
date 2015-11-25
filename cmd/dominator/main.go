@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/dom/herd"
@@ -9,14 +10,19 @@ import (
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"log"
 	"os"
+	"os/user"
 	"path"
 	"runtime"
+	"strconv"
+	"syscall"
 	"time"
 )
 
 var (
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
+	fdLimit = flag.Uint64("fdLimit", getFdLimit(),
+		"Maximum number of open file descriptors (this limits concurrent connection attempts)")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
 		"Hostname of image server")
 	imageServerPortNum = flag.Uint("imageServerPortNum",
@@ -30,6 +36,8 @@ var (
 		"Port number to allocate and listen on for HTTP/RPC")
 	stateDir = flag.String("stateDir", "/var/lib/Dominator",
 		"Name of dominator state directory.")
+	username = flag.String("username", "",
+		"If running as root, username to switch to.")
 )
 
 func showMdb(mdb *mdb.Mdb) {
@@ -38,11 +46,52 @@ func showMdb(mdb *mdb.Mdb) {
 	fmt.Println()
 }
 
+func getFdLimit() uint64 {
+	var rlim syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
+		panic(err)
+	}
+	return rlim.Max
+}
+
+func setUser(username string) error {
+	if username == "" {
+		return errors.New("-username argument missing")
+	}
+	newUser, err := user.Lookup(username)
+	if err != nil {
+		return err
+	}
+	uid, err := strconv.Atoi(newUser.Uid)
+	if err != nil {
+		return err
+	}
+	gid, err := strconv.Atoi(newUser.Gid)
+	if err != nil {
+		return err
+	}
+	if uid == 0 {
+		return errors.New("Do not run the Dominator as root")
+		os.Exit(1)
+	}
+	if err := syscall.Setresgid(gid, gid, gid); err != nil {
+		return err
+	}
+	return syscall.Setresuid(uid, uid, uid)
+}
+
 func main() {
 	flag.Parse()
-	if os.Geteuid() == 0 {
-		fmt.Fprintln(os.Stderr, "Do not run the Dominator as root")
+	rlim := syscall.Rlimit{*fdLimit, *fdLimit}
+	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot set FD limit\t%s\n", err)
 		os.Exit(1)
+	}
+	if os.Geteuid() == 0 {
+		if err := setUser(*username); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 	fi, err := os.Lstat(*stateDir)
 	if err != nil {

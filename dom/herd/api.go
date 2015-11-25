@@ -52,18 +52,19 @@ type Sub struct {
 }
 
 type Herd struct {
-	sync.RWMutex            // Protect map and slice mutations.
-	imageServerAddress      string
-	logger                  *log.Logger
-	htmlWriters             []HtmlWriter
-	nextSubToPoll           uint
-	subsByName              map[string]*Sub
-	subsByIndex             []*Sub // Sorted by Sub.hostname.
-	imagesByName            map[string]*image.Image
-	makeConnectionSemaphore chan bool
-	pollSemaphore           chan bool
-	currentScanStartTime    time.Time
-	previousScanDuration    time.Duration
+	sync.RWMutex         // Protect map and slice mutations.
+	imageServerAddress   string
+	logger               *log.Logger
+	htmlWriters          []HtmlWriter
+	nextSubToPoll        uint
+	subsByName           map[string]*Sub
+	subsByIndex          []*Sub // Sorted by Sub.hostname.
+	imagesByName         map[string]*image.Image
+	missingImages        map[string]time.Time
+	connectionSemaphore  chan bool
+	pollSemaphore        chan bool
+	currentScanStartTime time.Time
+	previousScanDuration time.Duration
 }
 
 func NewHerd(imageServerAddress string, logger *log.Logger) *Herd {
