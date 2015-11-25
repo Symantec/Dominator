@@ -31,7 +31,6 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 	for _, sub := range herd.subsByName {
 		subsToDelete[sub.hostname] = true
 	}
-	missingMap := make(map[string]bool)
 	for _, machine := range mdb.Machines { // Sorted by Hostname.
 		sub := herd.subsByName[machine.Hostname]
 		if sub == nil {
@@ -50,8 +49,8 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 		}
 		sub.requiredImage = machine.RequiredImage
 		sub.plannedImage = machine.PlannedImage
-		herd.getImageHaveLock(sub.requiredImage, missingMap) // Preload.
-		herd.getImageHaveLock(sub.plannedImage, missingMap)
+		herd.getImageHaveLock(sub.requiredImage) // Preload.
+		herd.getImageHaveLock(sub.plannedImage)
 	}
 	// Delete flagged subs (those not in the new MDB).
 	for subHostname, toDelete := range subsToDelete {

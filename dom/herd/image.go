@@ -4,6 +4,7 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"net/rpc"
+	"time"
 )
 
 func (herd *Herd) getImage(name string) *image.Image {
@@ -18,19 +19,23 @@ func (herd *Herd) getImage(name string) *image.Image {
 	}
 	herd.Lock()
 	defer herd.Unlock()
-	return herd.getImageHaveLock(name, nil)
+	return herd.getImageHaveLock(name)
 }
 
-func (herd *Herd) getImageHaveLock(name string,
-	missingMap map[string]bool) *image.Image {
+func (herd *Herd) getImageHaveLock(name string) *image.Image {
 	if name == "" {
-		return nil
-	}
-	if missingMap != nil && missingMap[name] {
 		return nil
 	}
 	if image := herd.imagesByName[name]; image != nil {
 		return image
+	}
+	// Image not yet known. If it was recently found to be missing, report it
+	// as missing. This avoids hammering the imageserver with "are we there
+	// yet?", "are we there yet?", "are we there yet?" queries.
+	if lastCheck, ok := herd.missingImages[name]; ok {
+		if time.Since(lastCheck).Seconds() < 1 {
+			return nil
+		}
 	}
 	connection, err := rpc.DialHTTP("tcp", herd.imageServerAddress)
 	if err != nil {
@@ -47,15 +52,14 @@ func (herd *Herd) getImageHaveLock(name string,
 		return nil
 	}
 	if reply.Image == nil {
-		if missingMap != nil {
-			missingMap[name] = true
-		}
+		herd.missingImages[name] = time.Now()
 	} else {
 		if err := reply.Image.FileSystem.RebuildInodePointers(); err != nil {
 			herd.logger.Printf("Error building inode pointers for image: %s %s",
 				name, err)
 			return nil
 		}
+		delete(herd.missingImages, name)
 		reply.Image.FileSystem.BuildEntryMap()
 		reply.Image.FileSystem.BuildInodeToFilenamesTable()
 		reply.Image.FileSystem.BuildHashToInodesTable()
