@@ -17,7 +17,6 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "</center>")
 	html.WriteHeader(writer)
 	fmt.Fprintln(writer, "<h3>")
-	writeLinks(writer)
 	for _, htmlWriter := range htmlWriters {
 		htmlWriter.WriteHtml(writer)
 	}
