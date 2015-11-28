@@ -12,7 +12,7 @@ type objectServer struct {
 	objectServer objectserver.ObjectServer
 }
 
-var savedObjectServer objectserver.ObjectServer
+var savedObjectServer *objectServer
 var logger *log.Logger
 var getSemaphore chan bool = make(chan bool, 100)
 
@@ -23,8 +23,8 @@ func (hw *htmlWriter) WriteHtml(writer io.Writer) {
 }
 
 func Setup(objSrv objectserver.ObjectServer, lg *log.Logger) *htmlWriter {
-	savedObjectServer = objSrv
 	rpcObj := &objectServer{objSrv}
+	savedObjectServer = rpcObj
 	logger = lg
 	rpc.RegisterName("ObjectServer", rpcObj)
 	http.HandleFunc("/GetObjects", getObjectsHandler)

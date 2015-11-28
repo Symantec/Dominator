@@ -1,6 +1,7 @@
 package rpcd
 
 import (
+	"bufio"
 	"encoding/gob"
 	"fmt"
 	"github.com/Symantec/Dominator/proto/objectserver"
@@ -26,6 +27,10 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 	defer conn.Close()
 	defer bufrw.Flush()
 	io.WriteString(conn, "HTTP/1.0 200 Connected to GetObjects RPC\n\n")
+	savedObjectServer.getObjects(bufrw)
+}
+
+func (objSrv *objectServer) getObjects(bufrw *bufio.ReadWriter) {
 	var request objectserver.GetObjectsRequest
 	var response objectserver.GetObjectsResponse
 	if request.Exclusive {
@@ -39,12 +44,13 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	decoder := gob.NewDecoder(bufrw)
 	encoder := gob.NewEncoder(bufrw)
+	var err error
 	if err = decoder.Decode(&request); err != nil {
 		response.ResponseString = err.Error()
 		encoder.Encode(response)
 		return
 	}
-	response.ObjectSizes, err = savedObjectServer.CheckObjects(request.Hashes)
+	response.ObjectSizes, err = objSrv.objectServer.CheckObjects(request.Hashes)
 	if err != nil {
 		response.ResponseString = err.Error()
 		encoder.Encode(response)
@@ -58,7 +64,7 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	objectsReader, err := savedObjectServer.GetObjects(request.Hashes)
+	objectsReader, err := objSrv.objectServer.GetObjects(request.Hashes)
 	if err != nil {
 		response.ResponseString = err.Error()
 		encoder.Encode(response)
@@ -73,7 +79,7 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 			logger.Println(err)
 			return
 		}
-		nCopied, err := io.Copy(conn, reader)
+		nCopied, err := io.Copy(bufrw.Writer, reader)
 		reader.Close()
 		if err != nil {
 			logger.Printf("Error copying:\t%s\n", err)
