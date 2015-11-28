@@ -4,11 +4,12 @@ import (
 	"github.com/Symantec/Dominator/proto/objectserver"
 )
 
-func (t *rpcType) CheckObjects(request objectserver.CheckObjectsRequest,
+func (objSrv *objectServer) CheckObjects(
+	request objectserver.CheckObjectsRequest,
 	reply *objectserver.CheckObjectsResponse) error {
 	var response objectserver.CheckObjectsResponse
 	var err error
-	response.ObjectSizes, err = objectServer.CheckObjects(request.Hashes)
+	response.ObjectSizes, err = objSrv.objectServer.CheckObjects(request.Hashes)
 	if err != nil {
 		return err
 	}

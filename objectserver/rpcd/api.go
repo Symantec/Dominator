@@ -8,9 +8,11 @@ import (
 	"net/rpc"
 )
 
-type rpcType int
+type objectServer struct {
+	objectServer objectserver.ObjectServer
+}
 
-var objectServer objectserver.ObjectServer
+var savedObjectServer objectserver.ObjectServer
 var logger *log.Logger
 var getSemaphore chan bool = make(chan bool, 100)
 
@@ -21,9 +23,10 @@ func (hw *htmlWriter) WriteHtml(writer io.Writer) {
 }
 
 func Setup(objSrv objectserver.ObjectServer, lg *log.Logger) *htmlWriter {
-	objectServer = objSrv
+	savedObjectServer = objSrv
+	rpcObj := &objectServer{objSrv}
 	logger = lg
-	rpc.RegisterName("ObjectServer", new(rpcType))
+	rpc.RegisterName("ObjectServer", rpcObj)
 	http.HandleFunc("/GetObjects", getObjectsHandler)
 	return &htmlWriter{}
 }

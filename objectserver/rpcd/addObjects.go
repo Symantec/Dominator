@@ -5,11 +5,11 @@ import (
 	"runtime"
 )
 
-func (t *rpcType) AddObjects(request objectserver.AddObjectsRequest,
+func (objSrv *objectServer) AddObjects(request objectserver.AddObjectsRequest,
 	reply *objectserver.AddObjectsResponse) error {
 	var response objectserver.AddObjectsResponse
 	var err error
-	response.Hashes, err = objectServer.AddObjects(request.ObjectDatas,
+	response.Hashes, err = objSrv.objectServer.AddObjects(request.ObjectDatas,
 		request.ExpectedHashes)
 	if err != nil {
 		return err

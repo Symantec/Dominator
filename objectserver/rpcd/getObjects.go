@@ -44,7 +44,7 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 		encoder.Encode(response)
 		return
 	}
-	response.ObjectSizes, err = objectServer.CheckObjects(request.Hashes)
+	response.ObjectSizes, err = savedObjectServer.CheckObjects(request.Hashes)
 	if err != nil {
 		response.ResponseString = err.Error()
 		encoder.Encode(response)
@@ -58,7 +58,7 @@ func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	objectsReader, err := objectServer.GetObjects(request.Hashes)
+	objectsReader, err := savedObjectServer.GetObjects(request.Hashes)
 	if err != nil {
 		response.ResponseString = err.Error()
 		encoder.Encode(response)
