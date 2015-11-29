@@ -16,8 +16,7 @@ const (
 )
 
 type receiverType struct {
-	receiver reflect.Value
-	methods  map[string]*reflect.Value
+	methods map[string]reflect.Value
 }
 
 var receivers map[string]receiverType = make(map[string]receiverType)
@@ -32,11 +31,11 @@ func init() {
 
 func registerName(name string, rcvr interface{}) error {
 	var receiver receiverType
-	receiver.receiver = reflect.ValueOf(rcvr)
-	receiver.methods = make(map[string]*reflect.Value)
-	rcvrType := reflect.TypeOf(rcvr)
-	for index := 0; index < rcvrType.NumMethod(); index++ {
-		method := rcvrType.Method(index)
+	receiver.methods = make(map[string]reflect.Value)
+	typeOfReceiver := reflect.TypeOf(rcvr)
+	valueOfReceiver := reflect.ValueOf(rcvr)
+	for index := 0; index < typeOfReceiver.NumMethod(); index++ {
+		method := typeOfReceiver.Method(index)
 		if method.PkgPath != "" { // Method must be exported.
 			continue
 		}
@@ -51,14 +50,14 @@ func registerName(name string, rcvr interface{}) error {
 		if methodType.NumOut() != 0 {
 			continue
 		}
-		receiver.methods[method.Name] = &method.Func
+		receiver.methods[method.Name] = valueOfReceiver.Method(index)
 	}
 	receivers[name] = receiver
 	return nil
 }
 
 func httpHandler(w http.ResponseWriter, req *http.Request) {
-	receiver, method, status := findMethod(w, req)
+	method, status := findMethod(w, req)
 	if status != http.StatusOK {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(status)
@@ -71,26 +70,26 @@ func httpHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	defer conn.Close()
 	io.WriteString(conn, "HTTP/1.0 "+connectString+"\n\n")
-	method.Call([]reflect.Value{receiver.receiver, reflect.ValueOf(conn)})
+	method.Call([]reflect.Value{reflect.ValueOf(conn)})
 }
 
 func findMethod(w http.ResponseWriter, req *http.Request) (
-	*receiverType, *reflect.Value, int) {
+	*reflect.Value, int) {
 	if req.Method != "CONNECT" {
-		return nil, nil, http.StatusMethodNotAllowed
+		return nil, http.StatusMethodNotAllowed
 	}
 	rpcName := path.Base(req.URL.Path)
 	splitRpcName := strings.Split(rpcName, ".")
 	if len(splitRpcName) != 2 {
-		return nil, nil, http.StatusBadRequest
+		return nil, http.StatusBadRequest
 	}
 	receiver, ok := receivers[splitRpcName[0]]
 	if !ok {
-		return nil, nil, http.StatusNotFound
+		return nil, http.StatusNotFound
 	}
 	method, ok := receiver.methods[splitRpcName[1]]
 	if !ok {
-		return nil, nil, http.StatusNotFound
+		return nil, http.StatusNotFound
 	}
-	return &receiver, method, http.StatusOK
+	return &method, http.StatusOK
 }
