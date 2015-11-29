@@ -6,13 +6,14 @@ import (
 	"net/rpc"
 )
 
-type rpcType int
-
-var imageDataBase *scanner.ImageDataBase
-var logger *log.Logger
+type rpcType struct {
+	imageDataBase *scanner.ImageDataBase
+	logger        *log.Logger
+}
 
 func Setup(imdb *scanner.ImageDataBase, lg *log.Logger) {
-	imageDataBase = imdb
-	logger = lg
-	rpc.RegisterName("ImageServer", new(rpcType))
+	rpcObj := &rpcType{
+		imageDataBase: imdb,
+		logger:        lg}
+	rpc.RegisterName("ImageServer", rpcObj)
 }

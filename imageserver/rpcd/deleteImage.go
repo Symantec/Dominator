@@ -7,7 +7,7 @@ import (
 func (t *rpcType) DeleteImage(request imageserver.DeleteImageRequest,
 	reply *imageserver.DeleteImageResponse) error {
 	var response imageserver.DeleteImageResponse
-	err := imageDataBase.DeleteImage(request.ImageName)
+	err := t.imageDataBase.DeleteImage(request.ImageName)
 	if err == nil {
 		response.Success = true
 	} else {

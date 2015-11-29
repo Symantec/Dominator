@@ -7,7 +7,7 @@ import (
 func (t *rpcType) ListImages(request imageserver.ListImagesRequest,
 	reply *imageserver.ListImagesResponse) error {
 	var response imageserver.ListImagesResponse
-	response.ImageNames = imageDataBase.ListImages()
+	response.ImageNames = t.imageDataBase.ListImages()
 	*reply = response
 	return nil
 }
