@@ -13,7 +13,6 @@ func listImageHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(writer, "<title>image %s</title>\n", imageName)
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<h3>")
-	writeLinks(writer)
 	image := imageDataBase.GetImage(imageName)
 	if image == nil {
 		fmt.Fprintf(writer, "Image: %s UNKNOWN!\n", imageName)

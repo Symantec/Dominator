@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
 	"io/ioutil"
 	"net"
-	"net/http"
 )
 
 func dial(network, address string) (net.Conn, error) {
@@ -18,23 +18,7 @@ func dial(network, address string) (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	io.WriteString(conn, "CONNECT /GetObjects HTTP/1.0\n\n")
-	// Require successful HTTP response before switching to RPC protocol.
-	resp, err := http.ReadResponse(bufio.NewReader(conn),
-		&http.Request{Method: "CONNECT"})
-	if err == nil && resp.Status == "200 Connected to GetObjects RPC" {
-		return conn, nil
-	}
-	if err == nil {
-		err = errors.New("unexpected HTTP response: " + resp.Status)
-	}
-	conn.Close()
-	return nil, &net.OpError{
-		Op:   "dial-http",
-		Net:  network + " " + address,
-		Addr: nil,
-		Err:  err,
-	}
+	return conn, srpc.Call(conn, "ObjectServer.GetObjects")
 }
 
 func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (

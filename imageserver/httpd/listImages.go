@@ -21,7 +21,6 @@ func listImagesHandler(w http.ResponseWriter, req *http.Request) {
                           </style>`)
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<h3>")
-	writeLinks(writer)
 	imageNames := imageDataBase.ListImages()
 	sort.Strings(imageNames)
 	fmt.Fprintln(writer, `<table border="1" style="width:100%">`)

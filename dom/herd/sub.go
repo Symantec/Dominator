@@ -106,17 +106,23 @@ func (sub *Sub) poll(connection *rpc.Client) {
 	if idle, status := sub.fetchMissingObjects(connection,
 		sub.requiredImage); !idle {
 		sub.status = status
+		sub.fileSystem = nil // Mark memory for reclaim.
+		runtime.GC()         // Reclaim now.
 		return
 	}
 	sub.status = statusComputingUpdate
 	if idle, status := sub.sendUpdate(connection); !idle {
 		sub.status = status
+		sub.fileSystem = nil // Mark memory for reclaim.
+		runtime.GC()         // Reclaim now.
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(connection,
 		sub.plannedImage); !idle {
 		if status != statusImageNotReady {
 			sub.status = status
+			sub.fileSystem = nil // Mark memory for reclaim.
+			runtime.GC()         // Reclaim now.
 			return
 		}
 	}
