@@ -6,16 +6,16 @@ import (
 
 func (t *rpcType) Poll(request sub.PollRequest, reply *sub.PollResponse) error {
 	var response sub.PollResponse
-	response.NetworkSpeed = networkReaderContext.MaximumSpeed()
-	rwLock.RLock()
-	response.FetchInProgress = fetchInProgress
-	response.UpdateInProgress = updateInProgress
-	response.LastUpdateHadTriggerFailures = lastUpdateHadTriggerFailures
-	rwLock.RUnlock()
-	response.GenerationCount = fileSystemHistory.GenerationCount()
-	fs := fileSystemHistory.FileSystem()
+	response.NetworkSpeed = t.networkReaderContext.MaximumSpeed()
+	t.rwLock.RLock()
+	response.FetchInProgress = t.fetchInProgress
+	response.UpdateInProgress = t.updateInProgress
+	response.LastUpdateHadTriggerFailures = t.lastUpdateHadTriggerFailures
+	t.rwLock.RUnlock()
+	response.GenerationCount = t.fileSystemHistory.GenerationCount()
+	fs := t.fileSystemHistory.FileSystem()
 	if fs != nil &&
-		request.HaveGeneration != fileSystemHistory.GenerationCount() {
+		request.HaveGeneration != t.fileSystemHistory.GenerationCount() {
 		response.FileSystem = fs
 	}
 	*reply = response

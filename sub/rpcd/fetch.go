@@ -26,39 +26,39 @@ func (t *rpcType) Fetch(request sub.FetchRequest,
 	reply *sub.FetchResponse) error {
 	if *readOnly {
 		txt := "Fetch() rejected due to read-only mode"
-		logger.Println(txt)
+		t.logger.Println(txt)
 		return errors.New(txt)
 	}
-	rwLock.Lock()
-	defer rwLock.Unlock()
-	logger.Printf("Fetch() %d objects\n", len(request.Hashes))
-	if fetchInProgress {
-		logger.Println("Error: fetch already in progress")
+	t.rwLock.Lock()
+	defer t.rwLock.Unlock()
+	t.logger.Printf("Fetch() %d objects\n", len(request.Hashes))
+	if t.fetchInProgress {
+		t.logger.Println("Error: fetch already in progress")
 		return errors.New("fetch already in progress")
 	}
-	if updateInProgress {
-		logger.Println("Error: update in progress")
+	if t.updateInProgress {
+		t.logger.Println("Error: update in progress")
 		return errors.New("update in progress")
 	}
-	fetchInProgress = true
-	go doFetch(request)
+	t.fetchInProgress = true
+	go t.doFetch(request)
 	return nil
 }
 
-func doFetch(request sub.FetchRequest) {
-	defer clearFetchInProgress()
+func (t *rpcType) doFetch(request sub.FetchRequest) {
+	defer t.clearFetchInProgress()
 	objectServer := objectclient.NewObjectClient(request.ServerAddress)
 	benchmark := false
-	if networkReaderContext.MaximumSpeed() < 1 {
+	if t.networkReaderContext.MaximumSpeed() < 1 {
 		benchmark = enoughBytesForBenchmark(objectServer, request)
 		if benchmark {
 			objectServer.SetExclusiveGetObjects(true)
-			logger.Println("Benchmarking network speed")
+			t.logger.Println("Benchmarking network speed")
 		}
 	}
 	objectsReader, err := objectServer.GetObjects(request.Hashes)
 	if err != nil {
-		logger.Printf("Error getting object reader:\t%s\n", err.Error())
+		t.logger.Printf("Error getting object reader:\t%s\n", err.Error())
 		if *exitOnFetchFailure {
 			os.Exit(1)
 		}
@@ -70,16 +70,17 @@ func doFetch(request sub.FetchRequest) {
 	for _, hash := range request.Hashes {
 		length, reader, err := objectsReader.NextObject()
 		if err != nil {
-			logger.Println(err)
+			t.logger.Println(err)
 			if *exitOnFetchFailure {
 				os.Exit(1)
 			}
 			return
 		}
-		err = readOne(hash, length, networkReaderContext.NewReader(reader))
+		err = readOne(t.objectsDir, hash, length,
+			t.networkReaderContext.NewReader(reader))
 		reader.Close()
 		if err != nil {
-			logger.Println(err)
+			t.logger.Println(err)
 			if *exitOnFetchFailure {
 				os.Exit(1)
 			}
@@ -90,16 +91,16 @@ func doFetch(request sub.FetchRequest) {
 	duration := time.Since(timeStart)
 	speed := uint64(float64(totalLength) / duration.Seconds())
 	if benchmark {
-		file, err := os.Create(netbenchFilename)
+		file, err := os.Create(t.netbenchFilename)
 		if err == nil {
 			fmt.Fprintf(file, "%d\n", speed)
 			file.Close()
 		}
-		networkReaderContext.InitialiseMaximumSpeed(speed)
+		t.networkReaderContext.InitialiseMaximumSpeed(speed)
 	}
-	logger.Printf("Fetch() complete. Read: %s in %s (%s/s)\n",
+	t.logger.Printf("Fetch() complete. Read: %s in %s (%s/s)\n",
 		format.FormatBytes(totalLength), duration, format.FormatBytes(speed))
-	rescanObjectCacheChannel <- true
+	t.rescanObjectCacheChannel <- true
 }
 
 func enoughBytesForBenchmark(objectServer *objectclient.ObjectClient,
@@ -118,7 +119,8 @@ func enoughBytesForBenchmark(objectServer *objectclient.ObjectClient,
 	return false
 }
 
-func readOne(hash hash.Hash, length uint64, reader io.Reader) error {
+func readOne(objectsDir string, hash hash.Hash, length uint64,
+	reader io.Reader) error {
 	filename := path.Join(objectsDir, objectcache.HashToFilename(hash))
 	dirname := path.Dir(filename)
 	if err := os.MkdirAll(dirname, syscall.S_IRWXU); err != nil {
@@ -127,8 +129,8 @@ func readOne(hash hash.Hash, length uint64, reader io.Reader) error {
 	return fsutil.CopyToFile(filename, reader, int64(length))
 }
 
-func clearFetchInProgress() {
-	rwLock.Lock()
-	defer rwLock.Unlock()
-	fetchInProgress = false
+func (t *rpcType) clearFetchInProgress() {
+	t.rwLock.Lock()
+	defer t.rwLock.Unlock()
+	t.fetchInProgress = false
 }

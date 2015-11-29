@@ -12,6 +12,7 @@ import (
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -29,42 +30,41 @@ var (
 		"If true, do not run any triggers. For debugging only")
 )
 
-var lastUpdateHadTriggerFailures bool
-
 func (t *rpcType) Update(request sub.UpdateRequest,
 	reply *sub.UpdateResponse) error {
 	if *readOnly || *disableUpdates {
 		txt := "Update() rejected due to read-only mode"
-		logger.Println(txt)
+		t.logger.Println(txt)
 		return errors.New(txt)
 	}
-	rwLock.Lock()
-	defer rwLock.Unlock()
-	fs := fileSystemHistory.FileSystem()
+	t.rwLock.Lock()
+	defer t.rwLock.Unlock()
+	fs := t.fileSystemHistory.FileSystem()
 	if fs == nil {
 		return errors.New("No file-system history yet")
 	}
-	logger.Printf("Update()\n")
-	if fetchInProgress {
-		logger.Println("Error: fetch already in progress")
+	t.logger.Printf("Update()\n")
+	if t.fetchInProgress {
+		t.logger.Println("Error: fetch already in progress")
 		return errors.New("fetch already in progress")
 	}
-	if updateInProgress {
-		logger.Println("Error: update progress")
+	if t.updateInProgress {
+		t.logger.Println("Error: update progress")
 		return errors.New("update in progress")
 	}
-	updateInProgress = true
-	go doUpdate(request, fs.RootDirectoryName())
+	t.updateInProgress = true
+	go t.doUpdate(request, fs.RootDirectoryName())
 	return nil
 }
 
-func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
-	defer clearUpdateInProgress()
-	disableScannerFunc(true)
-	defer disableScannerFunc(false)
+func (t *rpcType) doUpdate(request sub.UpdateRequest,
+	rootDirectoryName string) {
+	defer t.clearUpdateInProgress()
+	t.disableScannerFunc(true)
+	defer t.disableScannerFunc(false)
 	startTime := time.Now()
 	var oldTriggers triggers.Triggers
-	file, err := os.Open(oldTriggersFilename)
+	file, err := os.Open(t.oldTriggersFilename)
 	if err == nil {
 		decoder := json.NewDecoder(file)
 		var trig triggers.Triggers
@@ -73,38 +73,40 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 		if err == nil {
 			oldTriggers = trig
 		} else {
-			logger.Printf("Error decoding old triggers: %s", err.Error())
+			t.logger.Printf("Error decoding old triggers: %s", err.Error())
 		}
 	}
-	copyFilesToCache(request.FilesToCopyToCache, rootDirectoryName)
-	makeObjectCopies(request.MultiplyUsedObjects)
-	lastUpdateHadTriggerFailures = false
+	t.copyFilesToCache(request.FilesToCopyToCache, rootDirectoryName)
+	t.makeObjectCopies(request.MultiplyUsedObjects)
+	t.lastUpdateHadTriggerFailures = false
 	if len(oldTriggers.Triggers) > 0 {
-		makeInodes(request.InodesToMake, rootDirectoryName,
+		t.makeInodes(request.InodesToMake, rootDirectoryName,
 			request.MultiplyUsedObjects, &oldTriggers, false)
 		makeHardlinks(request.HardlinksToMake, rootDirectoryName,
-			&oldTriggers, false)
-		doDeletes(request.PathsToDelete, rootDirectoryName, &oldTriggers, false)
-		makeDirectories(request.DirectoriesToMake, rootDirectoryName,
+			&oldTriggers, false, t.logger)
+		doDeletes(request.PathsToDelete, rootDirectoryName, &oldTriggers, false,
+			t.logger)
+		t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
 			&oldTriggers, false)
 		changeInodes(request.InodesToChange, rootDirectoryName, &oldTriggers,
-			false)
+			false, t.logger)
 		matchedOldTriggers := oldTriggers.GetMatchedTriggers()
-		if runTriggers(matchedOldTriggers, "stop") {
-			lastUpdateHadTriggerFailures = true
+		if runTriggers(matchedOldTriggers, "stop", t.logger) {
+			t.lastUpdateHadTriggerFailures = true
 		}
 	}
-	makeInodes(request.InodesToMake, rootDirectoryName,
+	t.makeInodes(request.InodesToMake, rootDirectoryName,
 		request.MultiplyUsedObjects, request.Triggers, true)
 	makeHardlinks(request.HardlinksToMake, rootDirectoryName,
-		request.Triggers, true)
-	doDeletes(request.PathsToDelete, rootDirectoryName, request.Triggers, true)
-	makeDirectories(request.DirectoriesToMake, rootDirectoryName,
+		request.Triggers, true, t.logger)
+	doDeletes(request.PathsToDelete, rootDirectoryName, request.Triggers, true,
+		t.logger)
+	t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
 		request.Triggers, true)
 	changeInodes(request.InodesToChange, rootDirectoryName, request.Triggers,
-		true)
+		true, t.logger)
 	matchedNewTriggers := request.Triggers.GetMatchedTriggers()
-	file, err = os.Create(oldTriggersFilename)
+	file, err = os.Create(t.oldTriggersFilename)
 	if err == nil {
 		b, err := json.Marshal(request.Triggers.Triggers)
 		if err == nil {
@@ -112,76 +114,75 @@ func doUpdate(request sub.UpdateRequest, rootDirectoryName string) {
 			json.Indent(&out, b, "", "    ")
 			out.WriteTo(file)
 		} else {
-			logger.Printf("Error marshaling triggers: %s", err.Error())
+			t.logger.Printf("Error marshaling triggers: %s", err.Error())
 		}
 		file.Close()
 	}
-	if runTriggers(matchedNewTriggers, "start") {
-		lastUpdateHadTriggerFailures = true
+	if runTriggers(matchedNewTriggers, "start", t.logger) {
+		t.lastUpdateHadTriggerFailures = true
 	}
 	timeTaken := time.Since(startTime)
-	logger.Printf("Update() completed in %s\n", timeTaken)
+	t.logger.Printf("Update() completed in %s\n", timeTaken)
 }
 
-func clearUpdateInProgress() {
-	rwLock.Lock()
-	defer rwLock.Unlock()
-	updateInProgress = false
+func (t *rpcType) clearUpdateInProgress() {
+	t.rwLock.Lock()
+	defer t.rwLock.Unlock()
+	t.updateInProgress = false
 }
 
-func copyFilesToCache(filesToCopyToCache []sub.FileToCopyToCache,
+func (t *rpcType) copyFilesToCache(filesToCopyToCache []sub.FileToCopyToCache,
 	rootDirectoryName string) {
 	for _, fileToCopy := range filesToCopyToCache {
 		sourcePathname := path.Join(rootDirectoryName, fileToCopy.Name)
-		destPathname := path.Join(objectsDir,
+		destPathname := path.Join(t.objectsDir,
 			objectcache.HashToFilename(fileToCopy.Hash))
-		if copyFile(destPathname, sourcePathname) {
-			logger.Printf("Copied: %s to cache\n", sourcePathname)
+		if err := copyFile(destPathname, sourcePathname); err != nil {
+			t.logger.Println(err)
+		} else {
+			t.logger.Printf("Copied: %s to cache\n", sourcePathname)
 		}
 	}
 }
 
-func copyFile(destPathname, sourcePathname string) bool {
+func copyFile(destPathname, sourcePathname string) error {
 	sourceFile, err := os.Open(sourcePathname)
 	if err != nil {
-		logger.Println(err)
-		return false
+		return err
 	}
 	defer sourceFile.Close()
 	dirname := path.Dir(destPathname)
 	if err := os.MkdirAll(dirname, syscall.S_IRWXU); err != nil {
-		return false
+		return err
 	}
 	destFile, err := os.Create(destPathname)
 	if err != nil {
-		logger.Println(err)
-		return false
+		return err
 	}
 	defer destFile.Close()
 	_, err = io.Copy(destFile, sourceFile)
-	if err != nil {
-		return false
-	}
-	return true
+	return err
 }
 
-func makeObjectCopies(multiplyUsedObjects map[hash.Hash]uint64) {
+func (t *rpcType) makeObjectCopies(multiplyUsedObjects map[hash.Hash]uint64) {
 	for hash, numCopies := range multiplyUsedObjects {
 		if numCopies < 2 {
 			continue
 		}
-		objectPathname := path.Join(objectsDir,
+		objectPathname := path.Join(t.objectsDir,
 			objectcache.HashToFilename(hash))
 		for numCopies--; numCopies > 0; numCopies-- {
 			ext := strings.Repeat("~", int(numCopies))
-			if copyFile(objectPathname+ext, objectPathname) {
-				logger.Printf("Copied object: %x%s\n", hash, ext)
+			if err := copyFile(objectPathname+ext, objectPathname); err != nil {
+				t.logger.Println(err)
+			} else {
+				t.logger.Printf("Copied object: %x%s\n", hash, ext)
 			}
 		}
 	}
 }
 
-func makeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
+func (t *rpcType) makeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
 	multiplyUsedObjects map[hash.Hash]uint64, triggers *triggers.Triggers,
 	takeAction bool) {
 	for _, inode := range inodesToMake {
@@ -190,18 +191,20 @@ func makeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
 		if takeAction {
 			switch inode := inode.GenericInode.(type) {
 			case *filesystem.RegularInode:
-				makeRegularInode(fullPathname, inode, multiplyUsedObjects)
+				makeRegularInode(fullPathname, inode, multiplyUsedObjects,
+					t.objectsDir, t.logger)
 			case *filesystem.SymlinkInode:
-				makeSymlinkInode(fullPathname, inode)
+				makeSymlinkInode(fullPathname, inode, t.logger)
 			case *filesystem.SpecialInode:
-				makeSpecialInode(fullPathname, inode)
+				makeSpecialInode(fullPathname, inode, t.logger)
 			}
 		}
 	}
 }
 
-func makeRegularInode(fullPathname string, inode *filesystem.RegularInode,
-	multiplyUsedObjects map[hash.Hash]uint64) {
+func makeRegularInode(fullPathname string,
+	inode *filesystem.RegularInode, multiplyUsedObjects map[hash.Hash]uint64,
+	objectsDir string, logger *log.Logger) {
 	var err error
 	if inode.Size > 0 {
 		objectPathname := path.Join(objectsDir,
@@ -226,14 +229,16 @@ func makeRegularInode(fullPathname string, inode *filesystem.RegularInode,
 		logger.Println(err)
 	} else {
 		if inode.Size > 0 {
-			logger.Printf("Made inode: %s from: %x\n", fullPathname, inode.Hash)
+			logger.Printf("Made inode: %s from: %x\n",
+				fullPathname, inode.Hash)
 		} else {
 			logger.Printf("Made empty inode: %s\n", fullPathname)
 		}
 	}
 }
 
-func makeSymlinkInode(fullPathname string, inode *filesystem.SymlinkInode) {
+func makeSymlinkInode(fullPathname string,
+	inode *filesystem.SymlinkInode, logger *log.Logger) {
 	if err := inode.Write(fullPathname); err != nil {
 		logger.Println(err)
 	} else {
@@ -242,7 +247,8 @@ func makeSymlinkInode(fullPathname string, inode *filesystem.SymlinkInode) {
 	}
 }
 
-func makeSpecialInode(fullPathname string, inode *filesystem.SpecialInode) {
+func makeSpecialInode(fullPathname string, inode *filesystem.SpecialInode,
+	logger *log.Logger) {
 	if err := inode.Write(fullPathname); err != nil {
 		logger.Println(err)
 	} else {
@@ -251,7 +257,7 @@ func makeSpecialInode(fullPathname string, inode *filesystem.SpecialInode) {
 }
 
 func makeHardlinks(hardlinksToMake []sub.Hardlink, rootDirectoryName string,
-	triggers *triggers.Triggers, takeAction bool) {
+	triggers *triggers.Triggers, takeAction bool, logger *log.Logger) {
 	for _, hardlink := range hardlinksToMake {
 		triggers.Match(hardlink.NewLink)
 		if takeAction {
@@ -268,7 +274,7 @@ func makeHardlinks(hardlinksToMake []sub.Hardlink, rootDirectoryName string,
 }
 
 func doDeletes(pathsToDelete []string, rootDirectoryName string,
-	triggers *triggers.Triggers, takeAction bool) {
+	triggers *triggers.Triggers, takeAction bool, logger *log.Logger) {
 	for _, pathname := range pathsToDelete {
 		fullPathname := path.Join(rootDirectoryName, pathname)
 		triggers.Match(pathname)
@@ -282,10 +288,10 @@ func doDeletes(pathsToDelete []string, rootDirectoryName string,
 	}
 }
 
-func makeDirectories(directoriesToMake []sub.Inode, rootDirectoryName string,
-	triggers *triggers.Triggers, takeAction bool) {
+func (t *rpcType) makeDirectories(directoriesToMake []sub.Inode,
+	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
 	for _, newdir := range directoriesToMake {
-		if skipPath(newdir.Name) {
+		if t.skipPath(newdir.Name) {
 			continue
 		}
 		fullPathname := path.Join(rootDirectoryName, newdir.Name)
@@ -293,20 +299,20 @@ func makeDirectories(directoriesToMake []sub.Inode, rootDirectoryName string,
 		if takeAction {
 			inode, ok := newdir.GenericInode.(*filesystem.DirectoryInode)
 			if !ok {
-				logger.Println("%s is not a directory!\n", newdir.Name)
+				t.logger.Println("%s is not a directory!\n", newdir.Name)
 				continue
 			}
 			if err := inode.Write(fullPathname); err != nil {
-				logger.Println(err)
+				t.logger.Println(err)
 			} else {
-				logger.Printf("Made directory: %s\n", fullPathname)
+				t.logger.Printf("Made directory: %s\n", fullPathname)
 			}
 		}
 	}
 }
 
 func changeInodes(inodesToChange []sub.Inode, rootDirectoryName string,
-	triggers *triggers.Triggers, takeAction bool) {
+	triggers *triggers.Triggers, takeAction bool, logger *log.Logger) {
 	for _, inode := range inodesToChange {
 		fullPathname := path.Join(rootDirectoryName, inode.Name)
 		triggers.Match(inode.Name)
@@ -320,8 +326,8 @@ func changeInodes(inodesToChange []sub.Inode, rootDirectoryName string,
 	}
 }
 
-func skipPath(pathname string) bool {
-	if scannerConfiguration.ScanFilter.Match(pathname) {
+func (t *rpcType) skipPath(pathname string) bool {
+	if t.scannerConfiguration.ScanFilter.Match(pathname) {
 		return true
 	}
 	if pathname == "/.subd" {
@@ -333,7 +339,8 @@ func skipPath(pathname string) bool {
 	return false
 }
 
-func runTriggers(triggers []*triggers.Trigger, action string) bool {
+func runTriggers(triggers []*triggers.Trigger, action string,
+	logger *log.Logger) bool {
 	hadFailures := false
 	logPrefix := ""
 	if *disableTriggers {

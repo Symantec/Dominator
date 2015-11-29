@@ -10,26 +10,26 @@ import (
 
 func (t *rpcType) Cleanup(request sub.CleanupRequest,
 	reply *sub.CleanupResponse) error {
-	disableScannerFunc(true)
-	defer disableScannerFunc(false)
-	rwLock.Lock()
-	defer rwLock.Unlock()
-	logger.Printf("Cleanup(): %d objects\n", len(request.Hashes))
-	if fetchInProgress {
-		logger.Println("Error: fetch in progress")
+	t.disableScannerFunc(true)
+	defer t.disableScannerFunc(false)
+	t.rwLock.Lock()
+	defer t.rwLock.Unlock()
+	t.logger.Printf("Cleanup(): %d objects\n", len(request.Hashes))
+	if t.fetchInProgress {
+		t.logger.Println("Error: fetch in progress")
 		return errors.New("fetch in progress")
 	}
-	if updateInProgress {
-		logger.Println("Error: update progress")
+	if t.updateInProgress {
+		t.logger.Println("Error: update progress")
 		return errors.New("update in progress")
 	}
 	for _, hash := range request.Hashes {
-		pathname := path.Join(objectsDir, objectcache.HashToFilename(hash))
+		pathname := path.Join(t.objectsDir, objectcache.HashToFilename(hash))
 		err := os.Remove(pathname)
 		if err == nil {
-			logger.Printf("Deleted: %s\n", pathname)
+			t.logger.Printf("Deleted: %s\n", pathname)
 		} else {
-			logger.Println(err)
+			t.logger.Println(err)
 		}
 	}
 	return nil
