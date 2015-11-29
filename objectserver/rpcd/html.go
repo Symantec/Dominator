@@ -7,5 +7,5 @@ import (
 
 func (hw *htmlWriter) writeHtml(writer io.Writer) {
 	fmt.Fprintf(writer, "GetObjects() RPC slots: %d out of %d<br>\n",
-		len(getSemaphore), cap(getSemaphore))
+		len(hw.getSemaphore), cap(hw.getSemaphore))
 }
