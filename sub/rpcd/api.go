@@ -8,41 +8,41 @@ import (
 	"sync"
 )
 
-var scannerConfiguration *scanner.Configuration
-var fileSystemHistory *scanner.FileSystemHistory
-var objectsDir string
-var networkReaderContext *rateio.ReaderContext
-var netbenchFilename string
-var oldTriggersFilename string
-var rescanObjectCacheChannel chan bool
-var disableScannerFunc func(disableScanner bool)
-var logger *log.Logger
-
-type rpcType int
+type rpcType struct {
+	scannerConfiguration         *scanner.Configuration
+	fileSystemHistory            *scanner.FileSystemHistory
+	objectsDir                   string
+	networkReaderContext         *rateio.ReaderContext
+	netbenchFilename             string
+	oldTriggersFilename          string
+	rescanObjectCacheChannel     chan<- bool
+	disableScannerFunc           func(disableScanner bool)
+	logger                       *log.Logger
+	rwLock                       sync.RWMutex
+	fetchInProgress              bool // Fetch() & Update() mutually exclusive.
+	updateInProgress             bool
+	startTimeNanoSeconds         int32 // For Fetch() or Update().
+	startTimeSeconds             int64
+	lastUpdateHadTriggerFailures bool
+}
 
 func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 	objectsDirname string, netReaderContext *rateio.ReaderContext,
 	netbenchFname string, oldTriggersFname string,
 	disableScannerFunction func(disableScanner bool),
-	lg *log.Logger) <-chan bool {
-	scannerConfiguration = configuration
-	fileSystemHistory = fsh
-	objectsDir = objectsDirname
-	networkReaderContext = netReaderContext
-	netbenchFilename = netbenchFname
-	oldTriggersFilename = oldTriggersFname
-	disableScannerFunc = disableScannerFunction
-	logger = lg
-	rescanObjectCacheChannel = make(chan bool)
-	rpc.RegisterName("Subd", new(rpcType))
+	logger *log.Logger) <-chan bool {
+	rescanObjectCacheChannel := make(chan bool)
+	rpcObj := &rpcType{
+		scannerConfiguration:     configuration,
+		fileSystemHistory:        fsh,
+		objectsDir:               objectsDirname,
+		networkReaderContext:     netReaderContext,
+		netbenchFilename:         netbenchFname,
+		oldTriggersFilename:      oldTriggersFname,
+		rescanObjectCacheChannel: rescanObjectCacheChannel,
+		disableScannerFunc:       disableScannerFunction,
+		logger:                   logger}
+	rpc.RegisterName("Subd", rpcObj)
 	rpc.HandleHTTP()
 	return rescanObjectCacheChannel
 }
-
-var (
-	rwLock               sync.RWMutex
-	fetchInProgress      bool // Fetch() and Update() are mutually exclusive.
-	updateInProgress     bool
-	startTimeNanoSeconds int32 // For Fetch() or Update().
-	startTimeSeconds     int64
-)

@@ -8,15 +8,15 @@ import (
 func (t *rpcType) SetConfiguration(request sub.SetConfigurationRequest,
 	reply *sub.SetConfigurationResponse) error {
 	var response sub.SetConfigurationResponse
-	scannerConfiguration.FsScanContext.GetContext().SetSpeedPercent(
+	t.scannerConfiguration.FsScanContext.GetContext().SetSpeedPercent(
 		request.ScanSpeedPercent)
-	scannerConfiguration.NetworkReaderContext.SetSpeedPercent(
+	t.scannerConfiguration.NetworkReaderContext.SetSpeedPercent(
 		request.NetworkSpeedPercent)
 	newFilter, err := filter.NewFilter(request.ScanExclusionList)
 	if err != nil {
 		return err
 	}
-	scannerConfiguration.ScanFilter = newFilter
+	t.scannerConfiguration.ScanFilter = newFilter
 	response.Success = true
 	*reply = response
 	return nil

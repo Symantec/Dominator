@@ -27,8 +27,8 @@ func (objSrv *srpcType) getObjects(bufrw *bufio.ReadWriter) {
 	} else {
 		exclusive.RLock()
 		defer exclusive.RUnlock()
-		getSemaphore <- true
-		defer releaseSemaphore(getSemaphore)
+		objSrv.getSemaphore <- true
+		defer releaseSemaphore(objSrv.getSemaphore)
 	}
 	decoder := gob.NewDecoder(bufrw)
 	encoder := gob.NewEncoder(bufrw)
@@ -64,22 +64,22 @@ func (objSrv *srpcType) getObjects(bufrw *bufio.ReadWriter) {
 	for _, hash := range request.Hashes {
 		length, reader, err := objectsReader.NextObject()
 		if err != nil {
-			logger.Println(err)
+			objSrv.logger.Println(err)
 			return
 		}
 		nCopied, err := io.Copy(bufrw.Writer, reader)
 		reader.Close()
 		if err != nil {
-			logger.Printf("Error copying:\t%s\n", err)
+			objSrv.logger.Printf("Error copying:\t%s\n", err)
 			return
 		}
 		if nCopied != int64(length) {
-			logger.Printf("Expected length: %d, got: %d for: %x\n",
+			objSrv.logger.Printf("Expected length: %d, got: %d for: %x\n",
 				length, nCopied, hash)
 			return
 		}
 	}
-	logger.Printf("GetObjects() sent: %d objects\n", len(request.Hashes))
+	objSrv.logger.Printf("GetObjects() sent: %d objects\n", len(request.Hashes))
 }
 
 func releaseSemaphore(semaphore <-chan bool) {

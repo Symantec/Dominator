@@ -10,7 +10,7 @@ import (
 
 func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 	reply *imageserver.AddImageResponse) error {
-	if imageDataBase.CheckImage(request.ImageName) {
+	if t.imageDataBase.CheckImage(request.ImageName) {
 		return errors.New("image already exists")
 	}
 	if request.Image == nil {
@@ -28,7 +28,7 @@ func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 			}
 		}
 	}
-	objectSizes, err := imageDataBase.ObjectServer().CheckObjects(hashes)
+	objectSizes, err := t.imageDataBase.ObjectServer().CheckObjects(hashes)
 	if err != nil {
 		return err
 	}
@@ -39,6 +39,6 @@ func (t *rpcType) AddImage(request imageserver.AddImageRequest,
 		}
 	}
 	request.Image.FileSystem.RebuildInodePointers()
-	logger.Printf("AddImage(%s)\n", request.ImageName)
-	return imageDataBase.AddImage(request.Image, request.ImageName)
+	t.logger.Printf("AddImage(%s)\n", request.ImageName)
+	return t.imageDataBase.AddImage(request.Image, request.ImageName)
 }
