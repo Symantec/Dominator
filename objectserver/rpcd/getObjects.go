@@ -6,31 +6,19 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
-	"net/http"
+	"net"
 	"sync"
 )
 
 var exclusive sync.RWMutex
 
-func getObjectsHandler(w http.ResponseWriter, req *http.Request) {
-	if req.Method != "CONNECT" {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		io.WriteString(w, "405 must CONNECT\n")
-		return
-	}
-	conn, bufrw, err := w.(http.Hijacker).Hijack()
-	if err != nil {
-		logger.Println("rpc hijacking ", req.RemoteAddr, ": ", err.Error())
-		return
-	}
-	defer conn.Close()
+func (objSrv *srpcType) GetObjects(conn net.Conn) {
+	bufrw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 	defer bufrw.Flush()
-	io.WriteString(conn, "HTTP/1.0 200 Connected to GetObjects RPC\n\n")
-	savedObjectServer.getObjects(bufrw)
+	objSrv.getObjects(bufrw)
 }
 
-func (objSrv *objectServer) getObjects(bufrw *bufio.ReadWriter) {
+func (objSrv *srpcType) getObjects(bufrw *bufio.ReadWriter) {
 	var request objectserver.GetObjectsRequest
 	var response objectserver.GetObjectsResponse
 	if request.Exclusive {
