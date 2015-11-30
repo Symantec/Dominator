@@ -19,6 +19,11 @@ var (
 		"If true, (re)open a connection for each Poll")
 	numPolls = flag.Int("numPolls", 1,
 		"The number of polls to run (infinite: < 0)")
+	objectServerHostname = flag.String("objectServerHostname", "localhost",
+		"Hostname of image server")
+	objectServerPortNum = flag.Uint("objectServerPortNum",
+		constants.ImageServerPortNumber,
+		"Port number of image server")
 	scanExcludeList = flag.String("scanExcludeList",
 		strings.Join(constants.ScanExcludeList, ","),
 		"Comma separated list of patterns to exclude from scanning")
@@ -32,10 +37,11 @@ var (
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr,
-		"Usage: subtool [flags...] get-config|poll|set-config")
+		"Usage: subtool [flags...] fetch|get-config|poll|set-config")
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
+	fmt.Fprintln(os.Stderr, "  fetch hashesFile")
 	fmt.Fprintln(os.Stderr, "  get-config")
 	fmt.Fprintln(os.Stderr, "  poll")
 	fmt.Fprintln(os.Stderr, "  set-config")
@@ -50,6 +56,7 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
+	{"fetch", 1, fetchSubcommand},
 	{"get-config", 0, getConfigSubcommand},
 	{"poll", 0, pollSubcommand},
 	{"set-config", 0, setConfigSubcommand},
@@ -58,7 +65,7 @@ var subcommands = []subcommand{
 func main() {
 	flag.Usage = printUsage
 	flag.Parse()
-	if flag.NArg() != 1 {
+	if flag.NArg() < 1 {
 		printUsage()
 		os.Exit(2)
 	}
