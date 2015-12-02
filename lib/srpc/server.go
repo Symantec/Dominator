@@ -39,7 +39,7 @@ func registerName(name string, rcvr interface{}) error {
 			continue
 		}
 		methodType := method.Type
-		// Method needs two ins: receiver, *bufio.ReadWriter.
+		// Method needs two ins: receiver, *Conn.
 		if methodType.NumIn() != 2 {
 			continue
 		}
