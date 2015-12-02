@@ -2,6 +2,7 @@ package rpcd
 
 import (
 	"github.com/Symantec/Dominator/lib/rateio"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"log"
 	"net/rpc"
@@ -43,6 +44,7 @@ func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 		disableScannerFunc:       disableScannerFunction,
 		logger:                   logger}
 	rpc.RegisterName("Subd", rpcObj)
+	srpc.RegisterName("Subd", rpcObj)
 	rpc.HandleHTTP()
 	return rescanObjectCacheChannel
 }

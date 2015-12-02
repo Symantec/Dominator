@@ -5,7 +5,9 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
+	"github.com/Symantec/Dominator/sub/client"
 	"net/rpc"
 	"runtime"
 	"strings"
@@ -31,28 +33,34 @@ func (sub *Sub) makeUnbusy() {
 func (sub *Sub) connectAndPoll() {
 	sub.status = statusConnecting
 	hostname := strings.SplitN(sub.hostname, "*", 2)[0]
+	address := fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber)
 	var err error
-	connection, err := rpc.DialHTTP("tcp",
-		fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber))
+	rpcClient, err := rpc.DialHTTP("tcp", address)
 	if err != nil {
 		sub.status = statusFailedToConnect
 		return
 	}
-	defer connection.Close()
+	defer rpcClient.Close()
+	srpcClient, err := srpc.DialHTTP("tcp", address)
+	if err != nil {
+		sub.status = statusFailedToConnect
+		return
+	}
+	defer srpcClient.Close()
 	sub.status = statusWaitingToPoll
 	sub.herd.pollSemaphore <- true
 	sub.status = statusPolling
-	sub.poll(connection)
+	sub.poll(rpcClient, srpcClient)
 	<-sub.herd.pollSemaphore
 }
 
-func (sub *Sub) poll(connection *rpc.Client) {
+func (sub *Sub) poll(rpcClient *rpc.Client, srpcClient *srpc.Client) {
 	var request subproto.PollRequest
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
 	sub.lastPollStartTime = time.Now()
 	logger := sub.herd.logger
-	if err := connection.Call("Subd.Poll", request, &reply); err != nil {
+	if err := rpcClient.Call("Subd.Poll", request, &reply); err != nil {
 		sub.status = statusFailedToPoll
 		logger.Printf("Error calling %s.Poll()\t%s\n", sub.hostname, err)
 		return
@@ -103,7 +111,7 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		sub.status = statusWaitingForNextPoll
 		return
 	}
-	if idle, status := sub.fetchMissingObjects(connection,
+	if idle, status := sub.fetchMissingObjects(srpcClient,
 		sub.requiredImage); !idle {
 		sub.status = status
 		sub.fileSystem = nil // Mark memory for reclaim.
@@ -111,13 +119,13 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		return
 	}
 	sub.status = statusComputingUpdate
-	if idle, status := sub.sendUpdate(connection); !idle {
+	if idle, status := sub.sendUpdate(rpcClient); !idle {
 		sub.status = status
 		sub.fileSystem = nil // Mark memory for reclaim.
 		runtime.GC()         // Reclaim now.
 		return
 	}
-	if idle, status := sub.fetchMissingObjects(connection,
+	if idle, status := sub.fetchMissingObjects(srpcClient,
 		sub.plannedImage); !idle {
 		if status != statusImageNotReady {
 			sub.status = status
@@ -127,14 +135,14 @@ func (sub *Sub) poll(connection *rpc.Client) {
 		}
 	}
 	sub.status = statusSynced
-	sub.cleanup(connection, sub.plannedImage)
+	sub.cleanup(rpcClient, sub.plannedImage)
 	sub.generationCountAtLastSync = sub.generationCount
 	sub.fileSystem = nil // Mark memory for reclaim.
 	runtime.GC()         // Reclaim now.
 }
 
 // Returns true if all required objects are available.
-func (sub *Sub) fetchMissingObjects(connection *rpc.Client, imageName string) (
+func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 	bool, uint) {
 	image := sub.herd.getImage(imageName)
 	if image == nil {
@@ -170,7 +178,7 @@ func (sub *Sub) fetchMissingObjects(connection *rpc.Client, imageName string) (
 	for hash := range missingObjects {
 		request.Hashes = append(request.Hashes, hash)
 	}
-	if err := connection.Call("Subd.Fetch", request, &reply); err != nil {
+	if err := client.CallFetch(srpcClient, request, &reply); err != nil {
 		logger.Printf("Error calling %s.Fetch()\t%s\n", sub.hostname, err)
 		return false, statusFailedToFetch
 	}
@@ -179,14 +187,14 @@ func (sub *Sub) fetchMissingObjects(connection *rpc.Client, imageName string) (
 }
 
 // Returns true if no update needs to be performed.
-func (sub *Sub) sendUpdate(connection *rpc.Client) (bool, uint) {
+func (sub *Sub) sendUpdate(rpcClient *rpc.Client) (bool, uint) {
 	logger := sub.herd.logger
 	var request subproto.UpdateRequest
 	var reply subproto.UpdateResponse
 	if sub.buildUpdateRequest(&request) {
 		return true, statusSynced
 	}
-	if err := connection.Call("Subd.Update", request, &reply); err != nil {
+	if err := rpcClient.Call("Subd.Update", request, &reply); err != nil {
 		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
 		return false, statusFailedToUpdate
 	}
@@ -194,7 +202,7 @@ func (sub *Sub) sendUpdate(connection *rpc.Client) (bool, uint) {
 	return false, statusUpdating
 }
 
-func (sub *Sub) cleanup(connection *rpc.Client, plannedImageName string) {
+func (sub *Sub) cleanup(rpcClient *rpc.Client, plannedImageName string) {
 	logger := sub.herd.logger
 	unusedObjects := make(map[hash.Hash]bool)
 	for _, hash := range sub.fileSystem.ObjectCache {
@@ -230,7 +238,7 @@ func (sub *Sub) cleanup(connection *rpc.Client, plannedImageName string) {
 	for hash := range unusedObjects {
 		request.Hashes = append(request.Hashes, hash)
 	}
-	if err := connection.Call("Subd.Cleanup", request, &reply); err != nil {
+	if err := rpcClient.Call("Subd.Cleanup", request, &reply); err != nil {
 		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
 	} else {
 		sub.generationCountAtChangeStart = sub.generationCount

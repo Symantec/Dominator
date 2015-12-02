@@ -1,6 +1,7 @@
 package rpcd
 
 import (
+	"encoding/gob"
 	"errors"
 	"flag"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectclient"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 	"io"
 	"os"
@@ -22,7 +24,25 @@ var (
 		"If true, exit if there are fetch failures. For debugging only")
 )
 
-func (t *rpcType) Fetch(request sub.FetchRequest,
+func (t *rpcType) Fetch(conn *srpc.Conn) {
+	defer conn.Flush()
+	var request sub.FetchRequest
+	var response sub.FetchResponse
+	decoder := gob.NewDecoder(conn)
+	if err := decoder.Decode(&request); err != nil {
+		conn.WriteString(err.Error() + "\n")
+		return
+	}
+	if err := t.fetch(request, &response); err != nil {
+		conn.WriteString(err.Error() + "\n")
+		return
+	}
+	conn.WriteString("\n")
+	encoder := gob.NewEncoder(conn)
+	encoder.Encode(response)
+}
+
+func (t *rpcType) fetch(request sub.FetchRequest,
 	reply *sub.FetchResponse) error {
 	if *readOnly {
 		txt := "Fetch() rejected due to read-only mode"

@@ -4,20 +4,29 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/objectcache"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
+	"github.com/Symantec/Dominator/sub/client"
 	"net/rpc"
 	"os"
 )
 
-func fetchSubcommand(client *rpc.Client, args []string) {
-	if err := fetch(client, args[0]); err != nil {
+func fetchSubcommand(rpcClient *rpc.Client, args []string) {
+	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
+	srpcClient, err := srpc.DialHTTP("tcp", clientName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error connecting\t%s\n", err)
+		os.Exit(2)
+	}
+	defer srpcClient.Close()
+	if err := fetch(srpcClient, args[0]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching\t%s\n", err)
 		os.Exit(2)
 	}
 	os.Exit(0)
 }
 
-func fetch(client *rpc.Client, hashesFilename string) error {
+func fetch(srpcClient *srpc.Client, hashesFilename string) error {
 	hashesFile, err := os.Open(hashesFilename)
 	if err != nil {
 		return err
@@ -38,5 +47,5 @@ func fetch(client *rpc.Client, hashesFilename string) error {
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	return client.Call("Subd.Fetch", request, &reply)
+	return client.CallFetch(srpcClient, request, &reply)
 }
