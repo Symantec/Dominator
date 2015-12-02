@@ -75,7 +75,7 @@ func httpHandler(w http.ResponseWriter, req *http.Request) {
 
 func handleConnection(conn *Conn) {
 	defer conn.Flush()
-	for {
+	for ; ; conn.Flush() {
 		serviceMethod, err := conn.ReadString('\n')
 		if err == io.EOF {
 			return
@@ -85,13 +85,16 @@ func handleConnection(conn *Conn) {
 			conn.WriteString(err.Error() + "\n")
 			continue
 		}
-		conn.WriteString("\n")
-		conn.Flush()
 		serviceMethod = serviceMethod[:len(serviceMethod)-1]
-		log.Println(serviceMethod)
 		method, err := findMethod(serviceMethod)
-		method.Call([]reflect.Value{reflect.ValueOf(conn)})
+		if err != nil {
+			conn.WriteString(err.Error() + "\n")
+			continue
+		} else {
+			conn.WriteString("\n")
+		}
 		conn.Flush()
+		method.Call([]reflect.Value{reflect.ValueOf(conn)})
 	}
 }
 
@@ -100,13 +103,15 @@ func findMethod(serviceMethod string) (*reflect.Value, error) {
 	if len(splitServiceMethod) != 2 {
 		return nil, errors.New("malformed Service.Method: " + serviceMethod)
 	}
-	receiver, ok := receivers[splitServiceMethod[0]]
+	serviceName := splitServiceMethod[0]
+	receiver, ok := receivers[serviceName]
 	if !ok {
-		return nil, errors.New("unknown service: " + splitServiceMethod[0])
+		return nil, errors.New("unknown service: " + serviceName)
 	}
-	method, ok := receiver.methods[splitServiceMethod[1]]
+	methodName := splitServiceMethod[1]
+	method, ok := receiver.methods[methodName]
 	if !ok {
-		return nil, errors.New("unknown method: " + splitServiceMethod[1])
+		return nil, errors.New(serviceName + ": unknown method: " + methodName)
 	}
 	return &method, nil
 }
