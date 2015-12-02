@@ -1,7 +1,6 @@
 package objectclient
 
 import (
-	"bufio"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -10,22 +9,17 @@ import (
 	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
 	"io/ioutil"
-	"net"
 )
-
-func dial(network, address string) (net.Conn, error) {
-	conn, err := net.Dial(network, address)
-	if err != nil {
-		return nil, err
-	}
-	return conn, srpc.Call(conn, "ObjectServer.GetObjects")
-}
 
 func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (
 	*ObjectsReader, error) {
-	conn, err := dial("tcp", objClient.address)
+	client, err := srpc.DialHTTP("tcp", objClient.address)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Error dialing\t%s\n", err))
+	}
+	conn, err := client.Call("ObjectServer.GetObjects")
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Error calling\t%s\n", err))
 	}
 	var request objectserver.GetObjectsRequest
 	var reply objectserver.GetObjectsResponse
@@ -33,12 +27,10 @@ func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (
 	request.Hashes = hashes
 	encoder := gob.NewEncoder(conn)
 	encoder.Encode(request)
+	conn.Flush()
 	var objectsReader ObjectsReader
-	objectsReader.conn = conn
-	// Create a buffered reader and use it from now on, since otherwise
-	// gob.NewDecoder() will create one under the covers and we could lose some
-	// buffered data.
-	objectsReader.reader = bufio.NewReader(conn)
+	objectsReader.client = client
+	objectsReader.reader = conn
 	decoder := gob.NewDecoder(objectsReader.reader)
 	err = decoder.Decode(&reply)
 	if err != nil {
