@@ -1,11 +1,10 @@
 package srpc
 
 import (
+	"errors"
 	"io"
 	"log"
-	"net"
 	"net/http"
-	"path"
 	"reflect"
 	"strings"
 )
@@ -23,7 +22,7 @@ var receivers map[string]receiverType = make(map[string]receiverType)
 
 // Precompute the reflect type for net.Conn. Can't use net.Conn directly
 // because Typeof takes an empty interface value. This is annoying.
-var typeOfConn = reflect.TypeOf((*net.Conn)(nil)).Elem()
+var typeOfConn = reflect.TypeOf((**Conn)(nil)).Elem()
 
 func init() {
 	http.HandleFunc(rpcPath, httpHandler)
@@ -40,7 +39,7 @@ func registerName(name string, rcvr interface{}) error {
 			continue
 		}
 		methodType := method.Type
-		// Method needs two ins: receiver, net.Conn.
+		// Method needs two ins: receiver, *Conn.
 		if methodType.NumIn() != 2 {
 			continue
 		}
@@ -57,39 +56,62 @@ func registerName(name string, rcvr interface{}) error {
 }
 
 func httpHandler(w http.ResponseWriter, req *http.Request) {
-	method, status := findMethod(w, req)
-	if status != http.StatusOK {
+	if req.Method != "CONNECT" {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(status)
+		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	conn, _, err := w.(http.Hijacker).Hijack()
+	conn, bufrw, err := w.(http.Hijacker).Hijack()
 	if err != nil {
 		log.Println("rpc hijacking ", req.RemoteAddr, ": ", err.Error())
 		return
 	}
 	defer conn.Close()
 	io.WriteString(conn, "HTTP/1.0 "+connectString+"\n\n")
-	method.Call([]reflect.Value{reflect.ValueOf(conn)})
+	myConn := new(Conn)
+	myConn.ReadWriter = bufrw
+	handleConnection(myConn)
 }
 
-func findMethod(w http.ResponseWriter, req *http.Request) (
-	*reflect.Value, int) {
-	if req.Method != "CONNECT" {
-		return nil, http.StatusMethodNotAllowed
+func handleConnection(conn *Conn) {
+	defer conn.Flush()
+	for ; ; conn.Flush() {
+		serviceMethod, err := conn.ReadString('\n')
+		if err == io.EOF {
+			return
+		}
+		if err != nil {
+			log.Println(err)
+			conn.WriteString(err.Error() + "\n")
+			continue
+		}
+		serviceMethod = serviceMethod[:len(serviceMethod)-1]
+		method, err := findMethod(serviceMethod)
+		if err != nil {
+			conn.WriteString(err.Error() + "\n")
+			continue
+		} else {
+			conn.WriteString("\n")
+		}
+		conn.Flush()
+		method.Call([]reflect.Value{reflect.ValueOf(conn)})
 	}
-	rpcName := path.Base(req.URL.Path)
-	splitRpcName := strings.Split(rpcName, ".")
-	if len(splitRpcName) != 2 {
-		return nil, http.StatusBadRequest
+}
+
+func findMethod(serviceMethod string) (*reflect.Value, error) {
+	splitServiceMethod := strings.Split(serviceMethod, ".")
+	if len(splitServiceMethod) != 2 {
+		return nil, errors.New("malformed Service.Method: " + serviceMethod)
 	}
-	receiver, ok := receivers[splitRpcName[0]]
+	serviceName := splitServiceMethod[0]
+	receiver, ok := receivers[serviceName]
 	if !ok {
-		return nil, http.StatusNotFound
+		return nil, errors.New("unknown service: " + serviceName)
 	}
-	method, ok := receiver.methods[splitRpcName[1]]
+	methodName := splitServiceMethod[1]
+	method, ok := receiver.methods[methodName]
 	if !ok {
-		return nil, http.StatusNotFound
+		return nil, errors.New(serviceName + ": unknown method: " + methodName)
 	}
-	return &method, http.StatusOK
+	return &method, nil
 }

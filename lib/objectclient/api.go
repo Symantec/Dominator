@@ -2,9 +2,9 @@ package objectclient
 
 import (
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/objectserver"
 	"io"
-	"net"
 )
 
 type ObjectClient struct {
@@ -37,13 +37,13 @@ func (objClient *ObjectClient) SetExclusiveGetObjects(exclusive bool) {
 
 type ObjectsReader struct {
 	sizes     []uint64
-	conn      net.Conn
+	client    *srpc.Client
 	reader    io.Reader
 	nextIndex int64
 }
 
 func (or *ObjectsReader) Close() error {
-	return or.conn.Close()
+	return or.client.Close()
 }
 
 func (or *ObjectsReader) NextObject() (uint64, io.ReadCloser, error) {

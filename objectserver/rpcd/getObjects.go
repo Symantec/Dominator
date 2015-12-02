@@ -1,24 +1,18 @@
 package rpcd
 
 import (
-	"bufio"
 	"encoding/gob"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
-	"net"
 	"sync"
 )
 
 var exclusive sync.RWMutex
 
-func (objSrv *srpcType) GetObjects(conn net.Conn) {
-	bufrw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
-	defer bufrw.Flush()
-	objSrv.getObjects(bufrw)
-}
-
-func (objSrv *srpcType) getObjects(bufrw *bufio.ReadWriter) {
+func (objSrv *srpcType) GetObjects(conn *srpc.Conn) {
+	defer conn.Flush()
 	var request objectserver.GetObjectsRequest
 	var response objectserver.GetObjectsResponse
 	if request.Exclusive {
@@ -30,8 +24,8 @@ func (objSrv *srpcType) getObjects(bufrw *bufio.ReadWriter) {
 		objSrv.getSemaphore <- true
 		defer releaseSemaphore(objSrv.getSemaphore)
 	}
-	decoder := gob.NewDecoder(bufrw)
-	encoder := gob.NewEncoder(bufrw)
+	decoder := gob.NewDecoder(conn)
+	encoder := gob.NewEncoder(conn)
 	var err error
 	if err = decoder.Decode(&request); err != nil {
 		response.ResponseString = err.Error()
@@ -60,14 +54,14 @@ func (objSrv *srpcType) getObjects(bufrw *bufio.ReadWriter) {
 	}
 	defer objectsReader.Close()
 	encoder.Encode(response)
-	bufrw.Flush()
+	conn.Flush()
 	for _, hash := range request.Hashes {
 		length, reader, err := objectsReader.NextObject()
 		if err != nil {
 			objSrv.logger.Println(err)
 			return
 		}
-		nCopied, err := io.Copy(bufrw.Writer, reader)
+		nCopied, err := io.Copy(conn.Writer, reader)
 		reader.Close()
 		if err != nil {
 			objSrv.logger.Printf("Error copying:\t%s\n", err)
