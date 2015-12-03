@@ -2,16 +2,37 @@ package srpc
 
 import (
 	"bufio"
+	"crypto/tls"
 	"net"
 	"sync"
 )
 
+var serverTlsConfig *tls.Config
+var clientTlsConfig *tls.Config
+
+// RegisterName publishes in the server the set of methods of the receiver
+// value that satisfy the following interface:
+//   func Method(*Conn) error
+// The name of the receiver (service) is given by name.
 func RegisterName(name string, rcvr interface{}) error {
 	return registerName(name, rcvr)
 }
 
+func RegisterServerTlsConfig(config *tls.Config) {
+	serverTlsConfig = config
+}
+
+func RegisterClientTlsConfig(config *tls.Config) {
+	clientTlsConfig = config
+}
+
 func DialHTTP(network, address string) (*Client, error) {
-	return dialHTTP(network, address)
+	return dialHTTP(network, address, clientTlsConfig)
+}
+
+func DialTlsHTTP(network, address string, tlsConfig *tls.Config) (
+	*Client, error) {
+	return dialHTTP(network, address, tlsConfig)
 }
 
 type Client struct {
