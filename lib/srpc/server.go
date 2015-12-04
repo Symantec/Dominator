@@ -74,7 +74,7 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if req.Method != "CONNECT" {
+	if (tlsRequired && !doTls) || req.Method != "CONNECT" {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
