@@ -26,6 +26,8 @@ import (
 )
 
 var (
+	CAfile = flag.String("CAfile", "/etc/ssl/CA.pem",
+		"Name of file containing the root of trust")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
 	maxThreads = flag.Uint("maxThreads", 1,
