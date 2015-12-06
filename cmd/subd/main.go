@@ -26,8 +26,12 @@ import (
 )
 
 var (
-	CAfile = flag.String("CAfile", "/etc/ssl/CA.pem",
+	caFile = flag.String("CAfile", "/etc/ssl/CA.pem",
 		"Name of file containing the root of trust")
+	certFile = flag.String("certFile", "/etc/ssl/subd/cert.pem",
+		"Name of file containing the subd certificate")
+	keyFile = flag.String("keyFile", "/etc/ssl/subd/key.pem",
+		"Name of file containing the subd ")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
 	maxThreads = flag.Uint("maxThreads", 1,
