@@ -54,6 +54,9 @@ func DialHTTP(network, address string) (*Client, error) {
 // listening on the HTTP SRPC TLS path.
 func DialTlsHTTP(network, address string, tlsConfig *tls.Config) (
 	*Client, error) {
+	if tlsConfig == nil {
+		tlsConfig = clientTlsConfig
+	}
 	return dialHTTP(network, address, tlsConfig)
 }
 
