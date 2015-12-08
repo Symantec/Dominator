@@ -220,6 +220,7 @@ func writePidfile() {
 
 func main() {
 	flag.Parse()
+	setupTls()
 	subdDirPathname := path.Join(*rootDir, *subdDir)
 	workingRootDir := path.Join(subdDirPathname, "root")
 	objectsDir := path.Join(workingRootDir, *subdDir, "objects")
