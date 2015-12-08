@@ -25,6 +25,7 @@ func setupTls() {
 		os.Exit(1)
 	}
 	serverConfig := new(tls.Config)
+	serverConfig.ClientAuth = tls.RequireAndVerifyClientCert
 	serverConfig.ClientCAs = caCertPool
 	cert, err := tls.LoadX509KeyPair(*certFile, *keyFile)
 	if err != nil {
