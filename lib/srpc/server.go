@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"reflect"
 	"strings"
@@ -104,22 +103,6 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		myConn.ReadWriter = bufrw
 	}
 	handleConnection(myConn)
-}
-
-func httpToConnection(w http.ResponseWriter, req *http.Request) (
-	net.Conn, *bufio.ReadWriter) {
-	if req.Method != "CONNECT" {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return nil, nil
-	}
-	conn, bufrw, err := w.(http.Hijacker).Hijack()
-	if err != nil {
-		log.Println("rpc hijacking ", req.RemoteAddr, ": ", err.Error())
-		return nil, nil
-	}
-	io.WriteString(conn, "HTTP/1.0 "+connectString+"\n\n")
-	return conn, bufrw
 }
 
 func handleConnection(conn *Conn) {
