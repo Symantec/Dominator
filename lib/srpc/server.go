@@ -112,7 +112,7 @@ func (conn *Conn) setPermittedMethods(state tls.ConnectionState) {
 	for _, certChain := range state.VerifiedChains {
 		for _, cert := range certChain {
 			for _, sm := range strings.Split(cert.Subject.CommonName, ",") {
-				if sm != "" {
+				if strings.Count(sm, ".") == 1 {
 					conn.permittedMethods[sm] = true
 				}
 			}
