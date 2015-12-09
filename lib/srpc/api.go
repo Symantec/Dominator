@@ -82,6 +82,7 @@ func (client *Client) Call(serviceMethod string) (*Conn, error) {
 type Conn struct {
 	parent *Client
 	*bufio.ReadWriter
+	permittedMethods map[string]bool
 }
 
 // Close will close the connection to the Sevice.Method function, releasing the

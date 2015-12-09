@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path/filepath"
 	"reflect"
 	"strings"
 )
@@ -96,6 +97,7 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 			log.Println(err)
 			return
 		}
+		myConn.setPermittedMethods(tlsConn.ConnectionState())
 		myConn.ReadWriter = bufio.NewReadWriter(bufio.NewReader(tlsConn),
 			bufio.NewWriter(tlsConn))
 	} else {
@@ -103,6 +105,19 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		myConn.ReadWriter = bufrw
 	}
 	handleConnection(myConn)
+}
+
+func (conn *Conn) setPermittedMethods(state tls.ConnectionState) {
+	conn.permittedMethods = make(map[string]bool)
+	for _, certChain := range state.VerifiedChains {
+		for _, cert := range certChain {
+			for _, sm := range strings.Split(cert.Subject.CommonName, ",") {
+				if sm != "" {
+					conn.permittedMethods[sm] = true
+				}
+			}
+		}
+	}
 }
 
 func handleConnection(conn *Conn) {
@@ -118,6 +133,10 @@ func handleConnection(conn *Conn) {
 			continue
 		}
 		serviceMethod = serviceMethod[:len(serviceMethod)-1]
+		if !conn.checkPermitted(serviceMethod) {
+			conn.WriteString("access to method denied\n")
+			continue
+		}
 		method, err := findMethod(serviceMethod)
 		if err != nil {
 			conn.WriteString(err.Error() + "\n")
@@ -128,6 +147,18 @@ func handleConnection(conn *Conn) {
 		conn.Flush()
 		method.Call([]reflect.Value{reflect.ValueOf(conn)})
 	}
+}
+
+func (conn *Conn) checkPermitted(serviceMethod string) bool {
+	if conn.permittedMethods == nil {
+		return true
+	}
+	for sm := range conn.permittedMethods {
+		if matched, _ := filepath.Match(sm, serviceMethod); matched {
+			return true
+		}
+	}
+	return false
 }
 
 func findMethod(serviceMethod string) (*reflect.Value, error) {
