@@ -31,7 +31,11 @@ func dialHTTP(network, address string, tlsConfig *tls.Config) (*Client, error) {
 	if tlsConfig == nil {
 		return newClient(unsecuredConn), nil
 	}
-	return newClient(tls.Client(unsecuredConn, tlsConfig)), nil
+	tlsConn := tls.Client(unsecuredConn, tlsConfig)
+	if err := tlsConn.Handshake(); err != nil {
+		return nil, err
+	}
+	return newClient(tlsConn), nil
 }
 
 func newClient(conn net.Conn) *Client {

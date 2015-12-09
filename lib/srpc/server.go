@@ -93,6 +93,10 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 	if doTls {
 		tlsConn := tls.Server(unsecuredConn, serverTlsConfig)
 		defer tlsConn.Close()
+		if err := tlsConn.Handshake(); err != nil {
+			log.Println(err)
+			return
+		}
 		myConn.ReadWriter = bufio.NewReadWriter(bufio.NewReader(tlsConn),
 			bufio.NewWriter(tlsConn))
 	} else {
