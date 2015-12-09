@@ -35,5 +35,5 @@ func setupTls() {
 		os.Exit(1)
 	}
 	serverConfig.Certificates = append(serverConfig.Certificates, cert)
-	srpc.RegisterServerTlsConfig(serverConfig, false)
+	srpc.RegisterServerTlsConfig(serverConfig, true)
 }
