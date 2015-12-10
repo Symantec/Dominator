@@ -10,13 +10,19 @@ func CallFetch(client *srpc.Client, request sub.FetchRequest,
 	return callFetch(client, request, reply)
 }
 
-func CallUpdate(client *srpc.Client, request sub.UpdateRequest,
-	reply *sub.UpdateResponse) error {
-	return callUpdate(client, request, reply)
+func CallGetConfiguration(client *srpc.Client,
+	request sub.GetConfigurationRequest,
+	reply *sub.GetConfigurationResponse) error {
+	return callGetConfiguration(client, request, reply)
 }
 
 func CallSetConfiguration(client *srpc.Client,
 	request sub.SetConfigurationRequest,
 	reply *sub.SetConfigurationResponse) error {
 	return callSetConfiguration(client, request, reply)
+}
+
+func CallUpdate(client *srpc.Client, request sub.UpdateRequest,
+	reply *sub.UpdateResponse) error {
+	return callUpdate(client, request, reply)
 }
