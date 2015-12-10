@@ -5,6 +5,11 @@ import (
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
+func CallCleanup(client *srpc.Client, request sub.CleanupRequest,
+	reply *sub.CleanupResponse) error {
+	return callCleanup(client, request, reply)
+}
+
 func CallFetch(client *srpc.Client, request sub.FetchRequest,
 	reply *sub.FetchResponse) error {
 	return callFetch(client, request, reply)

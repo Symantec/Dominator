@@ -8,7 +8,6 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
-	"net/rpc"
 	"runtime"
 	"strings"
 	"time"
@@ -34,13 +33,6 @@ func (sub *Sub) connectAndPoll() {
 	sub.status = statusConnecting
 	hostname := strings.SplitN(sub.hostname, "*", 2)[0]
 	address := fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber)
-	var err error
-	rpcClient, err := rpc.DialHTTP("tcp", address)
-	if err != nil {
-		sub.status = statusFailedToConnect
-		return
-	}
-	defer rpcClient.Close()
 	srpcClient, err := srpc.DialHTTP("tcp", address)
 	if err != nil {
 		sub.status = statusFailedToConnect
@@ -50,11 +42,11 @@ func (sub *Sub) connectAndPoll() {
 	sub.status = statusWaitingToPoll
 	sub.herd.pollSemaphore <- true
 	sub.status = statusPolling
-	sub.poll(rpcClient, srpcClient)
+	sub.poll(srpcClient)
 	<-sub.herd.pollSemaphore
 }
 
-func (sub *Sub) poll(rpcClient *rpc.Client, srpcClient *srpc.Client) {
+func (sub *Sub) poll(srpcClient *srpc.Client) {
 	var request subproto.PollRequest
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
@@ -135,7 +127,7 @@ func (sub *Sub) poll(rpcClient *rpc.Client, srpcClient *srpc.Client) {
 		}
 	}
 	sub.status = statusSynced
-	sub.cleanup(rpcClient, sub.plannedImage)
+	sub.cleanup(srpcClient, sub.plannedImage)
 	sub.generationCountAtLastSync = sub.generationCount
 	sub.fileSystem = nil // Mark memory for reclaim.
 	runtime.GC()         // Reclaim now.
@@ -202,7 +194,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, uint) {
 	return false, statusUpdating
 }
 
-func (sub *Sub) cleanup(rpcClient *rpc.Client, plannedImageName string) {
+func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 	logger := sub.herd.logger
 	unusedObjects := make(map[hash.Hash]bool)
 	for _, hash := range sub.fileSystem.ObjectCache {
@@ -238,8 +230,9 @@ func (sub *Sub) cleanup(rpcClient *rpc.Client, plannedImageName string) {
 	for hash := range unusedObjects {
 		request.Hashes = append(request.Hashes, hash)
 	}
-	if err := rpcClient.Call("Subd.Cleanup", request, &reply); err != nil {
-		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
+	if err := client.CallCleanup(srpcClient, request, &reply); err != nil {
+		logger.Printf("Error calling %s:Subd.Cleanup()\t%s\n",
+			sub.hostname, err)
 	} else {
 		sub.generationCountAtChangeStart = sub.generationCount
 	}
