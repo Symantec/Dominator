@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
-	"net/rpc"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"os"
 	"path"
 	"strings"
@@ -56,7 +56,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  set-config")
 }
 
-type commandFunc func(*rpc.Client, []string)
+type commandFunc func(*srpc.Client, []string)
 
 type subcommand struct {
 	command string
@@ -80,7 +80,7 @@ func main() {
 	}
 	setupTls()
 	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
-	client, err := rpc.DialHTTP("tcp", clientName)
+	client, err := srpc.DialHTTP("tcp", clientName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
 		os.Exit(1)

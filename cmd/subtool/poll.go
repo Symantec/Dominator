@@ -6,19 +6,13 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
-	"net/rpc"
 	"os"
 	"time"
 )
 
-func pollSubcommand(rpcClient *rpc.Client, args []string) {
+func pollSubcommand(srpcClient *srpc.Client, args []string) {
 	var err error
 	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
-	srpcClient, err := srpc.DialHTTP("tcp", clientName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error connecting\t%s\n", err)
-		os.Exit(2)
-	}
 	for iter := 0; *numPolls < 0 || iter < *numPolls; iter++ {
 		if iter > 0 {
 			time.Sleep(time.Duration(*interval) * time.Second)

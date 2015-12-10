@@ -7,18 +7,10 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
-	"net/rpc"
 	"os"
 )
 
-func fetchSubcommand(rpcClient *rpc.Client, args []string) {
-	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
-	srpcClient, err := srpc.DialHTTP("tcp", clientName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error connecting\t%s\n", err)
-		os.Exit(2)
-	}
-	defer srpcClient.Close()
+func fetchSubcommand(srpcClient *srpc.Client, args []string) {
 	if err := fetch(srpcClient, args[0]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching\t%s\n", err)
 		os.Exit(2)
