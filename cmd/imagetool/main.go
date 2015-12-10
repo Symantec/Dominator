@@ -7,9 +7,13 @@ import (
 	"github.com/Symantec/Dominator/lib/objectclient"
 	"net/rpc"
 	"os"
+	"path"
 )
 
 var (
+	certFile = flag.String("certFile",
+		path.Join(os.Getenv("HOME"), ".ssl/cert.pem"),
+		"Name of file containing the user SSL certificate")
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
@@ -17,6 +21,9 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
+	keyFile = flag.String("keyFile",
+		path.Join(os.Getenv("HOME"), ".ssl/key.pem"),
+		"Name of file containing the user SSL key")
 )
 
 func printUsage() {
@@ -61,6 +68,7 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
+	setupTls()
 	clientName := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)
 	imageClient, err := rpc.DialHTTP("tcp", clientName)
