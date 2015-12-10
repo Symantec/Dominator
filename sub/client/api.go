@@ -14,3 +14,9 @@ func CallUpdate(client *srpc.Client, request sub.UpdateRequest,
 	reply *sub.UpdateResponse) error {
 	return callUpdate(client, request, reply)
 }
+
+func CallSetConfiguration(client *srpc.Client,
+	request sub.SetConfigurationRequest,
+	reply *sub.SetConfigurationResponse) error {
+	return callSetConfiguration(client, request, reply)
+}
