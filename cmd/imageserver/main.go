@@ -18,11 +18,17 @@ import (
 )
 
 var (
+	caFile = flag.String("CAfile", "/etc/ssl/CA.pem",
+		"Name of file containing the root of trust")
+	certFile = flag.String("certFile", "/etc/ssl/imageserver/cert.pem",
+		"Name of file containing the SSL certificate")
 	debug    = flag.Bool("debug", false, "If true, show debugging output")
 	imageDir = flag.String("imageDir", "/var/lib/imageserver",
 		"Name of image server data directory.")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
+	keyFile = flag.String("keyFile", "/etc/ssl/imageserver/key.pem",
+		"Name of file containing the SSL key")
 	objectDir = flag.String("objectDir", "/var/lib/objectserver",
 		"Name of image server data directory.")
 	portNum = flag.Uint("portNum", constants.ImageServerPortNumber,
@@ -35,6 +41,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Do not run the Image Server as root")
 		os.Exit(1)
 	}
+	setupTls()
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	objSrv, err := filesystem.NewObjectServer(*objectDir, logger)
