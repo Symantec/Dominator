@@ -7,8 +7,10 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/objectclient"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"github.com/Symantec/Dominator/proto/sub"
+	"github.com/Symantec/Dominator/sub/client"
 	"io/ioutil"
 	"net/rpc"
 	"os"
@@ -75,13 +77,14 @@ func getImage(client *rpc.Client, name string) (*filesystem.FileSystem, error) {
 
 func pollImage(name string) (*filesystem.FileSystem, error) {
 	clientName := fmt.Sprintf("%s:%d", name, constants.SubPortNumber)
-	client, err := rpc.DialHTTP("tcp", clientName)
+	srpcClient, err := srpc.DialHTTP("tcp", clientName)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Error dialing %s", err))
 	}
+	defer srpcClient.Close()
 	var request sub.PollRequest
 	var reply sub.PollResponse
-	if err = client.Call("Subd.Poll", request, &reply); err != nil {
+	if err = client.CallPoll(srpcClient, request, &reply); err != nil {
 		return nil, err
 	}
 	if reply.FileSystem == nil {

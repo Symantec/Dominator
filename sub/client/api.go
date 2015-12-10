@@ -16,6 +16,11 @@ func CallGetConfiguration(client *srpc.Client,
 	return callGetConfiguration(client, request, reply)
 }
 
+func CallPoll(client *srpc.Client, request sub.PollRequest,
+	reply *sub.PollResponse) error {
+	return callPoll(client, request, reply)
+}
+
 func CallSetConfiguration(client *srpc.Client,
 	request sub.SetConfigurationRequest,
 	reply *sub.SetConfigurationResponse) error {

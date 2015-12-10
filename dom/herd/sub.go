@@ -60,7 +60,7 @@ func (sub *Sub) poll(rpcClient *rpc.Client, srpcClient *srpc.Client) {
 	var reply subproto.PollResponse
 	sub.lastPollStartTime = time.Now()
 	logger := sub.herd.logger
-	if err := rpcClient.Call("Subd.Poll", request, &reply); err != nil {
+	if err := client.CallPoll(srpcClient, request, &reply); err != nil {
 		sub.status = statusFailedToPoll
 		logger.Printf("Error calling %s.Poll()\t%s\n", sub.hostname, err)
 		return
