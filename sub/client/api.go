@@ -9,3 +9,8 @@ func CallFetch(client *srpc.Client, request sub.FetchRequest,
 	reply *sub.FetchResponse) error {
 	return callFetch(client, request, reply)
 }
+
+func CallUpdate(client *srpc.Client, request sub.UpdateRequest,
+	reply *sub.UpdateResponse) error {
+	return callUpdate(client, request, reply)
+}

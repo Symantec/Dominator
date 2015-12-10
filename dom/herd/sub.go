@@ -119,7 +119,7 @@ func (sub *Sub) poll(rpcClient *rpc.Client, srpcClient *srpc.Client) {
 		return
 	}
 	sub.status = statusComputingUpdate
-	if idle, status := sub.sendUpdate(rpcClient); !idle {
+	if idle, status := sub.sendUpdate(srpcClient); !idle {
 		sub.status = status
 		sub.fileSystem = nil // Mark memory for reclaim.
 		runtime.GC()         // Reclaim now.
@@ -187,14 +187,14 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 }
 
 // Returns true if no update needs to be performed.
-func (sub *Sub) sendUpdate(rpcClient *rpc.Client) (bool, uint) {
+func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, uint) {
 	logger := sub.herd.logger
 	var request subproto.UpdateRequest
 	var reply subproto.UpdateResponse
 	if sub.buildUpdateRequest(&request) {
 		return true, statusSynced
 	}
-	if err := rpcClient.Call("Subd.Update", request, &reply); err != nil {
+	if err := client.CallUpdate(srpcClient, request, &reply); err != nil {
 		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
 		return false, statusFailedToUpdate
 	}

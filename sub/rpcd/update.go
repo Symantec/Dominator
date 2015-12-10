@@ -2,6 +2,7 @@ package rpcd
 
 import (
 	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -9,6 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
 	"io"
@@ -30,7 +32,24 @@ var (
 		"If true, do not run any triggers. For debugging only")
 )
 
-func (t *rpcType) Update(request sub.UpdateRequest,
+func (t *rpcType) Update(conn *srpc.Conn) {
+	var request sub.UpdateRequest
+	var response sub.UpdateResponse
+	decoder := gob.NewDecoder(conn)
+	if err := decoder.Decode(&request); err != nil {
+		conn.WriteString(err.Error() + "\n")
+		return
+	}
+	if err := t.update(request, &response); err != nil {
+		conn.WriteString(err.Error() + "\n")
+		return
+	}
+	conn.WriteString("\n")
+	encoder := gob.NewEncoder(conn)
+	encoder.Encode(response)
+}
+
+func (t *rpcType) update(request sub.UpdateRequest,
 	reply *sub.UpdateResponse) error {
 	if *readOnly || *disableUpdates {
 		txt := "Update() rejected due to read-only mode"
