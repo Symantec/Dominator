@@ -13,6 +13,7 @@ func setupTls() {
 	if *caFile == "" || *certFile == "" || *keyFile == "" {
 		return
 	}
+	// Load certificates and key.
 	caData, err := ioutil.ReadFile(*caFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to load CA file\t%s\n",
@@ -24,6 +25,7 @@ func setupTls() {
 		fmt.Fprintln(os.Stderr, "Unable to parse CA file")
 		os.Exit(1)
 	}
+	// Setup server.
 	serverConfig := new(tls.Config)
 	serverConfig.ClientAuth = tls.RequireAndVerifyClientCert
 	serverConfig.MinVersion = tls.VersionTLS12
@@ -36,4 +38,10 @@ func setupTls() {
 	}
 	serverConfig.Certificates = append(serverConfig.Certificates, cert)
 	srpc.RegisterServerTlsConfig(serverConfig, true)
+	// Setup client.
+	clientConfig := new(tls.Config)
+	clientConfig.InsecureSkipVerify = true
+	clientConfig.MinVersion = tls.VersionTLS12
+	clientConfig.Certificates = append(clientConfig.Certificates, cert)
+	srpc.RegisterClientTlsConfig(clientConfig)
 }
