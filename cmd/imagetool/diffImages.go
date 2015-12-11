@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	imgclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"github.com/Symantec/Dominator/proto/sub"
-	"github.com/Symantec/Dominator/sub/client"
+	subclient "github.com/Symantec/Dominator/sub/client"
 	"io/ioutil"
 	"net/rpc"
 	"os"
@@ -20,7 +21,7 @@ import (
 func diffImageVImageSubcommand(imageClient *rpc.Client,
 	imageSClient *srpc.Client, objectClient *objectclient.ObjectClient,
 	args []string) {
-	err := diffImageVImage(imageClient, args[0], args[1], args[2])
+	err := diffImageVImage(imageSClient, args[0], args[1], args[2])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error diffing images\t%s\n", err)
 		os.Exit(1)
@@ -28,7 +29,7 @@ func diffImageVImageSubcommand(imageClient *rpc.Client,
 	os.Exit(0)
 }
 
-func diffImageVImage(client *rpc.Client, tool, limage, rimage string) error {
+func diffImageVImage(client *srpc.Client, tool, limage, rimage string) error {
 	lfs, err := getImage(client, limage)
 	if err != nil {
 		return err
@@ -42,7 +43,7 @@ func diffImageVImage(client *rpc.Client, tool, limage, rimage string) error {
 
 func diffImageVSubSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
-	err := diffImageVSub(imageClient, args[0], args[1], args[2])
+	err := diffImageVSub(imageSClient, args[0], args[1], args[2])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error diffing images\t%s\n", err)
 		os.Exit(1)
@@ -50,7 +51,7 @@ func diffImageVSubSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
 	os.Exit(0)
 }
 
-func diffImageVSub(client *rpc.Client, tool, image, sub string) error {
+func diffImageVSub(client *srpc.Client, tool, image, sub string) error {
 	lfs, err := getImage(client, image)
 	if err != nil {
 		return err
@@ -62,11 +63,12 @@ func diffImageVSub(client *rpc.Client, tool, image, sub string) error {
 	return diffImages(tool, lfs, rfs)
 }
 
-func getImage(client *rpc.Client, name string) (*filesystem.FileSystem, error) {
+func getImage(client *srpc.Client, name string) (
+	*filesystem.FileSystem, error) {
 	var request imageserver.GetImageRequest
 	request.ImageName = name
 	var reply imageserver.GetImageResponse
-	if err := client.Call("ImageServer.GetImage", request, &reply); err != nil {
+	if err := imgclient.CallGetImage(client, request, &reply); err != nil {
 		return nil, err
 	}
 	if reply.Image == nil {
@@ -85,7 +87,7 @@ func pollImage(name string) (*filesystem.FileSystem, error) {
 	defer srpcClient.Close()
 	var request sub.PollRequest
 	var reply sub.PollResponse
-	if err = client.CallPoll(srpcClient, request, &reply); err != nil {
+	if err = subclient.CallPoll(srpcClient, request, &reply); err != nil {
 		return nil, err
 	}
 	if reply.FileSystem == nil {

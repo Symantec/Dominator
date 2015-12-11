@@ -15,3 +15,8 @@ func CallDeleteImage(client *srpc.Client,
 	reply *imageserver.DeleteImageResponse) error {
 	return callDeleteImage(client, request, reply)
 }
+
+func CallGetImage(client *srpc.Client, request imageserver.GetImageRequest,
+	reply *imageserver.GetImageResponse) error {
+	return callGetImage(client, request, reply)
+}

@@ -19,7 +19,7 @@ var dirPerms os.FileMode = syscall.S_IRWXU
 
 func getImageSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
-	err := getImageAndWrite(imageClient, objectClient, args[0], args[1])
+	err := getImageAndWrite(imageSClient, objectClient, args[0], args[1])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting image\t%s\n", err)
 		os.Exit(1)
@@ -27,7 +27,7 @@ func getImageSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
 	os.Exit(0)
 }
 
-func getImageAndWrite(imageClient *rpc.Client,
+func getImageAndWrite(imageClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, name, dirname string) error {
 	inodesDir := dirname + ".inodes"
 	if err := os.Mkdir(inodesDir, dirPerms); err != nil {
