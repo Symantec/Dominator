@@ -4,12 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/objectclient"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"net/rpc"
 	"os"
 )
 
-func deleteImageSubcommand(imageClient *rpc.Client,
+func deleteImageSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
 	if err := deleteImage(imageClient, args[0]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error deleting image\t%s\n", err)

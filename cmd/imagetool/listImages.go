@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/objectclient"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"net/rpc"
 	"os"
 )
 
-func listImagesSubcommand(imageClient *rpc.Client,
+func listImagesSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
 	if err := listImages(imageClient); err != nil {
 		fmt.Fprintf(os.Stderr, "Error listing images\t%s\n", err)

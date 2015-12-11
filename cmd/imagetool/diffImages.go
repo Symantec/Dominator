@@ -18,7 +18,8 @@ import (
 )
 
 func diffImageVImageSubcommand(imageClient *rpc.Client,
-	objectClient *objectclient.ObjectClient, args []string) {
+	imageSClient *srpc.Client, objectClient *objectclient.ObjectClient,
+	args []string) {
 	err := diffImageVImage(imageClient, args[0], args[1], args[2])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error diffing images\t%s\n", err)
@@ -39,7 +40,7 @@ func diffImageVImage(client *rpc.Client, tool, limage, rimage string) error {
 	return diffImages(tool, lfs, rfs)
 }
 
-func diffImageVSubSubcommand(imageClient *rpc.Client,
+func diffImageVSubSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
 	err := diffImageVSub(imageClient, args[0], args[1], args[2])
 	if err != nil {
