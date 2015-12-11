@@ -9,3 +9,9 @@ func CallAddImage(client *srpc.Client, request imageserver.AddImageRequest,
 	reply *imageserver.AddImageResponse) error {
 	return callAddImage(client, request, reply)
 }
+
+func CallDeleteImage(client *srpc.Client,
+	request imageserver.DeleteImageRequest,
+	reply *imageserver.DeleteImageResponse) error {
+	return callDeleteImage(client, request, reply)
+}
