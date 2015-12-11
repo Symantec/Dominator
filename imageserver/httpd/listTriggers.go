@@ -15,7 +15,6 @@ func listTriggersHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(writer, "<title>triggers %s</title>\n", imageName)
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<h3>")
-	writeLinks(writer)
 	image := imageDataBase.GetImage(imageName)
 	if image == nil {
 		fmt.Fprintf(writer, "Image: %s UNKNOWN!\n", imageName)

@@ -2,28 +2,40 @@ package srpc
 
 import (
 	"bufio"
+	"crypto/tls"
 	"errors"
 	"io"
 	"net"
 	"net/http"
 )
 
-func dialHTTP(network, address string) (*Client, error) {
-	conn, err := net.Dial(network, address)
+func dialHTTP(network, address string, tlsConfig *tls.Config) (*Client, error) {
+	unsecuredConn, err := net.Dial(network, address)
 	if err != nil {
 		return nil, err
 	}
-	io.WriteString(conn, "CONNECT "+rpcPath+" HTTP/1.0\n\n")
+	path := rpcPath
+	if tlsConfig != nil {
+		path = tlsRpcPath
+	}
+	io.WriteString(unsecuredConn, "CONNECT "+path+" HTTP/1.0\n\n")
 	// Require successful HTTP response before switching to SRPC protocol.
-	resp, err := http.ReadResponse(bufio.NewReader(conn),
+	resp, err := http.ReadResponse(bufio.NewReader(unsecuredConn),
 		&http.Request{Method: "CONNECT"})
-	if err == nil && resp.Status == connectString {
-		return newClient(conn), nil
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		err = errors.New("unexpected HTTP response: " + resp.Status)
+	if resp.Status != connectString {
+		return nil, errors.New("unexpected HTTP response: " + resp.Status)
 	}
-	return nil, err
+	if tlsConfig == nil {
+		return newClient(unsecuredConn), nil
+	}
+	tlsConn := tls.Client(unsecuredConn, tlsConfig)
+	if err := tlsConn.Handshake(); err != nil {
+		return nil, err
+	}
+	return newClient(tlsConn), nil
 }
 
 func newClient(conn net.Conn) *Client {

@@ -4,15 +4,24 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
-	"net/rpc"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"os"
+	"path"
 	"strings"
 )
 
 var (
-	debug               = flag.Bool("debug", false, "Enable debug mode")
-	file                = flag.String("file", "", "Name of file to write encoded data to")
-	interval            = flag.Uint("interval", 1, "Seconds to sleep between Polls")
+	certFile = flag.String("certFile",
+		path.Join(os.Getenv("HOME"), ".ssl/cert.pem"),
+		"Name of file containing the user SSL certificate")
+	debug = flag.Bool("debug", false, "Enable debug mode")
+	file  = flag.String("file", "",
+		"Name of file to write encoded data to")
+	interval = flag.Uint("interval", 1,
+		"Seconds to sleep between Polls")
+	keyFile = flag.String("keyFile",
+		path.Join(os.Getenv("HOME"), ".ssl/key.pem"),
+		"Name of file containing the user SSL key")
 	networkSpeedPercent = flag.Uint("networkSpeedPercent", 10,
 		"Network speed as percentage of capacity")
 	newConnection = flag.Bool("newConnection", false,
@@ -47,7 +56,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  set-config")
 }
 
-type commandFunc func(*rpc.Client, []string)
+type commandFunc func(*srpc.Client, []string)
 
 type subcommand struct {
 	command string
@@ -69,8 +78,9 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
+	setupTls()
 	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
-	client, err := rpc.DialHTTP("tcp", clientName)
+	client, err := srpc.DialHTTP("tcp", clientName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
 		os.Exit(1)

@@ -7,11 +7,18 @@ import (
 	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/objectserver"
 	"os"
+	"path"
 )
 
 var (
+	certFile = flag.String("certFile",
+		path.Join(os.Getenv("HOME"), ".ssl/cert.pem"),
+		"Name of file containing the user SSL certificate")
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
+	keyFile = flag.String("keyFile",
+		path.Join(os.Getenv("HOME"), ".ssl/key.pem"),
+		"Name of file containing the user SSL key")
 	objectServerHostname = flag.String("objectServerHostname", "localhost",
 		"Hostname of image server")
 	objectServerPortNum = flag.Uint("objectServerPortNum",
@@ -51,6 +58,7 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
+	setupTls()
 	objectServer := objectclient.NewObjectClient(fmt.Sprintf("%s:%d",
 		*objectServerHostname, *objectServerPortNum))
 	for _, subcommand := range subcommands {

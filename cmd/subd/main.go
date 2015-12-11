@@ -26,6 +26,12 @@ import (
 )
 
 var (
+	caFile = flag.String("CAfile", "/etc/ssl/CA.pem",
+		"Name of file containing the root of trust")
+	certFile = flag.String("certFile", "/etc/ssl/subd/cert.pem",
+		"Name of file containing the SSL certificate")
+	keyFile = flag.String("keyFile", "/etc/ssl/subd/key.pem",
+		"Name of file containing the SSL key")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
 	maxThreads = flag.Uint("maxThreads", 1,
@@ -214,6 +220,7 @@ func writePidfile() {
 
 func main() {
 	flag.Parse()
+	setupTls()
 	subdDirPathname := path.Join(*rootDir, *subdDir)
 	workingRootDir := path.Join(subdDirPathname, "root")
 	objectsDir := path.Join(workingRootDir, *subdDir, "objects")

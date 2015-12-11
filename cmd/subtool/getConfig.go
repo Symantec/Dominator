@@ -2,23 +2,24 @@ package main
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
-	"net/rpc"
+	"github.com/Symantec/Dominator/sub/client"
 	"os"
 )
 
-func getConfigSubcommand(client *rpc.Client, args []string) {
-	if err := getConfig(client); err != nil {
+func getConfigSubcommand(srpcClient *srpc.Client, args []string) {
+	if err := getConfig(srpcClient); err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting config\t%s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
 }
 
-func getConfig(client *rpc.Client) error {
+func getConfig(srpcClient *srpc.Client) error {
 	var request sub.GetConfigurationRequest
 	var reply sub.GetConfigurationResponse
-	err := client.Call("Subd.GetConfiguration", request, &reply)
+	err := client.CallGetConfiguration(srpcClient, request, &reply)
 	if err != nil {
 		return err
 	}

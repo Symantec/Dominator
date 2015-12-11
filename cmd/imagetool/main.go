@@ -5,11 +5,16 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/objectclient"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"net/rpc"
 	"os"
+	"path"
 )
 
 var (
+	certFile = flag.String("certFile",
+		path.Join(os.Getenv("HOME"), ".ssl/cert.pem"),
+		"Name of file containing the user SSL certificate")
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
@@ -17,6 +22,9 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
+	keyFile = flag.String("keyFile",
+		path.Join(os.Getenv("HOME"), ".ssl/key.pem"),
+		"Name of file containing the user SSL key")
 )
 
 func printUsage() {
@@ -35,7 +43,8 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  show   name")
 }
 
-type commandFunc func(*rpc.Client, *objectclient.ObjectClient, []string)
+type commandFunc func(*rpc.Client, *srpc.Client, *objectclient.ObjectClient,
+	[]string)
 
 type subcommand struct {
 	command string
@@ -61,9 +70,15 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
+	setupTls()
 	clientName := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)
 	imageClient, err := rpc.DialHTTP("tcp", clientName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
+		os.Exit(1)
+	}
+	imageSClient, err := srpc.DialHTTP("tcp", clientName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
 		os.Exit(1)
@@ -75,7 +90,8 @@ func main() {
 				printUsage()
 				os.Exit(2)
 			}
-			subcommand.cmdFunc(imageClient, objectClient, flag.Args()[1:])
+			subcommand.cmdFunc(imageClient, imageSClient, objectClient,
+				flag.Args()[1:])
 			os.Exit(3)
 		}
 	}

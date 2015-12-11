@@ -1,9 +1,10 @@
 package herd
 
 import (
+	"github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
-	"net/rpc"
 	"time"
 )
 
@@ -37,16 +38,16 @@ func (herd *Herd) getImageHaveLock(name string) *image.Image {
 			return nil
 		}
 	}
-	connection, err := rpc.DialHTTP("tcp", herd.imageServerAddress)
+	imageClient, err := srpc.DialHTTP("tcp", herd.imageServerAddress)
 	if err != nil {
 		herd.logger.Println(err)
 		return nil
 	}
-	defer connection.Close()
+	defer imageClient.Close()
 	var request imageserver.GetImageRequest
 	request.ImageName = name
 	var reply imageserver.GetImageResponse
-	err = connection.Call("ImageServer.GetImage", request, &reply)
+	err = client.CallGetImage(imageClient, request, &reply)
 	if err != nil {
 		herd.logger.Printf("Error calling\t%s\n", err)
 		return nil

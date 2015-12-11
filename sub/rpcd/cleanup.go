@@ -1,14 +1,34 @@
 package rpcd
 
 import (
+	"encoding/gob"
 	"errors"
 	"github.com/Symantec/Dominator/lib/objectcache"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 	"os"
 	"path"
 )
 
-func (t *rpcType) Cleanup(request sub.CleanupRequest,
+func (t *rpcType) Cleanup(conn *srpc.Conn) {
+	defer conn.Flush()
+	var request sub.CleanupRequest
+	var response sub.CleanupResponse
+	decoder := gob.NewDecoder(conn)
+	if err := decoder.Decode(&request); err != nil {
+		conn.WriteString(err.Error() + "\n")
+		return
+	}
+	if err := t.cleanup(request, &response); err != nil {
+		conn.WriteString(err.Error() + "\n")
+		return
+	}
+	conn.WriteString("\n")
+	encoder := gob.NewEncoder(conn)
+	encoder.Encode(response)
+}
+
+func (t *rpcType) cleanup(request sub.CleanupRequest,
 	reply *sub.CleanupResponse) error {
 	t.disableScannerFunc(true)
 	defer t.disableScannerFunc(false)

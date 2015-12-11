@@ -7,6 +7,7 @@ import (
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectclient"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/objectserver"
 	"net/rpc"
 	"os"
@@ -16,9 +17,9 @@ import (
 
 var dirPerms os.FileMode = syscall.S_IRWXU
 
-func getImageSubcommand(imageClient *rpc.Client,
+func getImageSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
-	err := getImageAndWrite(imageClient, objectClient, args[0], args[1])
+	err := getImageAndWrite(imageSClient, objectClient, args[0], args[1])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting image\t%s\n", err)
 		os.Exit(1)
@@ -26,7 +27,7 @@ func getImageSubcommand(imageClient *rpc.Client,
 	os.Exit(0)
 }
 
-func getImageAndWrite(imageClient *rpc.Client,
+func getImageAndWrite(imageClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, name, dirname string) error {
 	inodesDir := dirname + ".inodes"
 	if err := os.Mkdir(inodesDir, dirPerms); err != nil {

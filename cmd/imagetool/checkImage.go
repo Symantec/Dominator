@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/objectclient"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"net/rpc"
 	"os"
 )
 
-func checkImageSubcommand(imageClient *rpc.Client,
+func checkImageSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
 	imageExists, err := checkImage(imageClient, args[0])
 	if err != nil {

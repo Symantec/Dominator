@@ -1,14 +1,34 @@
 package rpcd
 
 import (
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
 
-func (t *rpcType) AddImage(request imageserver.AddImageRequest,
+func (t *srpcType) AddImage(conn *srpc.Conn) {
+	defer conn.Flush()
+	var request imageserver.AddImageRequest
+	var response imageserver.AddImageResponse
+	decoder := gob.NewDecoder(conn)
+	if err := decoder.Decode(&request); err != nil {
+		conn.WriteString(err.Error() + "\n")
+		return
+	}
+	if err := t.addImage(request, &response); err != nil {
+		conn.WriteString(err.Error() + "\n")
+		return
+	}
+	conn.WriteString("\n")
+	encoder := gob.NewEncoder(conn)
+	encoder.Encode(response)
+}
+
+func (t *srpcType) addImage(request imageserver.AddImageRequest,
 	reply *imageserver.AddImageResponse) error {
 	if t.imageDataBase.CheckImage(request.ImageName) {
 		return errors.New("image already exists")
