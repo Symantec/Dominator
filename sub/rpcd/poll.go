@@ -8,6 +8,8 @@ import (
 
 func (t *rpcType) Poll(conn *srpc.Conn) {
 	defer conn.Flush()
+	t.pollLock.Lock()
+	defer t.pollLock.Unlock()
 	var request sub.PollRequest
 	var response sub.PollResponse
 	decoder := gob.NewDecoder(conn)
