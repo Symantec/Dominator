@@ -15,6 +15,9 @@ func setupTls() {
 	}
 	// Load certificates and key.
 	caData, err := ioutil.ReadFile(*caFile)
+	if os.IsNotExist(err) {
+		return
+	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to load CA file\t%s\n",
 			err)
@@ -31,6 +34,9 @@ func setupTls() {
 	serverConfig.MinVersion = tls.VersionTLS12
 	serverConfig.ClientCAs = caCertPool
 	cert, err := tls.LoadX509KeyPair(*certFile, *keyFile)
+	if os.IsNotExist(err) {
+		return
+	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to load keypair\t%s\n",
 			err)
