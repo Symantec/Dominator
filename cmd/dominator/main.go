@@ -21,6 +21,8 @@ import (
 var (
 	caFile = flag.String("CAfile", "/etc/ssl/CA.pem",
 		"Name of file containing the root of trust")
+	certDir = flag.String("certDir", "/etc/ssl/Dominator",
+		"Name of file (relative to certDir) containing the SSL certificate")
 	certFile = flag.String("certFile", "cert.pem",
 		"Name of file (relative to stateDir) containing the SSL certificate")
 	debug = flag.Bool("debug", false,
@@ -33,7 +35,7 @@ var (
 		constants.ImageServerPortNumber,
 		"Port number of image server")
 	keyFile = flag.String("keyFile", "key.pem",
-		"Name of file (relative to stateDir) containing the SSL certificate")
+		"Name of file (relative to certDir) containing the SSL certificate")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
 	minInterval = flag.Uint("minInterval", 1,
@@ -96,7 +98,7 @@ func pathJoin(first, second string) string {
 func main() {
 	flag.Parse()
 	setupTls(*caFile,
-		pathJoin(*stateDir, *certFile), pathJoin(*stateDir, *keyFile))
+		pathJoin(*certDir, *certFile), pathJoin(*certDir, *keyFile))
 	rlim := syscall.Rlimit{*fdLimit, *fdLimit}
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot set FD limit\t%s\n", err)
