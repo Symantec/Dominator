@@ -63,8 +63,9 @@ func NewObjectAdderQueue(client *ObjectClient,
 	return &ObjectAdderQueue{client: client, maxBytes: maxBytes}
 }
 
-func (objQ *ObjectAdderQueue) Add(data []byte) (hash.Hash, error) {
-	return objQ.add(data)
+func (objQ *ObjectAdderQueue) Add(reader io.Reader, length uint64) (
+	hash.Hash, error) {
+	return objQ.add(reader, length)
 }
 
 func (objQ *ObjectAdderQueue) Flush() error {

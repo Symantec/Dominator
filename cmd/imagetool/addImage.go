@@ -139,8 +139,9 @@ type dataHandler struct {
 	objQ *objectclient.ObjectAdderQueue
 }
 
-func (dh *dataHandler) HandleData(data []byte) (hash.Hash, error) {
-	hash, err := dh.objQ.Add(data)
+func (dh *dataHandler) HandleData(reader io.Reader, length uint64) (
+	hash.Hash, error) {
+	hash, err := dh.objQ.Add(reader, length)
 	if err != nil {
 		return hash, errors.New("error sending image data: " + err.Error())
 	}

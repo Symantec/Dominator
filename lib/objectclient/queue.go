@@ -3,17 +3,30 @@ package objectclient
 import (
 	"crypto/sha512"
 	"errors"
+	"fmt"
 	"github.com/Symantec/Dominator/lib/hash"
+	"io"
 )
 
-func (objQ *ObjectAdderQueue) add(data []byte) (hash.Hash, error) {
+func (objQ *ObjectAdderQueue) add(reader io.Reader, length uint64) (
+	hash.Hash, error) {
 	var hash hash.Hash
-	if uint64(len(data))+objQ.numBytes > objQ.maxBytes {
+	if length+objQ.numBytes > objQ.maxBytes {
 		if err := objQ.Flush(); err != nil {
 			return hash, err
 		}
 	}
 	hasher := sha512.New()
+	data := make([]byte, length)
+	nRead, err := io.ReadFull(reader, data)
+	if err != nil {
+		return hash, err
+	}
+	if uint64(nRead) != length {
+		return hash, errors.New(fmt.Sprintf(
+			"failed to read file data, wanted: %d, got: %d bytes",
+			length, nRead))
+	}
 	if _, err := hasher.Write(data); err != nil {
 		return hash, err
 	}
