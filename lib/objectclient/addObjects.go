@@ -29,13 +29,18 @@ func (objClient *ObjectClient) addObjects(datas [][]byte,
 	go sendRequests(conn, datas, expectedHashes)
 	decoder := gob.NewDecoder(conn)
 	hashes := make([]hash.Hash, 0, len(datas))
-	for range datas {
+	for index := range datas {
 		var reply objectserver.AddObjectResponse
 		if err := decoder.Decode(&reply); err != nil {
 			return nil, err
 		}
 		if reply.Error != nil {
 			return nil, err
+		}
+		if expectedHashes != nil && *expectedHashes[index] != reply.Hash {
+			return nil, errors.New(fmt.Sprintf(
+				"received hash: %x != expected: %x",
+				reply.Hash, *expectedHashes[index]))
 		}
 		hashes = append(hashes, reply.Hash)
 	}
