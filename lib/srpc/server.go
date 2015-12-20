@@ -124,7 +124,7 @@ func handleConnection(conn *Conn) {
 	defer conn.Flush()
 	for ; ; conn.Flush() {
 		serviceMethod, err := conn.ReadString('\n')
-		if err == io.EOF {
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return
 		}
 		if err != nil {
