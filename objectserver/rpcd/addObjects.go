@@ -20,6 +20,9 @@ func (t *srpcType) AddObjects(conn *srpc.Conn) {
 		var request objectserver.AddObjectRequest
 		var response objectserver.AddObjectResponse
 		if err := decoder.Decode(&request); err != nil {
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				return
+			}
 			response.Error = err
 		} else if request.Length < 1 {
 			return
