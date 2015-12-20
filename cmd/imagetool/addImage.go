@@ -151,12 +151,16 @@ func (dh *dataHandler) HandleData(reader io.Reader, length uint64) (
 func buildImage(objectClient *objectclient.ObjectClient, tarReader *tar.Reader,
 	filter *filter.Filter) (*filesystem.FileSystem, error) {
 	var dh dataHandler
-	dh.objQ = objectclient.NewObjectAdderQueue(objectClient, 1024*1024*128)
+	var err error
+	dh.objQ, err = objectclient.NewObjectAdderQueue(objectClient)
+	if err != nil {
+		return nil, err
+	}
 	fs, err := untar.Decode(tarReader, &dh, filter)
 	if err != nil {
 		return nil, err
 	}
-	err = dh.objQ.Flush()
+	err = dh.objQ.Close()
 	if err != nil {
 		return nil, err
 	}
