@@ -57,6 +57,7 @@ type ObjectAdderQueue struct {
 	encoder         *gob.Encoder
 	getResponseChan chan<- bool
 	errorChan       <-chan error
+	sendSemaphore   chan bool
 }
 
 func NewObjectAdderQueue(objClient *ObjectClient) (*ObjectAdderQueue, error) {

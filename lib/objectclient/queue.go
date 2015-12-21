@@ -28,6 +28,7 @@ func newObjectAdderQueue(objClient *ObjectClient) (*ObjectAdderQueue, error) {
 	errorChan := make(chan error, 1024)
 	objQ.getResponseChan = getResponseChan
 	objQ.errorChan = errorChan
+	objQ.sendSemaphore = make(chan bool, 1)
 	go readResponses(objQ.conn, getResponseChan, errorChan)
 	return &objQ, nil
 }
@@ -38,7 +39,6 @@ func (objQ *ObjectAdderQueue) add(reader io.Reader, length uint64) (
 	if err := objQ.consumeErrors(); err != nil {
 		return hash, err
 	}
-	hasher := sha512.New()
 	data := make([]byte, length)
 	nRead, err := io.ReadFull(reader, data)
 	if err != nil {
@@ -49,16 +49,24 @@ func (objQ *ObjectAdderQueue) add(reader io.Reader, length uint64) (
 			"failed to read file data, wanted: %d, got: %d bytes",
 			length, nRead))
 	}
+	hasher := sha512.New()
 	if _, err := hasher.Write(data); err != nil {
 		return hash, err
 	}
 	copy(hash[:], hasher.Sum(nil))
-	var request objectserver.AddObjectRequest
-	request.Length = uint64(len(data))
-	request.ExpectedHash = &hash
-	objQ.encoder.Encode(request)
-	objQ.conn.Write(data)
-	objQ.getResponseChan <- true
+	// Send in a goroutine to increase concurrency. A small win.
+	objQ.sendSemaphore <- true
+	go func() {
+		defer func() {
+			<-objQ.sendSemaphore
+		}()
+		var request objectserver.AddObjectRequest
+		request.Length = uint64(len(data))
+		request.ExpectedHash = &hash
+		objQ.encoder.Encode(request)
+		objQ.conn.Write(data)
+		objQ.getResponseChan <- true
+	}()
 	return hash, nil
 }
 
