@@ -4,37 +4,39 @@ import (
 	"encoding/gob"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
+	"io"
 	"runtime"
 )
 
 func (t *srpcType) AddObjects(conn *srpc.Conn) {
+	defer runtime.GC() // An opportune time to take out the garbage.
 	defer conn.Flush()
-	var request objectserver.AddObjectsRequest
-	var response objectserver.AddObjectsResponse
 	decoder := gob.NewDecoder(conn)
-	if err := decoder.Decode(&request); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
-	}
-	if err := t.addObjects(request, &response); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
-	}
-	conn.WriteString("\n")
 	encoder := gob.NewEncoder(conn)
-	encoder.Encode(response)
-}
-
-func (t *srpcType) addObjects(request objectserver.AddObjectsRequest,
-	reply *objectserver.AddObjectsResponse) error {
-	var response objectserver.AddObjectsResponse
-	var err error
-	response.Hashes, err = t.objectServer.AddObjects(request.ObjectDatas,
-		request.ExpectedHashes)
-	if err != nil {
-		return err
+	numAdded := 0
+	numObj := 0
+	for ; ; numObj++ {
+		var request objectserver.AddObjectRequest
+		var response objectserver.AddObjectResponse
+		if err := decoder.Decode(&request); err != nil {
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				break
+			}
+			response.Error = err
+		} else if request.Length < 1 {
+			break
+		} else {
+			response.Hash, response.Added, response.Error =
+				t.objectServer.AddObject(
+					conn, request.Length, request.ExpectedHash)
+			if response.Added {
+				numAdded++
+			}
+		}
+		encoder.Encode(response)
+		if response.Error != nil {
+			return
+		}
 	}
-	*reply = response
-	runtime.GC() // An opportune time to take out the garbage.
-	return nil
+	t.logger.Printf("AddObjects(): %d of %d are new objects", numAdded, numObj)
 }

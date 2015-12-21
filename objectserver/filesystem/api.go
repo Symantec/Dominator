@@ -18,9 +18,9 @@ func NewObjectServer(baseDir string, logger *log.Logger) (
 	return newObjectServer(baseDir, logger)
 }
 
-func (objSrv *ObjectServer) AddObjects(datas [][]byte,
-	expectedHashes []*hash.Hash) ([]hash.Hash, error) {
-	return objSrv.addObjects(datas, expectedHashes)
+func (objSrv *ObjectServer) AddObject(reader io.Reader, length uint64,
+	expectedHash *hash.Hash) (hash.Hash, bool, error) {
+	return objSrv.addObject(reader, length, expectedHash)
 }
 
 func (objSrv *ObjectServer) CheckObjects(hashes []hash.Hash) ([]uint64, error) {

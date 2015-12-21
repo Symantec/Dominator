@@ -1,6 +1,7 @@
 package objectclient
 
 import (
+	"encoding/gob"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/objectserver"
@@ -16,9 +17,9 @@ func NewObjectClient(address string) *ObjectClient {
 	return &ObjectClient{address, false}
 }
 
-func (objClient *ObjectClient) AddObjects(datas [][]byte,
-	expectedHashes []*hash.Hash) ([]hash.Hash, error) {
-	return objClient.addObjects(datas, expectedHashes)
+func (objClient *ObjectClient) AddObject(reader io.Reader, length uint64,
+	expectedHash *hash.Hash) (hash.Hash, bool, error) {
+	return objClient.addObject(reader, length, expectedHash)
 }
 
 func (objClient *ObjectClient) CheckObjects(hashes []hash.Hash) (
@@ -51,22 +52,23 @@ func (or *ObjectsReader) NextObject() (uint64, io.ReadCloser, error) {
 }
 
 type ObjectAdderQueue struct {
-	numBytes       uint64
-	maxBytes       uint64
-	client         *ObjectClient
-	datas          [][]byte
-	expectedHashes []*hash.Hash
+	client          *srpc.Client
+	conn            *srpc.Conn
+	encoder         *gob.Encoder
+	getResponseChan chan<- bool
+	errorChan       <-chan error
+	sendSemaphore   chan bool
 }
 
-func NewObjectAdderQueue(client *ObjectClient,
-	maxBytes uint64) *ObjectAdderQueue {
-	return &ObjectAdderQueue{client: client, maxBytes: maxBytes}
+func NewObjectAdderQueue(objClient *ObjectClient) (*ObjectAdderQueue, error) {
+	return newObjectAdderQueue(objClient)
 }
 
-func (objQ *ObjectAdderQueue) Add(data []byte) (hash.Hash, error) {
-	return objQ.add(data)
+func (objQ *ObjectAdderQueue) Add(reader io.Reader, length uint64) (
+	hash.Hash, error) {
+	return objQ.add(reader, length)
 }
 
-func (objQ *ObjectAdderQueue) Flush() error {
-	return objQ.flush()
+func (objQ *ObjectAdderQueue) Close() error {
+	return objQ.close()
 }

@@ -7,14 +7,14 @@ import (
 	"os"
 )
 
-func setupTls() {
-	if *certFile == "" || *keyFile == "" {
+func setupTls(certFile, keyFile string) {
+	if certFile == "" || keyFile == "" {
 		return
 	}
 	clientConfig := new(tls.Config)
 	clientConfig.InsecureSkipVerify = true
 	clientConfig.MinVersion = tls.VersionTLS12
-	cert, err := tls.LoadX509KeyPair(*certFile, *keyFile)
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if os.IsNotExist(err) {
 		return
 	}

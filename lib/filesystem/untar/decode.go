@@ -7,7 +7,6 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	"io"
-	"io/ioutil"
 	"path"
 	"strings"
 	"syscall"
@@ -115,16 +114,9 @@ func (decoderData *decoderData) addRegularFile(tarReader *tar.Reader,
 	newInode.MtimeSeconds = header.ModTime.Unix()
 	newInode.Size = uint64(header.Size)
 	if header.Size > 0 {
-		data, err := ioutil.ReadAll(tarReader)
-		if err != nil {
-			return errors.New("error reading file data" + err.Error())
-		}
-		if int64(len(data)) != header.Size {
-			return errors.New(fmt.Sprintf(
-				"failed to read file data, wanted: %d, got: %d bytes",
-				header.Size, len(data)))
-		}
-		newInode.Hash, err = dataHandler.HandleData(data)
+		var err error
+		newInode.Hash, err = dataHandler.HandleData(tarReader,
+			uint64(header.Size))
 		if err != nil {
 			return err
 		}

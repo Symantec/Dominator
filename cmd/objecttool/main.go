@@ -58,7 +58,7 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
-	setupTls()
+	setupTls(*certFile, *keyFile)
 	objectServer := objectclient.NewObjectClient(fmt.Sprintf("%s:%d",
 		*objectServerHostname, *objectServerPortNum))
 	for _, subcommand := range subcommands {

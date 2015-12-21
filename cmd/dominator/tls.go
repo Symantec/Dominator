@@ -9,11 +9,11 @@ import (
 	"os"
 )
 
-func setupTls() {
-	if *caFile == "" || *certFile == "" || *keyFile == "" {
+func setupTls(caFile, certFile, keyFile string) {
+	if caFile == "" || certFile == "" || keyFile == "" {
 		return
 	}
-	caData, err := ioutil.ReadFile(*caFile)
+	caData, err := ioutil.ReadFile(caFile)
 	if os.IsNotExist(err) {
 		return
 	}
@@ -31,7 +31,7 @@ func setupTls() {
 	clientConfig.InsecureSkipVerify = true
 	clientConfig.MinVersion = tls.VersionTLS12
 	clientConfig.RootCAs = caCertPool
-	cert, err := tls.LoadX509KeyPair(*certFile, *keyFile)
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if os.IsNotExist(err) {
 		return
 	}
