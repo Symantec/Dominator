@@ -26,11 +26,10 @@ func (t *srpcType) AddObjects(conn *srpc.Conn) {
 		} else if request.Length < 1 {
 			break
 		} else {
-			var added bool
 			response.Hash, response.Added, response.Error =
 				t.objectServer.AddObject(
 					conn, request.Length, request.ExpectedHash)
-			if added {
+			if response.Added {
 				numAdded++
 			}
 		}
