@@ -17,9 +17,9 @@ func NewObjectClient(address string) *ObjectClient {
 	return &ObjectClient{address, false}
 }
 
-func (objClient *ObjectClient) AddObjects(datas [][]byte,
-	expectedHashes []*hash.Hash) ([]hash.Hash, error) {
-	return objClient.addObjects(datas, expectedHashes)
+func (objClient *ObjectClient) AddObject(reader io.Reader, length uint64,
+	expectedHash *hash.Hash) (hash.Hash, bool, error) {
+	return objClient.addObject(reader, length, expectedHash)
 }
 
 func (objClient *ObjectClient) CheckObjects(hashes []hash.Hash) (

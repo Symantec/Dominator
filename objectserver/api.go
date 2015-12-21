@@ -11,7 +11,8 @@ type ObjectsReader interface {
 }
 
 type ObjectServer interface {
-	AddObjects(datas [][]byte, expectedHashes []*hash.Hash) ([]hash.Hash, error)
+	AddObject(reader io.Reader, length uint64, expectedHash *hash.Hash) (
+		hash.Hash, bool, error)
 	CheckObjects(hashes []hash.Hash) ([]uint64, error)
 	GetObjects(hashes []hash.Hash) (ObjectsReader, error)
 }

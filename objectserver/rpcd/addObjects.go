@@ -2,9 +2,6 @@ package rpcd
 
 import (
 	"encoding/gob"
-	"errors"
-	"fmt"
-	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
@@ -16,45 +13,31 @@ func (t *srpcType) AddObjects(conn *srpc.Conn) {
 	defer conn.Flush()
 	decoder := gob.NewDecoder(conn)
 	encoder := gob.NewEncoder(conn)
-	for {
+	numAdded := 0
+	numObj := 0
+	for ; ; numObj++ {
 		var request objectserver.AddObjectRequest
 		var response objectserver.AddObjectResponse
 		if err := decoder.Decode(&request); err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				return
+				break
 			}
 			response.Error = err
 		} else if request.Length < 1 {
-			return
+			break
 		} else {
-			response.Error = t.addObject(conn, request, &response)
+			var added bool
+			response.Hash, response.Added, response.Error =
+				t.objectServer.AddObject(
+					conn, request.Length, request.ExpectedHash)
+			if added {
+				numAdded++
+			}
 		}
 		encoder.Encode(response)
 		if response.Error != nil {
 			return
 		}
 	}
-}
-
-func (t *srpcType) addObject(conn *srpc.Conn,
-	request objectserver.AddObjectRequest,
-	response *objectserver.AddObjectResponse) error {
-	data := make([]byte, request.Length)
-	nRead, err := io.ReadFull(conn, data)
-	if err != nil {
-		return err
-	}
-	if uint64(nRead) != request.Length {
-		return errors.New(fmt.Sprintf(
-			"failed to read data, wanted: %d, got: %d bytes",
-			request.Length, nRead))
-	}
-	datas := [][]byte{data}
-	expectedHashes := []*hash.Hash{request.ExpectedHash}
-	hashes, err := t.objectServer.AddObjects(datas, expectedHashes)
-	if err != nil {
-		return err
-	}
-	response.Hash = hashes[0]
-	return nil
+	t.logger.Printf("AddObjects(): %d of %d are new objects", numAdded, numObj)
 }

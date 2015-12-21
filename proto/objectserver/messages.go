@@ -17,6 +17,7 @@ type AddObjectRequest struct {
 type AddObjectResponse struct {
 	Error error
 	Hash  hash.Hash
+	Added bool // If true: object was added, else object already existed.
 }
 
 type CheckObjectsRequest struct {

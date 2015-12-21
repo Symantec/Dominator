@@ -8,38 +8,27 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
+	"io"
 	"os"
 	"path"
 )
 
 const buflen = 65536
 
-func (objSrv *ObjectServer) addObjects(datas [][]byte,
-	expectedHashes []*hash.Hash) ([]hash.Hash, error) {
-	hashes := make([]hash.Hash, len(datas))
-	numAdded := 0
-	for index, data := range datas {
-		var err error
-		var add bool
-		hashes[index], add, err = objSrv.addObject(data, expectedHashes[index])
-		if err != nil {
-			objSrv.logger.Printf("AddObjects(): error: %s", err.Error())
-			return nil, err
-		}
-		if add {
-			numAdded++
-		}
-	}
-	objSrv.logger.Printf("AddObjects(): %d of %d are new objects",
-		numAdded, len(datas))
-	return hashes, nil
-}
-
-func (objSrv *ObjectServer) addObject(data []byte, expectedHash *hash.Hash) (
-	hash.Hash, bool, error) {
+func (objSrv *ObjectServer) addObject(reader io.Reader, length uint64,
+	expectedHash *hash.Hash) (hash.Hash, bool, error) {
 	var hash hash.Hash
-	if len(data) < 1 {
+	if length < 1 {
 		return hash, false, errors.New("zero length object cannot be added")
+	}
+	data := make([]byte, length)
+	nRead, err := io.ReadFull(reader, data)
+	if err != nil {
+		return hash, false, err
+	}
+	if uint64(nRead) != length {
+		return hash, false, errors.New(fmt.Sprintf(
+			"failed to read data, wanted: %d, got: %d bytes", length, nRead))
 	}
 	hasher := sha512.New()
 	if hasher.Size() != len(hash) {
