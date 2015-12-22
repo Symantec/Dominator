@@ -72,7 +72,7 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
-	setupTls()
+	setupTls(*certFile, *keyFile)
 	clientName := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)
 	imageClient, err := rpc.DialHTTP("tcp", clientName)
