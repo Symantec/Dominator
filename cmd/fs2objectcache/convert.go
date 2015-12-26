@@ -6,6 +6,7 @@ import (
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 )
 
@@ -25,6 +26,15 @@ func convertToObject(pathname, objectsDir string) error {
 	objPathname := path.Join(objectsDir, objectcache.HashToFilename(hashVal))
 	if err = os.MkdirAll(path.Dir(objPathname), 0755); err != nil {
 		return err
+	}
+	err = os.Rename(pathname, objPathname)
+	if err == nil {
+		return nil
+	}
+	if os.IsPermission(err) {
+		// Blindly attempt to remove immutable attribute.
+		cmd := exec.Command("chattr", "-ai", pathname)
+		cmd.Run()
 	}
 	return os.Rename(pathname, objPathname)
 }
