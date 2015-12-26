@@ -2,11 +2,11 @@ package main
 
 import (
 	"crypto/sha512"
+	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
 	"os"
-	"os/exec"
 	"path"
 )
 
@@ -33,8 +33,7 @@ func convertToObject(pathname, objectsDir string) error {
 	}
 	if os.IsPermission(err) {
 		// Blindly attempt to remove immutable attribute.
-		cmd := exec.Command("chattr", "-ai", pathname)
-		cmd.Run()
+		util.MakeMutable(pathname)
 	}
 	return os.Rename(pathname, objPathname)
 }
