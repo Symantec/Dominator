@@ -10,8 +10,8 @@ func forceRename(oldpath, newpath string) error {
 		return nil
 	}
 	if os.IsPermission(err) {
-		// Blindly attempt to remove immutable attribute.
-		MakeMutable(oldpath)
+		// Blindly attempt to remove immutable attributes.
+		MakeMutable(oldpath, newpath)
 	}
 	return os.Rename(oldpath, newpath)
 }
