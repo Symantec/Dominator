@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -236,7 +237,7 @@ func makeRegularInode(fullPathname string,
 				delete(multiplyUsedObjects, inode.Hash)
 			}
 		}
-		err = os.Rename(objectPathname, fullPathname)
+		err = fsutil.ForceRename(objectPathname, fullPathname)
 	} else {
 		_, err = os.Create(fullPathname)
 	}
