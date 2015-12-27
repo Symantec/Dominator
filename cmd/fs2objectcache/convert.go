@@ -2,7 +2,7 @@ package main
 
 import (
 	"crypto/sha512"
-	"github.com/Symantec/Dominator/lib/filesystem/util"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
@@ -27,5 +27,5 @@ func convertToObject(pathname, objectsDir string) error {
 	if err = os.MkdirAll(path.Dir(objPathname), 0755); err != nil {
 		return err
 	}
-	return util.ForceRename(pathname, objPathname)
+	return fsutil.ForceRename(pathname, objPathname)
 }

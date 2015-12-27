@@ -1,4 +1,15 @@
-package util
+package fsutil
+
+import (
+	"io"
+)
+
+// CopyToFile will create a new file, writre length bytes from reader to the
+// file and then atimically renames the file to destFilename. If there are any
+// errors, then destFilename is unchanged.
+func CopyToFile(destFilename string, reader io.Reader, length int64) error {
+	return copyToFile(destFilename, reader, length)
+}
 
 // MakeMutable attempts to remove the "immutable" and "append-only" ext2
 // file-system attributes for one or more files. It is equivalent to calling the
