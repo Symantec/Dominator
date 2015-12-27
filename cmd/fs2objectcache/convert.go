@@ -27,13 +27,5 @@ func convertToObject(pathname, objectsDir string) error {
 	if err = os.MkdirAll(path.Dir(objPathname), 0755); err != nil {
 		return err
 	}
-	err = os.Rename(pathname, objPathname)
-	if err == nil {
-		return nil
-	}
-	if os.IsPermission(err) {
-		// Blindly attempt to remove immutable attribute.
-		util.MakeMutable(pathname)
-	}
-	return os.Rename(pathname, objPathname)
+	return util.ForceRename(pathname, objPathname)
 }
