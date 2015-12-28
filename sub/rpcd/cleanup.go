@@ -3,10 +3,10 @@ package rpcd
 import (
 	"encoding/gob"
 	"errors"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
-	"os"
 	"path"
 )
 
@@ -45,7 +45,7 @@ func (t *rpcType) cleanup(request sub.CleanupRequest,
 	}
 	for _, hash := range request.Hashes {
 		pathname := path.Join(t.objectsDir, objectcache.HashToFilename(hash))
-		err := os.Remove(pathname)
+		err := fsutil.ForceRemove(pathname)
 		if err == nil {
 			t.logger.Printf("Deleted: %s\n", pathname)
 		} else {
