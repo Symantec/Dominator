@@ -299,7 +299,7 @@ func doDeletes(pathsToDelete []string, rootDirectoryName string,
 		fullPathname := path.Join(rootDirectoryName, pathname)
 		triggers.Match(pathname)
 		if takeAction {
-			if err := os.RemoveAll(fullPathname); err != nil {
+			if err := fsutil.ForceRemoveAll(fullPathname); err != nil {
 				logger.Println(err)
 			} else {
 				logger.Printf("Deleted: %s\n", fullPathname)
