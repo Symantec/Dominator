@@ -24,6 +24,13 @@ func ForceRename(oldpath, newpath string) error {
 	return forceRename(oldpath, newpath)
 }
 
+// ForceRemove removes the named file or directory. It first attempts to remove
+// using os.Remove and that fails, it blindly calls MakeMutable and then
+// retries.
+func ForceRemove(name string) error {
+	return forceRemove(name)
+}
+
 // ForceRemoveAll removes path and any children it contains. It first attempts
 // to remove using os.RemoveAll and that fails, it blindly calls MakeMutable and
 // then retries.

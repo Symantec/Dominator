@@ -16,6 +16,18 @@ func forceRename(oldpath, newpath string) error {
 	return os.Rename(oldpath, newpath)
 }
 
+func forceRemove(name string) error {
+	err := os.Remove(name)
+	if err == nil {
+		return nil
+	}
+	if os.IsPermission(err) {
+		// Blindly attempt to remove immutable attributes.
+		MakeMutable(name)
+	}
+	return os.Remove(name)
+}
+
 func forceRemoveAll(path string) error {
 	err := os.RemoveAll(path)
 	if err == nil {
