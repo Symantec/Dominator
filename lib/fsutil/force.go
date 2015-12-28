@@ -4,16 +4,16 @@ import (
 	"os"
 )
 
-func forceRename(oldpath, newpath string) error {
-	err := os.Rename(oldpath, newpath)
+func forceLink(oldname, newname string) error {
+	err := os.Link(oldname, newname)
 	if err == nil {
 		return nil
 	}
 	if os.IsPermission(err) {
 		// Blindly attempt to remove immutable attributes.
-		MakeMutable(oldpath, newpath)
+		MakeMutable(oldname, newname)
 	}
-	return os.Rename(oldpath, newpath)
+	return os.Link(oldname, newname)
 }
 
 func forceRemove(name string) error {
@@ -38,4 +38,16 @@ func forceRemoveAll(path string) error {
 		MakeMutable(path)
 	}
 	return os.RemoveAll(path)
+}
+
+func forceRename(oldpath, newpath string) error {
+	err := os.Rename(oldpath, newpath)
+	if err == nil {
+		return nil
+	}
+	if os.IsPermission(err) {
+		// Blindly attempt to remove immutable attributes.
+		MakeMutable(oldpath, newpath)
+	}
+	return os.Rename(oldpath, newpath)
 }

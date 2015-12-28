@@ -11,17 +11,11 @@ func CopyToFile(destFilename string, reader io.Reader, length int64) error {
 	return copyToFile(destFilename, reader, length)
 }
 
-// MakeMutable attempts to remove the "immutable" and "append-only" ext2
-// file-system attributes for one or more files. It is equivalent to calling the
-// command-line programme "chattr -ai pathname...".
-func MakeMutable(pathname ...string) error {
-	return makeMutable(pathname...)
-}
-
-// ForceRename renames (moves) a file. It first attempts to rename using
-// os.Rename and if that fails, it blindly calls MakeMutable and then retries.
-func ForceRename(oldpath, newpath string) error {
-	return forceRename(oldpath, newpath)
+// ForceLink creates newname as a hard link to the oldname file. It first
+// attempts to link using os.Link and if that fails, it blindly calls
+// MakeMutable and then retries.
+func ForceLink(oldname, newname string) error {
+	return forceLink(oldname, newname)
 }
 
 // ForceRemove removes the named file or directory. It first attempts to remove
@@ -36,4 +30,17 @@ func ForceRemove(name string) error {
 // then retries.
 func ForceRemoveAll(path string) error {
 	return forceRemoveAll(path)
+}
+
+// ForceRename renames (moves) a file. It first attempts to rename using
+// os.Rename and if that fails, it blindly calls MakeMutable and then retries.
+func ForceRename(oldpath, newpath string) error {
+	return forceRename(oldpath, newpath)
+}
+
+// MakeMutable attempts to remove the "immutable" and "append-only" ext2
+// file-system attributes for one or more files. It is equivalent to calling the
+// command-line programme "chattr -ai pathname...".
+func MakeMutable(pathname ...string) error {
+	return makeMutable(pathname...)
 }
