@@ -283,7 +283,8 @@ func makeHardlinks(hardlinksToMake []sub.Hardlink, rootDirectoryName string,
 		if takeAction {
 			targetPathname := path.Join(rootDirectoryName, hardlink.Target)
 			linkPathname := path.Join(rootDirectoryName, hardlink.NewLink)
-			if err := os.Link(targetPathname, linkPathname); err != nil {
+			if err := fsutil.ForceLink(targetPathname,
+				linkPathname); err != nil {
 				logger.Println(err)
 			} else {
 				logger.Printf("Linked: %s => %s\n",
