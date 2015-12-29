@@ -2,12 +2,25 @@ package filesystem
 
 import (
 	"errors"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"os"
 	"syscall"
 	"time"
 )
 
 var modePerm FileMode = syscall.S_IRWXU | syscall.S_IRWXG | syscall.S_IRWXO
+
+func forceWriteMetadata(inode GenericInode, name string) error {
+	err := inode.WriteMetadata(name)
+	if err == nil {
+		return nil
+	}
+	if os.IsPermission(err) {
+		// Blindly attempt to remove immutable attributes.
+		fsutil.MakeMutable(name)
+	}
+	return inode.WriteMetadata(name)
+}
 
 func (inode *RegularInode) writeMetadata(name string) error {
 	if err := os.Lchown(name, int(inode.Uid), int(inode.Gid)); err != nil {

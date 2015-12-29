@@ -255,3 +255,7 @@ func CompareSpecialInodesData(left, right *SpecialInode,
 	logWriter io.Writer) bool {
 	return compareSpecialInodesData(left, right, logWriter)
 }
+
+func ForceWriteMetadata(inode GenericInode, name string) error {
+	return forceWriteMetadata(inode, name)
+}
