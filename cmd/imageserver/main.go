@@ -41,7 +41,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Do not run the Image Server as root")
 		os.Exit(1)
 	}
-	setupTls()
+	setupTls(*caFile, *certFile, *keyFile)
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	objSrv, err := filesystem.NewObjectServer(*objectDir, logger)

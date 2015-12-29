@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func CopyToFile(destFilename string, reader io.Reader, length int64) error {
+func copyToFile(destFilename string, reader io.Reader, length int64) error {
 	tmpFilename := destFilename + "~"
 	destFile, err := os.Create(tmpFilename)
 	if err != nil {

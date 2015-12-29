@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -236,7 +237,7 @@ func makeRegularInode(fullPathname string,
 				delete(multiplyUsedObjects, inode.Hash)
 			}
 		}
-		err = os.Rename(objectPathname, fullPathname)
+		err = fsutil.ForceRename(objectPathname, fullPathname)
 	} else {
 		_, err = os.Create(fullPathname)
 	}
@@ -282,7 +283,8 @@ func makeHardlinks(hardlinksToMake []sub.Hardlink, rootDirectoryName string,
 		if takeAction {
 			targetPathname := path.Join(rootDirectoryName, hardlink.Target)
 			linkPathname := path.Join(rootDirectoryName, hardlink.NewLink)
-			if err := os.Link(targetPathname, linkPathname); err != nil {
+			if err := fsutil.ForceLink(targetPathname,
+				linkPathname); err != nil {
 				logger.Println(err)
 			} else {
 				logger.Printf("Linked: %s => %s\n",
@@ -298,7 +300,7 @@ func doDeletes(pathsToDelete []string, rootDirectoryName string,
 		fullPathname := path.Join(rootDirectoryName, pathname)
 		triggers.Match(pathname)
 		if takeAction {
-			if err := os.RemoveAll(fullPathname); err != nil {
+			if err := fsutil.ForceRemoveAll(fullPathname); err != nil {
 				logger.Println(err)
 			} else {
 				logger.Printf("Deleted: %s\n", fullPathname)
@@ -336,7 +338,8 @@ func changeInodes(inodesToChange []sub.Inode, rootDirectoryName string,
 		fullPathname := path.Join(rootDirectoryName, inode.Name)
 		triggers.Match(inode.Name)
 		if takeAction {
-			if err := inode.WriteMetadata(fullPathname); err != nil {
+			if err := filesystem.ForceWriteMetadata(inode,
+				fullPathname); err != nil {
 				logger.Println(err)
 				continue
 			}
