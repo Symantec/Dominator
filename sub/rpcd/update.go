@@ -338,7 +338,8 @@ func changeInodes(inodesToChange []sub.Inode, rootDirectoryName string,
 		fullPathname := path.Join(rootDirectoryName, inode.Name)
 		triggers.Match(inode.Name)
 		if takeAction {
-			if err := inode.WriteMetadata(fullPathname); err != nil {
+			if err := filesystem.ForceWriteMetadata(inode,
+				fullPathname); err != nil {
 				logger.Println(err)
 				continue
 			}
