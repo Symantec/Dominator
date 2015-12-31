@@ -132,6 +132,11 @@ func handleConnection(conn *Conn) {
 			conn.WriteString(err.Error() + "\n")
 			continue
 		}
+		if serviceMethod == "\n" {
+			// Received a "ping" request, send response.
+			conn.WriteString("\n")
+			continue
+		}
 		serviceMethod = serviceMethod[:len(serviceMethod)-1]
 		if !conn.checkPermitted(serviceMethod) {
 			conn.WriteString("access to method denied\n")

@@ -79,3 +79,12 @@ func (client *Client) close() error {
 	client.bufrw.Flush()
 	return client.conn.Close()
 }
+
+func (client *Client) ping() error {
+	conn, err := client.call("\n")
+	if err != nil {
+		return err
+	}
+	conn.Close()
+	return nil
+}
