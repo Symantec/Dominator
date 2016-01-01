@@ -235,6 +235,8 @@ func makeRegularInode(fullPathname string,
 			objectPathname += strings.Repeat("~", int(numCopies))
 			if numCopies < 2 {
 				delete(multiplyUsedObjects, inode.Hash)
+			} else {
+				multiplyUsedObjects[inode.Hash] = numCopies
 			}
 		}
 		err = fsutil.ForceRename(objectPathname, fullPathname)
