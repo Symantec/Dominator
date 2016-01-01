@@ -38,7 +38,8 @@ func (t *rpcType) poll(request sub.PollRequest, reply *sub.PollResponse) error {
 	fs := t.fileSystemHistory.FileSystem()
 	if fs != nil &&
 		request.HaveGeneration != t.fileSystemHistory.GenerationCount() {
-		response.FileSystem = fs
+		response.FileSystem = &fs.FileSystem
+		response.ObjectCache = fs.ObjectCache
 	}
 	*reply = response
 	return nil

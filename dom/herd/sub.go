@@ -60,6 +60,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client) {
 	sub.lastPollSucceededTime = time.Now()
 	if reply.GenerationCount == 0 {
 		sub.fileSystem = nil
+		sub.objectCache = nil
 		sub.generationCount = 0
 	}
 	if fs := reply.FileSystem; fs == nil {
@@ -76,6 +77,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client) {
 		fs.BuildInodeToFilenamesTable()
 		fs.BuildEntryMap()
 		sub.fileSystem = fs
+		sub.objectCache = reply.ObjectCache
 		sub.generationCount = reply.GenerationCount
 		sub.lastFullPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
@@ -106,31 +108,35 @@ func (sub *Sub) poll(srpcClient *srpc.Client) {
 	if idle, status := sub.fetchMissingObjects(srpcClient,
 		sub.requiredImage); !idle {
 		sub.status = status
-		sub.fileSystem = nil // Mark memory for reclaim.
-		runtime.GC()         // Reclaim now.
+		sub.fileSystem = nil  // Mark memory for reclaim.
+		sub.objectCache = nil // Mark memory for reclaim.
+		runtime.GC()          // Reclaim now.
 		return
 	}
 	sub.status = statusComputingUpdate
 	if idle, status := sub.sendUpdate(srpcClient); !idle {
 		sub.status = status
-		sub.fileSystem = nil // Mark memory for reclaim.
-		runtime.GC()         // Reclaim now.
+		sub.fileSystem = nil  // Mark memory for reclaim.
+		sub.objectCache = nil // Mark memory for reclaim.
+		runtime.GC()          // Reclaim now.
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(srpcClient,
 		sub.plannedImage); !idle {
 		if status != statusImageNotReady {
 			sub.status = status
-			sub.fileSystem = nil // Mark memory for reclaim.
-			runtime.GC()         // Reclaim now.
+			sub.fileSystem = nil  // Mark memory for reclaim.
+			sub.objectCache = nil // Mark memory for reclaim.
+			runtime.GC()          // Reclaim now.
 			return
 		}
 	}
 	sub.status = statusSynced
 	sub.cleanup(srpcClient, sub.plannedImage)
 	sub.generationCountAtLastSync = sub.generationCount
-	sub.fileSystem = nil // Mark memory for reclaim.
-	runtime.GC()         // Reclaim now.
+	sub.fileSystem = nil  // Mark memory for reclaim.
+	sub.objectCache = nil // Mark memory for reclaim.
+	runtime.GC()          // Reclaim now.
 }
 
 // Returns true if all required objects are available.
@@ -148,7 +154,7 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 			}
 		}
 	}
-	for _, hash := range sub.fileSystem.ObjectCache {
+	for _, hash := range sub.objectCache {
 		delete(missingObjects, hash)
 	}
 	for _, inode := range sub.fileSystem.InodeTable {
@@ -197,7 +203,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, uint) {
 func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 	logger := sub.herd.logger
 	unusedObjects := make(map[hash.Hash]bool)
-	for _, hash := range sub.fileSystem.ObjectCache {
+	for _, hash := range sub.objectCache {
 		unusedObjects[hash] = false // Potential cleanup candidate.
 	}
 	for _, inode := range sub.fileSystem.InodeTable {

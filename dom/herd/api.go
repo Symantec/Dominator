@@ -2,8 +2,9 @@ package herd
 
 import (
 	"github.com/Symantec/Dominator/dom/mdb"
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/sub/scanner"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
 	"log"
 	"sync"
@@ -39,7 +40,8 @@ type Sub struct {
 	plannedImage                 string
 	busyMutex                    sync.Mutex
 	busy                         bool
-	fileSystem                   *scanner.FileSystem
+	fileSystem                   *filesystem.FileSystem
+	objectCache                  objectcache.ObjectCache
 	generationCount              uint64
 	generationCountAtChangeStart uint64
 	generationCountAtLastSync    uint64

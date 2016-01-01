@@ -23,7 +23,7 @@ type state struct {
 // Returns true if no update needs to be performed.
 func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) bool {
 	var state state
-	state.subFS = &sub.fileSystem.FileSystem
+	state.subFS = sub.fileSystem
 	requiredImage := sub.herd.getImage(sub.requiredImage)
 	state.requiredFS = requiredImage.FileSystem
 	filter := requiredImage.Filter
@@ -31,12 +31,11 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) bool {
 	state.requiredInodeToSubInode = make(map[uint64]uint64)
 	state.inodesChanged = make(map[uint64]bool)
 	state.inodesCreated = make(map[uint64]string)
-	state.subObjectCacheUsage = make(map[hash.Hash]uint64,
-		len(sub.fileSystem.ObjectCache))
+	state.subObjectCacheUsage = make(map[hash.Hash]uint64, len(sub.objectCache))
 	var rusageStart, rusageStop syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
 	// Populate subObjectCacheUsage.
-	for _, hash := range sub.fileSystem.ObjectCache {
+	for _, hash := range sub.objectCache {
 		state.subObjectCacheUsage[hash] = 0
 	}
 	compareDirectories(request, &state,

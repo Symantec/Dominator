@@ -3,9 +3,9 @@ package sub
 import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/common"
-	"github.com/Symantec/Dominator/sub/scanner"
 )
 
 type Configuration struct {
@@ -36,7 +36,8 @@ type PollResponse struct {
 	UpdateInProgress             bool
 	LastUpdateHadTriggerFailures bool
 	GenerationCount              uint64
-	FileSystem                   *scanner.FileSystem
+	FileSystem                   *filesystem.FileSystem
+	ObjectCache                  objectcache.ObjectCache
 }
 
 type SetConfigurationRequest Configuration
