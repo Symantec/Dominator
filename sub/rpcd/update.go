@@ -103,7 +103,7 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 		t.makeInodes(request.InodesToMake, rootDirectoryName,
 			request.MultiplyUsedObjects, &oldTriggers, false)
 		makeHardlinks(request.HardlinksToMake, rootDirectoryName,
-			&oldTriggers, false, t.logger)
+			&oldTriggers, "", false, t.logger)
 		doDeletes(request.PathsToDelete, rootDirectoryName, &oldTriggers, false,
 			t.logger)
 		t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
@@ -118,7 +118,7 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 	t.makeInodes(request.InodesToMake, rootDirectoryName,
 		request.MultiplyUsedObjects, request.Triggers, true)
 	makeHardlinks(request.HardlinksToMake, rootDirectoryName,
-		request.Triggers, true, t.logger)
+		request.Triggers, t.objectsDir, true, t.logger)
 	doDeletes(request.PathsToDelete, rootDirectoryName, request.Triggers, true,
 		t.logger)
 	t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
@@ -279,15 +279,25 @@ func makeSpecialInode(fullPathname string, inode *filesystem.SpecialInode,
 }
 
 func makeHardlinks(hardlinksToMake []sub.Hardlink, rootDirectoryName string,
-	triggers *triggers.Triggers, takeAction bool, logger *log.Logger) {
+	triggers *triggers.Triggers, tmpDir string, takeAction bool,
+	logger *log.Logger) {
+	tmpName := path.Join(tmpDir, "temporaryHardlink")
 	for _, hardlink := range hardlinksToMake {
 		triggers.Match(hardlink.NewLink)
 		if takeAction {
 			targetPathname := path.Join(rootDirectoryName, hardlink.Target)
 			linkPathname := path.Join(rootDirectoryName, hardlink.NewLink)
-			if err := fsutil.ForceLink(targetPathname,
-				linkPathname); err != nil {
+			// A Link directly to linkPathname will fail if it exists, so do a
+			// Link+Rename using a temporary filename.
+			if err := fsutil.ForceLink(targetPathname, tmpName); err != nil {
 				logger.Println(err)
+				continue
+			}
+			if err := fsutil.ForceRename(tmpName, linkPathname); err != nil {
+				logger.Println(err)
+				if err := fsutil.ForceRemove(tmpName); err != nil {
+					logger.Println(err)
+				}
 			} else {
 				logger.Printf("Linked: %s => %s\n",
 					linkPathname, targetPathname)
