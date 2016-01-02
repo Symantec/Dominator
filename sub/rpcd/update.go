@@ -100,14 +100,14 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 	t.makeObjectCopies(request.MultiplyUsedObjects)
 	t.lastUpdateHadTriggerFailures = false
 	if len(oldTriggers.Triggers) > 0 {
+		t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
+			&oldTriggers, false)
 		t.makeInodes(request.InodesToMake, rootDirectoryName,
 			request.MultiplyUsedObjects, &oldTriggers, false)
 		makeHardlinks(request.HardlinksToMake, rootDirectoryName,
-			&oldTriggers, false, t.logger)
+			&oldTriggers, "", false, t.logger)
 		doDeletes(request.PathsToDelete, rootDirectoryName, &oldTriggers, false,
 			t.logger)
-		t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
-			&oldTriggers, false)
 		changeInodes(request.InodesToChange, rootDirectoryName, &oldTriggers,
 			false, t.logger)
 		matchedOldTriggers := oldTriggers.GetMatchedTriggers()
@@ -115,14 +115,14 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 			t.lastUpdateHadTriggerFailures = true
 		}
 	}
+	t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
+		request.Triggers, true)
 	t.makeInodes(request.InodesToMake, rootDirectoryName,
 		request.MultiplyUsedObjects, request.Triggers, true)
 	makeHardlinks(request.HardlinksToMake, rootDirectoryName,
-		request.Triggers, true, t.logger)
+		request.Triggers, t.objectsDir, true, t.logger)
 	doDeletes(request.PathsToDelete, rootDirectoryName, request.Triggers, true,
 		t.logger)
-	t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
-		request.Triggers, true)
 	changeInodes(request.InodesToChange, rootDirectoryName, request.Triggers,
 		true, t.logger)
 	matchedNewTriggers := request.Triggers.GetMatchedTriggers()
@@ -235,6 +235,8 @@ func makeRegularInode(fullPathname string,
 			objectPathname += strings.Repeat("~", int(numCopies))
 			if numCopies < 2 {
 				delete(multiplyUsedObjects, inode.Hash)
+			} else {
+				multiplyUsedObjects[inode.Hash] = numCopies
 			}
 		}
 		err = fsutil.ForceRename(objectPathname, fullPathname)
@@ -277,15 +279,25 @@ func makeSpecialInode(fullPathname string, inode *filesystem.SpecialInode,
 }
 
 func makeHardlinks(hardlinksToMake []sub.Hardlink, rootDirectoryName string,
-	triggers *triggers.Triggers, takeAction bool, logger *log.Logger) {
+	triggers *triggers.Triggers, tmpDir string, takeAction bool,
+	logger *log.Logger) {
+	tmpName := path.Join(tmpDir, "temporaryHardlink")
 	for _, hardlink := range hardlinksToMake {
 		triggers.Match(hardlink.NewLink)
 		if takeAction {
 			targetPathname := path.Join(rootDirectoryName, hardlink.Target)
 			linkPathname := path.Join(rootDirectoryName, hardlink.NewLink)
-			if err := fsutil.ForceLink(targetPathname,
-				linkPathname); err != nil {
+			// A Link directly to linkPathname will fail if it exists, so do a
+			// Link+Rename using a temporary filename.
+			if err := fsutil.ForceLink(targetPathname, tmpName); err != nil {
 				logger.Println(err)
+				continue
+			}
+			if err := fsutil.ForceRename(tmpName, linkPathname); err != nil {
+				logger.Println(err)
+				if err := fsutil.ForceRemove(tmpName); err != nil {
+					logger.Println(err)
+				}
 			} else {
 				logger.Printf("Linked: %s => %s\n",
 					linkPathname, targetPathname)

@@ -115,8 +115,8 @@ func pollImage(name string) (*filesystem.FileSystem, error) {
 	if reply.FileSystem == nil {
 		return nil, errors.New("no poll data")
 	}
-	reply.FileSystem.FileSystem.RebuildInodePointers()
-	return &reply.FileSystem.FileSystem, nil
+	reply.FileSystem.RebuildInodePointers()
+	return reply.FileSystem, nil
 }
 
 func diffImages(tool string, lfs, rfs *filesystem.FileSystem) error {

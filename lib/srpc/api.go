@@ -73,10 +73,19 @@ func (client *Client) Close() error {
 
 // Call opens a buffered connection to the named Service.Method function, and
 // returns a connection handle and an error status. The connection handle wraps
-// a *bufio.ReadWriter. Only one connection can be made per Client. The Close
-// method must be called prior to attempting another Call.
+// a *bufio.ReadWriter. Only one connection can be made per Client. The Call
+// method will block if another Call is in progress. The Close method must be
+// called prior to attempting another Call.
 func (client *Client) Call(serviceMethod string) (*Conn, error) {
 	return client.call(serviceMethod)
+}
+
+// Ping sends a short "are you alive?" request and waits for a response. No
+// method permissions are required for this operation. The Ping method is a
+// wrapper around the Call method and hence will block if a Call is already in
+// progress.
+func (client *Client) Ping() error {
+	return client.ping()
 }
 
 type Conn struct {
