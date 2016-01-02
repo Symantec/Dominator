@@ -100,14 +100,14 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 	t.makeObjectCopies(request.MultiplyUsedObjects)
 	t.lastUpdateHadTriggerFailures = false
 	if len(oldTriggers.Triggers) > 0 {
+		t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
+			&oldTriggers, false)
 		t.makeInodes(request.InodesToMake, rootDirectoryName,
 			request.MultiplyUsedObjects, &oldTriggers, false)
 		makeHardlinks(request.HardlinksToMake, rootDirectoryName,
 			&oldTriggers, "", false, t.logger)
 		doDeletes(request.PathsToDelete, rootDirectoryName, &oldTriggers, false,
 			t.logger)
-		t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
-			&oldTriggers, false)
 		changeInodes(request.InodesToChange, rootDirectoryName, &oldTriggers,
 			false, t.logger)
 		matchedOldTriggers := oldTriggers.GetMatchedTriggers()
@@ -115,14 +115,14 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 			t.lastUpdateHadTriggerFailures = true
 		}
 	}
+	t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
+		request.Triggers, true)
 	t.makeInodes(request.InodesToMake, rootDirectoryName,
 		request.MultiplyUsedObjects, request.Triggers, true)
 	makeHardlinks(request.HardlinksToMake, rootDirectoryName,
 		request.Triggers, t.objectsDir, true, t.logger)
 	doDeletes(request.PathsToDelete, rootDirectoryName, request.Triggers, true,
 		t.logger)
-	t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
-		request.Triggers, true)
 	changeInodes(request.InodesToChange, rootDirectoryName, request.Triggers,
 		true, t.logger)
 	matchedNewTriggers := request.Triggers.GetMatchedTriggers()
