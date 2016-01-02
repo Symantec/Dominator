@@ -115,6 +115,7 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 			t.lastUpdateHadTriggerFailures = true
 		}
 	}
+	fsChangeStartTime := time.Now()
 	t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
 		request.Triggers, true)
 	t.makeInodes(request.InodesToMake, rootDirectoryName,
@@ -125,6 +126,7 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 		t.logger)
 	changeInodes(request.InodesToChange, rootDirectoryName, request.Triggers,
 		true, t.logger)
+	fsChangeDuration := time.Since(fsChangeStartTime)
 	matchedNewTriggers := request.Triggers.GetMatchedTriggers()
 	file, err = os.Create(t.oldTriggersFilename)
 	if err == nil {
@@ -142,7 +144,8 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 		t.lastUpdateHadTriggerFailures = true
 	}
 	timeTaken := time.Since(startTime)
-	t.logger.Printf("Update() completed in %s\n", timeTaken)
+	t.logger.Printf("Update() completed in %s (change window: %s)\n",
+		timeTaken, fsChangeDuration)
 }
 
 func (t *rpcType) clearUpdateInProgress() {
