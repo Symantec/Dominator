@@ -17,17 +17,7 @@ func (t *rpcType) Poll(conn *srpc.Conn) {
 		conn.WriteString(err.Error() + "\n")
 		return
 	}
-	if err := t.poll(request, &response); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
-	}
 	conn.WriteString("\n")
-	encoder := gob.NewEncoder(conn)
-	encoder.Encode(response)
-}
-
-func (t *rpcType) poll(request sub.PollRequest, reply *sub.PollResponse) error {
-	var response sub.PollResponse
 	response.NetworkSpeed = t.networkReaderContext.MaximumSpeed()
 	t.rwLock.RLock()
 	response.FetchInProgress = t.fetchInProgress
@@ -41,6 +31,6 @@ func (t *rpcType) poll(request sub.PollRequest, reply *sub.PollResponse) error {
 		response.FileSystem = &fs.FileSystem
 		response.ObjectCache = fs.ObjectCache
 	}
-	*reply = response
-	return nil
+	encoder := gob.NewEncoder(conn)
+	encoder.Encode(response)
 }
