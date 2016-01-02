@@ -45,7 +45,7 @@ func pollSubcommand(srpcClient *srpc.Client, args []string) {
 			if *debug {
 				fs.List(os.Stdout)
 			} else {
-				fmt.Print(fs)
+				fmt.Println(fs)
 			}
 			if *file != "" {
 				f, err := os.Create(*file)

@@ -1,6 +1,8 @@
 package filesystem
 
 import (
+	"fmt"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/hash"
 	"io"
 )
@@ -47,6 +49,13 @@ func (fs *FileSystem) ComputeTotalDataBytes() {
 
 func (fs *FileSystem) List(w io.Writer) error {
 	return fs.list(w)
+}
+
+func (fs *FileSystem) String() string {
+	return fmt.Sprintf("Tree: %d inodes, total file size: %s, number of regular inodes: %d",
+		len(fs.InodeTable),
+		format.FormatBytes(fs.TotalDataBytes),
+		fs.NumRegularInodes)
 }
 
 type DirectoryInode struct {
