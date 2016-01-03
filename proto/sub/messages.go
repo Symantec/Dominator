@@ -37,8 +37,9 @@ type PollResponse struct {
 	LastUpdateHadTriggerFailures bool
 	GenerationCount              uint64
 	FileSystem                   *filesystem.FileSystem
+	FileSystemFollows            bool
 	ObjectCache                  objectcache.ObjectCache
-}
+} // FileSystem is encoded afterwards.
 
 type SetConfigurationRequest Configuration
 

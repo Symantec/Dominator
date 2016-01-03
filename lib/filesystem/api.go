@@ -47,6 +47,14 @@ func (fs *FileSystem) ComputeTotalDataBytes() {
 	fs.computeTotalDataBytes()
 }
 
+func Decode(reader io.Reader) (*FileSystem, error) {
+	return decode(reader)
+}
+
+func (fs *FileSystem) Encode(writer io.Writer) error {
+	return fs.encode(writer)
+}
+
 func (fs *FileSystem) List(w io.Writer) error {
 	return fs.list(w)
 }

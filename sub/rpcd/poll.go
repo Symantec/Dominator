@@ -6,6 +6,7 @@ import (
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
+// TODO(rgooch): return error once srpc package supports it.
 func (t *rpcType) Poll(conn *srpc.Conn) {
 	defer conn.Flush()
 	t.pollLock.Lock()
@@ -28,9 +29,17 @@ func (t *rpcType) Poll(conn *srpc.Conn) {
 	fs := t.fileSystemHistory.FileSystem()
 	if fs != nil &&
 		request.HaveGeneration != t.fileSystemHistory.GenerationCount() {
-		response.FileSystem = &fs.FileSystem
+		response.FileSystemFollows = true
 		response.ObjectCache = fs.ObjectCache
 	}
 	encoder := gob.NewEncoder(conn)
-	encoder.Encode(response)
+	if err := encoder.Encode(response); err != nil {
+		return // err
+	}
+	if response.FileSystemFollows {
+		if err := fs.FileSystem.Encode(conn); err != nil {
+			return // err
+		}
+	}
+	return // nil
 }
