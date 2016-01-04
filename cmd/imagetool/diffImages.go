@@ -63,6 +63,28 @@ func diffImageVSub(client *srpc.Client, tool, image, sub string) error {
 	return diffImages(tool, lfs, rfs)
 }
 
+func diffSubVImageSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
+	objectClient *objectclient.ObjectClient, args []string) {
+	err := diffSubVImage(imageSClient, args[0], args[1], args[2])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error diffing images\t%s\n", err)
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
+func diffSubVImage(client *srpc.Client, tool, sub, image string) error {
+	lfs, err := pollImage(sub)
+	if err != nil {
+		return err
+	}
+	rfs, err := getImage(client, image)
+	if err != nil {
+		return err
+	}
+	return diffImages(tool, lfs, rfs)
+}
+
 func diffSubVSubSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
 	err := diffSubVSub(args[0], args[1], args[2])
