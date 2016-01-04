@@ -6,22 +6,23 @@ import (
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
 
-func (t *srpcType) DeleteImage(conn *srpc.Conn) {
+func (t *srpcType) DeleteImage(conn *srpc.Conn) error {
 	defer conn.Flush()
 	var request imageserver.DeleteImageRequest
 	var response imageserver.DeleteImageResponse
 	decoder := gob.NewDecoder(conn)
 	if err := decoder.Decode(&request); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
+		_, err = conn.WriteString(err.Error() + "\n")
+		return err
 	}
 	if err := t.deleteImage(request, &response); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
+		_, err = conn.WriteString(err.Error() + "\n")
+		return err
 	}
-	conn.WriteString("\n")
-	encoder := gob.NewEncoder(conn)
-	encoder.Encode(response)
+	if _, err := conn.WriteString("\n"); err != nil {
+		return err
+	}
+	return gob.NewEncoder(conn).Encode(response)
 }
 
 func (t *srpcType) deleteImage(request imageserver.DeleteImageRequest,

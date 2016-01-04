@@ -6,8 +6,7 @@ import (
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
-// TODO(rgooch): return error once srpc package supports it.
-func (t *rpcType) Poll(conn *srpc.Conn) {
+func (t *rpcType) Poll(conn *srpc.Conn) error {
 	defer conn.Flush()
 	t.pollLock.Lock()
 	defer t.pollLock.Unlock()
@@ -15,10 +14,12 @@ func (t *rpcType) Poll(conn *srpc.Conn) {
 	var response sub.PollResponse
 	decoder := gob.NewDecoder(conn)
 	if err := decoder.Decode(&request); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
+		_, err = conn.WriteString(err.Error() + "\n")
+		return err
 	}
-	conn.WriteString("\n")
+	if _, err := conn.WriteString("\n"); err != nil {
+		return err
+	}
 	response.NetworkSpeed = t.networkReaderContext.MaximumSpeed()
 	t.rwLock.RLock()
 	response.FetchInProgress = t.fetchInProgress
@@ -34,12 +35,12 @@ func (t *rpcType) Poll(conn *srpc.Conn) {
 	}
 	encoder := gob.NewEncoder(conn)
 	if err := encoder.Encode(response); err != nil {
-		return // err
+		return err
 	}
 	if response.FileSystemFollows {
 		if err := fs.FileSystem.Encode(conn); err != nil {
-			return // err
+			return err
 		}
 	}
-	return // nil
+	return nil
 }

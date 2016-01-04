@@ -6,22 +6,23 @@ import (
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
-func (t *rpcType) GetConfiguration(conn *srpc.Conn) {
+func (t *rpcType) GetConfiguration(conn *srpc.Conn) error {
 	defer conn.Flush()
 	var request sub.GetConfigurationRequest
 	var response sub.GetConfigurationResponse
 	decoder := gob.NewDecoder(conn)
 	if err := decoder.Decode(&request); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
+		_, err = conn.WriteString(err.Error() + "\n")
+		return err
 	}
 	if err := t.getConfiguration(request, &response); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
+		_, err = conn.WriteString(err.Error() + "\n")
+		return err
 	}
-	conn.WriteString("\n")
-	encoder := gob.NewEncoder(conn)
-	encoder.Encode(response)
+	if _, err := conn.WriteString("\n"); err != nil {
+		return err
+	}
+	return gob.NewEncoder(conn).Encode(response)
 }
 
 func (t *rpcType) getConfiguration(request sub.GetConfigurationRequest,
