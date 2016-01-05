@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 )
@@ -31,11 +32,14 @@ func callPoll(client *srpc.Client, request sub.PollRequest,
 		return err
 	}
 	if reply.FileSystemFollows {
-		fs, err := filesystem.Decode(conn)
+		reply.FileSystem, err = filesystem.Decode(conn)
 		if err != nil {
 			return err
 		}
-		reply.FileSystem = fs
+		reply.ObjectCache, err = objectcache.Decode(conn)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

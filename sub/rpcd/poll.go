@@ -31,7 +31,6 @@ func (t *rpcType) Poll(conn *srpc.Conn) error {
 	if fs != nil &&
 		request.HaveGeneration != t.fileSystemHistory.GenerationCount() {
 		response.FileSystemFollows = true
-		response.ObjectCache = fs.ObjectCache
 	}
 	encoder := gob.NewEncoder(conn)
 	if err := encoder.Encode(response); err != nil {
@@ -39,6 +38,9 @@ func (t *rpcType) Poll(conn *srpc.Conn) error {
 	}
 	if response.FileSystemFollows {
 		if err := fs.FileSystem.Encode(conn); err != nil {
+			return err
+		}
+		if err := fs.ObjectCache.Encode(conn); err != nil {
 			return err
 		}
 	}
