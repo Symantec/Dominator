@@ -4,6 +4,7 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/objectserver"
 	"io"
+	"log"
 	"sync"
 )
 
@@ -23,9 +24,9 @@ type ImageDataBase struct {
 	objectServer objectserver.ObjectServer
 }
 
-func LoadImageDataBase(baseDir string, objSrv objectserver.ObjectServer) (
-	*ImageDataBase, error) {
-	return loadImageDataBase(baseDir, objSrv)
+func LoadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
+	logger *log.Logger) (*ImageDataBase, error) {
+	return loadImageDataBase(baseDir, objSrv, logger)
 }
 
 func (imdb *ImageDataBase) WriteHtml(writer io.Writer) {

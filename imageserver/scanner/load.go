@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/objectserver"
+	"log"
 	"os"
 	"path"
 	"syscall"
+	"time"
 )
 
-func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer) (
-	*ImageDataBase, error) {
+func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
+	logger *log.Logger) (*ImageDataBase, error) {
 	fi, err := os.Stat(baseDir)
 	if err != nil {
 		return nil, errors.New(
@@ -25,8 +27,17 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer) (
 	imdb.baseDir = baseDir
 	imdb.imageMap = make(map[string]*image.Image)
 	imdb.objectServer = objSrv
+	startTime := time.Now()
 	if err = imdb.scanDirectory(""); err != nil {
 		return nil, err
+	}
+	if logger != nil {
+		plural := ""
+		if imdb.CountImages() != 1 {
+			plural = "s"
+		}
+		logger.Printf("Loaded %d image%s in %s\n",
+			imdb.CountImages(), plural, time.Since(startTime))
 	}
 	return imdb, nil
 }
