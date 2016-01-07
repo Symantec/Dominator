@@ -146,11 +146,11 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 	if image == nil {
 		return false, statusImageNotReady
 	}
-	missingObjects := make(map[hash.Hash]bool)
+	missingObjects := make(map[hash.Hash]struct{})
 	for _, inode := range image.FileSystem.InodeTable {
 		if inode, ok := inode.(*filesystem.RegularInode); ok {
 			if inode.Size > 0 {
-				missingObjects[inode.Hash] = true
+				missingObjects[inode.Hash] = struct{}{}
 			}
 		}
 	}
