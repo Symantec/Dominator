@@ -51,7 +51,7 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
 	fmt.Fprintln(writer, "    <th>Update Compute</th>")
 	fmt.Fprintln(writer, "  </tr>")
 	subs := herd.getSelectedSubs(selectFunc)
-	missingImages := make(map[string]bool)
+	missingImages := make(map[string]struct{})
 	for _, sub := range subs {
 		showSub(writer, sub, missingImages)
 	}
@@ -59,7 +59,7 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
 	fmt.Fprintln(writer, "</body>")
 }
 
-func showSub(writer io.Writer, sub *Sub, missingImages map[string]bool) {
+func showSub(writer io.Writer, sub *Sub, missingImages map[string]struct{}) {
 	fmt.Fprintf(writer, "  <tr>\n")
 	subURL := fmt.Sprintf("http://%s:%d/",
 		strings.SplitN(sub.hostname, "*", 2)[0], constants.SubPortNumber)
@@ -127,11 +127,11 @@ func showSub(writer io.Writer, sub *Sub, missingImages map[string]bool) {
 }
 
 func (herd *Herd) showImage(writer io.Writer, name string,
-	missingImages map[string]bool) {
+	missingImages map[string]struct{}) {
 	found := false
-	if !missingImages[name] {
+	if _, ok := missingImages[name]; !ok {
 		if herd.getImage(name) == nil {
-			missingImages[name] = true
+			missingImages[name] = struct{}{}
 		} else {
 			found = true
 		}
