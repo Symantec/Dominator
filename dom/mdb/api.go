@@ -23,6 +23,6 @@ func (mdb *Mdb) DebugWrite(w io.Writer) error {
 	return mdb.debugWrite(w)
 }
 
-func StartMdbDaemon(mdbDir string, logger *log.Logger) <-chan *Mdb {
-	return startMdbDaemon(mdbDir, logger)
+func StartMdbDaemon(mdbFileName string, logger *log.Logger) <-chan *Mdb {
+	return startMdbDaemon(mdbFileName, logger)
 }
