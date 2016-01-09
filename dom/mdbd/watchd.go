@@ -1,8 +1,9 @@
-package mdb
+package mdbd
 
 import (
 	"encoding/gob"
 	"encoding/json"
+	"github.com/Symantec/Dominator/lib/mdb"
 	"log"
 	"os"
 	"path"
@@ -11,8 +12,8 @@ import (
 	"time"
 )
 
-func startMdbDaemon(mdbFileName string, logger *log.Logger) <-chan *Mdb {
-	mdbChannel := make(chan *Mdb)
+func startMdbDaemon(mdbFileName string, logger *log.Logger) <-chan *mdb.Mdb {
+	mdbChannel := make(chan *mdb.Mdb)
 	go watchDaemon(mdbFileName, mdbChannel, logger)
 	return mdbChannel
 }
@@ -21,10 +22,10 @@ type genericDecoder interface {
 	Decode(v interface{}) error
 }
 
-func watchDaemon(mdbFileName string, mdbChannel chan<- *Mdb,
+func watchDaemon(mdbFileName string, mdbChannel chan<- *mdb.Mdb,
 	logger *log.Logger) {
 	var lastStat syscall.Stat_t
-	var lastMdb *Mdb
+	var lastMdb *mdb.Mdb
 	for ; ; time.Sleep(time.Second) {
 		var stat syscall.Stat_t
 		if err := syscall.Stat(mdbFileName, &stat); err != nil {
@@ -50,14 +51,14 @@ func watchDaemon(mdbFileName string, mdbChannel chan<- *Mdb,
 	}
 }
 
-func loadFile(mdbFileName string, logger *log.Logger) *Mdb {
+func loadFile(mdbFileName string, logger *log.Logger) *mdb.Mdb {
 	file, err := os.Open(mdbFileName)
 	if err != nil {
 		logger.Printf("Error opening file\t%s\n", err)
 		return nil
 	}
 	decoder := getDecoder(file)
-	var mdb Mdb
+	var mdb mdb.Mdb
 	decodeStartTime := time.Now()
 	if err = decoder.Decode(&mdb.Machines); err != nil {
 		logger.Printf("Error decoding\t%s\n", err)
@@ -79,7 +80,7 @@ func getDecoder(mdbFile *os.File) genericDecoder {
 	}
 }
 
-func compare(oldMdb, newMdb *Mdb) bool {
+func compare(oldMdb, newMdb *mdb.Mdb) bool {
 	if len(oldMdb.Machines) != len(newMdb.Machines) {
 		return false
 	}
@@ -89,17 +90,4 @@ func compare(oldMdb, newMdb *Mdb) bool {
 		}
 	}
 	return true
-}
-
-func (mdb *Mdb) Less(left, right int) bool {
-	if mdb.Machines[left].Hostname < mdb.Machines[right].Hostname {
-		return true
-	}
-	return false
-}
-
-func (mdb *Mdb) Swap(left, right int) {
-	tmp := mdb.Machines[left]
-	mdb.Machines[left] = mdb.Machines[right]
-	mdb.Machines[right] = tmp
 }

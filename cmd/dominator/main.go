@@ -5,9 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/dom/herd"
-	"github.com/Symantec/Dominator/dom/mdb"
+	"github.com/Symantec/Dominator/dom/mdbd"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/logbuf"
+	"github.com/Symantec/Dominator/lib/mdb"
 	"log"
 	"os"
 	"os/user"
@@ -124,7 +125,7 @@ func main() {
 	interval := time.Duration(*minInterval) * time.Second
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
-	mdbChannel := mdb.StartMdbDaemon(path.Join(*stateDir, *mdbFile), logger)
+	mdbChannel := mdbd.StartMdbDaemon(path.Join(*stateDir, *mdbFile), logger)
 	herd := herd.NewHerd(fmt.Sprintf("%s:%d", *imageServerHostname,
 		*imageServerPortNum), logger)
 	herd.AddHtmlWriter(circularBuffer)

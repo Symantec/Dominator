@@ -1,4 +1,4 @@
-package mdb
+package mdbd
 
 import (
 	"github.com/Symantec/tricorder/go/tricorder"
