@@ -1,9 +1,11 @@
 package mdb
 
 import (
+	"encoding/gob"
 	"encoding/json"
 	"log"
 	"os"
+	"path"
 	"sort"
 	"syscall"
 	"time"
@@ -13,6 +15,10 @@ func startMdbDaemon(mdbFileName string, logger *log.Logger) <-chan *Mdb {
 	mdbChannel := make(chan *Mdb)
 	go watchDaemon(mdbFileName, mdbChannel, logger)
 	return mdbChannel
+}
+
+type genericDecoder interface {
+	Decode(v interface{}) error
 }
 
 func watchDaemon(mdbFileName string, mdbChannel chan<- *Mdb,
@@ -27,32 +33,49 @@ func watchDaemon(mdbFileName string, mdbChannel chan<- *Mdb,
 		}
 		stat.Atim = lastStat.Atim
 		if stat != lastStat {
-			file, err := os.Open(mdbFileName)
-			if err != nil {
-				logger.Printf("Error opening file\t%s\n", err)
+			mdb := loadFile(mdbFileName, logger)
+			if mdb == nil {
 				continue
 			}
-			decoder := json.NewDecoder(file)
-			var mdb Mdb
-			decodeStartTime := time.Now()
-			if err = decoder.Decode(&mdb.Machines); err != nil {
-				logger.Printf("Error decoding\t%s\n", err)
-				continue
-			}
-			sortStartTime := time.Now()
-			mdbDecodeTimeDistribution.Add(sortStartTime.Sub(decodeStartTime))
-			sort.Sort(&mdb)
 			compareStartTime := time.Now()
-			mdbSortTimeDistribution.Add(compareStartTime.Sub(sortStartTime))
-			if lastMdb == nil || !compare(lastMdb, &mdb) {
+			if lastMdb == nil || !compare(lastMdb, mdb) {
 				if lastMdb != nil {
 					mdbCompareTimeDistribution.Add(time.Since(compareStartTime))
 				}
-				mdbChannel <- &mdb
-				lastMdb = &mdb
+				mdbChannel <- mdb
+				lastMdb = mdb
 			}
 			lastStat = stat
 		}
+	}
+}
+
+func loadFile(mdbFileName string, logger *log.Logger) *Mdb {
+	file, err := os.Open(mdbFileName)
+	if err != nil {
+		logger.Printf("Error opening file\t%s\n", err)
+		return nil
+	}
+	decoder := getDecoder(file)
+	var mdb Mdb
+	decodeStartTime := time.Now()
+	if err = decoder.Decode(&mdb.Machines); err != nil {
+		logger.Printf("Error decoding\t%s\n", err)
+		return nil
+	}
+	sortStartTime := time.Now()
+	mdbDecodeTimeDistribution.Add(sortStartTime.Sub(decodeStartTime))
+	sort.Sort(&mdb)
+	mdbSortTimeDistribution.Add(time.Since(sortStartTime))
+	return &mdb
+}
+
+func getDecoder(mdbFile *os.File) genericDecoder {
+	switch path.Ext(mdbFile.Name()) {
+	case ".gob":
+		return gob.NewDecoder(mdbFile)
+	default:
+		return json.NewDecoder(mdbFile)
 	}
 }
 
