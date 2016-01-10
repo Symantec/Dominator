@@ -9,6 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Symantec/tricorder/go/tricorder"
 	"log"
 	"os"
 	"os/user"
@@ -100,6 +101,7 @@ func pathJoin(first, second string) string {
 
 func main() {
 	flag.Parse()
+	tricorder.RegisterFlags()
 	setupTls(*caFile,
 		pathJoin(*certDir, *certFile), pathJoin(*certDir, *keyFile))
 	rlim := syscall.Rlimit{*fdLimit, *fdLimit}
