@@ -8,10 +8,12 @@ import (
 	"errors"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"log"
+	"net/http"
 	"os"
 	"path"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -57,6 +59,9 @@ func sleepUntil(wakeTime time.Time) {
 }
 
 func loadMdb(driverFunc driverFunc, url string, logger *log.Logger) *mdb.Mdb {
+	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
+		return loadHttpMdb(driverFunc, url, logger)
+	}
 	file, err := os.Open(url)
 	if err != nil {
 		logger.Println("Error opening file " + err.Error())
@@ -64,6 +69,21 @@ func loadMdb(driverFunc driverFunc, url string, logger *log.Logger) *mdb.Mdb {
 	}
 	defer file.Close()
 	return driverFunc(bufio.NewReader(file), logger)
+}
+
+func loadHttpMdb(driverFunc driverFunc, url string,
+	logger *log.Logger) *mdb.Mdb {
+	response, err := http.Get(url)
+	if err != nil {
+		logger.Println(err)
+		return nil
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		logger.Println("HTTP get failed: " + err.Error())
+		return nil
+	}
+	return driverFunc(response.Body, logger)
 }
 
 func selectHosts(inMdb *mdb.Mdb, hostnameRE *regexp.Regexp) *mdb.Mdb {
