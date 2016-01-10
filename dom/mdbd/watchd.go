@@ -57,6 +57,7 @@ func loadFile(mdbFileName string, logger *log.Logger) *mdb.Mdb {
 		logger.Printf("Error opening file\t%s\n", err)
 		return nil
 	}
+	defer file.Close()
 	decoder := getDecoder(file)
 	var mdb mdb.Mdb
 	decodeStartTime := time.Now()
