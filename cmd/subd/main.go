@@ -220,6 +220,7 @@ func writePidfile() {
 
 func main() {
 	flag.Parse()
+	tricorder.RegisterFlags()
 	setupTls(*caFile, *certFile, *keyFile)
 	subdDirPathname := path.Join(*rootDir, *subdDir)
 	workingRootDir := path.Join(subdDirPathname, "root")

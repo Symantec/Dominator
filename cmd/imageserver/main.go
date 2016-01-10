@@ -37,6 +37,7 @@ var (
 
 func main() {
 	flag.Parse()
+	tricorder.RegisterFlags()
 	if os.Geteuid() == 0 {
 		fmt.Fprintln(os.Stderr, "Do not run the Image Server as root")
 		os.Exit(1)
