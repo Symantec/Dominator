@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/gob"
 	"encoding/json"
 	"errors"
@@ -62,20 +64,25 @@ func writeMdb(mdb *mdb.Mdb, mdbFileName string) error {
 	}
 	defer os.Remove(tmpFileName)
 	defer file.Close()
-	encoder := getEncoder(file)
-	if err = encoder.Encode(mdb.Machines); err != nil {
-		return errors.New("Error encoding " + err.Error())
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+	switch path.Ext(mdbFileName) {
+	case ".gob":
+		if err := gob.NewEncoder(writer).Encode(mdb.Machines); err != nil {
+			return err
+		}
+	default:
+		b, err := json.Marshal(mdb.Machines)
+		if err != nil {
+			return err
+		}
+		var out bytes.Buffer
+		json.Indent(&out, b, "", "    ")
+		_, err = out.WriteTo(writer)
+		if err != nil {
+			return err
+		}
+		writer.Write([]byte("\n"))
 	}
 	return os.Rename(tmpFileName, mdbFileName)
-}
-
-func getEncoder(mdbFile *os.File) genericEncoder {
-	name := mdbFile.Name()
-	name = mdbFile.Name()[:len(name)-1]
-	switch path.Ext(name) {
-	case ".gob":
-		return gob.NewEncoder(mdbFile)
-	default:
-		return json.NewEncoder(mdbFile)
-	}
 }
