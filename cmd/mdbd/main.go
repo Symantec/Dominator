@@ -28,6 +28,8 @@ func printUsage() {
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Drivers:")
 	fmt.Fprintln(os.Stderr,
+		"  ds.host.fqdn: JSON with map of map of hosts with fqdn entries")
+	fmt.Fprintln(os.Stderr,
 		"  text: each line contains: host required-image planned-image")
 }
 
@@ -40,6 +42,7 @@ type driver struct {
 
 var drivers = []driver{
 	{"text", loadText},
+	{"ds.host.fqdn", loadDsHostFqdn},
 }
 
 func getLogger() *log.Logger {
