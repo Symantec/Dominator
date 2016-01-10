@@ -12,12 +12,12 @@ import (
 var (
 	fetchInterval = flag.Uint("fetchInterval", 59,
 		"Interval between fetches from the MDB source, in seconds")
+	hostnameRegex = flag.String("hostnameRegex", ".*",
+		"A regular expression to match the desired hostnames")
 	mdbFile = flag.String("mdbFile", "/var/lib/Dominator/mdb",
 		"Name of file to write filtered MDB data to")
 	useSyslog = flag.Bool("syslog", false, "If true, log to syslog")
 	url       = flag.String("url", "", "Location of MDB source")
-	zone      = flag.String("zone", "",
-		"The zone (typically a datacentre) to select")
 )
 
 func printUsage() {
@@ -62,8 +62,8 @@ func main() {
 	}
 	for _, driver := range drivers {
 		if flag.Arg(0) == driver.name {
-			runDaemon(driver.driverFunc, *url, *mdbFile, *zone, *fetchInterval,
-				getLogger())
+			runDaemon(driver.driverFunc, *url, *mdbFile, *hostnameRegex,
+				*fetchInterval, getLogger())
 		}
 	}
 	printUsage()

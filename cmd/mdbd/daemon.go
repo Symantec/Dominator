@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"sort"
 	"time"
 )
@@ -18,12 +19,22 @@ type genericEncoder interface {
 	Encode(v interface{}) error
 }
 
-func runDaemon(driverFunc driverFunc, url, mdbFileName, zone string,
+func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
 	fetchInterval uint, logger *log.Logger) {
 	var prevMdb *mdb.Mdb
+	var hostnameRE *regexp.Regexp
+	var err error
+	if hostnameRegex != ".*" {
+		hostnameRE, err = regexp.Compile("^" + hostnameRegex)
+		if err != nil {
+			logger.Println(err)
+			os.Exit(1)
+		}
+	}
 	for {
 		cycleStopTime := time.Now().Add(time.Duration(fetchInterval))
 		if newMdb := driverFunc(url, logger); newMdb != nil {
+			newMdb := selectHosts(newMdb, hostnameRE)
 			sort.Sort(newMdb)
 			if newMdbIsDifferent(prevMdb, newMdb) {
 				if err := writeMdb(newMdb, mdbFileName); err != nil {
@@ -39,6 +50,19 @@ func runDaemon(driverFunc driverFunc, url, mdbFileName, zone string,
 		}
 		time.Sleep(sleepTime)
 	}
+}
+
+func selectHosts(inMdb *mdb.Mdb, hostnameRE *regexp.Regexp) *mdb.Mdb {
+	if hostnameRE == nil {
+		return inMdb
+	}
+	var outMdb mdb.Mdb
+	for _, machine := range inMdb.Machines {
+		if hostnameRE.MatchString(machine.Hostname) {
+			outMdb.Machines = append(outMdb.Machines, machine)
+		}
+	}
+	return &outMdb
 }
 
 func newMdbIsDifferent(prevMdb, newMdb *mdb.Mdb) bool {
