@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	debug         = flag.Bool("debug", false, "If true, show debugging output")
 	fetchInterval = flag.Uint("fetchInterval", 59,
 		"Interval between fetches from the MDB source, in seconds")
 	hostnameRegex = flag.String("hostnameRegex", ".*",
@@ -54,7 +55,7 @@ func getLogger() *log.Logger {
 		}
 		return logger
 	}
-	return log.New(os.Stderr, "mdbd", 0)
+	return log.New(os.Stderr, "mdbd: ", 0)
 }
 
 func main() {
@@ -67,7 +68,7 @@ func main() {
 	for _, driver := range drivers {
 		if flag.Arg(0) == driver.name {
 			runDaemon(driver.driverFunc, *url, *mdbFile, *hostnameRegex,
-				*fetchInterval, getLogger())
+				*fetchInterval, getLogger(), *debug)
 		}
 	}
 	printUsage()

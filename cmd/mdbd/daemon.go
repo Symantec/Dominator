@@ -23,7 +23,7 @@ type genericEncoder interface {
 }
 
 func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
-	fetchInterval uint, logger *log.Logger) {
+	fetchInterval uint, logger *log.Logger, debug bool) {
 	var prevMdb *mdb.Mdb
 	var hostnameRE *regexp.Regexp
 	var err error
@@ -44,8 +44,15 @@ func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
 				if err := writeMdb(newMdb, mdbFileName); err != nil {
 					logger.Println(err)
 				} else {
+					if debug {
+						logger.Printf("Wrote new MDB data, %d machines\n",
+							len(newMdb.Machines))
+					}
 					prevMdb = newMdb
 				}
+			} else if debug {
+				logger.Printf("Refreshed MDB data, same %d machines\n",
+					len(newMdb.Machines))
 			}
 		}
 	}
