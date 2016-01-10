@@ -26,6 +26,8 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Drivers:")
+	fmt.Fprintln(os.Stderr,
+		"  text: each line contains: host required-image planned-image")
 }
 
 type driverFunc func(url string, logger *log.Logger) *mdb.Mdb
@@ -35,7 +37,9 @@ type driver struct {
 	driverFunc driverFunc
 }
 
-var drivers = []driver{}
+var drivers = []driver{
+	{"text", loadFromTextFile},
+}
 
 func getLogger() *log.Logger {
 	if *useSyslog {
