@@ -6,8 +6,8 @@ import (
 
 type Machine struct {
 	Hostname      string
-	RequiredImage string
-	PlannedImage  string
+	RequiredImage string `json:",omitempty"`
+	PlannedImage  string `json:",omitempty"`
 }
 
 type Mdb struct {
