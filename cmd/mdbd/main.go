@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/mdb"
+	"io"
 	"log"
 	"log/syslog"
 	"os"
@@ -30,7 +31,7 @@ func printUsage() {
 		"  text: each line contains: host required-image planned-image")
 }
 
-type driverFunc func(url string, logger *log.Logger) *mdb.Mdb
+type driverFunc func(reader io.Reader, logger *log.Logger) *mdb.Mdb
 
 type driver struct {
 	name       string
@@ -38,7 +39,7 @@ type driver struct {
 }
 
 var drivers = []driver{
-	{"text", loadFromTextFile},
+	{"text", loadText},
 }
 
 func getLogger() *log.Logger {

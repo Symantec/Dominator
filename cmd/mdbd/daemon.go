@@ -31,9 +31,10 @@ func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
 			os.Exit(1)
 		}
 	}
-	for {
-		cycleStopTime := time.Now().Add(time.Duration(fetchInterval))
-		if newMdb := driverFunc(url, logger); newMdb != nil {
+	var cycleStopTime time.Time
+	for ; ; sleepUntil(cycleStopTime) {
+		cycleStopTime = time.Now().Add(time.Duration(fetchInterval))
+		if newMdb := loadMdb(driverFunc, url, logger); newMdb != nil {
 			newMdb := selectHosts(newMdb, hostnameRE)
 			sort.Sort(newMdb)
 			if newMdbIsDifferent(prevMdb, newMdb) {
@@ -44,12 +45,25 @@ func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
 				}
 			}
 		}
-		sleepTime := cycleStopTime.Sub(time.Now())
-		if sleepTime < time.Second {
-			sleepTime = time.Second
-		}
-		time.Sleep(sleepTime)
 	}
+}
+
+func sleepUntil(wakeTime time.Time) {
+	sleepTime := wakeTime.Sub(time.Now())
+	if sleepTime < time.Second {
+		sleepTime = time.Second
+	}
+	time.Sleep(sleepTime)
+}
+
+func loadMdb(driverFunc driverFunc, url string, logger *log.Logger) *mdb.Mdb {
+	file, err := os.Open(url)
+	if err != nil {
+		logger.Println("Error opening file " + err.Error())
+		return nil
+	}
+	defer file.Close()
+	return driverFunc(bufio.NewReader(file), logger)
 }
 
 func selectHosts(inMdb *mdb.Mdb, hostnameRE *regexp.Regexp) *mdb.Mdb {
