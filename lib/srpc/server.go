@@ -24,9 +24,10 @@ type receiverType struct {
 
 var receivers map[string]receiverType = make(map[string]receiverType)
 
-// Precompute the reflect type for net.Conn. Can't use net.Conn directly
-// because Typeof takes an empty interface value. This is annoying.
+// Precompute some reflect types. Can't use the types directly because Typeof
+// takes an empty interface value. This is annoying.
 var typeOfConn = reflect.TypeOf((**Conn)(nil)).Elem()
+var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
 
 func init() {
 	http.HandleFunc(rpcPath, unsecuredHttpHandler)
@@ -51,7 +52,10 @@ func registerName(name string, rcvr interface{}) error {
 		if methodType.In(1) != typeOfConn {
 			continue
 		}
-		if methodType.NumOut() != 0 {
+		if methodType.NumOut() != 1 {
+			continue
+		}
+		if methodType.Out(0) != typeOfError {
 			continue
 		}
 		receiver.methods[method.Name] = valueOfReceiver.Method(index)
@@ -129,28 +133,52 @@ func handleConnection(conn *Conn) {
 		}
 		if err != nil {
 			log.Println(err)
-			conn.WriteString(err.Error() + "\n")
+			if _, err := conn.WriteString(err.Error() + "\n"); err != nil {
+				log.Println(err)
+				return
+			}
 			continue
 		}
 		if serviceMethod == "\n" {
 			// Received a "ping" request, send response.
-			conn.WriteString("\n")
+			if _, err := conn.WriteString("\n"); err != nil {
+				log.Println(err)
+				return
+			}
 			continue
 		}
 		serviceMethod = serviceMethod[:len(serviceMethod)-1]
 		if !conn.checkPermitted(serviceMethod) {
-			conn.WriteString("access to method denied\n")
+			if _, e := conn.WriteString("access to method denied\n"); e != nil {
+				log.Println(e)
+				return
+			}
 			continue
 		}
 		method, err := findMethod(serviceMethod)
 		if err != nil {
-			conn.WriteString(err.Error() + "\n")
+			if _, err := conn.WriteString(err.Error() + "\n"); err != nil {
+				log.Println(err)
+				return
+			}
 			continue
 		} else {
-			conn.WriteString("\n")
+			if _, err := conn.WriteString("\n"); err != nil {
+				log.Println(err)
+				return
+			}
 		}
-		conn.Flush()
-		method.Call([]reflect.Value{reflect.ValueOf(conn)})
+		if err := conn.Flush(); err != nil {
+			log.Println(err)
+			return
+		}
+		returnValues := method.Call([]reflect.Value{reflect.ValueOf(conn)})
+		errInter := returnValues[0].Interface()
+		if errInter != nil {
+			err = errInter.(error)
+			log.Println(err)
+			return
+		}
 	}
 }
 

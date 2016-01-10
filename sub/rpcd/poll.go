@@ -6,7 +6,7 @@ import (
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
-func (t *rpcType) Poll(conn *srpc.Conn) {
+func (t *rpcType) Poll(conn *srpc.Conn) error {
 	defer conn.Flush()
 	t.pollLock.Lock()
 	defer t.pollLock.Unlock()
@@ -14,20 +14,12 @@ func (t *rpcType) Poll(conn *srpc.Conn) {
 	var response sub.PollResponse
 	decoder := gob.NewDecoder(conn)
 	if err := decoder.Decode(&request); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
+		_, err = conn.WriteString(err.Error() + "\n")
+		return err
 	}
-	if err := t.poll(request, &response); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
+	if _, err := conn.WriteString("\n"); err != nil {
+		return err
 	}
-	conn.WriteString("\n")
-	encoder := gob.NewEncoder(conn)
-	encoder.Encode(response)
-}
-
-func (t *rpcType) poll(request sub.PollRequest, reply *sub.PollResponse) error {
-	var response sub.PollResponse
 	response.NetworkSpeed = t.networkReaderContext.MaximumSpeed()
 	t.rwLock.RLock()
 	response.FetchInProgress = t.fetchInProgress
@@ -38,9 +30,19 @@ func (t *rpcType) poll(request sub.PollRequest, reply *sub.PollResponse) error {
 	fs := t.fileSystemHistory.FileSystem()
 	if fs != nil &&
 		request.HaveGeneration != t.fileSystemHistory.GenerationCount() {
-		response.FileSystem = &fs.FileSystem
-		response.ObjectCache = fs.ObjectCache
+		response.FileSystemFollows = true
 	}
-	*reply = response
+	encoder := gob.NewEncoder(conn)
+	if err := encoder.Encode(response); err != nil {
+		return err
+	}
+	if response.FileSystemFollows {
+		if err := fs.FileSystem.Encode(conn); err != nil {
+			return err
+		}
+		if err := fs.ObjectCache.Encode(conn); err != nil {
+			return err
+		}
+	}
 	return nil
 }

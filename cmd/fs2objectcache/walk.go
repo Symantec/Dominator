@@ -7,12 +7,12 @@ import (
 )
 
 type stateType struct {
-	processedInodes map[uint64]bool
+	processedInodes map[uint64]struct{}
 }
 
 func walk(rootDirName, dirName, objectsDir string) error {
 	var state stateType
-	state.processedInodes = make(map[uint64]bool)
+	state.processedInodes = make(map[uint64]struct{})
 	return state.walk(rootDirName, dirName, objectsDir)
 }
 
@@ -56,9 +56,9 @@ func (state *stateType) walk(rootDirName, dirName, objectsDir string) error {
 
 func (state *stateType) handleFile(pathname string, inum uint64,
 	objectsDir string) error {
-	if state.processedInodes[inum] {
+	if _, ok := state.processedInodes[inum]; ok {
 		return os.Remove(pathname)
 	}
-	state.processedInodes[inum] = true
+	state.processedInodes[inum] = struct{}{}
 	return convertToObject(pathname, objectsDir)
 }

@@ -21,68 +21,49 @@ import (
 func diffImageVImageSubcommand(imageClient *rpc.Client,
 	imageSClient *srpc.Client, objectClient *objectclient.ObjectClient,
 	args []string) {
-	err := diffImageVImage(imageSClient, args[0], args[1], args[2])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error diffing images\t%s\n", err)
-		os.Exit(1)
-	}
-	os.Exit(0)
-}
-
-func diffImageVImage(client *srpc.Client, tool, limage, rimage string) error {
-	lfs, err := getImage(client, limage)
-	if err != nil {
-		return err
-	}
-	rfs, err := getImage(client, rimage)
-	if err != nil {
-		return err
-	}
-	return diffImages(tool, lfs, rfs)
+	commonDiffSubcommand(imageSClient, args[0],
+		args[1], getImage, args[2], getImage)
 }
 
 func diffImageVSubSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
-	err := diffImageVSub(imageSClient, args[0], args[1], args[2])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error diffing images\t%s\n", err)
-		os.Exit(1)
-	}
-	os.Exit(0)
+	commonDiffSubcommand(imageSClient, args[0],
+		args[1], getImage, args[2], pollImage)
 }
 
-func diffImageVSub(client *srpc.Client, tool, image, sub string) error {
-	lfs, err := getImage(client, image)
-	if err != nil {
-		return err
-	}
-	rfs, err := pollImage(sub)
-	if err != nil {
-		return err
-	}
-	return diffImages(tool, lfs, rfs)
+func diffSubVImageSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
+	objectClient *objectclient.ObjectClient, args []string) {
+	commonDiffSubcommand(imageSClient, args[0],
+		args[1], pollImage, args[2], getImage)
 }
 
 func diffSubVSubSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, args []string) {
-	err := diffSubVSub(args[0], args[1], args[2])
+	commonDiffSubcommand(imageSClient, args[0],
+		args[1], pollImage, args[2], pollImage)
+}
+
+func commonDiffSubcommand(client *srpc.Client, tool string,
+	lName string, lGetFunc func(client *srpc.Client, name string) (
+		*filesystem.FileSystem, error),
+	rName string, rGetFunc func(client *srpc.Client, name string) (
+		*filesystem.FileSystem, error)) {
+	lfs, err := lGetFunc(client, lName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting left image\t%s\n", err)
+		os.Exit(1)
+	}
+	rfs, err := rGetFunc(client, rName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting right image\t%s\n", err)
+		os.Exit(1)
+	}
+	err = diffImages(tool, lfs, rfs)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error diffing images\t%s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
-}
-
-func diffSubVSub(tool, subl, subr string) error {
-	lfs, err := pollImage(subl)
-	if err != nil {
-		return err
-	}
-	rfs, err := pollImage(subr)
-	if err != nil {
-		return err
-	}
-	return diffImages(tool, lfs, rfs)
 }
 
 func getImage(client *srpc.Client, name string) (
@@ -100,7 +81,8 @@ func getImage(client *srpc.Client, name string) (
 	return reply.Image.FileSystem, nil
 }
 
-func pollImage(name string) (*filesystem.FileSystem, error) {
+func pollImage(client *srpc.Client, name string) (
+	*filesystem.FileSystem, error) {
 	clientName := fmt.Sprintf("%s:%d", name, constants.SubPortNumber)
 	srpcClient, err := srpc.DialHTTP("tcp", clientName)
 	if err != nil {

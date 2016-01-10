@@ -45,8 +45,9 @@ func pollSubcommand(srpcClient *srpc.Client, args []string) {
 			if *debug {
 				fs.List(os.Stdout)
 			} else {
-				fmt.Print(fs)
+				fmt.Println(fs)
 			}
+			fmt.Printf("Num objects: %d\n", len(reply.ObjectCache))
 			if *file != "" {
 				f, err := os.Create(*file)
 				if err != nil {

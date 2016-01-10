@@ -5,9 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/dom/herd"
-	"github.com/Symantec/Dominator/dom/mdb"
+	"github.com/Symantec/Dominator/dom/mdbd"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/logbuf"
+	"github.com/Symantec/Dominator/lib/mdb"
 	"log"
 	"os"
 	"os/user"
@@ -38,6 +39,8 @@ var (
 		"Name of file (relative to certDir) containing the SSL certificate")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
+	mdbFile = flag.String("mdbFile", "mdb",
+		"File to read MDB data from, relative to stateDir (default format is JSON)")
 	minInterval = flag.Uint("minInterval", 1,
 		"Minimum interval between loops (in seconds)")
 	portNum = flag.Uint("portNum", constants.DomPortNumber,
@@ -122,7 +125,7 @@ func main() {
 	interval := time.Duration(*minInterval) * time.Second
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
-	mdbChannel := mdb.StartMdbDaemon(path.Join(*stateDir, "mdb"), logger)
+	mdbChannel := mdbd.StartMdbDaemon(path.Join(*stateDir, *mdbFile), logger)
 	herd := herd.NewHerd(fmt.Sprintf("%s:%d", *imageServerHostname,
 		*imageServerPortNum), logger)
 	herd.AddHtmlWriter(circularBuffer)

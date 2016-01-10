@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"time"
 )
 
 func newObjectServer(baseDir string, logger *log.Logger) (
@@ -27,9 +28,16 @@ func newObjectServer(baseDir string, logger *log.Logger) (
 		logger = log.New(os.Stdout, "", log.LstdFlags)
 	}
 	objSrv.logger = logger
+	startTime := time.Now()
 	if err = scanDirectory(&objSrv, baseDir, ""); err != nil {
 		return nil, err
 	}
+	plural := ""
+	if len(objSrv.sizesMap) != 1 {
+		plural = "s"
+	}
+	logger.Printf("Scanned %d object%s in %s\n",
+		len(objSrv.sizesMap), plural, time.Since(startTime))
 	return &objSrv, nil
 }
 

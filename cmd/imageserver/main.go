@@ -49,7 +49,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Cannot create ObjectServer\t%s\n", err)
 		os.Exit(1)
 	}
-	imdb, err := scanner.LoadImageDataBase(*imageDir, objSrv)
+	imdb, err := scanner.LoadImageDataBase(*imageDir, objSrv, logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot load image database\t%s\n", err)
 		os.Exit(1)

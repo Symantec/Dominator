@@ -33,21 +33,22 @@ var (
 		"If true, do not run any triggers. For debugging only")
 )
 
-func (t *rpcType) Update(conn *srpc.Conn) {
+func (t *rpcType) Update(conn *srpc.Conn) error {
 	var request sub.UpdateRequest
 	var response sub.UpdateResponse
 	decoder := gob.NewDecoder(conn)
 	if err := decoder.Decode(&request); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
+		_, err = conn.WriteString(err.Error() + "\n")
+		return err
 	}
 	if err := t.update(request, &response); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
+		_, err = conn.WriteString(err.Error() + "\n")
+		return err
 	}
-	conn.WriteString("\n")
-	encoder := gob.NewEncoder(conn)
-	encoder.Encode(response)
+	if _, err := conn.WriteString("\n"); err != nil {
+		return err
+	}
+	return gob.NewEncoder(conn).Encode(response)
 }
 
 func (t *rpcType) update(request sub.UpdateRequest,
@@ -115,6 +116,7 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 			t.lastUpdateHadTriggerFailures = true
 		}
 	}
+	fsChangeStartTime := time.Now()
 	t.makeDirectories(request.DirectoriesToMake, rootDirectoryName,
 		request.Triggers, true)
 	t.makeInodes(request.InodesToMake, rootDirectoryName,
@@ -125,6 +127,7 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 		t.logger)
 	changeInodes(request.InodesToChange, rootDirectoryName, request.Triggers,
 		true, t.logger)
+	fsChangeDuration := time.Since(fsChangeStartTime)
 	matchedNewTriggers := request.Triggers.GetMatchedTriggers()
 	file, err = os.Create(t.oldTriggersFilename)
 	if err == nil {
@@ -142,7 +145,8 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 		t.lastUpdateHadTriggerFailures = true
 	}
 	timeTaken := time.Since(startTime)
-	t.logger.Printf("Update() completed in %s\n", timeTaken)
+	t.logger.Printf("Update() completed in %s (change window: %s)\n",
+		timeTaken, fsChangeDuration)
 }
 
 func (t *rpcType) clearUpdateInProgress() {

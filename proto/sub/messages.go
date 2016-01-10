@@ -36,9 +36,10 @@ type PollResponse struct {
 	UpdateInProgress             bool
 	LastUpdateHadTriggerFailures bool
 	GenerationCount              uint64
-	FileSystem                   *filesystem.FileSystem
-	ObjectCache                  objectcache.ObjectCache
-}
+	FileSystem                   *filesystem.FileSystem // Streamed separately.
+	FileSystemFollows            bool
+	ObjectCache                  objectcache.ObjectCache // Streamed separately.
+} // FileSystem is encoded afterwards, followed by ObjectCache.
 
 type SetConfigurationRequest Configuration
 

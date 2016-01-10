@@ -1,7 +1,7 @@
 package herd
 
 import (
-	"github.com/Symantec/Dominator/dom/mdb"
+	"github.com/Symantec/Dominator/lib/mdb"
 	"time"
 )
 

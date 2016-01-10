@@ -1,9 +1,9 @@
 package herd
 
 import (
-	"github.com/Symantec/Dominator/dom/mdb"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
 	"log"

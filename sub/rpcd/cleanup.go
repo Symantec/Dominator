@@ -10,22 +10,23 @@ import (
 	"path"
 )
 
-func (t *rpcType) Cleanup(conn *srpc.Conn) {
+func (t *rpcType) Cleanup(conn *srpc.Conn) error {
 	defer conn.Flush()
 	var request sub.CleanupRequest
 	var response sub.CleanupResponse
 	decoder := gob.NewDecoder(conn)
 	if err := decoder.Decode(&request); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
+		_, err = conn.WriteString(err.Error() + "\n")
+		return err
 	}
 	if err := t.cleanup(request, &response); err != nil {
-		conn.WriteString(err.Error() + "\n")
-		return
+		_, err = conn.WriteString(err.Error() + "\n")
+		return err
 	}
-	conn.WriteString("\n")
-	encoder := gob.NewEncoder(conn)
-	encoder.Encode(response)
+	if _, err := conn.WriteString("\n"); err != nil {
+		return err
+	}
+	return gob.NewEncoder(conn).Encode(response)
 }
 
 func (t *rpcType) cleanup(request sub.CleanupRequest,

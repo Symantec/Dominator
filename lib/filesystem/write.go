@@ -35,7 +35,7 @@ func (inode *RegularInode) writeMetadata(name string) error {
 
 func (inode *SymlinkInode) write(name string) error {
 	if inode.make(name) != nil {
-		os.RemoveAll(name)
+		fsutil.ForceRemoveAll(name)
 		if err := inode.make(name); err != nil {
 			return err
 		}
@@ -53,7 +53,7 @@ func (inode *SymlinkInode) writeMetadata(name string) error {
 
 func (inode *SpecialInode) write(name string) error {
 	if inode.make(name) != nil {
-		os.RemoveAll(name)
+		fsutil.ForceRemoveAll(name)
 		if err := inode.make(name); err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ func (inode *SpecialInode) writeMetadata(name string) error {
 
 func (inode *DirectoryInode) write(name string) error {
 	if inode.make(name) != nil {
-		os.RemoveAll(name)
+		fsutil.ForceRemoveAll(name)
 		if err := inode.make(name); err != nil {
 			return err
 		}
