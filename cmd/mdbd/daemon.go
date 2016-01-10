@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -51,6 +52,7 @@ func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
 }
 
 func sleepUntil(wakeTime time.Time) {
+	runtime.GC() // An opportune time to take out the garbage.
 	sleepTime := wakeTime.Sub(time.Now())
 	if sleepTime < time.Second {
 		sleepTime = time.Second
