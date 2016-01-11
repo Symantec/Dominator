@@ -23,7 +23,7 @@ type genericEncoder interface {
 }
 
 func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
-	fetchInterval uint, logger *log.Logger) {
+	fetchInterval uint, logger *log.Logger, debug bool) {
 	var prevMdb *mdb.Mdb
 	var hostnameRE *regexp.Regexp
 	var err error
@@ -35,8 +35,9 @@ func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
 		}
 	}
 	var cycleStopTime time.Time
+	fetchIntervalDuration := time.Duration(fetchInterval) * time.Second
 	for ; ; sleepUntil(cycleStopTime) {
-		cycleStopTime = time.Now().Add(time.Duration(fetchInterval))
+		cycleStopTime = time.Now().Add(fetchIntervalDuration)
 		if newMdb := loadMdb(driverFunc, url, logger); newMdb != nil {
 			newMdb := selectHosts(newMdb, hostnameRE)
 			sort.Sort(newMdb)
@@ -44,8 +45,15 @@ func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
 				if err := writeMdb(newMdb, mdbFileName); err != nil {
 					logger.Println(err)
 				} else {
+					if debug {
+						logger.Printf("Wrote new MDB data, %d machines\n",
+							len(newMdb.Machines))
+					}
 					prevMdb = newMdb
 				}
+			} else if debug {
+				logger.Printf("Refreshed MDB data, same %d machines\n",
+					len(newMdb.Machines))
 			}
 		}
 	}
