@@ -33,6 +33,7 @@ func (sub *Sub) connectAndPoll() {
 	sub.status = statusConnecting
 	hostname := strings.SplitN(sub.hostname, "*", 2)[0]
 	address := fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber)
+	sub.lastConnectionStartTime = time.Now()
 	srpcClient, err := srpc.DialHTTP("tcp", address)
 	if err != nil {
 		sub.status = statusFailedToConnect
@@ -40,6 +41,10 @@ func (sub *Sub) connectAndPoll() {
 	}
 	defer srpcClient.Close()
 	sub.status = statusWaitingToPoll
+	sub.lastConnectionSucceededTime = time.Now()
+	sub.lastConnectDuration =
+		sub.lastConnectionSucceededTime.Sub(sub.lastConnectionStartTime)
+	connectDistribution.Add(sub.lastConnectDuration)
 	sub.herd.pollSemaphore <- true
 	sub.status = statusPolling
 	sub.poll(srpcClient)
