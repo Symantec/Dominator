@@ -35,8 +35,9 @@ func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
 		}
 	}
 	var cycleStopTime time.Time
+	fetchIntervalDuration := time.Duration(fetchInterval) * time.Second
 	for ; ; sleepUntil(cycleStopTime) {
-		cycleStopTime = time.Now().Add(time.Duration(fetchInterval))
+		cycleStopTime = time.Now().Add(fetchIntervalDuration)
 		if newMdb := loadMdb(driverFunc, url, logger); newMdb != nil {
 			newMdb := selectHosts(newMdb, hostnameRE)
 			sort.Sort(newMdb)
