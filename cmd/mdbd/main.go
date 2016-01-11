@@ -48,14 +48,14 @@ var drivers = []driver{
 
 func getLogger() *log.Logger {
 	if *useSyslog {
-		logger, err := syslog.NewLogger(syslog.LOG_INFO|syslog.LOG_DAEMON, 0)
+		s, err := syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON, "mdbd")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		return logger
+		return log.New(s, "", 0)
 	}
-	return log.New(os.Stderr, "mdbd: ", 0)
+	return log.New(os.Stderr, "", log.LstdFlags)
 }
 
 func main() {
