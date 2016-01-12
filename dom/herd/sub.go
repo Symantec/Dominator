@@ -45,6 +45,10 @@ func (sub *Sub) connectAndPoll() {
 	sub.lastConnectDuration =
 		sub.lastConnectionSucceededTime.Sub(sub.lastConnectionStartTime)
 	connectDistribution.Add(sub.lastConnectDuration)
+	if sub.herd.getImage(sub.requiredImage) == nil {
+		sub.status = statusImageNotReady
+		return
+	}
 	sub.herd.pollSemaphore <- true
 	sub.status = statusPolling
 	sub.poll(srpcClient)
