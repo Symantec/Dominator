@@ -22,7 +22,7 @@ type genericEncoder interface {
 	Encode(v interface{}) error
 }
 
-func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
+func runDaemon(sources []source, mdbFileName, hostnameRegex string,
 	fetchInterval uint, logger *log.Logger, debug bool) {
 	var prevMdb *mdb.Mdb
 	var hostnameRE *regexp.Regexp
@@ -38,7 +38,7 @@ func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
 	fetchIntervalDuration := time.Duration(fetchInterval) * time.Second
 	for ; ; sleepUntil(cycleStopTime) {
 		cycleStopTime = time.Now().Add(fetchIntervalDuration)
-		if newMdb := loadMdb(driverFunc, url, logger); newMdb != nil {
+		if newMdb := loadFromAll(sources, logger); newMdb != nil {
 			newMdb := selectHosts(newMdb, hostnameRE)
 			sort.Sort(newMdb)
 			if newMdbIsDifferent(prevMdb, newMdb) {
@@ -66,6 +66,27 @@ func sleepUntil(wakeTime time.Time) {
 		sleepTime = time.Second
 	}
 	time.Sleep(sleepTime)
+}
+
+func loadFromAll(sources []source, logger *log.Logger) *mdb.Mdb {
+	var newMdb mdb.Mdb
+	hostMap := make(map[string]struct{})
+	atLeastOneSourceWorked := false
+	for _, source := range sources {
+		if mdb := loadMdb(source.driverFunc, source.url, logger); mdb != nil {
+			atLeastOneSourceWorked = true
+			for _, machine := range mdb.Machines {
+				if _, ok := hostMap[machine.Hostname]; !ok {
+					newMdb.Machines = append(newMdb.Machines, machine)
+					hostMap[machine.Hostname] = struct{}{}
+				}
+			}
+		}
+	}
+	if !atLeastOneSourceWorked {
+		return nil
+	}
+	return &newMdb
 }
 
 func loadMdb(driverFunc driverFunc, url string, logger *log.Logger) *mdb.Mdb {
