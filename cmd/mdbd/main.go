@@ -39,7 +39,7 @@ func printUsage() {
 		"  text: each line contains: host required-image planned-image")
 }
 
-type driverFunc func(reader io.Reader, logger *log.Logger) *mdb.Mdb
+type driverFunc func(reader io.Reader, logger *log.Logger) (*mdb.Mdb, error)
 
 type driver struct {
 	name       string

@@ -2,12 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"io"
 	"log"
 )
 
-func loadDsHostFqdn(reader io.Reader, logger *log.Logger) *mdb.Mdb {
+func loadDsHostFqdn(reader io.Reader, logger *log.Logger) (*mdb.Mdb, error) {
 	type machineType struct {
 		Fqdn string
 	}
@@ -20,8 +21,7 @@ func loadDsHostFqdn(reader io.Reader, logger *log.Logger) *mdb.Mdb {
 	var outMdb mdb.Mdb
 	decoder := json.NewDecoder(reader)
 	if err := decoder.Decode(&inMdb); err != nil {
-		logger.Println("Error decoding: " + err.Error())
-		return nil
+		return nil, errors.New("Error decoding: " + err.Error())
 	}
 	for dsName, dataCentre := range inMdb {
 		for machineName, inMachine := range dataCentre {
@@ -34,5 +34,5 @@ func loadDsHostFqdn(reader io.Reader, logger *log.Logger) *mdb.Mdb {
 			outMdb.Machines = append(outMdb.Machines, outMachine)
 		}
 	}
-	return &outMdb
+	return &outMdb, nil
 }
