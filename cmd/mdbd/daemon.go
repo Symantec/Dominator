@@ -22,7 +22,7 @@ type genericEncoder interface {
 	Encode(v interface{}) error
 }
 
-func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
+func runDaemon(sources []source, mdbFileName, hostnameRegex string,
 	fetchInterval uint, logger *log.Logger, debug bool) {
 	var prevMdb *mdb.Mdb
 	var hostnameRE *regexp.Regexp
@@ -38,23 +38,26 @@ func runDaemon(driverFunc driverFunc, url, mdbFileName, hostnameRegex string,
 	fetchIntervalDuration := time.Duration(fetchInterval) * time.Second
 	for ; ; sleepUntil(cycleStopTime) {
 		cycleStopTime = time.Now().Add(fetchIntervalDuration)
-		if newMdb := loadMdb(driverFunc, url, logger); newMdb != nil {
-			newMdb := selectHosts(newMdb, hostnameRE)
-			sort.Sort(newMdb)
-			if newMdbIsDifferent(prevMdb, newMdb) {
-				if err := writeMdb(newMdb, mdbFileName); err != nil {
-					logger.Println(err)
-				} else {
-					if debug {
-						logger.Printf("Wrote new MDB data, %d machines\n",
-							len(newMdb.Machines))
-					}
-					prevMdb = newMdb
+		newMdb, err := loadFromAll(sources, logger)
+		if err != nil {
+			logger.Println(err)
+			continue
+		}
+		newMdb = selectHosts(newMdb, hostnameRE)
+		sort.Sort(newMdb)
+		if newMdbIsDifferent(prevMdb, newMdb) {
+			if err := writeMdb(newMdb, mdbFileName); err != nil {
+				logger.Println(err)
+			} else {
+				if debug {
+					logger.Printf("Wrote new MDB data, %d machines\n",
+						len(newMdb.Machines))
 				}
-			} else if debug {
-				logger.Printf("Refreshed MDB data, same %d machines\n",
-					len(newMdb.Machines))
+				prevMdb = newMdb
 			}
+		} else if debug {
+			logger.Printf("Refreshed MDB data, same %d machines\n",
+				len(newMdb.Machines))
 		}
 	}
 }
@@ -68,30 +71,46 @@ func sleepUntil(wakeTime time.Time) {
 	time.Sleep(sleepTime)
 }
 
-func loadMdb(driverFunc driverFunc, url string, logger *log.Logger) *mdb.Mdb {
+func loadFromAll(sources []source, logger *log.Logger) (*mdb.Mdb, error) {
+	var newMdb mdb.Mdb
+	hostMap := make(map[string]struct{})
+	for _, source := range sources {
+		mdb, err := loadMdb(source.driverFunc, source.url, logger)
+		if err != nil {
+			return nil, err
+		}
+		for _, machine := range mdb.Machines {
+			if _, ok := hostMap[machine.Hostname]; !ok {
+				newMdb.Machines = append(newMdb.Machines, machine)
+				hostMap[machine.Hostname] = struct{}{}
+			}
+		}
+	}
+	return &newMdb, nil
+}
+
+func loadMdb(driverFunc driverFunc, url string, logger *log.Logger) (
+	*mdb.Mdb, error) {
 	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
 		return loadHttpMdb(driverFunc, url, logger)
 	}
 	file, err := os.Open(url)
 	if err != nil {
-		logger.Println("Error opening file " + err.Error())
-		return nil
+		return nil, errors.New(("Error opening file " + err.Error()))
 	}
 	defer file.Close()
 	return driverFunc(bufio.NewReader(file), logger)
 }
 
-func loadHttpMdb(driverFunc driverFunc, url string,
-	logger *log.Logger) *mdb.Mdb {
+func loadHttpMdb(driverFunc driverFunc, url string, logger *log.Logger) (
+	*mdb.Mdb, error) {
 	response, err := http.Get(url)
 	if err != nil {
-		logger.Println(err)
-		return nil
+		return nil, err
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		logger.Println("HTTP get failed: " + err.Error())
-		return nil
+		return nil, errors.New("HTTP get failed: " + err.Error())
 	}
 	return driverFunc(response.Body, logger)
 }

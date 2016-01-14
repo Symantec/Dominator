@@ -46,6 +46,7 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
 	fmt.Fprintln(writer, "    <th>Busy</th>")
 	fmt.Fprintln(writer, "    <th>Status</th>")
 	fmt.Fprintln(writer, "    <th>Staleness</th>")
+	fmt.Fprintln(writer, "    <th>Connect</th>")
 	fmt.Fprintln(writer, "    <th>Short Poll</th>")
 	fmt.Fprintln(writer, "    <th>Full Poll</th>")
 	fmt.Fprintln(writer, "    <th>Update Compute</th>")
@@ -76,6 +77,8 @@ func showSub(writer io.Writer, sub *Sub, missingImages map[string]struct{}) {
 		status = "connecting"
 	case sub.status == statusFailedToConnect:
 		status = "connect failed"
+	case sub.status == statusWaitingToPoll:
+		status = "waiting to poll"
 	case sub.status == statusPolling:
 		status = "polling"
 	case sub.status == statusFailedToPoll:
@@ -98,6 +101,8 @@ func showSub(writer io.Writer, sub *Sub, missingImages map[string]struct{}) {
 		status = "update failed"
 	case sub.status == statusSynced:
 		status = "synced"
+	default:
+		panic(fmt.Sprintf("unknown status: %d", sub.status))
 	}
 	fmt.Fprintf(writer, "    <td>%s</td>\n", status)
 	if sub.lastPollSucceededTime.IsZero() {
@@ -106,23 +111,10 @@ func showSub(writer io.Writer, sub *Sub, missingImages map[string]struct{}) {
 		fmt.Fprintf(writer, "    <td>%s</td>\n",
 			time.Since(sub.lastPollSucceededTime))
 	}
-	if sub.lastShortPollDuration < 1 {
-		fmt.Fprintf(writer, "    <td></td>\n")
-	} else {
-		fmt.Fprintf(writer, "    <td>%s</td>\n", sub.lastShortPollDuration)
-	}
-	if sub.lastFullPollDuration < 1 {
-		fmt.Fprintf(writer, "    <td></td>\n")
-	} else {
-		fmt.Fprintf(writer, "    <td>%.fms</td>\n",
-			sub.lastFullPollDuration.Seconds()*1e3)
-	}
-	if sub.lastComputeUpdateCpuDuration < 1 {
-		fmt.Fprintf(writer, "    <td></td>\n")
-	} else {
-		fmt.Fprintf(writer, "    <td>%.fms</td>\n",
-			sub.lastComputeUpdateCpuDuration.Seconds()*1e3)
-	}
+	showTime(writer, sub.lastConnectDuration)
+	showTime(writer, sub.lastShortPollDuration)
+	showTime(writer, sub.lastFullPollDuration)
+	showTime(writer, sub.lastComputeUpdateCpuDuration)
 	fmt.Fprintf(writer, "  </tr>\n")
 }
 
@@ -141,5 +133,18 @@ func (herd *Herd) showImage(writer io.Writer, name string,
 	} else {
 		fmt.Fprintf(writer, "    <td><font color=\"grey\">%s</font></td>\n",
 			name)
+	}
+}
+
+func showTime(writer io.Writer, duration time.Duration) {
+	if duration < 1 {
+		fmt.Fprintf(writer, "    <td></td>\n")
+	} else {
+		seconds := duration.Seconds()
+		if seconds <= 1.0 {
+			fmt.Fprintf(writer, "    <td>%.fms</td>\n", seconds*1e3)
+		} else {
+			fmt.Fprintf(writer, "    <td>%.fs</td>\n", seconds)
+		}
 	}
 }

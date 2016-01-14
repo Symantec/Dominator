@@ -33,6 +33,7 @@ func (sub *Sub) connectAndPoll() {
 	sub.status = statusConnecting
 	hostname := strings.SplitN(sub.hostname, "*", 2)[0]
 	address := fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber)
+	sub.lastConnectionStartTime = time.Now()
 	srpcClient, err := srpc.DialHTTP("tcp", address)
 	if err != nil {
 		sub.status = statusFailedToConnect
@@ -40,6 +41,14 @@ func (sub *Sub) connectAndPoll() {
 	}
 	defer srpcClient.Close()
 	sub.status = statusWaitingToPoll
+	sub.lastConnectionSucceededTime = time.Now()
+	sub.lastConnectDuration =
+		sub.lastConnectionSucceededTime.Sub(sub.lastConnectionStartTime)
+	connectDistribution.Add(sub.lastConnectDuration)
+	if sub.herd.getImage(sub.requiredImage) == nil {
+		sub.status = statusImageNotReady
+		return
+	}
 	sub.herd.pollSemaphore <- true
 	sub.status = statusPolling
 	sub.poll(srpcClient)
@@ -59,8 +68,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client) {
 	}
 	sub.lastPollSucceededTime = time.Now()
 	if reply.GenerationCount == 0 {
-		sub.fileSystem = nil
-		sub.objectCache = nil
+		sub.reclaim()
 		sub.generationCount = 0
 	}
 	if fs := reply.FileSystem; fs == nil {
@@ -108,32 +116,30 @@ func (sub *Sub) poll(srpcClient *srpc.Client) {
 	if idle, status := sub.fetchMissingObjects(srpcClient,
 		sub.requiredImage); !idle {
 		sub.status = status
-		sub.fileSystem = nil  // Mark memory for reclaim.
-		sub.objectCache = nil // Mark memory for reclaim.
-		runtime.GC()          // Reclaim now.
+		sub.reclaim()
 		return
 	}
 	sub.status = statusComputingUpdate
 	if idle, status := sub.sendUpdate(srpcClient); !idle {
 		sub.status = status
-		sub.fileSystem = nil  // Mark memory for reclaim.
-		sub.objectCache = nil // Mark memory for reclaim.
-		runtime.GC()          // Reclaim now.
+		sub.reclaim()
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(srpcClient,
 		sub.plannedImage); !idle {
 		if status != statusImageNotReady {
 			sub.status = status
-			sub.fileSystem = nil  // Mark memory for reclaim.
-			sub.objectCache = nil // Mark memory for reclaim.
-			runtime.GC()          // Reclaim now.
+			sub.reclaim()
 			return
 		}
 	}
 	sub.status = statusSynced
 	sub.cleanup(srpcClient, sub.plannedImage)
 	sub.generationCountAtLastSync = sub.generationCount
+	sub.reclaim()
+}
+
+func (sub *Sub) reclaim() {
 	sub.fileSystem = nil  // Mark memory for reclaim.
 	sub.objectCache = nil // Mark memory for reclaim.
 	runtime.GC()          // Reclaim now.

@@ -37,10 +37,12 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 		"Number of compliant subs: <a href=\"showCompliantSubs\">%d</a><br>\n",
 		numSubs)
 	subs := herd.getSelectedSubs(nil)
-	shortPollDuractions := getPollDurations(subs, false)
-	fullPollDuractions := getPollDurations(subs, true)
-	showPollDurationStats(writer, shortPollDuractions, "Short")
-	showPollDurationStats(writer, fullPollDuractions, "Full")
+	connectDurations := getConnectDurations(subs)
+	shortPollDurations := getPollDurations(subs, false)
+	fullPollDurations := getPollDurations(subs, true)
+	showDurationStats(writer, connectDurations, "Connect")
+	showDurationStats(writer, shortPollDurations, "Short poll")
+	showDurationStats(writer, fullPollDurations, "Full poll")
 	fmt.Fprintf(writer, "Connection slots: %d out of %d<br>\n",
 		len(herd.connectionSemaphore), cap(herd.connectionSemaphore))
 	fmt.Fprintf(writer, "RPC slots: %d out of %d<br>\n",
@@ -75,6 +77,17 @@ func selectCompliantSub(sub *Sub) bool {
 	return false
 }
 
+func getConnectDurations(subs []*Sub) []time.Duration {
+	durations := make([]time.Duration, 0, len(subs))
+	for _, sub := range subs {
+		if sub.lastConnectDuration > 0 {
+			durations = append(durations, sub.lastConnectDuration)
+		}
+	}
+	sort.Sort(durationList(durations))
+	return durations
+}
+
 func getPollDurations(subs []*Sub, full bool) []time.Duration {
 	durations := make([]time.Duration, 0, len(subs))
 	for _, sub := range subs {
@@ -106,8 +119,8 @@ func (dl durationList) Swap(i, j int) {
 	dl[i], dl[j] = dl[j], dl[i]
 }
 
-func showPollDurationStats(writer io.Writer, durations []time.Duration,
-	pollType string) {
+func showDurationStats(writer io.Writer, durations []time.Duration,
+	durationType string) {
 	if len(durations) < 1 {
 		return
 	}
@@ -131,8 +144,8 @@ func showPollDurationStats(writer io.Writer, durations []time.Duration,
 		scale = 1e-3
 	}
 	fmt.Fprintf(writer,
-		"%s poll durations: %.3f/%.3f/%.3f/%.3f %s (avg/med/min/max)<br>\n",
-		pollType,
+		"%s durations: %.3f/%.3f/%.3f/%.3f %s (avg/med/min/max)<br>\n",
+		durationType,
 		float64(avgDuration)*scale, float64(medDuration)*scale,
 		float64(durations[0])*scale, float64(durations[len(durations)-1])*scale,
 		unit)

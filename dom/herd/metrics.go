@@ -7,6 +7,7 @@ import (
 
 var latencyBucketer *tricorder.Bucketer
 var computeCpuTimeDistribution *tricorder.Distribution
+var connectDistribution *tricorder.Distribution
 var fullPollDistribution *tricorder.Distribution
 var shortPollDistribution *tricorder.Distribution
 var mdbUpdateTimeDistribution *tricorder.Distribution
@@ -16,6 +17,9 @@ func init() {
 	computeCpuTimeDistribution = latencyBucketer.NewDistribution()
 	tricorder.RegisterMetric("/compute-cputime", computeCpuTimeDistribution,
 		units.Millisecond, "compute CPU time")
+	connectDistribution = latencyBucketer.NewDistribution()
+	tricorder.RegisterMetric("/connect-latency", connectDistribution,
+		units.Millisecond, "connect duration")
 	fullPollDistribution = latencyBucketer.NewDistribution()
 	tricorder.RegisterMetric("/poll-full-latency", fullPollDistribution,
 		units.Millisecond, "full poll duration")
