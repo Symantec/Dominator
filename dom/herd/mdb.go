@@ -49,7 +49,9 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 		sub.requiredImage = machine.RequiredImage
 		sub.plannedImage = machine.PlannedImage
 		herd.getImageHaveLock(sub.requiredImage) // Preload.
-		herd.getImageHaveLock(sub.plannedImage)
+		if herd.getImageHaveLock(sub.plannedImage) == nil {
+			sub.havePlannedImage = false
+		}
 	}
 	// Delete flagged subs (those not in the new MDB).
 	for subHostname, toDelete := range subsToDelete {
