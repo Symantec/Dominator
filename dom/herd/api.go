@@ -20,6 +20,7 @@ func (status subStatus) String() string {
 const (
 	statusUnknown = iota
 	statusConnecting
+	statusDNSError
 	statusFailedToConnect
 	statusWaitingToPoll
 	statusPolling

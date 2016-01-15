@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
+	"net"
 	"runtime"
 	"strings"
 	"time"
@@ -37,6 +38,12 @@ func (sub *Sub) connectAndPoll() {
 	sub.lastConnectionStartTime = time.Now()
 	srpcClient, err := srpc.DialHTTP("tcp", address)
 	if err != nil {
+		if err, ok := err.(*net.OpError); ok {
+			if _, ok := err.Err.(*net.DNSError); ok {
+				sub.status = statusDNSError
+				return
+			}
+		}
 		sub.status = statusFailedToConnect
 		return
 	}

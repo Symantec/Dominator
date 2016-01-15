@@ -10,6 +10,8 @@ func (status subStatus) string() string {
 		return "unknown"
 	case status == statusConnecting:
 		return "connecting"
+	case status == statusDNSError:
+		return "DNS error"
 	case status == statusFailedToConnect:
 		return "connect failed"
 	case status == statusWaitingToPoll:
