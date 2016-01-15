@@ -14,6 +14,9 @@ func loadText(reader io.Reader, logger *log.Logger) (*mdb.Mdb, error) {
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
 		if len(fields) > 0 {
+			if fields[0][0] == '#' {
+				continue
+			}
 			var machine mdb.Machine
 			machine.Hostname = fields[0]
 			if len(fields) > 1 {
