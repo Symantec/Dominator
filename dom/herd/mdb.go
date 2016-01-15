@@ -44,13 +44,14 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 		herd.subsByIndex = append(herd.subsByIndex, sub)
 		if sub.requiredImage != machine.RequiredImage ||
 			sub.plannedImage != machine.PlannedImage {
-			sub.generationCountAtChangeStart = 0
-			sub.generationCountAtLastSync = 0
+			sub.generationCount = 0 // Force a full poll.
 		}
 		sub.requiredImage = machine.RequiredImage
 		sub.plannedImage = machine.PlannedImage
 		herd.getImageHaveLock(sub.requiredImage) // Preload.
-		herd.getImageHaveLock(sub.plannedImage)
+		if herd.getImageHaveLock(sub.plannedImage) == nil {
+			sub.havePlannedImage = false
+		}
 	}
 	// Delete flagged subs (those not in the new MDB).
 	for subHostname, toDelete := range subsToDelete {

@@ -30,6 +30,7 @@ func (sub *Sub) makeUnbusy() {
 }
 
 func (sub *Sub) connectAndPoll() {
+	previousStatus := sub.status
 	sub.status = statusConnecting
 	hostname := strings.SplitN(sub.hostname, "*", 2)[0]
 	address := fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber)
@@ -51,11 +52,18 @@ func (sub *Sub) connectAndPoll() {
 	}
 	sub.herd.pollSemaphore <- true
 	sub.status = statusPolling
-	sub.poll(srpcClient)
+	sub.poll(srpcClient, previousStatus)
 	<-sub.herd.pollSemaphore
 }
 
-func (sub *Sub) poll(srpcClient *srpc.Client) {
+func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
+	// If the planned image has just become available, force a full poll.
+	if previousStatus == statusSynced &&
+		!sub.havePlannedImage &&
+		sub.herd.getImage(sub.plannedImage) != nil {
+		sub.havePlannedImage = true
+		sub.generationCount = 0 // Force a full poll.
+	}
 	var request subproto.PollRequest
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
@@ -101,16 +109,17 @@ func (sub *Sub) poll(srpcClient *srpc.Client) {
 		sub.status = statusUpdating
 		return
 	}
-	if sub.generationCountAtLastSync == sub.generationCount {
-		sub.status = statusSynced
-		return
-	}
-	if sub.fileSystem == nil {
+	if sub.generationCount < 1 {
 		sub.status = statusSubNotReady
 		return
 	}
-	if sub.generationCountAtChangeStart == sub.generationCount {
-		sub.status = statusWaitingForNextPoll
+	if sub.fileSystem == nil {
+		sub.status = previousStatus
+		if previousStatus != statusSynced {
+			// Force a full poll next cycle so that we can see the state of the
+			// sub and recompute/retry what needs to be done.
+			sub.generationCount = 0
+		}
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(srpcClient,
@@ -135,7 +144,6 @@ func (sub *Sub) poll(srpcClient *srpc.Client) {
 	}
 	sub.status = statusSynced
 	sub.cleanup(srpcClient, sub.plannedImage)
-	sub.generationCountAtLastSync = sub.generationCount
 	sub.reclaim()
 }
 
@@ -147,7 +155,7 @@ func (sub *Sub) reclaim() {
 
 // Returns true if all required objects are available.
 func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
-	bool, uint) {
+	bool, subStatus) {
 	image := sub.herd.getImage(imageName)
 	if image == nil {
 		return false, statusImageNotReady
@@ -186,12 +194,11 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 		logger.Printf("Error calling %s.Fetch()\t%s\n", sub.hostname, err)
 		return false, statusFailedToFetch
 	}
-	sub.generationCountAtChangeStart = sub.generationCount
 	return false, statusFetching
 }
 
 // Returns true if no update needs to be performed.
-func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, uint) {
+func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	logger := sub.herd.logger
 	var request subproto.UpdateRequest
 	var reply subproto.UpdateResponse
@@ -202,7 +209,6 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, uint) {
 		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
 		return false, statusFailedToUpdate
 	}
-	sub.generationCountAtChangeStart = sub.generationCount
 	return false, statusUpdating
 }
 
@@ -246,6 +252,5 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 		logger.Printf("Error calling %s:Subd.Cleanup()\t%s\n",
 			sub.hostname, err)
 	} else {
-		sub.generationCountAtChangeStart = sub.generationCount
 	}
 }

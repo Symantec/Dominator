@@ -11,6 +11,12 @@ import (
 	"time"
 )
 
+type subStatus uint
+
+func (status subStatus) String() string {
+	return status.string()
+}
+
 const (
 	statusUnknown = iota
 	statusConnecting
@@ -22,7 +28,6 @@ const (
 	statusImageNotReady
 	statusFetching
 	statusFailedToFetch
-	statusWaitingForNextPoll
 	statusComputingUpdate
 	statusUpdating
 	statusFailedToUpdate
@@ -40,12 +45,11 @@ type Sub struct {
 	plannedImage                 string
 	busyMutex                    sync.Mutex
 	busy                         bool
+	havePlannedImage             bool
 	fileSystem                   *filesystem.FileSystem
 	objectCache                  objectcache.ObjectCache
 	generationCount              uint64
-	generationCountAtChangeStart uint64
-	generationCountAtLastSync    uint64
-	status                       uint
+	status                       subStatus
 	lastConnectionStartTime      time.Time
 	lastConnectionSucceededTime  time.Time
 	lastConnectDuration          time.Duration
