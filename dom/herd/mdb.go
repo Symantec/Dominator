@@ -44,8 +44,7 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 		herd.subsByIndex = append(herd.subsByIndex, sub)
 		if sub.requiredImage != machine.RequiredImage ||
 			sub.plannedImage != machine.PlannedImage {
-			sub.generationCountAtChangeStart = 0
-			sub.generationCountAtLastSync = 0
+			sub.generationCount = 0 // Force a full poll.
 		}
 		sub.requiredImage = machine.RequiredImage
 		sub.plannedImage = machine.PlannedImage

@@ -91,8 +91,6 @@ func showSub(writer io.Writer, sub *Sub, missingImages map[string]struct{}) {
 		status = "fetching"
 	case sub.status == statusFailedToFetch:
 		status = "fetch failed"
-	case sub.status == statusWaitingForNextPoll:
-		status = "waiting for next poll"
 	case sub.status == statusComputingUpdate:
 		status = "computing update"
 	case sub.status == statusUpdating:

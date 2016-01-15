@@ -22,7 +22,6 @@ const (
 	statusImageNotReady
 	statusFetching
 	statusFailedToFetch
-	statusWaitingForNextPoll
 	statusComputingUpdate
 	statusUpdating
 	statusFailedToUpdate
@@ -40,11 +39,10 @@ type Sub struct {
 	plannedImage                 string
 	busyMutex                    sync.Mutex
 	busy                         bool
+	havePlannedImage             bool
 	fileSystem                   *filesystem.FileSystem
 	objectCache                  objectcache.ObjectCache
 	generationCount              uint64
-	generationCountAtChangeStart uint64
-	generationCountAtLastSync    uint64
 	status                       uint
 	lastConnectionStartTime      time.Time
 	lastConnectionSucceededTime  time.Time
