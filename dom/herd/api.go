@@ -11,6 +11,12 @@ import (
 	"time"
 )
 
+type subStatus uint
+
+func (status subStatus) String() string {
+	return status.string()
+}
+
 const (
 	statusUnknown = iota
 	statusConnecting
@@ -43,7 +49,7 @@ type Sub struct {
 	fileSystem                   *filesystem.FileSystem
 	objectCache                  objectcache.ObjectCache
 	generationCount              uint64
-	status                       uint
+	status                       subStatus
 	lastConnectionStartTime      time.Time
 	lastConnectionSucceededTime  time.Time
 	lastConnectDuration          time.Duration

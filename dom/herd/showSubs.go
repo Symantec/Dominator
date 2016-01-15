@@ -69,40 +69,7 @@ func showSub(writer io.Writer, sub *Sub, missingImages map[string]struct{}) {
 	sub.herd.showImage(writer, sub.requiredImage, missingImages)
 	sub.herd.showImage(writer, sub.plannedImage, missingImages)
 	fmt.Fprintf(writer, "    <td>%v</td>\n", sub.busy)
-	var status string
-	switch {
-	case sub.status == statusUnknown:
-		status = "unknown"
-	case sub.status == statusConnecting:
-		status = "connecting"
-	case sub.status == statusFailedToConnect:
-		status = "connect failed"
-	case sub.status == statusWaitingToPoll:
-		status = "waiting to poll"
-	case sub.status == statusPolling:
-		status = "polling"
-	case sub.status == statusFailedToPoll:
-		status = "poll failed"
-	case sub.status == statusSubNotReady:
-		status = "sub not ready"
-	case sub.status == statusImageNotReady:
-		status = "image not ready"
-	case sub.status == statusFetching:
-		status = "fetching"
-	case sub.status == statusFailedToFetch:
-		status = "fetch failed"
-	case sub.status == statusComputingUpdate:
-		status = "computing update"
-	case sub.status == statusUpdating:
-		status = "updating"
-	case sub.status == statusFailedToUpdate:
-		status = "update failed"
-	case sub.status == statusSynced:
-		status = "synced"
-	default:
-		panic(fmt.Sprintf("unknown status: %d", sub.status))
-	}
-	fmt.Fprintf(writer, "    <td>%s</td>\n", status)
+	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.status)
 	if sub.lastPollSucceededTime.IsZero() {
 		fmt.Fprintf(writer, "    <td></td>\n")
 	} else {

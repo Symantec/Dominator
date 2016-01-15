@@ -56,7 +56,7 @@ func (sub *Sub) connectAndPoll() {
 	<-sub.herd.pollSemaphore
 }
 
-func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus uint) {
+func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	// If the planned image has just become available, force a full poll.
 	if previousStatus == statusSynced &&
 		!sub.havePlannedImage &&
@@ -155,7 +155,7 @@ func (sub *Sub) reclaim() {
 
 // Returns true if all required objects are available.
 func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
-	bool, uint) {
+	bool, subStatus) {
 	image := sub.herd.getImage(imageName)
 	if image == nil {
 		return false, statusImageNotReady
@@ -198,7 +198,7 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 }
 
 // Returns true if no update needs to be performed.
-func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, uint) {
+func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	logger := sub.herd.logger
 	var request subproto.UpdateRequest
 	var reply subproto.UpdateResponse
