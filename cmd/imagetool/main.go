@@ -39,6 +39,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  diff   tool left right")
 	fmt.Fprintln(os.Stderr, "         left & right are image sources. Format:")
 	fmt.Fprintln(os.Stderr, "         type:name where type is one of:")
+	fmt.Fprintln(os.Stderr, "           f: name of file containing an image")
 	fmt.Fprintln(os.Stderr, "           i: name of an image on the imageserver")
 	fmt.Fprintln(os.Stderr, "           s: name of sub to poll")
 	fmt.Fprintln(os.Stderr, "  get    name directory")

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	imgclient "github.com/Symantec/Dominator/imageserver/client"
@@ -14,7 +15,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"strings"
 )
 
 func diffSubcommand(args []string) {
@@ -40,16 +40,35 @@ func diffTypedImages(tool string, lName string, rName string) {
 	os.Exit(0)
 }
 
-func getTypedImage(name string) (*filesystem.FileSystem, error) {
-	switch {
-	case strings.HasPrefix(name, "i:"):
-		_, imageSClient, _ := getClients()
-		return getImage(imageSClient, name[2:])
-	case strings.HasPrefix(name, "s:"):
-		return pollImage(name[2:])
-	default:
-		return nil, errors.New("unknown image type: " + name)
+func getTypedImage(typedName string) (*filesystem.FileSystem, error) {
+	if len(typedName) < 3 || typedName[1] != ':' {
+		return nil, errors.New("not a typed name: " + typedName)
 	}
+	switch name := typedName[2:]; typedName[0] {
+	case 'f':
+		return readImage(name)
+	case 'i':
+		_, imageSClient, _ := getClients()
+		return getImage(imageSClient, name)
+	case 's':
+		return pollImage(name)
+	default:
+		return nil, errors.New("unknown image type: " + typedName[:1])
+	}
+}
+
+func readImage(name string) (*filesystem.FileSystem, error) {
+	file, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	var fileSystem filesystem.FileSystem
+	if err := gob.NewDecoder(file).Decode(&fileSystem); err != nil {
+		return nil, err
+	}
+	fileSystem.RebuildInodePointers()
+	return &fileSystem, nil
 }
 
 func getImage(client *srpc.Client, name string) (
