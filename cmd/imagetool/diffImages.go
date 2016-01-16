@@ -14,41 +14,20 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 )
 
-func diffImageVImageSubcommand(args []string) {
-	_, imageSClient, _ := getClients()
-	commonDiffSubcommand(imageSClient, args[0],
-		args[1], getImage, args[2], getImage)
+func diffSubcommand(args []string) {
+	diffTypedImages(args[0], args[1], args[2])
 }
 
-func diffImageVSubSubcommand(args []string) {
-	_, imageSClient, _ := getClients()
-	commonDiffSubcommand(imageSClient, args[0],
-		args[1], getImage, args[2], pollImage)
-}
-
-func diffSubVImageSubcommand(args []string) {
-	_, imageSClient, _ := getClients()
-	commonDiffSubcommand(imageSClient, args[0],
-		args[1], pollImage, args[2], getImage)
-}
-
-func diffSubVSubSubcommand(args []string) {
-	commonDiffSubcommand(nil, args[0], args[1], pollImage, args[2], pollImage)
-}
-
-func commonDiffSubcommand(client *srpc.Client, tool string,
-	lName string, lGetFunc func(client *srpc.Client, name string) (
-		*filesystem.FileSystem, error),
-	rName string, rGetFunc func(client *srpc.Client, name string) (
-		*filesystem.FileSystem, error)) {
-	lfs, err := lGetFunc(client, lName)
+func diffTypedImages(tool string, lName string, rName string) {
+	lfs, err := getTypedImage(lName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting left image\t%s\n", err)
 		os.Exit(1)
 	}
-	rfs, err := rGetFunc(client, rName)
+	rfs, err := getTypedImage(rName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting right image\t%s\n", err)
 		os.Exit(1)
@@ -59,6 +38,18 @@ func commonDiffSubcommand(client *srpc.Client, tool string,
 		os.Exit(1)
 	}
 	os.Exit(0)
+}
+
+func getTypedImage(name string) (*filesystem.FileSystem, error) {
+	switch {
+	case strings.HasPrefix(name, "i:"):
+		_, imageSClient, _ := getClients()
+		return getImage(imageSClient, name[2:])
+	case strings.HasPrefix(name, "s:"):
+		return pollImage(name[2:])
+	default:
+		return nil, errors.New("unknown image type: " + name)
+	}
 }
 
 func getImage(client *srpc.Client, name string) (
@@ -76,8 +67,7 @@ func getImage(client *srpc.Client, name string) (
 	return reply.Image.FileSystem, nil
 }
 
-func pollImage(client *srpc.Client, name string) (
-	*filesystem.FileSystem, error) {
+func pollImage(name string) (*filesystem.FileSystem, error) {
 	clientName := fmt.Sprintf("%s:%d", name, constants.SubPortNumber)
 	srpcClient, err := srpc.DialHTTP("tcp", clientName)
 	if err != nil {
