@@ -7,40 +7,35 @@ import (
 	imgclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"github.com/Symantec/Dominator/proto/sub"
 	subclient "github.com/Symantec/Dominator/sub/client"
 	"io/ioutil"
-	"net/rpc"
 	"os"
 	"os/exec"
 )
 
-func diffImageVImageSubcommand(imageClient *rpc.Client,
-	imageSClient *srpc.Client, objectClient *objectclient.ObjectClient,
-	args []string) {
+func diffImageVImageSubcommand(args []string) {
+	_, imageSClient, _ := getClients()
 	commonDiffSubcommand(imageSClient, args[0],
 		args[1], getImage, args[2], getImage)
 }
 
-func diffImageVSubSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
-	objectClient *objectclient.ObjectClient, args []string) {
+func diffImageVSubSubcommand(args []string) {
+	_, imageSClient, _ := getClients()
 	commonDiffSubcommand(imageSClient, args[0],
 		args[1], getImage, args[2], pollImage)
 }
 
-func diffSubVImageSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
-	objectClient *objectclient.ObjectClient, args []string) {
+func diffSubVImageSubcommand(args []string) {
+	_, imageSClient, _ := getClients()
 	commonDiffSubcommand(imageSClient, args[0],
 		args[1], pollImage, args[2], getImage)
 }
 
-func diffSubVSubSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
-	objectClient *objectclient.ObjectClient, args []string) {
-	commonDiffSubcommand(imageSClient, args[0],
-		args[1], pollImage, args[2], pollImage)
+func diffSubVSubSubcommand(args []string) {
+	commonDiffSubcommand(nil, args[0], args[1], pollImage, args[2], pollImage)
 }
 
 func commonDiffSubcommand(client *srpc.Client, tool string,

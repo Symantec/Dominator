@@ -45,8 +45,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  show   name")
 }
 
-type commandFunc func(*rpc.Client, *srpc.Client, *objectclient.ObjectClient,
-	[]string)
+type commandFunc func([]string)
 
 type subcommand struct {
 	command string
@@ -67,6 +66,30 @@ var subcommands = []subcommand{
 	{"show", 1, showImageSubcommand},
 }
 
+var imageRpcClient *rpc.Client
+var imageSrpcClient *srpc.Client
+var theObjectClient *objectclient.ObjectClient
+
+func getClients() (*rpc.Client, *srpc.Client, *objectclient.ObjectClient) {
+	if imageRpcClient == nil {
+		var err error
+		clientName := fmt.Sprintf("%s:%d",
+			*imageServerHostname, *imageServerPortNum)
+		imageRpcClient, err = rpc.DialHTTP("tcp", clientName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
+			os.Exit(1)
+		}
+		imageSrpcClient, err = srpc.DialHTTP("tcp", clientName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
+			os.Exit(1)
+		}
+		theObjectClient = objectclient.NewObjectClient(clientName)
+	}
+	return imageRpcClient, imageSrpcClient, theObjectClient
+}
+
 func main() {
 	flag.Usage = printUsage
 	flag.Parse()
@@ -75,27 +98,13 @@ func main() {
 		os.Exit(2)
 	}
 	setupTls(*certFile, *keyFile)
-	clientName := fmt.Sprintf("%s:%d",
-		*imageServerHostname, *imageServerPortNum)
-	imageClient, err := rpc.DialHTTP("tcp", clientName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
-		os.Exit(1)
-	}
-	imageSClient, err := srpc.DialHTTP("tcp", clientName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
-		os.Exit(1)
-	}
-	objectClient := objectclient.NewObjectClient(clientName)
 	for _, subcommand := range subcommands {
 		if flag.Arg(0) == subcommand.command {
 			if flag.NArg()-1 != subcommand.numArgs {
 				printUsage()
 				os.Exit(2)
 			}
-			subcommand.cmdFunc(imageClient, imageSClient, objectClient,
-				flag.Args()[1:])
+			subcommand.cmdFunc(flag.Args()[1:])
 			os.Exit(3)
 		}
 	}

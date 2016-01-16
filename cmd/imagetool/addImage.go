@@ -23,8 +23,8 @@ import (
 	"strings"
 )
 
-func addImageSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
-	objectClient *objectclient.ObjectClient, args []string) {
+func addImageSubcommand(args []string) {
+	imageClient, imageSClient, objectClient := getClients()
 	err := addImage(imageClient, imageSClient, objectClient, args[0], args[1],
 		args[2], args[3])
 	if err != nil {
