@@ -9,11 +9,26 @@ import (
 
 type NumLinksTable map[uint64]int
 
+type ListSelector uint8
+
+const (
+	ListSelectSkipMode = 1 << iota
+	ListSelectSkipNumLinks
+	ListSelectSkipUid
+	ListSelectSkipGid
+	ListSelectSkipSizeDevnum
+	ListSelectSkipMtime
+	ListSelectSkipName
+	ListSelectSkipData
+
+	ListSelectAll = 0
+)
+
 type GenericInode interface {
 	GetUid() uint32
 	GetGid() uint32
 	List(w io.Writer, name string, numLinksTable NumLinksTable,
-		numLinks int) error
+		numLinks int, listSelector ListSelector) error
 	WriteMetadata(name string) error
 }
 
@@ -55,8 +70,12 @@ func (fs *FileSystem) Encode(writer io.Writer) error {
 	return fs.encode(writer)
 }
 
+func (fs *FileSystem) Listf(w io.Writer, listSelector ListSelector) error {
+	return fs.list(w, listSelector)
+}
+
 func (fs *FileSystem) List(w io.Writer) error {
-	return fs.list(w)
+	return fs.list(w, ListSelectAll)
 }
 
 func (fs *FileSystem) String() string {
@@ -87,8 +106,9 @@ func (inode *DirectoryInode) GetGid() uint32 {
 }
 
 func (inode *DirectoryInode) List(w io.Writer, name string,
-	numLinksTable NumLinksTable, numLinks int) error {
-	return inode.list(w, name, numLinksTable, numLinks)
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector) error {
+	return inode.list(w, name, numLinksTable, numLinks, listSelector)
 }
 
 func (inode *DirectoryInode) Write(name string) error {
@@ -136,8 +156,9 @@ func (inode *RegularInode) GetGid() uint32 {
 }
 
 func (inode *RegularInode) List(w io.Writer, name string,
-	numLinksTable NumLinksTable, numLinks int) error {
-	return inode.list(w, name, numLinksTable, numLinks)
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector) error {
+	return inode.list(w, name, numLinksTable, numLinks, listSelector)
 }
 
 func (inode *RegularInode) WriteMetadata(name string) error {
@@ -159,8 +180,9 @@ func (inode *SymlinkInode) GetGid() uint32 {
 }
 
 func (inode *SymlinkInode) List(w io.Writer, name string,
-	numLinksTable NumLinksTable, numLinks int) error {
-	return inode.list(w, name, numLinksTable, numLinks)
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector) error {
+	return inode.list(w, name, numLinksTable, numLinks, listSelector)
 }
 
 func (inode *SymlinkInode) Write(name string) error {
@@ -189,8 +211,9 @@ func (inode *SpecialInode) GetGid() uint32 {
 }
 
 func (inode *SpecialInode) List(w io.Writer, name string,
-	numLinksTable NumLinksTable, numLinks int) error {
-	return inode.list(w, name, numLinksTable, numLinks)
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector) error {
+	return inode.list(w, name, numLinksTable, numLinks, listSelector)
 }
 
 func (inode *SpecialInode) Write(name string) error {

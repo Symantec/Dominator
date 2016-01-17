@@ -11,10 +11,10 @@ import (
 
 var timeFormat string = "02 Jan 2006 15:04:05 MST"
 
-func (fs *FileSystem) list(w io.Writer) error {
+func (fs *FileSystem) list(w io.Writer, listSelector ListSelector) error {
 	defer runtime.GC()
 	numLinksTable := buildNumLinksTable(fs)
-	return fs.DirectoryInode.list(w, "/", numLinksTable, 1)
+	return fs.DirectoryInode.list(w, "/", numLinksTable, 1, listSelector)
 }
 
 func buildNumLinksTable(fs *FileSystem) NumLinksTable {
@@ -34,7 +34,8 @@ func (inode *DirectoryInode) scanDirectory(fs *FileSystem,
 }
 
 func (inode *DirectoryInode) list(w io.Writer, name string,
-	numLinksTable NumLinksTable, numLinks int) error {
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector) error {
 	_, err := fmt.Fprintf(w, "%v %3d %5d %5d %35s %s\n",
 		inode.Mode, numLinks, inode.Uid, inode.Gid, "", name)
 	if err != nil {
@@ -42,7 +43,7 @@ func (inode *DirectoryInode) list(w io.Writer, name string,
 	}
 	for _, dirent := range inode.EntryList {
 		err = dirent.inode.List(w, path.Join(name, dirent.Name), numLinksTable,
-			numLinksTable[dirent.InodeNumber])
+			numLinksTable[dirent.InodeNumber], listSelector)
 		if err != nil {
 			return err
 		}
@@ -51,7 +52,8 @@ func (inode *DirectoryInode) list(w io.Writer, name string,
 }
 
 func (inode *RegularInode) list(w io.Writer, name string,
-	numLinksTable NumLinksTable, numLinks int) error {
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector) error {
 	var err error
 	t := time.Unix(inode.MtimeSeconds, int64(inode.MtimeNanoSeconds))
 	if inode.Size > 0 {
@@ -70,7 +72,8 @@ func (inode *RegularInode) list(w io.Writer, name string,
 }
 
 func (inode *SymlinkInode) list(w io.Writer, name string,
-	numLinksTable NumLinksTable, numLinks int) error {
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector) error {
 	_, err := fmt.Fprintf(w, "lrwxrwxrwx %3d %5d %5d %35s %s -> %s\n",
 		numLinks, inode.Uid, inode.Gid, "", name, inode.Symlink)
 	if err != nil {
@@ -80,7 +83,8 @@ func (inode *SymlinkInode) list(w io.Writer, name string,
 }
 
 func (inode *SpecialInode) list(w io.Writer, name string,
-	numLinksTable NumLinksTable, numLinks int) error {
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector) error {
 	var data string
 	data = ""
 	t := time.Unix(inode.MtimeSeconds, int64(inode.MtimeNanoSeconds))
