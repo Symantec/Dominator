@@ -2,14 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"net/rpc"
 	"os"
 )
 
-func showImageSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
-	objectClient *objectclient.ObjectClient, args []string) {
+func showImageSubcommand(args []string) {
+	_, imageSClient, _ := getClients()
 	if err := showImage(imageSClient, args[0]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error showing image\t%s\n", err)
 		os.Exit(1)
@@ -22,5 +20,5 @@ func showImage(client *srpc.Client, image string) error {
 	if err != nil {
 		return err
 	}
-	return fs.List(os.Stdout)
+	return fs.Listf(os.Stdout, listSelector)
 }

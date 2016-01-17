@@ -9,7 +9,6 @@ import (
 	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/objectserver"
-	"net/rpc"
 	"os"
 	"path"
 	"syscall"
@@ -17,8 +16,8 @@ import (
 
 var dirPerms os.FileMode = syscall.S_IRWXU
 
-func getImageSubcommand(imageClient *rpc.Client, imageSClient *srpc.Client,
-	objectClient *objectclient.ObjectClient, args []string) {
+func getImageSubcommand(args []string) {
+	_, imageSClient, objectClient := getClients()
 	err := getImageAndWrite(imageSClient, objectClient, args[0], args[1])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting image\t%s\n", err)

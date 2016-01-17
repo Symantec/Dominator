@@ -9,12 +9,16 @@ import (
 	"time"
 )
 
-var timeFormat string = "02 Jan 2006 15:04:05 MST"
+const (
+	timeFormat  string = "02 Jan 2006 15:04:05 MST"
+	symlinkMode        = syscall.S_IFLNK | syscall.S_IRWXU | syscall.S_IRWXG |
+		syscall.S_IRWXO
+)
 
-func (fs *FileSystem) list(w io.Writer) error {
+func (fs *FileSystem) list(w io.Writer, listSelector ListSelector) error {
 	defer runtime.GC()
 	numLinksTable := buildNumLinksTable(fs)
-	return fs.DirectoryInode.list(w, "/", numLinksTable, 1)
+	return fs.DirectoryInode.list(w, "/", numLinksTable, 1, listSelector)
 }
 
 func buildNumLinksTable(fs *FileSystem) NumLinksTable {
@@ -34,15 +38,15 @@ func (inode *DirectoryInode) scanDirectory(fs *FileSystem,
 }
 
 func (inode *DirectoryInode) list(w io.Writer, name string,
-	numLinksTable NumLinksTable, numLinks int) error {
-	_, err := fmt.Fprintf(w, "%v %3d %5d %5d %35s %s\n",
-		inode.Mode, numLinks, inode.Uid, inode.Gid, "", name)
-	if err != nil {
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector) error {
+	if err := listUntilName(w, inode.Mode, numLinks, inode.Uid, inode.Gid,
+		0, -1, -1, name, true, listSelector); err != nil {
 		return err
 	}
 	for _, dirent := range inode.EntryList {
-		err = dirent.inode.List(w, path.Join(name, dirent.Name), numLinksTable,
-			numLinksTable[dirent.InodeNumber])
+		err := dirent.inode.List(w, path.Join(name, dirent.Name), numLinksTable,
+			numLinksTable[dirent.InodeNumber], listSelector)
 		if err != nil {
 			return err
 		}
@@ -51,47 +55,104 @@ func (inode *DirectoryInode) list(w io.Writer, name string,
 }
 
 func (inode *RegularInode) list(w io.Writer, name string,
-	numLinksTable NumLinksTable, numLinks int) error {
-	var err error
-	t := time.Unix(inode.MtimeSeconds, int64(inode.MtimeNanoSeconds))
-	if inode.Size > 0 {
-		_, err = fmt.Fprintf(w, "%v %3d %5d %5d %10d %s %s %x\n",
-			inode.Mode, numLinks, inode.Uid, inode.Gid, inode.Size,
-			t.Format(timeFormat), name, inode.Hash)
-	} else {
-		_, err = fmt.Fprintf(w, "%v %3d %5d %5d %10d %s %s\n",
-			inode.Mode, numLinks, inode.Uid, inode.Gid, inode.Size,
-			t.Format(timeFormat), name)
-	}
-	if err != nil {
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector) error {
+	if err := listUntilName(w, inode.Mode, numLinks, inode.Uid, inode.Gid,
+		inode.Size, inode.MtimeSeconds, inode.MtimeNanoSeconds, name, false,
+		listSelector); err != nil {
 		return err
 	}
-	return nil
+	var err error
+	if inode.Size > 0 && listSelector&ListSelectSkipData == 0 {
+		_, err = fmt.Fprintf(w, " %x\n", inode.Hash)
+	} else {
+		_, err = io.WriteString(w, "\n")
+	}
+	return err
 }
 
 func (inode *SymlinkInode) list(w io.Writer, name string,
-	numLinksTable NumLinksTable, numLinks int) error {
-	_, err := fmt.Fprintf(w, "lrwxrwxrwx %3d %5d %5d %35s %s -> %s\n",
-		numLinks, inode.Uid, inode.Gid, "", name, inode.Symlink)
-	if err != nil {
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector) error {
+	if err := listUntilName(w, symlinkMode, numLinks, inode.Uid, inode.Gid,
+		0, -1, -1, name, false, listSelector); err != nil {
 		return err
 	}
-	return nil
+	var err error
+	if listSelector&ListSelectSkipData == 0 {
+		_, err = fmt.Fprintf(w, " -> %s\n", inode.Symlink)
+	} else {
+		_, err = io.WriteString(w, "\n")
+	}
+	return err
 }
 
 func (inode *SpecialInode) list(w io.Writer, name string,
-	numLinksTable NumLinksTable, numLinks int) error {
-	var data string
-	data = ""
-	t := time.Unix(inode.MtimeSeconds, int64(inode.MtimeNanoSeconds))
-	if inode.Mode&syscall.S_IFMT == syscall.S_IFBLK ||
-		inode.Mode&syscall.S_IFMT == syscall.S_IFCHR {
-		data = fmt.Sprintf("%#x", inode.Rdev)
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector) error {
+	return listUntilName(w, inode.Mode, numLinks, inode.Uid, inode.Gid,
+		inode.Rdev, inode.MtimeSeconds, inode.MtimeNanoSeconds, name, true,
+		listSelector)
+}
+
+func listUntilName(w io.Writer, mode FileMode, numLinks int, uid uint32,
+	gid uint32, data uint64, seconds int64, nanoSeconds int32, name string,
+	newline bool, listSelector ListSelector) error {
+	if listSelector&ListSelectSkipMode == 0 {
+		if _, err := io.WriteString(w, mode.String()+" "); err != nil {
+			return err
+		}
 	}
-	_, err := fmt.Fprintf(w, "%v %3d %5d %5d %10s %s %s\n",
-		inode.Mode, numLinks, inode.Uid, inode.Gid, data, t.Format(timeFormat),
-		name)
-	if err != nil {
+	if listSelector&ListSelectSkipNumLinks == 0 {
+		if _, err := fmt.Fprintf(w, "%3d ", numLinks); err != nil {
+			return err
+		}
+	}
+	if listSelector&ListSelectSkipUid == 0 {
+		if _, err := fmt.Fprintf(w, "%5d ", uid); err != nil {
+			return err
+		}
+	}
+	if listSelector&ListSelectSkipGid == 0 {
+		if _, err := fmt.Fprintf(w, "%5d ", gid); err != nil {
+			return err
+		}
+	}
+	if listSelector&ListSelectSkipSizeDevnum == 0 {
+		var err error
+		switch mode & syscall.S_IFMT {
+		case syscall.S_IFREG:
+			_, err = fmt.Fprintf(w, "%10d ", data)
+		case syscall.S_IFBLK:
+			_, err = fmt.Fprintf(w, "%#10x ", data)
+		case syscall.S_IFCHR:
+			_, err = fmt.Fprintf(w, "%#10x ", data)
+		default:
+			_, err = fmt.Fprintf(w, "%11s", "")
+		}
+		if err != nil {
+			return err
+		}
+	}
+	if listSelector&ListSelectSkipMtime == 0 {
+		var err error
+		if seconds == -1 && nanoSeconds == -1 {
+			_, err = fmt.Fprintf(w, "%25s", "")
+		} else {
+			t := time.Unix(seconds, int64(nanoSeconds))
+			_, err = io.WriteString(w, t.Format(timeFormat)+" ")
+		}
+		if err != nil {
+			return err
+		}
+	}
+	if listSelector&ListSelectSkipName == 0 {
+		if _, err := io.WriteString(w, name); err != nil {
+			return err
+		}
+	}
+	if newline {
+		_, err := io.WriteString(w, "\n")
 		return err
 	}
 	return nil
@@ -109,20 +170,20 @@ func (mode FileMode) string() string {
 		}
 		w++
 	}
-	switch {
-	case mode&syscall.S_IFMT == syscall.S_IFSOCK:
+	switch mode & syscall.S_IFMT {
+	case syscall.S_IFSOCK:
 		buf[0] = 's'
-	case mode&syscall.S_IFMT == syscall.S_IFLNK:
+	case syscall.S_IFLNK:
 		buf[0] = 'l'
-	case mode&syscall.S_IFMT == syscall.S_IFREG:
+	case syscall.S_IFREG:
 		buf[0] = '-'
-	case mode&syscall.S_IFMT == syscall.S_IFBLK:
+	case syscall.S_IFBLK:
 		buf[0] = 'b'
-	case mode&syscall.S_IFMT == syscall.S_IFDIR:
+	case syscall.S_IFDIR:
 		buf[0] = 'd'
-	case mode&syscall.S_IFMT == syscall.S_IFCHR:
+	case syscall.S_IFCHR:
 		buf[0] = 'c'
-	case mode&syscall.S_IFMT == syscall.S_IFIFO:
+	case syscall.S_IFIFO:
 		buf[0] = 'p'
 	default:
 		buf[0] = '?'
