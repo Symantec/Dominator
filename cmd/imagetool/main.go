@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"net/rpc"
@@ -25,6 +26,8 @@ var (
 	keyFile = flag.String("keyFile",
 		path.Join(os.Getenv("HOME"), ".ssl/key.pem"),
 		"Name of file containing the user SSL key")
+	skipFields = flag.String("skipFields", "",
+		"Fields to skip when showing or diffing images")
 )
 
 func printUsage() {
@@ -45,6 +48,15 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  get    name directory")
 	fmt.Fprintln(os.Stderr, "  list")
 	fmt.Fprintln(os.Stderr, "  show   name")
+	fmt.Fprintln(os.Stderr, "Fields:")
+	fmt.Fprintln(os.Stderr, "  m: mode")
+	fmt.Fprintln(os.Stderr, "  l: number of hardlinks")
+	fmt.Fprintln(os.Stderr, "  u: UID")
+	fmt.Fprintln(os.Stderr, "  g: GID")
+	fmt.Fprintln(os.Stderr, "  s: size/Rdev")
+	fmt.Fprintln(os.Stderr, "  t: time of last modification")
+	fmt.Fprintln(os.Stderr, "  n: name")
+	fmt.Fprintln(os.Stderr, "  d: data (hash or symlink target)")
 }
 
 type commandFunc func([]string)
@@ -69,6 +81,8 @@ var imageRpcClient *rpc.Client
 var imageSrpcClient *srpc.Client
 var theObjectClient *objectclient.ObjectClient
 
+var listSelector filesystem.ListSelector
+
 func getClients() (*rpc.Client, *srpc.Client, *objectclient.ObjectClient) {
 	if imageRpcClient == nil {
 		var err error
@@ -89,6 +103,31 @@ func getClients() (*rpc.Client, *srpc.Client, *objectclient.ObjectClient) {
 	return imageRpcClient, imageSrpcClient, theObjectClient
 }
 
+func makeListSelector(arg string) filesystem.ListSelector {
+	var mask filesystem.ListSelector = filesystem.ListSelectAll
+	for _, char := range arg {
+		switch char {
+		case 'm':
+			mask |= filesystem.ListSelectSkipMode
+		case 'l':
+			mask |= filesystem.ListSelectSkipNumLinks
+		case 'u':
+			mask |= filesystem.ListSelectSkipUid
+		case 'g':
+			mask |= filesystem.ListSelectSkipGid
+		case 's':
+			mask |= filesystem.ListSelectSkipSizeDevnum
+		case 't':
+			mask |= filesystem.ListSelectSkipMtime
+		case 'n':
+			mask |= filesystem.ListSelectSkipName
+		case 'd':
+			mask |= filesystem.ListSelectSkipData
+		}
+	}
+	return mask
+}
+
 func main() {
 	flag.Usage = printUsage
 	flag.Parse()
@@ -96,6 +135,7 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
+	listSelector = makeListSelector(*skipFields)
 	setupTls(*certFile, *keyFile)
 	for _, subcommand := range subcommands {
 		if flag.Arg(0) == subcommand.command {

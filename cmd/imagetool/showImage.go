@@ -20,5 +20,5 @@ func showImage(client *srpc.Client, image string) error {
 	if err != nil {
 		return err
 	}
-	return fs.List(os.Stdout)
+	return fs.Listf(os.Stdout, listSelector)
 }
