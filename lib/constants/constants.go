@@ -9,6 +9,7 @@ const (
 )
 
 var ScanExcludeList = []string{
+	"/home/.*",
 	"/tmp/.*",
 	"/var/log/.*",
 	"/var/mail/.*",
