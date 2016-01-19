@@ -23,7 +23,7 @@ type genericEncoder interface {
 }
 
 func runDaemon(sources []source, mdbFileName, hostnameRegex string,
-	fetchInterval uint, logger *log.Logger, debug bool) {
+	datacentre string, fetchInterval uint, logger *log.Logger, debug bool) {
 	var prevMdb *mdb.Mdb
 	var hostnameRE *regexp.Regexp
 	var err error
@@ -38,7 +38,7 @@ func runDaemon(sources []source, mdbFileName, hostnameRegex string,
 	fetchIntervalDuration := time.Duration(fetchInterval) * time.Second
 	for ; ; sleepUntil(cycleStopTime) {
 		cycleStopTime = time.Now().Add(fetchIntervalDuration)
-		newMdb, err := loadFromAll(sources, logger)
+		newMdb, err := loadFromAll(sources, datacentre, logger)
 		if err != nil {
 			logger.Println(err)
 			continue
@@ -71,11 +71,12 @@ func sleepUntil(wakeTime time.Time) {
 	time.Sleep(sleepTime)
 }
 
-func loadFromAll(sources []source, logger *log.Logger) (*mdb.Mdb, error) {
+func loadFromAll(sources []source, datacentre string,
+	logger *log.Logger) (*mdb.Mdb, error) {
 	var newMdb mdb.Mdb
 	hostMap := make(map[string]struct{})
 	for _, source := range sources {
-		mdb, err := loadMdb(source.driverFunc, source.url, logger)
+		mdb, err := loadMdb(source.driverFunc, source.url, datacentre, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -89,20 +90,22 @@ func loadFromAll(sources []source, logger *log.Logger) (*mdb.Mdb, error) {
 	return &newMdb, nil
 }
 
-func loadMdb(driverFunc driverFunc, url string, logger *log.Logger) (
+func loadMdb(driverFunc driverFunc, url string, datacentre string,
+	logger *log.Logger) (
 	*mdb.Mdb, error) {
 	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
-		return loadHttpMdb(driverFunc, url, logger)
+		return loadHttpMdb(driverFunc, url, datacentre, logger)
 	}
 	file, err := os.Open(url)
 	if err != nil {
 		return nil, errors.New(("Error opening file " + err.Error()))
 	}
 	defer file.Close()
-	return driverFunc(bufio.NewReader(file), logger)
+	return driverFunc(bufio.NewReader(file), datacentre, logger)
 }
 
-func loadHttpMdb(driverFunc driverFunc, url string, logger *log.Logger) (
+func loadHttpMdb(driverFunc driverFunc, url string, datacentre string,
+	logger *log.Logger) (
 	*mdb.Mdb, error) {
 	response, err := http.Get(url)
 	if err != nil {
@@ -112,7 +115,7 @@ func loadHttpMdb(driverFunc driverFunc, url string, logger *log.Logger) (
 	if response.StatusCode != http.StatusOK {
 		return nil, errors.New("HTTP get failed: " + err.Error())
 	}
-	return driverFunc(response.Body, logger)
+	return driverFunc(response.Body, datacentre, logger)
 }
 
 func selectHosts(inMdb *mdb.Mdb, hostnameRE *regexp.Regexp) *mdb.Mdb {

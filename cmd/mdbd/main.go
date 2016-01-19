@@ -13,6 +13,8 @@ import (
 )
 
 var (
+	datacentre = flag.String("datacentre", "",
+		"Datacentre to limit results to (may not be supported by all drivers)")
 	debug         = flag.Bool("debug", false, "If true, show debugging output")
 	fetchInterval = flag.Uint("fetchInterval", 59,
 		"Interval between fetches from the MDB source, in seconds")
@@ -39,7 +41,8 @@ func printUsage() {
 		"  text: each line contains: host required-image planned-image")
 }
 
-type driverFunc func(reader io.Reader, logger *log.Logger) (*mdb.Mdb, error)
+type driverFunc func(reader io.Reader, datacentre string,
+	logger *log.Logger) (*mdb.Mdb, error)
 
 type driver struct {
 	name       string
@@ -109,6 +112,6 @@ func main() {
 	for index := 0; index < flag.NArg(); index += 2 {
 		sources = append(sources, getSource(flag.Arg(index), flag.Arg(index+1)))
 	}
-	runDaemon(sources, *mdbFile, *hostnameRegex, *fetchInterval, getLogger(),
-		*debug)
+	runDaemon(sources, *mdbFile, *hostnameRegex, *datacentre, *fetchInterval,
+		getLogger(), *debug)
 }
