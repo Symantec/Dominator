@@ -101,6 +101,9 @@ func main() {
 		for scanner.Scan() {
 			fields := strings.Fields(scanner.Text())
 			if len(fields) == 2 {
+				if fields[0][0] == '#' {
+					continue
+				}
 				sources = append(sources, getSource(fields[0], fields[1]))
 			}
 		}
