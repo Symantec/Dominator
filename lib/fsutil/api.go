@@ -38,6 +38,12 @@ func ForceRename(oldpath, newpath string) error {
 	return forceRename(oldpath, newpath)
 }
 
+// LoadLines will open a file and read lines from it. Comment lines (i.e. lines
+// beginning with '#') are skipped.
+func LoadLines(filename string) ([]string, error) {
+	return loadLines(filename)
+}
+
 // MakeMutable attempts to remove the "immutable" and "append-only" ext2
 // file-system attributes for one or more files. It is equivalent to calling the
 // command-line programme "chattr -ai pathname...".
