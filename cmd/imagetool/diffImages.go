@@ -129,5 +129,5 @@ func writeImage(fs *filesystem.FileSystem) (string, error) {
 	defer file.Close()
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
-	return file.Name(), fs.Listf(writer, listSelector)
+	return file.Name(), fs.Listf(writer, listSelector, listFilter)
 }

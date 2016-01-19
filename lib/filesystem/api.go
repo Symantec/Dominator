@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/hash"
 	"io"
@@ -28,7 +29,7 @@ type GenericInode interface {
 	GetUid() uint32
 	GetGid() uint32
 	List(w io.Writer, name string, numLinksTable NumLinksTable,
-		numLinks int, listSelector ListSelector) error
+		numLinks int, listSelector ListSelector, filter *filter.Filter) error
 	WriteMetadata(name string) error
 }
 
@@ -70,12 +71,13 @@ func (fs *FileSystem) Encode(writer io.Writer) error {
 	return fs.encode(writer)
 }
 
-func (fs *FileSystem) Listf(w io.Writer, listSelector ListSelector) error {
-	return fs.list(w, listSelector)
+func (fs *FileSystem) Listf(w io.Writer, listSelector ListSelector,
+	filter *filter.Filter) error {
+	return fs.list(w, listSelector, filter)
 }
 
 func (fs *FileSystem) List(w io.Writer) error {
-	return fs.list(w, ListSelectAll)
+	return fs.list(w, ListSelectAll, nil)
 }
 
 func (fs *FileSystem) String() string {
@@ -107,8 +109,8 @@ func (inode *DirectoryInode) GetGid() uint32 {
 
 func (inode *DirectoryInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int,
-	listSelector ListSelector) error {
-	return inode.list(w, name, numLinksTable, numLinks, listSelector)
+	listSelector ListSelector, filter *filter.Filter) error {
+	return inode.list(w, name, numLinksTable, numLinks, listSelector, filter)
 }
 
 func (inode *DirectoryInode) Write(name string) error {
@@ -157,7 +159,7 @@ func (inode *RegularInode) GetGid() uint32 {
 
 func (inode *RegularInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int,
-	listSelector ListSelector) error {
+	listSelector ListSelector, filter *filter.Filter) error {
 	return inode.list(w, name, numLinksTable, numLinks, listSelector)
 }
 
@@ -181,7 +183,7 @@ func (inode *SymlinkInode) GetGid() uint32 {
 
 func (inode *SymlinkInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int,
-	listSelector ListSelector) error {
+	listSelector ListSelector, filter *filter.Filter) error {
 	return inode.list(w, name, numLinksTable, numLinks, listSelector)
 }
 
@@ -212,7 +214,7 @@ func (inode *SpecialInode) GetGid() uint32 {
 
 func (inode *SpecialInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int,
-	listSelector ListSelector) error {
+	listSelector ListSelector, filter *filter.Filter) error {
 	return inode.list(w, name, numLinksTable, numLinks, listSelector)
 }
 

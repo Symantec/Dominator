@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"net/rpc"
@@ -18,6 +19,8 @@ var (
 		"Name of file containing the user SSL certificate")
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
+	filterFile = flag.String("filterFile", "",
+		"Filter file to apply when diffing images")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
 		"Hostname of image server")
 	imageServerPortNum = flag.Uint("imageServerPortNum",
@@ -128,6 +131,8 @@ func makeListSelector(arg string) filesystem.ListSelector {
 	return mask
 }
 
+var listFilter *filter.Filter
+
 func main() {
 	flag.Usage = printUsage
 	flag.Parse()
@@ -136,6 +141,14 @@ func main() {
 		os.Exit(2)
 	}
 	listSelector = makeListSelector(*skipFields)
+	var err error
+	if *filterFile != "" {
+		listFilter, err = filter.LoadFilter(*filterFile)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+	}
 	setupTls(*certFile, *keyFile)
 	for _, subcommand := range subcommands {
 		if flag.Arg(0) == subcommand.command {
