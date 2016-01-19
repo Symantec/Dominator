@@ -113,7 +113,7 @@ func loadHttpMdb(driverFunc driverFunc, url string, datacentre string,
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		return nil, errors.New("HTTP get failed: " + err.Error())
+		return nil, errors.New("HTTP get failed")
 	}
 	return driverFunc(response.Body, datacentre, logger)
 }
