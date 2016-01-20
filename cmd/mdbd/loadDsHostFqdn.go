@@ -8,7 +8,8 @@ import (
 	"log"
 )
 
-func loadDsHostFqdn(reader io.Reader, logger *log.Logger) (*mdb.Mdb, error) {
+func loadDsHostFqdn(reader io.Reader, datacentre string, logger *log.Logger) (
+	*mdb.Mdb, error) {
 	type machineType struct {
 		Fqdn string
 	}
@@ -24,6 +25,9 @@ func loadDsHostFqdn(reader io.Reader, logger *log.Logger) (*mdb.Mdb, error) {
 		return nil, errors.New("Error decoding: " + err.Error())
 	}
 	for dsName, dataCentre := range inMdb {
+		if datacentre != "" && dsName != datacentre {
+			continue
+		}
 		for machineName, inMachine := range dataCentre {
 			var outMachine mdb.Machine
 			if inMachine.Fqdn == "" {

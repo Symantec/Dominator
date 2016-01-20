@@ -8,7 +8,8 @@ import (
 	"log"
 )
 
-func loadCis(reader io.Reader, logger *log.Logger) (*mdb.Mdb, error) {
+func loadCis(reader io.Reader, datacentre string, logger *log.Logger) (
+	*mdb.Mdb, error) {
 	type sourceType struct {
 		Name string
 	}

@@ -8,7 +8,8 @@ import (
 	"strings"
 )
 
-func loadText(reader io.Reader, logger *log.Logger) (*mdb.Mdb, error) {
+func loadText(reader io.Reader, datacentre string, logger *log.Logger) (
+	*mdb.Mdb, error) {
 	scanner := bufio.NewScanner(reader)
 	var newMdb mdb.Mdb
 	for scanner.Scan() {

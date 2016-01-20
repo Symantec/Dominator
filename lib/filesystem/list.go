@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/lib/filter"
 	"io"
 	"path"
 	"runtime"
@@ -15,10 +16,12 @@ const (
 		syscall.S_IRWXO
 )
 
-func (fs *FileSystem) list(w io.Writer, listSelector ListSelector) error {
+func (fs *FileSystem) list(w io.Writer, listSelector ListSelector,
+	filter *filter.Filter) error {
 	defer runtime.GC()
 	numLinksTable := buildNumLinksTable(fs)
-	return fs.DirectoryInode.list(w, "/", numLinksTable, 1, listSelector)
+	return fs.DirectoryInode.list(w, "/", numLinksTable, 1, listSelector,
+		filter)
 }
 
 func buildNumLinksTable(fs *FileSystem) NumLinksTable {
@@ -39,14 +42,18 @@ func (inode *DirectoryInode) scanDirectory(fs *FileSystem,
 
 func (inode *DirectoryInode) list(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int,
-	listSelector ListSelector) error {
+	listSelector ListSelector, filter *filter.Filter) error {
 	if err := listUntilName(w, inode.Mode, numLinks, inode.Uid, inode.Gid,
 		0, -1, -1, name, true, listSelector); err != nil {
 		return err
 	}
 	for _, dirent := range inode.EntryList {
-		err := dirent.inode.List(w, path.Join(name, dirent.Name), numLinksTable,
-			numLinksTable[dirent.InodeNumber], listSelector)
+		pathname := path.Join(name, dirent.Name)
+		if filter != nil && filter.Match(pathname) {
+			continue
+		}
+		err := dirent.inode.List(w, pathname, numLinksTable,
+			numLinksTable[dirent.InodeNumber], listSelector, filter)
 		if err != nil {
 			return err
 		}

@@ -1,8 +1,17 @@
 package filter
 
 import (
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"regexp"
 )
+
+func loadFilter(filename string) (*Filter, error) {
+	lines, err := fsutil.LoadLines(filename)
+	if err != nil {
+		return nil, err
+	}
+	return NewFilter(lines)
+}
 
 func newFilter(filterLines []string) (*Filter, error) {
 	var filter Filter
