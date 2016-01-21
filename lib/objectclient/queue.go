@@ -71,6 +71,7 @@ func (objQ *ObjectAdderQueue) add(reader io.Reader, length uint64) (
 }
 
 func (objQ *ObjectAdderQueue) close() error {
+	objQ.sendSemaphore <- true // Wait for any sends in progress to complete.
 	close(objQ.getResponseChan)
 	err := objQ.consumeErrors()
 	if e := objQ.conn.Close(); err == nil {
