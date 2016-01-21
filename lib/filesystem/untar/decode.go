@@ -44,7 +44,7 @@ func decode(tarReader *tar.Reader, dataHandler DataHandler,
 			strings.HasPrefix(header.Name, "/.subd/") {
 			continue
 		}
-		if filter.Match(header.Name) {
+		if filter != nil && filter.Match(header.Name) {
 			continue
 		}
 		err = decoderData.addHeader(tarReader, dataHandler, header)
