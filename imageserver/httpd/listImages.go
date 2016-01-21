@@ -45,8 +45,12 @@ func showImage(writer io.Writer, name string, image *image.Image) {
 		name, format.FormatBytes(image.FileSystem.TotalDataBytes))
 	fmt.Fprintf(writer, "    <td><a href=\"listImage?%s\">%d</a></td>\n",
 		name, image.FileSystem.NumRegularInodes)
-	fmt.Fprintf(writer, "    <td><a href=\"listFilter?%s\">%d</a></td>\n",
-		name, len(image.Filter.FilterLines))
+	if image.Filter == nil {
+		fmt.Fprintln(writer, "    <td>(sparse filter)</td>")
+	} else {
+		fmt.Fprintf(writer, "    <td><a href=\"listFilter?%s\">%d</a></td>\n",
+			name, len(image.Filter.FilterLines))
+	}
 	fmt.Fprintf(writer, "    <td><a href=\"listTriggers?%s\">%d</a></td>\n",
 		name, len(image.Triggers.Triggers))
 	fmt.Fprintf(writer, "  </tr>\n")
