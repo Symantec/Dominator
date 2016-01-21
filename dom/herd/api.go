@@ -32,6 +32,7 @@ const (
 	statusComputingUpdate
 	statusUpdating
 	statusFailedToUpdate
+	statusWaitingForNextFullPoll
 	statusSynced
 )
 
@@ -50,6 +51,7 @@ type Sub struct {
 	fileSystem                   *filesystem.FileSystem
 	objectCache                  objectcache.ObjectCache
 	generationCount              uint64
+	generationCountAtChangeStart uint64
 	status                       subStatus
 	lastConnectionStartTime      time.Time
 	lastConnectionSucceededTime  time.Time

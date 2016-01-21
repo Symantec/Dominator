@@ -34,6 +34,8 @@ func (status subStatus) string() string {
 		return "updating"
 	case statusFailedToUpdate:
 		return "update failed"
+	case statusWaitingForNextFullPoll:
+		return "waiting for next full poll"
 	case statusSynced:
 		return "synced"
 	default:
