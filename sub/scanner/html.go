@@ -22,7 +22,8 @@ func (fsh *FileSystemHistory) writeHtml(writer io.Writer) {
 	fmt.Fprintf(writer, "Duration of current scan: %s<br>\n",
 		time.Since(fsh.timeOfLastScan))
 	if fsh.generationCount > 0 {
-		fmt.Fprintf(writer, "Last change: %s<br>\n", fsh.timeOfLastChange)
+		fmt.Fprintf(writer, "Last change: %s (%s ago)<br>\n",
+			fsh.timeOfLastChange, time.Since(fsh.timeOfLastChange))
 	}
 }
 
