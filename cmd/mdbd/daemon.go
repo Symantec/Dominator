@@ -73,19 +73,29 @@ func sleepUntil(wakeTime time.Time) {
 
 func loadFromAll(sources []source, datacentre string,
 	logger *log.Logger) (*mdb.Mdb, error) {
-	var newMdb mdb.Mdb
-	hostMap := make(map[string]struct{})
+	machineMap := make(map[string]mdb.Machine)
 	for _, source := range sources {
 		mdb, err := loadMdb(source.driverFunc, source.url, datacentre, logger)
 		if err != nil {
 			return nil, err
 		}
 		for _, machine := range mdb.Machines {
-			if _, ok := hostMap[machine.Hostname]; !ok {
-				newMdb.Machines = append(newMdb.Machines, machine)
-				hostMap[machine.Hostname] = struct{}{}
+			if oldMachine, ok := machineMap[machine.Hostname]; ok {
+				if machine.RequiredImage != "" {
+					oldMachine.RequiredImage = machine.RequiredImage
+				}
+				if machine.PlannedImage != "" {
+					oldMachine.PlannedImage = machine.PlannedImage
+				}
+				machineMap[machine.Hostname] = oldMachine
+			} else {
+				machineMap[machine.Hostname] = machine
 			}
 		}
+	}
+	var newMdb mdb.Mdb
+	for _, machine := range machineMap {
+		newMdb.Machines = append(newMdb.Machines, machine)
 	}
 	return &newMdb, nil
 }
