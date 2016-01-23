@@ -65,9 +65,11 @@ func addImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 		return errors.New("image exists")
 	}
 	var newImage image.Image
-	newImage.Filter, err = filter.LoadFilter(filterFilename)
-	if err != nil {
-		return err
+	if filterFilename != "" {
+		newImage.Filter, err = filter.LoadFilter(filterFilename)
+		if err != nil {
+			return err
+		}
 	}
 	if err := loadTriggers(&newImage, triggersFilename); err != nil {
 		return err

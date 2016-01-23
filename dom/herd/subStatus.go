@@ -5,36 +5,38 @@ import (
 )
 
 func (status subStatus) string() string {
-	switch {
-	case status == statusUnknown:
+	switch status {
+	case statusUnknown:
 		return "unknown"
-	case status == statusConnecting:
+	case statusConnecting:
 		return "connecting"
-	case status == statusDNSError:
+	case statusDNSError:
 		return "DNS error"
-	case status == statusFailedToConnect:
+	case statusFailedToConnect:
 		return "connect failed"
-	case status == statusWaitingToPoll:
+	case statusWaitingToPoll:
 		return "waiting to poll"
-	case status == statusPolling:
+	case statusPolling:
 		return "polling"
-	case status == statusFailedToPoll:
+	case statusFailedToPoll:
 		return "poll failed"
-	case status == statusSubNotReady:
+	case statusSubNotReady:
 		return "sub not ready"
-	case status == statusImageNotReady:
+	case statusImageNotReady:
 		return "image not ready"
-	case status == statusFetching:
+	case statusFetching:
 		return "fetching"
-	case status == statusFailedToFetch:
+	case statusFailedToFetch:
 		return "fetch failed"
-	case status == statusComputingUpdate:
+	case statusComputingUpdate:
 		return "computing update"
-	case status == statusUpdating:
+	case statusUpdating:
 		return "updating"
-	case status == statusFailedToUpdate:
+	case statusFailedToUpdate:
 		return "update failed"
-	case status == statusSynced:
+	case statusWaitingForNextFullPoll:
+		return "waiting for next full poll"
+	case statusSynced:
 		return "synced"
 	default:
 		panic(fmt.Sprintf("unknown status: %d", status))

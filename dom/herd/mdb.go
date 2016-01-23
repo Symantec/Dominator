@@ -51,6 +51,8 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 		herd.getImageHaveLock(sub.requiredImage) // Preload.
 		if herd.getImageHaveLock(sub.plannedImage) == nil {
 			sub.havePlannedImage = false
+		} else {
+			sub.havePlannedImage = true
 		}
 	}
 	// Delete flagged subs (those not in the new MDB).

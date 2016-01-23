@@ -36,7 +36,7 @@ func newObjectAdderQueue(objClient *ObjectClient) (*ObjectAdderQueue, error) {
 func (objQ *ObjectAdderQueue) add(reader io.Reader, length uint64) (
 	hash.Hash, error) {
 	var hash hash.Hash
-	if err := objQ.consumeErrors(); err != nil {
+	if err := objQ.consumeErrors(false); err != nil {
 		return hash, err
 	}
 	data := make([]byte, length)
@@ -71,22 +71,36 @@ func (objQ *ObjectAdderQueue) add(reader io.Reader, length uint64) (
 }
 
 func (objQ *ObjectAdderQueue) close() error {
+	objQ.sendSemaphore <- true // Wait for any sends in progress to complete.
+	var request objectserver.AddObjectRequest
+	err := objQ.encoder.Encode(request)
+	err = updateError(err, objQ.conn.Flush())
 	close(objQ.getResponseChan)
-	err := objQ.consumeErrors()
-	if e := objQ.conn.Close(); err == nil {
-		err = e
-	}
-	if e := objQ.client.Close(); err == nil {
-		err = e
-	}
-	return err
+	err = updateError(err, objQ.consumeErrors(true))
+	err = updateError(err, objQ.conn.Close())
+	return updateError(err, objQ.client.Close())
 }
 
-func (objQ *ObjectAdderQueue) consumeErrors() error {
-	for len(objQ.errorChan) > 0 {
-		err := <-objQ.errorChan
-		if err != nil {
-			return err
+func updateError(oldError, newError error) error {
+	if oldError == nil {
+		return newError
+	}
+	return oldError
+}
+
+func (objQ *ObjectAdderQueue) consumeErrors(untilClose bool) error {
+	if untilClose {
+		for err := range objQ.errorChan {
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		for len(objQ.errorChan) > 0 {
+			err := <-objQ.errorChan
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -94,6 +108,7 @@ func (objQ *ObjectAdderQueue) consumeErrors() error {
 
 func readResponses(conn *srpc.Conn, getResponseChan <-chan bool,
 	errorChan chan<- error) {
+	defer close(errorChan)
 	decoder := gob.NewDecoder(conn)
 	for range getResponseChan {
 		var reply objectserver.AddObjectResponse
@@ -103,8 +118,7 @@ func readResponses(conn *srpc.Conn, getResponseChan <-chan bool,
 		}
 		errorChan <- err
 		if err != nil {
-			close(errorChan)
-			return
+			break
 		}
 	}
 }

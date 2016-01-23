@@ -16,6 +16,8 @@ func listFilterHandler(w http.ResponseWriter, req *http.Request) {
 	image := imageDataBase.GetImage(imageName)
 	if image == nil {
 		fmt.Fprintf(writer, "Image: %s UNKNOWN!\n", imageName)
+	} else if image.Filter == nil {
+		fmt.Fprintln(writer, "Sparse filter")
 	} else {
 		fmt.Fprintf(writer, "Filter lines for image: %s\n", imageName)
 		fmt.Fprintln(writer, "<pre>")

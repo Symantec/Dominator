@@ -75,7 +75,7 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 	subDirectory, requiredDirectory *filesystem.DirectoryInode,
 	myPathName string, filter *filter.Filter) {
 	// First look for entries that should be deleted.
-	if subDirectory != nil {
+	if filter != nil && subDirectory != nil {
 		for name := range subDirectory.EntriesByName {
 			pathname := path.Join(myPathName, name)
 			if filter.Match(pathname) {
@@ -88,7 +88,7 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 	}
 	for name, requiredEntry := range requiredDirectory.EntriesByName {
 		pathname := path.Join(myPathName, name)
-		if filter.Match(pathname) {
+		if filter != nil && filter.Match(pathname) {
 			continue
 		}
 		var subEntry *filesystem.DirectoryEntry
@@ -100,8 +100,7 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 		if subEntry == nil {
 			addEntry(request, state, requiredEntry, pathname)
 		} else {
-			compareEntries(request, state, subEntry, requiredEntry, pathname,
-				filter)
+			compareEntries(request, state, subEntry, requiredEntry, pathname)
 		}
 		// If a directory: descend (possibly with the directory for the sub).
 		requiredInode := requiredEntry.Inode()
@@ -129,8 +128,7 @@ func addEntry(request *subproto.UpdateRequest, state *state,
 }
 
 func compareEntries(request *subproto.UpdateRequest, state *state,
-	subEntry, requiredEntry *filesystem.DirectoryEntry,
-	myPathName string, filter *filter.Filter) {
+	subEntry, requiredEntry *filesystem.DirectoryEntry, myPathName string) {
 	subInode := subEntry.Inode()
 	requiredInode := requiredEntry.Inode()
 	sameType, sameMetadata, sameData := filesystem.CompareInodes(
