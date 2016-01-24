@@ -380,6 +380,7 @@ func (t *rpcType) skipPath(pathname string) bool {
 func runTriggers(triggers []*triggers.Trigger, action string,
 	logger *log.Logger) bool {
 	hadFailures := false
+	needRestart := false
 	logPrefix := ""
 	if *disableTriggers {
 		logPrefix = "Disabled: "
@@ -407,6 +408,13 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 		if trigger.Service == "reboot" && action == "stop" {
 			continue
 		}
+		if trigger.Service == "subd" {
+			// Never kill myself, just restart.
+			if action == "start" {
+				needRestart = true
+			}
+			continue
+		}
 		logger.Printf("%sAction: service %s %s\n",
 			logPrefix, trigger.Service, action)
 		if *disableTriggers {
@@ -414,6 +422,14 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 		}
 		cmd := exec.Command("run-in-mntns", ppid, "service", action,
 			trigger.Service)
+		cmd.Stdout = os.Stdout
+		if err := cmd.Run(); err != nil {
+			hadFailures = true
+			logger.Print(err)
+		}
+	}
+	if needRestart {
+		cmd := exec.Command("run-in-mntns", ppid, "service", "restart", "subd")
 		cmd.Stdout = os.Stdout
 		if err := cmd.Run(); err != nil {
 			hadFailures = true
