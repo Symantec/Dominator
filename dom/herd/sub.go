@@ -36,7 +36,7 @@ func (sub *Sub) connectAndPoll() {
 	hostname := strings.SplitN(sub.hostname, "*", 2)[0]
 	address := fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber)
 	sub.lastConnectionStartTime = time.Now()
-	srpcClient, err := srpc.DialHTTP("tcp", address)
+	srpcClient, err := srpc.DialHTTP("tcp", address, 0)
 	if err != nil {
 		if err, ok := err.(*net.OpError); ok {
 			if _, ok := err.Err.(*net.DNSError); ok {

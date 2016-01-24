@@ -96,7 +96,7 @@ func getClients() (*rpc.Client, *srpc.Client, *objectclient.ObjectClient) {
 			fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
 			os.Exit(1)
 		}
-		imageSrpcClient, err = srpc.DialHTTP("tcp", clientName)
+		imageSrpcClient, err = srpc.DialHTTP("tcp", clientName, 0)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
 			os.Exit(1)

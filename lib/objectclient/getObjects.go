@@ -13,7 +13,7 @@ import (
 
 func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (
 	*ObjectsReader, error) {
-	client, err := srpc.DialHTTP("tcp", objClient.address)
+	client, err := srpc.DialHTTP("tcp", objClient.address, 0)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Error dialing\t%s\n", err))
 	}

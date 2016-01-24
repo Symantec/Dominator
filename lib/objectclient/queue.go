@@ -14,7 +14,7 @@ import (
 func newObjectAdderQueue(objClient *ObjectClient) (*ObjectAdderQueue, error) {
 	var objQ ObjectAdderQueue
 	var err error
-	objQ.client, err = srpc.DialHTTP("tcp", objClient.address)
+	objQ.client, err = srpc.DialHTTP("tcp", objClient.address, 0)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Error dialing\t%s\n", err.Error()))
 	}

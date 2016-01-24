@@ -7,10 +7,12 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"time"
 )
 
-func dialHTTP(network, address string, tlsConfig *tls.Config) (*Client, error) {
-	unsecuredConn, err := net.Dial(network, address)
+func dialHTTP(network, address string, tlsConfig *tls.Config,
+	timeout time.Duration) (*Client, error) {
+	unsecuredConn, err := net.DialTimeout(network, address, timeout)
 	if err != nil {
 		return nil, err
 	}
