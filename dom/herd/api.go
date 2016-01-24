@@ -21,6 +21,7 @@ const (
 	statusUnknown = iota
 	statusConnecting
 	statusDNSError
+	statusConnectTimeout
 	statusFailedToConnect
 	statusWaitingToPoll
 	statusPolling

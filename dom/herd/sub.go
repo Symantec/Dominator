@@ -43,6 +43,10 @@ func (sub *Sub) connectAndPoll() {
 				sub.status = statusDNSError
 				return
 			}
+			if err.Timeout() {
+				sub.status = statusConnectTimeout
+				return
+			}
 		}
 		sub.status = statusFailedToConnect
 		return
