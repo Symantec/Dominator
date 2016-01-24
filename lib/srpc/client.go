@@ -27,6 +27,12 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 	if err != nil {
 		return nil, err
 	}
+	if resp.StatusCode == http.StatusNotFound &&
+		tlsConfig != nil &&
+		tlsConfig.InsecureSkipVerify {
+		// Fall back to insecure connection.
+		return dialHTTP(network, address, nil, timeout)
+	}
 	if resp.Status != connectString {
 		return nil, errors.New("unexpected HTTP response: " + resp.Status)
 	}
