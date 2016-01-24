@@ -19,7 +19,7 @@ umask 022
 
 . /lib/lsb/init-functions
 
-export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
 readonly pidfile="/var/run/subd.pid"
 
 case "$1" in

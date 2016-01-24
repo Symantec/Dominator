@@ -20,7 +20,7 @@ umask 022
 
 . /etc/rc.d/init.d/functions
 
-export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
 readonly pidfile="/var/run/subd.pid"
 
 case "$1" in
