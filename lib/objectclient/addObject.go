@@ -18,7 +18,7 @@ func (objClient *ObjectClient) addObject(reader io.Reader, length uint64,
 		return reply.Hash, false, errors.New(
 			"zero length object cannot be added")
 	}
-	srpcClient, err := srpc.DialHTTP("tcp", objClient.address)
+	srpcClient, err := srpc.DialHTTP("tcp", objClient.address, 0)
 	if err != nil {
 		return reply.Hash, false, errors.New(
 			fmt.Sprintf("Error dialing\t%s\n", err.Error()))

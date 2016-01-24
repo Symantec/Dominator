@@ -88,7 +88,7 @@ func getImage(client *srpc.Client, name string) (
 
 func pollImage(name string) (*filesystem.FileSystem, error) {
 	clientName := fmt.Sprintf("%s:%d", name, constants.SubPortNumber)
-	srpcClient, err := srpc.DialHTTP("tcp", clientName)
+	srpcClient, err := srpc.DialHTTP("tcp", clientName, 0)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Error dialing %s", err))
 	}

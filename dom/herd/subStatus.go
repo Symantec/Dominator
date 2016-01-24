@@ -12,6 +12,8 @@ func (status subStatus) string() string {
 		return "connecting"
 	case statusDNSError:
 		return "DNS error"
+	case statusConnectTimeout:
+		return "connect timeout"
 	case statusFailedToConnect:
 		return "connect failed"
 	case statusWaitingToPoll:

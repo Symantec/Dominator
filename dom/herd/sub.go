@@ -1,6 +1,7 @@
 package herd
 
 import (
+	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
@@ -12,6 +13,13 @@ import (
 	"runtime"
 	"strings"
 	"time"
+)
+
+var (
+	subConnectTimeout = flag.Uint("subConnectTimeout", 15,
+		"Timeout in seconds for sub connections. If zero, OS timeout is used")
+	logUnknownSubConnectErrors = flag.Bool("logUnknownSubConnectErrors", false,
+		"If true, log unknown sub connection errors")
 )
 
 func (sub *Sub) tryMakeBusy() bool {
@@ -36,15 +44,23 @@ func (sub *Sub) connectAndPoll() {
 	hostname := strings.SplitN(sub.hostname, "*", 2)[0]
 	address := fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber)
 	sub.lastConnectionStartTime = time.Now()
-	srpcClient, err := srpc.DialHTTP("tcp", address)
+	srpcClient, err := srpc.DialHTTP("tcp", address,
+		time.Second*time.Duration(*subConnectTimeout))
 	if err != nil {
 		if err, ok := err.(*net.OpError); ok {
 			if _, ok := err.Err.(*net.DNSError); ok {
 				sub.status = statusDNSError
 				return
 			}
+			if err.Timeout() {
+				sub.status = statusConnectTimeout
+				return
+			}
 		}
 		sub.status = statusFailedToConnect
+		if *logUnknownSubConnectErrors {
+			sub.herd.logger.Println(err)
+		}
 		return
 	}
 	defer srpcClient.Close()

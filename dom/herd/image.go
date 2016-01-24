@@ -38,7 +38,7 @@ func (herd *Herd) getImageHaveLock(name string) *image.Image {
 			return nil
 		}
 	}
-	imageClient, err := srpc.DialHTTP("tcp", herd.imageServerAddress)
+	imageClient, err := srpc.DialHTTP("tcp", herd.imageServerAddress, 0)
 	if err != nil {
 		herd.logger.Println(err)
 		return nil

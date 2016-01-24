@@ -80,7 +80,7 @@ func main() {
 	}
 	setupTls(*certFile, *keyFile)
 	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
-	client, err := srpc.DialHTTP("tcp", clientName)
+	client, err := srpc.DialHTTP("tcp", clientName, 0)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
 		os.Exit(1)

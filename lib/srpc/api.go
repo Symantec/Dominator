@@ -16,6 +16,7 @@ import (
 	"crypto/tls"
 	"net"
 	"sync"
+	"time"
 )
 
 var serverTlsConfig *tls.Config
@@ -45,19 +46,22 @@ func RegisterClientTlsConfig(config *tls.Config) {
 }
 
 // DialHTTP connects to an HTTP SRPC server at the specified network address
-// listening on the HTTP SRPC path.
-func DialHTTP(network, address string) (*Client, error) {
-	return dialHTTP(network, address, clientTlsConfig)
+// listening on the HTTP SRPC path. If timeout is zero or less, the underlying
+// OS timeout is used (typically 3 minutes for TCP).
+func DialHTTP(network, address string, timeout time.Duration) (*Client, error) {
+	return dialHTTP(network, address, clientTlsConfig, timeout)
 }
 
 // DialHTTP connects to an HTTP SRPC TLS server at the specified network address
-// listening on the HTTP SRPC TLS path.
-func DialTlsHTTP(network, address string, tlsConfig *tls.Config) (
+// listening on the HTTP SRPC TLS path. If timeout is zero or less, the
+// underlying OS timeout is used (typically 3 minutes for TCP).
+func DialTlsHTTP(network, address string, tlsConfig *tls.Config,
+	timeout time.Duration) (
 	*Client, error) {
 	if tlsConfig == nil {
 		tlsConfig = clientTlsConfig
 	}
-	return dialHTTP(network, address, tlsConfig)
+	return dialHTTP(network, address, tlsConfig, timeout)
 }
 
 type Client struct {

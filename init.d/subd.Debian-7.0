@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash --posix
 
 ### BEGIN INIT INFO
 # Provides:		subd
@@ -19,7 +19,8 @@ umask 022
 
 . /lib/lsb/init-functions
 
-export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
+readonly pidfile="/var/run/subd.pid"
 
 case "$1" in
   start)
@@ -28,15 +29,21 @@ case "$1" in
 	;;
   stop)
 	log_daemon_msg "Stopping Dominator subject daemon" "subd" || true
-	kill -TERM $(cat /var/run/subd.pid)
+	kill -TERM $(cat "$pidfile")
 	;;
 
   reload|force-reload)
-	kill -HUP $(cat /var/run/subd.pid)
+	kill -HUP $(cat "$pidfile")
 	;;
 
   restart)
-	kill -HUP $(cat /var/run/subd.pid)
+	kill -HUP $(cat "$pidfile")
+	;;
+
+  start-if-down)
+	[ -s "$pidfile" ] && kill -0 $(cat "$pidfile") &> /dev/null && exit
+	log_daemon_msg "Starting Dominator subject daemon" "subd" || true
+	/usr/local/sbin/subd < /dev/null &> /dev/null &
 	;;
 
   *)

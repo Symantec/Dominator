@@ -7,10 +7,12 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"time"
 )
 
-func dialHTTP(network, address string, tlsConfig *tls.Config) (*Client, error) {
-	unsecuredConn, err := net.Dial(network, address)
+func dialHTTP(network, address string, tlsConfig *tls.Config,
+	timeout time.Duration) (*Client, error) {
+	unsecuredConn, err := net.DialTimeout(network, address, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -24,6 +26,12 @@ func dialHTTP(network, address string, tlsConfig *tls.Config) (*Client, error) {
 		&http.Request{Method: "CONNECT"})
 	if err != nil {
 		return nil, err
+	}
+	if resp.StatusCode == http.StatusNotFound &&
+		tlsConfig != nil &&
+		tlsConfig.InsecureSkipVerify {
+		// Fall back to insecure connection.
+		return dialHTTP(network, address, nil, timeout)
 	}
 	if resp.Status != connectString {
 		return nil, errors.New("unexpected HTTP response: " + resp.Status)
