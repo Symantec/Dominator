@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash --posix
 #
 # subd		Start up the Dominator subject daemon
 #
@@ -21,21 +21,28 @@ umask 022
 . /etc/rc.d/init.d/functions
 
 export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+readonly pidfile="/var/run/subd.pid"
 
 case "$1" in
   start)
 	/usr/local/sbin/subd < /dev/null &> /dev/null &
 	;;
   stop)
-	kill -TERM $(cat /var/run/subd.pid)
+	kill -TERM $(cat "$pidfile")
 	;;
 
   reload|force-reload)
-	kill -HUP $(cat /var/run/subd.pid)
+	kill -HUP $(cat "$pidfile")
 	;;
 
   restart)
-	kill -HUP $(cat /var/run/subd.pid)
+	kill -HUP $(cat "$pidfile")
+	;;
+
+  start-if-down)
+	[ -s "$pidfile" ] && kill -0 $(cat "$pidfile") &> /dev/null && exit
+	log_daemon_msg "Starting Dominator subject daemon" "subd" || true
+	/usr/local/sbin/subd < /dev/null &> /dev/null &
 	;;
 
   *)
