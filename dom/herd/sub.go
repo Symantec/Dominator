@@ -18,6 +18,8 @@ import (
 var (
 	subConnectTimeout = flag.Uint("subConnectTimeout", 15,
 		"Timeout in seconds for sub connections. If zero, OS timeout is used")
+	logUnknownSubConnectErrors = flag.Bool("logUnknownSubConnectErrors", false,
+		"If true, log unknown sub connection errors")
 )
 
 func (sub *Sub) tryMakeBusy() bool {
@@ -56,6 +58,9 @@ func (sub *Sub) connectAndPoll() {
 			}
 		}
 		sub.status = statusFailedToConnect
+		if *logUnknownSubConnectErrors {
+			sub.herd.logger.Println(err)
+		}
 		return
 	}
 	defer srpcClient.Close()
