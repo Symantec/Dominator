@@ -77,7 +77,7 @@ func (sub *Sub) connectAndPoll() {
 	sub.lastConnectDuration =
 		sub.lastConnectionSucceededTime.Sub(sub.lastConnectionStartTime)
 	connectDistribution.Add(sub.lastConnectDuration)
-	if sub.herd.getImage(sub.requiredImage) == nil {
+	if sub.herd.getImageNoError(sub.requiredImage) == nil {
 		sub.status = statusImageNotReady
 		return
 	}
@@ -91,7 +91,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	// If the planned image has just become available, force a full poll.
 	if previousStatus == statusSynced &&
 		!sub.havePlannedImage &&
-		sub.herd.getImage(sub.plannedImage) != nil {
+		sub.herd.getImageNoError(sub.plannedImage) != nil {
 		sub.havePlannedImage = true
 		sub.generationCount = 0 // Force a full poll.
 	}
@@ -195,7 +195,7 @@ func (sub *Sub) reclaim() {
 // Returns true if all required objects are available.
 func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 	bool, subStatus) {
-	image := sub.herd.getImage(imageName)
+	image := sub.herd.getImageNoError(imageName)
 	if image == nil {
 		return false, statusImageNotReady
 	}
@@ -274,7 +274,7 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 			}
 		}
 	}
-	image := sub.herd.getImage(plannedImageName)
+	image := sub.herd.getImageNoError(plannedImageName)
 	if image != nil {
 		for _, inode := range image.FileSystem.InodeTable {
 			if inode, ok := inode.(*filesystem.RegularInode); ok {
