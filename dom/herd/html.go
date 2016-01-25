@@ -55,6 +55,8 @@ func selectAliveSub(sub *Sub) bool {
 		return false
 	case statusConnecting:
 		return false
+	case statusDNSError:
+		return false
 	case statusFailedToConnect:
 		return false
 	case statusFailedToPoll:
