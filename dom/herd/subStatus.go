@@ -14,12 +14,18 @@ func (status subStatus) string() string {
 		return "DNS error"
 	case statusConnectTimeout:
 		return "connect timeout"
+	case statusMissingCertificate:
+		return "connect failed: missing certificate"
+	case statusBadCertificate:
+		return "connect failed: bad certificate"
 	case statusFailedToConnect:
 		return "connect failed"
 	case statusWaitingToPoll:
 		return "waiting to poll"
 	case statusPolling:
 		return "polling"
+	case statusPollDenied:
+		return "poll denied"
 	case statusFailedToPoll:
 		return "poll failed"
 	case statusSubNotReady:
@@ -28,12 +34,16 @@ func (status subStatus) string() string {
 		return "image not ready"
 	case statusFetching:
 		return "fetching"
+	case statusFetchDenied:
+		return "fetch denied"
 	case statusFailedToFetch:
 		return "fetch failed"
 	case statusComputingUpdate:
 		return "computing update"
 	case statusUpdating:
 		return "updating"
+	case statusUpdateDenied:
+		return "update denied"
 	case statusFailedToUpdate:
 		return "update failed"
 	case statusWaitingForNextFullPoll:

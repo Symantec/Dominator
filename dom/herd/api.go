@@ -22,16 +22,21 @@ const (
 	statusConnecting
 	statusDNSError
 	statusConnectTimeout
+	statusMissingCertificate
+	statusBadCertificate
 	statusFailedToConnect
 	statusWaitingToPoll
 	statusPolling
+	statusPollDenied
 	statusFailedToPoll
 	statusSubNotReady
 	statusImageNotReady
 	statusFetching
+	statusFetchDenied
 	statusFailedToFetch
 	statusComputingUpdate
 	statusUpdating
+	statusUpdateDenied
 	statusFailedToUpdate
 	statusWaitingForNextFullPoll
 	statusSynced
