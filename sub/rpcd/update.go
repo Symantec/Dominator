@@ -428,7 +428,7 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 	}
 	if needRestart {
 		logger.Printf("%sAction: service subd restart\n", logPrefix)
-		err := runCommand("run-in-mntns", ppid, "service", "restart", "subd")
+		err := runCommand("run-in-mntns", ppid, "service", "subd", "restart")
 		if err != nil {
 			hadFailures = true
 			logger.Print(err)
