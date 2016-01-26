@@ -57,6 +57,10 @@ func (sub *Sub) connectAndPoll() {
 				return
 			}
 		}
+		if err == srpc.ErrorConnectionRefused {
+			sub.status = statusConnectionRefused
+			return
+		}
 		if err == srpc.ErrorMissingCertificate {
 			sub.status = statusMissingCertificate
 			return
