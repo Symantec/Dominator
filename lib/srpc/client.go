@@ -15,6 +15,9 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 	timeout time.Duration) (*Client, error) {
 	unsecuredConn, err := net.DialTimeout(network, address, timeout)
 	if err != nil {
+		if strings.Contains(err.Error(), ErrorConnectionRefused.Error()) {
+			return nil, ErrorConnectionRefused
+		}
 		return nil, err
 	}
 	path := rpcPath

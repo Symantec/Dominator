@@ -21,6 +21,7 @@ import (
 )
 
 var (
+	ErrorConnectionRefused    = errors.New("connection refused")
 	ErrorMissingCertificate   = errors.New("missing certificate")
 	ErrorBadCertificate       = errors.New("bad certificate")
 	ErrorAccessToMethodDenied = errors.New("access to method denied")
