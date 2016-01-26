@@ -114,6 +114,11 @@ func unshareAndBind(workingRootDir string) bool {
 				err)
 			return false
 		}
+		// Ensure the process is slightly niced. Since the Linux implementation
+		// of setpriority(2) only applies to a thread, not the whole process
+		// (contrary to the POSIX specification), do this in the pinned OS
+		// thread so that the whole process (after exec) will be niced.
+		syscall.Setpriority(syscall.PRIO_PROCESS, 0, 1)
 		args := append(os.Args, "-unshare=false")
 		if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to Exec:%s\t%s\n", args[0], err)

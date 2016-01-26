@@ -12,6 +12,8 @@ func (status subStatus) string() string {
 		return "connecting"
 	case statusDNSError:
 		return "DNS error"
+	case statusConnectionRefused:
+		return "connection refused"
 	case statusConnectTimeout:
 		return "connect timeout"
 	case statusMissingCertificate:
