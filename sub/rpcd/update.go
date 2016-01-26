@@ -429,6 +429,7 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 		}
 	}
 	if needRestart {
+		logger.Printf("%sAction: service subd restart\n", logPrefix)
 		cmd := exec.Command("run-in-mntns", ppid, "service", "restart", "subd")
 		cmd.Stdout = os.Stdout
 		if err := cmd.Run(); err != nil {
