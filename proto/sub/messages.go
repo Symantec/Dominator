@@ -6,6 +6,7 @@ import (
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/common"
+	"time"
 )
 
 type Configuration struct {
@@ -35,6 +36,8 @@ type PollResponse struct {
 	FetchInProgress              bool // Fetch() and Update() mutually exclusive
 	UpdateInProgress             bool
 	LastUpdateHadTriggerFailures bool
+	StartTime                    time.Time
+	PollTime                     time.Time
 	GenerationCount              uint64
 	FileSystem                   *filesystem.FileSystem // Streamed separately.
 	FileSystemFollows            bool
