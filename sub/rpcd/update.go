@@ -393,9 +393,8 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 				if *disableTriggers {
 					return hadFailures
 				}
-				cmd := exec.Command("reboot")
-				cmd.Stdout = os.Stdout
-				if err := cmd.Run(); err != nil {
+				err := runCommand("reboot")
+				if err != nil {
 					hadFailures = true
 					logger.Print(err)
 				}
@@ -420,21 +419,35 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 		if *disableTriggers {
 			continue
 		}
-		cmd := exec.Command("run-in-mntns", ppid, "service", action,
-			trigger.Service)
-		cmd.Stdout = os.Stdout
-		if err := cmd.Run(); err != nil {
+		err := runCommand("run-in-mntns", ppid, "service", trigger.Service,
+			action)
+		if err != nil {
 			hadFailures = true
 			logger.Print(err)
 		}
 	}
 	if needRestart {
-		cmd := exec.Command("run-in-mntns", ppid, "service", "restart", "subd")
-		cmd.Stdout = os.Stdout
-		if err := cmd.Run(); err != nil {
+		logger.Printf("%sAction: service subd restart\n", logPrefix)
+		err := runCommand("run-in-mntns", ppid, "service", "subd", "restart")
+		if err != nil {
 			hadFailures = true
 			logger.Print(err)
 		}
 	}
 	return hadFailures
+}
+
+func runCommand(name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		errMsg := "error running: " + name
+		for _, arg := range args {
+			errMsg += " " + arg
+		}
+		errMsg += ": " + err.Error()
+		return errors.New(errMsg)
+	}
+	return nil
 }

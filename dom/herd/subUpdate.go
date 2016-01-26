@@ -24,7 +24,7 @@ type state struct {
 func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) bool {
 	var state state
 	state.subFS = sub.fileSystem
-	requiredImage := sub.herd.getImage(sub.requiredImage)
+	requiredImage := sub.herd.getImageNoError(sub.requiredImage)
 	state.requiredFS = requiredImage.FileSystem
 	filter := requiredImage.Filter
 	request.Triggers = requiredImage.Triggers

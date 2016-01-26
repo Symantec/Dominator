@@ -45,6 +45,7 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
 	fmt.Fprintln(writer, "    <th>Planned Image</th>")
 	fmt.Fprintln(writer, "    <th>Busy</th>")
 	fmt.Fprintln(writer, "    <th>Status</th>")
+	fmt.Fprintln(writer, "    <th>Uptime</th>")
 	fmt.Fprintln(writer, "    <th>Staleness</th>")
 	fmt.Fprintln(writer, "    <th>Connect</th>")
 	fmt.Fprintln(writer, "    <th>Short Poll</th>")
@@ -52,24 +53,28 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
 	fmt.Fprintln(writer, "    <th>Update Compute</th>")
 	fmt.Fprintln(writer, "  </tr>")
 	subs := herd.getSelectedSubs(selectFunc)
-	missingImages := make(map[string]struct{})
 	for _, sub := range subs {
-		showSub(writer, sub, missingImages)
+		showSub(writer, sub)
 	}
 	fmt.Fprintln(writer, "</table>")
 	fmt.Fprintln(writer, "</body>")
 }
 
-func showSub(writer io.Writer, sub *Sub, missingImages map[string]struct{}) {
+func showSub(writer io.Writer, sub *Sub) {
 	fmt.Fprintf(writer, "  <tr>\n")
 	subURL := fmt.Sprintf("http://%s:%d/",
 		strings.SplitN(sub.hostname, "*", 2)[0], constants.SubPortNumber)
 	fmt.Fprintf(writer, "    <td><a href=\"%s\">%s</a></td>\n",
 		subURL, sub.hostname)
-	sub.herd.showImage(writer, sub.requiredImage, missingImages)
-	sub.herd.showImage(writer, sub.plannedImage, missingImages)
+	sub.herd.showImage(writer, sub.requiredImage)
+	sub.herd.showImage(writer, sub.plannedImage)
 	fmt.Fprintf(writer, "    <td>%v</td>\n", sub.busy)
 	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.status)
+	if sub.startTime.IsZero() || sub.pollTime.IsZero() {
+		fmt.Fprintf(writer, "    <td></td>\n")
+	} else {
+		fmt.Fprintf(writer, "    <td>%s</td>\n", sub.pollTime.Sub(sub.startTime))
+	}
 	if sub.lastPollSucceededTime.IsZero() {
 		fmt.Fprintf(writer, "    <td></td>\n")
 	} else {
@@ -83,18 +88,11 @@ func showSub(writer io.Writer, sub *Sub, missingImages map[string]struct{}) {
 	fmt.Fprintf(writer, "  </tr>\n")
 }
 
-func (herd *Herd) showImage(writer io.Writer, name string,
-	missingImages map[string]struct{}) {
-	found := false
-	if _, ok := missingImages[name]; !ok {
-		if herd.getImage(name) == nil {
-			missingImages[name] = struct{}{}
-		} else {
-			found = true
-		}
-	}
-	if found {
+func (herd *Herd) showImage(writer io.Writer, name string) {
+	if image, err := herd.getImage(name); image != nil {
 		fmt.Fprintf(writer, "    <td>%s</td>\n", name)
+	} else if err != nil {
+		fmt.Fprintf(writer, "    <td><font color=\"red\">%s</font></td>\n", err)
 	} else {
 		fmt.Fprintf(writer, "    <td><font color=\"grey\">%s</font></td>\n",
 			name)

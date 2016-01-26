@@ -4,7 +4,10 @@ import (
 	"encoding/gob"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
+	"time"
 )
+
+var startTime time.Time = time.Now()
 
 func (t *rpcType) Poll(conn *srpc.Conn) error {
 	defer conn.Flush()
@@ -26,6 +29,8 @@ func (t *rpcType) Poll(conn *srpc.Conn) error {
 	response.UpdateInProgress = t.updateInProgress
 	response.LastUpdateHadTriggerFailures = t.lastUpdateHadTriggerFailures
 	t.rwLock.RUnlock()
+	response.StartTime = startTime
+	response.PollTime = time.Now()
 	response.GenerationCount = t.fileSystemHistory.GenerationCount()
 	fs := t.fileSystemHistory.FileSystem()
 	if fs != nil &&

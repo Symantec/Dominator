@@ -49,7 +49,7 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 		sub.requiredImage = machine.RequiredImage
 		sub.plannedImage = machine.PlannedImage
 		herd.getImageHaveLock(sub.requiredImage) // Preload.
-		if herd.getImageHaveLock(sub.plannedImage) == nil {
+		if image, _ := herd.getImageHaveLock(sub.plannedImage); image == nil {
 			sub.havePlannedImage = false
 		} else {
 			sub.havePlannedImage = true

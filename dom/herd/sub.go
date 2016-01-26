@@ -57,6 +57,14 @@ func (sub *Sub) connectAndPoll() {
 				return
 			}
 		}
+		if err == srpc.ErrorMissingCertificate {
+			sub.status = statusMissingCertificate
+			return
+		}
+		if err == srpc.ErrorBadCertificate {
+			sub.status = statusBadCertificate
+			return
+		}
 		sub.status = statusFailedToConnect
 		if *logUnknownSubConnectErrors {
 			sub.herd.logger.Println(err)
@@ -69,7 +77,7 @@ func (sub *Sub) connectAndPoll() {
 	sub.lastConnectDuration =
 		sub.lastConnectionSucceededTime.Sub(sub.lastConnectionStartTime)
 	connectDistribution.Add(sub.lastConnectDuration)
-	if sub.herd.getImage(sub.requiredImage) == nil {
+	if sub.herd.getImageNoError(sub.requiredImage) == nil {
 		sub.status = statusImageNotReady
 		return
 	}
@@ -83,7 +91,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	// If the planned image has just become available, force a full poll.
 	if previousStatus == statusSynced &&
 		!sub.havePlannedImage &&
-		sub.herd.getImage(sub.plannedImage) != nil {
+		sub.herd.getImageNoError(sub.plannedImage) != nil {
 		sub.havePlannedImage = true
 		sub.generationCount = 0 // Force a full poll.
 	}
@@ -93,10 +101,16 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	sub.lastPollStartTime = time.Now()
 	logger := sub.herd.logger
 	if err := client.CallPoll(srpcClient, request, &reply); err != nil {
-		sub.status = statusFailedToPoll
+		if err == srpc.ErrorAccessToMethodDenied {
+			sub.status = statusPollDenied
+		} else {
+			sub.status = statusFailedToPoll
+		}
 		logger.Printf("Error calling %s.Poll()\t%s\n", sub.hostname, err)
 		return
 	}
+	sub.startTime = reply.StartTime
+	sub.pollTime = reply.PollTime
 	sub.lastPollSucceededTime = time.Now()
 	if reply.GenerationCount == 0 {
 		sub.reclaim()
@@ -183,7 +197,7 @@ func (sub *Sub) reclaim() {
 // Returns true if all required objects are available.
 func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 	bool, subStatus) {
-	image := sub.herd.getImage(imageName)
+	image := sub.herd.getImageNoError(imageName)
 	if image == nil {
 		return false, statusImageNotReady
 	}
@@ -219,6 +233,9 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 	}
 	if err := client.CallFetch(srpcClient, request, &reply); err != nil {
 		logger.Printf("Error calling %s.Fetch()\t%s\n", sub.hostname, err)
+		if err == srpc.ErrorAccessToMethodDenied {
+			return false, statusFetchDenied
+		}
 		return false, statusFailedToFetch
 	}
 	sub.generationCountAtChangeStart = sub.generationCount
@@ -235,6 +252,9 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	}
 	if err := client.CallUpdate(srpcClient, request, &reply); err != nil {
 		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
+		if err == srpc.ErrorAccessToMethodDenied {
+			return false, statusUpdateDenied
+		}
 		return false, statusFailedToUpdate
 	}
 	sub.generationCountAtChangeStart = sub.generationCount
@@ -256,7 +276,7 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 			}
 		}
 	}
-	image := sub.herd.getImage(plannedImageName)
+	image := sub.herd.getImageNoError(plannedImageName)
 	if image != nil {
 		for _, inode := range image.FileSystem.InodeTable {
 			if inode, ok := inode.(*filesystem.RegularInode); ok {

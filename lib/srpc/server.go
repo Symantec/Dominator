@@ -149,7 +149,8 @@ func handleConnection(conn *Conn) {
 		}
 		serviceMethod = serviceMethod[:len(serviceMethod)-1]
 		if !conn.checkPermitted(serviceMethod) {
-			if _, e := conn.WriteString("access to method denied\n"); e != nil {
+			if _, e := conn.WriteString(
+				ErrorAccessToMethodDenied.Error() + "\n"); e != nil {
 				log.Println(e)
 				return
 			}

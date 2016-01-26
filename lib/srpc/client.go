@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -33,6 +34,9 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 		// Fall back to insecure connection.
 		return dialHTTP(network, address, nil, timeout)
 	}
+	if resp.StatusCode == http.StatusMethodNotAllowed {
+		return nil, ErrorMissingCertificate
+	}
 	if resp.Status != connectString {
 		return nil, errors.New("unexpected HTTP response: " + resp.Status)
 	}
@@ -41,6 +45,9 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 	}
 	tlsConn := tls.Client(unsecuredConn, tlsConfig)
 	if err := tlsConn.Handshake(); err != nil {
+		if strings.Contains(err.Error(), ErrorBadCertificate.Error()) {
+			return nil, ErrorBadCertificate
+		}
 		return nil, err
 	}
 	return newClient(tlsConn), nil
@@ -75,7 +82,11 @@ func (client *Client) callWithLock(serviceMethod string) (*Conn, error) {
 		return nil, err
 	}
 	if resp != "\n" {
-		return nil, errors.New(resp[:len(resp)-1])
+		resp := resp[:len(resp)-1]
+		if resp == ErrorAccessToMethodDenied.Error() {
+			return nil, ErrorAccessToMethodDenied
+		}
+		return nil, errors.New(resp)
 	}
 	conn := new(Conn)
 	conn.parent = client

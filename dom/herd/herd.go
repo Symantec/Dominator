@@ -14,7 +14,7 @@ func newHerd(imageServerAddress string, logger *log.Logger) *Herd {
 	herd.logger = logger
 	herd.subsByName = make(map[string]*Sub)
 	herd.imagesByName = make(map[string]*image.Image)
-	herd.missingImages = make(map[string]time.Time)
+	herd.missingImages = make(map[string]missingImage)
 	// Limit concurrent connection attempts so that the file descriptor limit is
 	// not exceeded.
 	var rlim syscall.Rlimit

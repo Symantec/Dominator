@@ -22,16 +22,21 @@ const (
 	statusConnecting
 	statusDNSError
 	statusConnectTimeout
+	statusMissingCertificate
+	statusBadCertificate
 	statusFailedToConnect
 	statusWaitingToPoll
 	statusPolling
+	statusPollDenied
 	statusFailedToPoll
 	statusSubNotReady
 	statusImageNotReady
 	statusFetching
+	statusFetchDenied
 	statusFailedToFetch
 	statusComputingUpdate
 	statusUpdating
+	statusUpdateDenied
 	statusFailedToUpdate
 	statusWaitingForNextFullPoll
 	statusSynced
@@ -49,6 +54,8 @@ type Sub struct {
 	busyMutex                    sync.Mutex
 	busy                         bool
 	havePlannedImage             bool
+	startTime                    time.Time
+	pollTime                     time.Time
 	fileSystem                   *filesystem.FileSystem
 	objectCache                  objectcache.ObjectCache
 	generationCount              uint64
@@ -64,6 +71,11 @@ type Sub struct {
 	lastComputeUpdateCpuDuration time.Duration
 }
 
+type missingImage struct {
+	lastGetAttempt time.Time
+	err            error
+}
+
 type Herd struct {
 	sync.RWMutex         // Protect map and slice mutations.
 	imageServerAddress   string
@@ -73,7 +85,7 @@ type Herd struct {
 	subsByName           map[string]*Sub
 	subsByIndex          []*Sub // Sorted by Sub.hostname.
 	imagesByName         map[string]*image.Image
-	missingImages        map[string]time.Time
+	missingImages        map[string]missingImage
 	connectionSemaphore  chan bool
 	pollSemaphore        chan bool
 	currentScanStartTime time.Time

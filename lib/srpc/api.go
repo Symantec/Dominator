@@ -14,9 +14,16 @@ package srpc
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"net"
 	"sync"
 	"time"
+)
+
+var (
+	ErrorMissingCertificate   = errors.New("missing certificate")
+	ErrorBadCertificate       = errors.New("bad certificate")
+	ErrorAccessToMethodDenied = errors.New("access to method denied")
 )
 
 var serverTlsConfig *tls.Config
