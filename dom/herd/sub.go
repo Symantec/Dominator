@@ -47,6 +47,7 @@ func (sub *Sub) connectAndPoll() {
 	srpcClient, err := srpc.DialHTTP("tcp", address,
 		time.Second*time.Duration(*subConnectTimeout))
 	if err != nil {
+		sub.pollTime = time.Time{}
 		if err, ok := err.(*net.OpError); ok {
 			if _, ok := err.Err.(*net.DNSError); ok {
 				sub.status = statusDNSError
@@ -105,6 +106,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	sub.lastPollStartTime = time.Now()
 	logger := sub.herd.logger
 	if err := client.CallPoll(srpcClient, request, &reply); err != nil {
+		sub.pollTime = time.Time{}
 		if err == srpc.ErrorAccessToMethodDenied {
 			sub.status = statusPollDenied
 		} else {
