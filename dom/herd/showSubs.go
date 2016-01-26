@@ -45,6 +45,7 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
 	fmt.Fprintln(writer, "    <th>Planned Image</th>")
 	fmt.Fprintln(writer, "    <th>Busy</th>")
 	fmt.Fprintln(writer, "    <th>Status</th>")
+	fmt.Fprintln(writer, "    <th>Uptime</th>")
 	fmt.Fprintln(writer, "    <th>Staleness</th>")
 	fmt.Fprintln(writer, "    <th>Connect</th>")
 	fmt.Fprintln(writer, "    <th>Short Poll</th>")
@@ -69,6 +70,11 @@ func showSub(writer io.Writer, sub *Sub) {
 	sub.herd.showImage(writer, sub.plannedImage)
 	fmt.Fprintf(writer, "    <td>%v</td>\n", sub.busy)
 	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.status)
+	if sub.startTime.IsZero() || sub.pollTime.IsZero() {
+		fmt.Fprintf(writer, "    <td></td>\n")
+	} else {
+		fmt.Fprintf(writer, "    <td>%s</td>\n", sub.pollTime.Sub(sub.startTime))
+	}
 	if sub.lastPollSucceededTime.IsZero() {
 		fmt.Fprintf(writer, "    <td></td>\n")
 	} else {

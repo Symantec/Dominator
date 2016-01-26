@@ -54,6 +54,8 @@ type Sub struct {
 	busyMutex                    sync.Mutex
 	busy                         bool
 	havePlannedImage             bool
+	startTime                    time.Time
+	pollTime                     time.Time
 	fileSystem                   *filesystem.FileSystem
 	objectCache                  objectcache.ObjectCache
 	generationCount              uint64

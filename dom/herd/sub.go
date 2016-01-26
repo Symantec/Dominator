@@ -109,6 +109,8 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		logger.Printf("Error calling %s.Poll()\t%s\n", sub.hostname, err)
 		return
 	}
+	sub.startTime = reply.StartTime
+	sub.pollTime = reply.PollTime
 	sub.lastPollSucceededTime = time.Now()
 	if reply.GenerationCount == 0 {
 		sub.reclaim()
