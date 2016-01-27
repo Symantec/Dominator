@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <fcntl.h>
 #include <sched.h>
 #include <sys/syscall.h>
@@ -17,6 +19,7 @@ int main (int argc, char **argv)
 	fprintf (stderr, "Usage: run-in-mntns pid command...\n");
 	exit (1);
     }
+    setpriority(PRIO_PROCESS, 0, 0);
     pid = atoi(argv[1]);
     snprintf(filename, sizeof(filename), "/proc/%d/ns/mnt", pid);
     fd = open(filename, O_RDONLY);
