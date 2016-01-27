@@ -138,6 +138,10 @@ func unshareAndBind(workingRootDir string) bool {
 			*rootDir, workingRootDir, err)
 		return false
 	}
+	// Clean up -unshare=false so that a subsequent re-exec starts from scratch.
+	if os.Args[len(os.Args)-1] == "-unshare=false" {
+		os.Args = os.Args[:len(os.Args)-1]
+	}
 	return true
 }
 
