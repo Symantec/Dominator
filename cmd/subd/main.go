@@ -139,9 +139,13 @@ func unshareAndBind(workingRootDir string) bool {
 		return false
 	}
 	// Clean up -unshare=false so that a subsequent re-exec starts from scratch.
-	if os.Args[len(os.Args)-1] == "-unshare=false" {
-		os.Args = os.Args[:len(os.Args)-1]
+	args := make([]string, 0, len(os.Args)-1)
+	for _, arg := range os.Args {
+		if arg != "-unshare=false" {
+			args = append(args, arg)
+		}
 	}
+	os.Args = args
 	return true
 }
 
