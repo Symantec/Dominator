@@ -25,8 +25,8 @@ func init() {
 func getRusage() (time.Time, time.Time) {
 	var rusage syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
-	return time.Unix(rusage.Utime.Sec, rusage.Utime.Usec*1000),
-		time.Unix(rusage.Stime.Sec, rusage.Stime.Usec*1000)
+	return time.Unix(int64(rusage.Utime.Sec), int64(rusage.Utime.Usec)*1000),
+		time.Unix(int64(rusage.Stime.Sec), int64(rusage.Stime.Usec)*1000)
 }
 
 func writeHeader(writer io.Writer) {
