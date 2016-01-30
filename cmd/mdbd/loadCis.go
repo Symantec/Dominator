@@ -19,6 +19,7 @@ func loadCis(reader io.Reader, datacentre string, logger *log.Logger) (
 	type sourceType struct {
 		Name             string
 		InstanceMetadata instanceMetadataType `json:"instance_metadata"`
+		Fqdn             string
 	}
 
 	type hitType struct {
@@ -41,7 +42,11 @@ func loadCis(reader io.Reader, datacentre string, logger *log.Logger) (
 	}
 	for _, hit := range inMdb.Hits.Hits {
 		var outMachine mdb.Machine
-		outMachine.Hostname = hit.Source.Name
+		if hit.Source.Fqdn != "" {
+			outMachine.Hostname = hit.Source.Fqdn
+		} else {
+			outMachine.Hostname = hit.Source.Name
+		}
 		if hit.Source.InstanceMetadata.RequiredImage != "" {
 			outMachine.RequiredImage = hit.Source.InstanceMetadata.RequiredImage
 		}
