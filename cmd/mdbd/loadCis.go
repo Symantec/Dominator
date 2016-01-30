@@ -10,8 +10,15 @@ import (
 
 func loadCis(reader io.Reader, datacentre string, logger *log.Logger) (
 	*mdb.Mdb, error) {
+
+	type instanceMetadataType struct {
+		RequiredImage string `json:"required_image"`
+		PlannedImage  string `json:"planned_image"`
+	}
+
 	type sourceType struct {
-		Name string
+		Name             string
+		InstanceMetadata instanceMetadataType `json:"instance_metadata"`
 	}
 
 	type hitType struct {
@@ -35,6 +42,12 @@ func loadCis(reader io.Reader, datacentre string, logger *log.Logger) (
 	for _, hit := range inMdb.Hits.Hits {
 		var outMachine mdb.Machine
 		outMachine.Hostname = hit.Source.Name
+		if hit.Source.InstanceMetadata.RequiredImage != "" {
+			outMachine.RequiredImage = hit.Source.InstanceMetadata.RequiredImage
+		}
+		if hit.Source.InstanceMetadata.PlannedImage != "" {
+			outMachine.PlannedImage = hit.Source.InstanceMetadata.PlannedImage
+		}
 		outMdb.Machines = append(outMdb.Machines, outMachine)
 	}
 	return &outMdb, nil
