@@ -25,6 +25,7 @@ type genericDecoder interface {
 func watchDaemon(mdbFileName string, mdbChannel chan<- *mdb.Mdb,
 	logger *log.Logger) {
 	var lastStat syscall.Stat_t
+	var lastMdbFile *os.File
 	var lastMdb *mdb.Mdb
 	for ; ; time.Sleep(time.Second) {
 		var stat syscall.Stat_t
@@ -32,9 +33,19 @@ func watchDaemon(mdbFileName string, mdbChannel chan<- *mdb.Mdb,
 			logger.Printf("Error stating file: %s\t%s\n", mdbFileName, err)
 			continue
 		}
-		stat.Atim = lastStat.Atim
-		if stat != lastStat {
-			mdb := loadFile(mdbFileName, logger)
+		if stat.Ino != lastStat.Ino {
+			mdb, file := loadFile(mdbFileName, logger)
+			if file == nil {
+				continue
+			}
+			// By holding onto the file, we guarantee that the inode number
+			// for the file we've opened cannot be reused until we've seen a new
+			// inode.
+			if lastMdbFile != nil {
+				lastMdbFile.Close()
+			}
+			lastMdbFile = file
+			lastStat = stat
 			if mdb == nil {
 				continue
 			}
@@ -46,30 +57,28 @@ func watchDaemon(mdbFileName string, mdbChannel chan<- *mdb.Mdb,
 				mdbChannel <- mdb
 				lastMdb = mdb
 			}
-			lastStat = stat
 		}
 	}
 }
 
-func loadFile(mdbFileName string, logger *log.Logger) *mdb.Mdb {
+func loadFile(mdbFileName string, logger *log.Logger) (*mdb.Mdb, *os.File) {
 	file, err := os.Open(mdbFileName)
 	if err != nil {
 		logger.Printf("Error opening file\t%s\n", err)
-		return nil
+		return nil, nil
 	}
-	defer file.Close()
 	decoder := getDecoder(file)
 	var mdb mdb.Mdb
 	decodeStartTime := time.Now()
 	if err = decoder.Decode(&mdb.Machines); err != nil {
 		logger.Printf("Error decoding\t%s\n", err)
-		return nil
+		return nil, file
 	}
 	sortStartTime := time.Now()
 	mdbDecodeTimeDistribution.Add(sortStartTime.Sub(decodeStartTime))
 	sort.Sort(&mdb)
 	mdbSortTimeDistribution.Add(time.Since(sortStartTime))
-	return &mdb
+	return &mdb, file
 }
 
 func getDecoder(mdbFile *os.File) genericDecoder {
