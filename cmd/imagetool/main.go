@@ -14,6 +14,8 @@ import (
 )
 
 var (
+	buildLog = flag.String("buildLog", "",
+		"Filename or URL containing build log")
 	certFile = flag.String("certFile",
 		path.Join(os.Getenv("HOME"), ".ssl/cert.pem"),
 		"Name of file containing the user SSL certificate")
@@ -29,6 +31,8 @@ var (
 	keyFile = flag.String("keyFile",
 		path.Join(os.Getenv("HOME"), ".ssl/key.pem"),
 		"Name of file containing the user SSL key")
+	releaseNotes = flag.String("releaseNotes", "",
+		"Filename or URL containing release notes")
 	skipFields = flag.String("skipFields", "",
 		"Fields to skip when showing or diffing images")
 )

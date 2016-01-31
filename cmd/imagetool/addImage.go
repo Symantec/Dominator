@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"bufio"
 	"compress/gzip"
 	"encoding/json"
 	"errors"
@@ -74,6 +75,14 @@ func addImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 	if err := loadTriggers(&newImage, triggersFilename); err != nil {
 		return err
 	}
+	newImage.BuildLog, err = getAnnotation(objectClient, *buildLog)
+	if err != nil {
+		return err
+	}
+	newImage.ReleaseNotes, err = getAnnotation(objectClient, *releaseNotes)
+	if err != nil {
+		return err
+	}
 	request.ImageName = name
 	request.Image = &newImage
 	tarReader := tar.NewReader(imageReader)
@@ -102,6 +111,25 @@ func loadTriggers(image *image.Image, triggersFilename string) error {
 	}
 	image.Triggers = &trig
 	return nil
+}
+
+func getAnnotation(objectClient *objectclient.ObjectClient, name string) (
+	*image.Annotation, error) {
+	if name == "" {
+		return nil, nil
+	}
+	file, err := os.Open(name)
+	if err != nil {
+		return &image.Annotation{URL: name}, nil
+	}
+	defer file.Close()
+	fi, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	reader := bufio.NewReader(file)
+	hash, _, err := objectClient.AddObject(reader, uint64(fi.Size()), nil)
+	return &image.Annotation{Object: &hash}, nil
 }
 
 type dataHandler struct {
