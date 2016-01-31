@@ -136,10 +136,12 @@ func main() {
 		os.Exit(1)
 	}
 	nextCycleStopTime := time.Now().Add(interval)
+	haveMdb := false
 	for {
 		select {
 		case mdb := <-mdbChannel:
 			herd.MdbUpdate(mdb)
+			haveMdb = true
 			if *debug {
 				showMdb(mdb)
 			}
@@ -150,7 +152,12 @@ func main() {
 				if *debug {
 					fmt.Print(".")
 				}
-				sleepTime := nextCycleStopTime.Sub(time.Now())
+				var sleepTime time.Duration
+				if haveMdb {
+					sleepTime = nextCycleStopTime.Sub(time.Now())
+				} else {
+					sleepTime = time.Millisecond * 100
+				}
 				time.Sleep(sleepTime)
 				nextCycleStopTime = time.Now().Add(interval)
 				if sleepTime < 0 { // There was no time to rest.
