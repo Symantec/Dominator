@@ -64,7 +64,7 @@ func main() {
 	httpd.AddHtmlWriter(imdb)
 	httpd.AddHtmlWriter(rpcHtmlWriter)
 	httpd.AddHtmlWriter(circularBuffer)
-	if err = httpd.StartServer(*portNum, imdb, false); err != nil {
+	if err = httpd.StartServer(*portNum, imdb, objSrv, false); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
 		os.Exit(1)
 	}
