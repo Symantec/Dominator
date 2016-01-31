@@ -6,7 +6,7 @@ import (
 )
 
 func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
-	numNew, numDeleted := herd.mdbUpdateNoLogging(mdb)
+	numNew, numDeleted, numChanged := herd.mdbUpdateNoLogging(mdb)
 	pluralNew := "s"
 	if numNew == 1 {
 		pluralNew = ""
@@ -15,16 +15,22 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 	if numDeleted == 1 {
 		pluralDeleted = ""
 	}
-	herd.logger.Printf("MDB update: %d new sub%s, %d removed sub%s",
-		numNew, pluralNew, numDeleted, pluralDeleted)
+	pluralChanged := "s"
+	if numChanged == 1 {
+		pluralChanged = ""
+	}
+	herd.logger.Printf(
+		"MDB update: %d new sub%s, %d removed sub%s, %d changed sub%s",
+		numNew, pluralNew, numDeleted, pluralDeleted, numChanged, pluralChanged)
 }
 
-func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
+func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int, int) {
 	herd.Lock()
 	defer herd.Unlock()
 	startTime := time.Now()
 	numNew := 0
 	numDeleted := 0
+	numChanged := 0
 	herd.subsByIndex = make([]*Sub, 0, len(mdb.Machines))
 	// Mark for delete all current subs, then later unmark ones in the new MDB.
 	subsToDelete := make(map[string]bool)
@@ -39,13 +45,15 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 			sub.hostname = machine.Hostname
 			herd.subsByName[machine.Hostname] = sub
 			numNew++
+		} else {
+			if sub.requiredImage != machine.RequiredImage ||
+				sub.plannedImage != machine.PlannedImage {
+				sub.generationCount = 0 // Force a full poll.
+				numChanged++
+			}
 		}
 		subsToDelete[sub.hostname] = false
 		herd.subsByIndex = append(herd.subsByIndex, sub)
-		if sub.requiredImage != machine.RequiredImage ||
-			sub.plannedImage != machine.PlannedImage {
-			sub.generationCount = 0 // Force a full poll.
-		}
 		sub.requiredImage = machine.RequiredImage
 		sub.plannedImage = machine.PlannedImage
 		herd.getImageHaveLock(sub.requiredImage) // Preload.
@@ -74,5 +82,5 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int) {
 		}
 	}
 	mdbUpdateTimeDistribution.Add(time.Since(startTime))
-	return numNew, numDeleted
+	return numNew, numDeleted, numChanged
 }

@@ -41,6 +41,9 @@ func (objClient *ObjectClient) addObject(reader io.Reader, length uint64,
 		return reply.Hash, false, errors.New(fmt.Sprintf(
 			"failed to copy, wanted: %d, got: %d bytes", length, nCopied))
 	}
+	// Send end-of-stream marker.
+	request = objectserver.AddObjectRequest{}
+	encoder.Encode(request)
 	conn.Flush()
 	decoder := gob.NewDecoder(conn)
 	if err := decoder.Decode(&reply); err != nil {

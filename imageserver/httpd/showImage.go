@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/image"
+	"io"
 	"net/http"
 )
 
@@ -35,5 +37,23 @@ func showImageHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(writer,
 		"Number of triggers: <a href=\"listTriggers?%s\">%d</a><br>\n",
 		imageName, len(image.Triggers.Triggers))
+	showAnnotation(writer, image.ReleaseNotes, imageName, "Release notes",
+		"listReleaseNotes")
+	showAnnotation(writer, image.BuildLog, imageName, "Build log",
+		"listBuildLog")
 	fmt.Fprintln(writer, "</body>")
+}
+
+func showAnnotation(writer io.Writer, annotation *image.Annotation,
+	imageName string, linkName string, baseURL string) {
+	if annotation == nil {
+		return
+	}
+	var url string
+	if annotation.URL != "" {
+		url = annotation.URL
+	} else {
+		url = baseURL + "?" + imageName
+	}
+	fmt.Fprintf(writer, "<a href=\"%s\">%s</a><br>\n", url, linkName)
 }

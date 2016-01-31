@@ -32,6 +32,11 @@ func (objSrv *ObjectServer) GetObjects(hashes []hash.Hash) (
 	return objSrv.getObjects(hashes)
 }
 
+func (objSrv *ObjectServer) GetObject(hashVal hash.Hash) (
+	uint64, io.ReadCloser, error) {
+	return objSrv.getObject(hashVal)
+}
+
 type ObjectsReader struct {
 	objectServer *ObjectServer
 	hashes       []hash.Hash
