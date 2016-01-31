@@ -28,14 +28,12 @@ func loadDsHostFqdn(reader io.Reader, datacentre string, logger *log.Logger) (
 		if datacentre != "" && dsName != datacentre {
 			continue
 		}
-		for machineName, inMachine := range dataCentre {
+		for _, inMachine := range dataCentre {
 			var outMachine mdb.Machine
-			if inMachine.Fqdn == "" {
-				outMachine.Hostname = machineName + "." + dsName
-			} else {
+			if inMachine.Fqdn != "" {
 				outMachine.Hostname = inMachine.Fqdn
+				outMdb.Machines = append(outMdb.Machines, outMachine)
 			}
-			outMdb.Machines = append(outMdb.Machines, outMachine)
 		}
 	}
 	return &outMdb, nil

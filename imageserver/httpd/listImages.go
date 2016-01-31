@@ -40,7 +40,8 @@ func listImagesHandler(w http.ResponseWriter, req *http.Request) {
 
 func showImage(writer io.Writer, name string, image *image.Image) {
 	fmt.Fprintf(writer, "  <tr>\n")
-	fmt.Fprintf(writer, "    <td>%s</td>\n", name)
+	fmt.Fprintf(writer, "    <td><a href=\"showImage?%s\">%s</a></td>\n",
+		name, name)
 	fmt.Fprintf(writer, "    <td><a href=\"listImage?%s\">%s</a></td>\n",
 		name, format.FormatBytes(image.FileSystem.TotalDataBytes))
 	fmt.Fprintf(writer, "    <td><a href=\"listImage?%s\">%d</a></td>\n",
