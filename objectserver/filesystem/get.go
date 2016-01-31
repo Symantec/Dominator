@@ -18,6 +18,22 @@ func (objSrv *ObjectServer) getObjects(hashes []hash.Hash) (
 	return &objectsReader, nil
 }
 
+func (objSrv *ObjectServer) getObject(hashVal hash.Hash) (
+	uint64, io.ReadCloser, error) {
+	hashes := make([]hash.Hash, 1)
+	hashes[0] = hashVal
+	objectsReader, err := objSrv.GetObjects(hashes)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer objectsReader.Close()
+	size, reader, err := objectsReader.NextObject()
+	if err != nil {
+		return 0, nil, err
+	}
+	return size, reader, nil
+}
+
 func (or *ObjectsReader) nextObject() (uint64, io.ReadCloser, error) {
 	or.nextIndex++
 	if or.nextIndex >= int64(len(or.hashes)) {
