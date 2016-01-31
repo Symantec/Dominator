@@ -90,7 +90,9 @@ func showSub(writer io.Writer, sub *Sub) {
 
 func (herd *Herd) showImage(writer io.Writer, name string) {
 	if image, err := herd.getImage(name); image != nil {
-		fmt.Fprintf(writer, "    <td>%s</td>\n", name)
+		fmt.Fprintf(writer,
+			"    <td><a href=\"http://%s/showImage?%s\">%s</a></td>\n",
+			herd.imageServerAddress, name, name)
 	} else if err != nil {
 		fmt.Fprintf(writer, "    <td><font color=\"red\">%s</font></td>\n", err)
 	} else {
