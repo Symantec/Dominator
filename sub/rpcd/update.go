@@ -105,12 +105,12 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 			&oldTriggers, false)
 		t.makeInodes(request.InodesToMake, rootDirectoryName,
 			request.MultiplyUsedObjects, &oldTriggers, false)
-		makeHardlinks(request.HardlinksToMake, rootDirectoryName,
-			&oldTriggers, "", false, t.logger)
-		doDeletes(request.PathsToDelete, rootDirectoryName, &oldTriggers, false,
-			t.logger)
-		changeInodes(request.InodesToChange, rootDirectoryName, &oldTriggers,
-			false, t.logger)
+		t.makeHardlinks(request.HardlinksToMake, rootDirectoryName,
+			&oldTriggers, "", false)
+		t.doDeletes(request.PathsToDelete, rootDirectoryName, &oldTriggers,
+			false)
+		t.changeInodes(request.InodesToChange, rootDirectoryName, &oldTriggers,
+			false)
 		matchedOldTriggers := oldTriggers.GetMatchedTriggers()
 		if runTriggers(matchedOldTriggers, "stop", t.logger) {
 			t.lastUpdateHadTriggerFailures = true
@@ -121,12 +121,12 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 		request.Triggers, true)
 	t.makeInodes(request.InodesToMake, rootDirectoryName,
 		request.MultiplyUsedObjects, request.Triggers, true)
-	makeHardlinks(request.HardlinksToMake, rootDirectoryName,
-		request.Triggers, t.objectsDir, true, t.logger)
-	doDeletes(request.PathsToDelete, rootDirectoryName, request.Triggers, true,
-		t.logger)
-	changeInodes(request.InodesToChange, rootDirectoryName, request.Triggers,
-		true, t.logger)
+	t.makeHardlinks(request.HardlinksToMake, rootDirectoryName,
+		request.Triggers, t.objectsDir, true)
+	t.doDeletes(request.PathsToDelete, rootDirectoryName, request.Triggers,
+		true)
+	t.changeInodes(request.InodesToChange, rootDirectoryName, request.Triggers,
+		true)
 	fsChangeDuration := time.Since(fsChangeStartTime)
 	matchedNewTriggers := request.Triggers.GetMatchedTriggers()
 	file, err = os.Create(t.oldTriggersFilename)
@@ -162,6 +162,7 @@ func (t *rpcType) copyFilesToCache(filesToCopyToCache []sub.FileToCopyToCache,
 		destPathname := path.Join(t.objectsDir,
 			objectcache.HashToFilename(fileToCopy.Hash))
 		if err := copyFile(destPathname, sourcePathname); err != nil {
+			t.lastUpdateError = err
 			t.logger.Println(err)
 		} else {
 			t.logger.Printf("Copied: %s to cache\n", sourcePathname)
@@ -198,6 +199,7 @@ func (t *rpcType) makeObjectCopies(multiplyUsedObjects map[hash.Hash]uint64) {
 		for numCopies--; numCopies > 0; numCopies-- {
 			ext := strings.Repeat("~", int(numCopies))
 			if err := copyFile(objectPathname+ext, objectPathname); err != nil {
+				t.lastUpdateError = err
 				t.logger.Println(err)
 			} else {
 				t.logger.Printf("Copied object: %x%s\n", hash, ext)
@@ -213,14 +215,18 @@ func (t *rpcType) makeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
 		fullPathname := path.Join(rootDirectoryName, inode.Name)
 		triggers.Match(inode.Name)
 		if takeAction {
+			var err error
 			switch inode := inode.GenericInode.(type) {
 			case *filesystem.RegularInode:
-				makeRegularInode(fullPathname, inode, multiplyUsedObjects,
+				err = makeRegularInode(fullPathname, inode, multiplyUsedObjects,
 					t.objectsDir, t.logger)
 			case *filesystem.SymlinkInode:
-				makeSymlinkInode(fullPathname, inode, t.logger)
+				err = makeSymlinkInode(fullPathname, inode, t.logger)
 			case *filesystem.SpecialInode:
-				makeSpecialInode(fullPathname, inode, t.logger)
+				err = makeSpecialInode(fullPathname, inode, t.logger)
+			}
+			if err != nil {
+				t.lastUpdateError = err
 			}
 		}
 	}
@@ -228,7 +234,7 @@ func (t *rpcType) makeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
 
 func makeRegularInode(fullPathname string,
 	inode *filesystem.RegularInode, multiplyUsedObjects map[hash.Hash]uint64,
-	objectsDir string, logger *log.Logger) {
+	objectsDir string, logger *log.Logger) error {
 	var err error
 	if inode.Size > 0 {
 		objectPathname := path.Join(objectsDir,
@@ -249,10 +255,11 @@ func makeRegularInode(fullPathname string,
 	}
 	if err != nil {
 		logger.Println(err)
-		return
+		return err
 	}
 	if err := inode.WriteMetadata(fullPathname); err != nil {
 		logger.Println(err)
+		return err
 	} else {
 		if inode.Size > 0 {
 			logger.Printf("Made inode: %s from: %x\n",
@@ -261,30 +268,32 @@ func makeRegularInode(fullPathname string,
 			logger.Printf("Made empty inode: %s\n", fullPathname)
 		}
 	}
+	return nil
 }
 
 func makeSymlinkInode(fullPathname string,
-	inode *filesystem.SymlinkInode, logger *log.Logger) {
+	inode *filesystem.SymlinkInode, logger *log.Logger) error {
 	if err := inode.Write(fullPathname); err != nil {
 		logger.Println(err)
-	} else {
-		logger.Printf("Made symlink inode: %s -> %s\n",
-			fullPathname, inode.Symlink)
+		return err
 	}
+	logger.Printf("Made symlink inode: %s -> %s\n", fullPathname, inode.Symlink)
+	return nil
 }
 
 func makeSpecialInode(fullPathname string, inode *filesystem.SpecialInode,
-	logger *log.Logger) {
+	logger *log.Logger) error {
 	if err := inode.Write(fullPathname); err != nil {
 		logger.Println(err)
-	} else {
-		logger.Printf("Made special inode: %s\n", fullPathname)
+		return err
 	}
+	logger.Printf("Made special inode: %s\n", fullPathname)
+	return nil
 }
 
-func makeHardlinks(hardlinksToMake []sub.Hardlink, rootDirectoryName string,
-	triggers *triggers.Triggers, tmpDir string, takeAction bool,
-	logger *log.Logger) {
+func (t *rpcType) makeHardlinks(hardlinksToMake []sub.Hardlink,
+	rootDirectoryName string, triggers *triggers.Triggers, tmpDir string,
+	takeAction bool) {
 	tmpName := path.Join(tmpDir, "temporaryHardlink")
 	for _, hardlink := range hardlinksToMake {
 		triggers.Match(hardlink.NewLink)
@@ -294,32 +303,35 @@ func makeHardlinks(hardlinksToMake []sub.Hardlink, rootDirectoryName string,
 			// A Link directly to linkPathname will fail if it exists, so do a
 			// Link+Rename using a temporary filename.
 			if err := fsutil.ForceLink(targetPathname, tmpName); err != nil {
-				logger.Println(err)
+				t.lastUpdateError = err
+				t.logger.Println(err)
 				continue
 			}
 			if err := fsutil.ForceRename(tmpName, linkPathname); err != nil {
-				logger.Println(err)
+				t.logger.Println(err)
 				if err := fsutil.ForceRemove(tmpName); err != nil {
-					logger.Println(err)
+					t.lastUpdateError = err
+					t.logger.Println(err)
 				}
 			} else {
-				logger.Printf("Linked: %s => %s\n",
+				t.logger.Printf("Linked: %s => %s\n",
 					linkPathname, targetPathname)
 			}
 		}
 	}
 }
 
-func doDeletes(pathsToDelete []string, rootDirectoryName string,
-	triggers *triggers.Triggers, takeAction bool, logger *log.Logger) {
+func (t *rpcType) doDeletes(pathsToDelete []string, rootDirectoryName string,
+	triggers *triggers.Triggers, takeAction bool) {
 	for _, pathname := range pathsToDelete {
 		fullPathname := path.Join(rootDirectoryName, pathname)
 		triggers.Match(pathname)
 		if takeAction {
 			if err := fsutil.ForceRemoveAll(fullPathname); err != nil {
-				logger.Println(err)
+				t.lastUpdateError = err
+				t.logger.Println(err)
 			} else {
-				logger.Printf("Deleted: %s\n", fullPathname)
+				t.logger.Printf("Deleted: %s\n", fullPathname)
 			}
 		}
 	}
@@ -340,6 +352,7 @@ func (t *rpcType) makeDirectories(directoriesToMake []sub.Inode,
 				continue
 			}
 			if err := inode.Write(fullPathname); err != nil {
+				t.lastUpdateError = err
 				t.logger.Println(err)
 			} else {
 				t.logger.Printf("Made directory: %s\n", fullPathname)
@@ -348,18 +361,19 @@ func (t *rpcType) makeDirectories(directoriesToMake []sub.Inode,
 	}
 }
 
-func changeInodes(inodesToChange []sub.Inode, rootDirectoryName string,
-	triggers *triggers.Triggers, takeAction bool, logger *log.Logger) {
+func (t *rpcType) changeInodes(inodesToChange []sub.Inode,
+	rootDirectoryName string, triggers *triggers.Triggers, takeAction bool) {
 	for _, inode := range inodesToChange {
 		fullPathname := path.Join(rootDirectoryName, inode.Name)
 		triggers.Match(inode.Name)
 		if takeAction {
 			if err := filesystem.ForceWriteMetadata(inode,
 				fullPathname); err != nil {
-				logger.Println(err)
+				t.lastUpdateError = err
+				t.logger.Println(err)
 				continue
 			}
-			logger.Printf("Changed inode: %s\n", fullPathname)
+			t.logger.Printf("Changed inode: %s\n", fullPathname)
 		}
 	}
 }

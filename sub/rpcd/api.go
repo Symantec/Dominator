@@ -24,6 +24,8 @@ type rpcType struct {
 	updateInProgress             bool
 	startTimeNanoSeconds         int32 // For Fetch() or Update().
 	startTimeSeconds             int64
+	lastFetchError               error
+	lastUpdateError              error
 	lastUpdateHadTriggerFailures bool
 }
 
