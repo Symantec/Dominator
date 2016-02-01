@@ -38,6 +38,10 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) bool {
 	for _, hash := range sub.objectCache {
 		state.subObjectCacheUsage[hash] = 0
 	}
+	if !filesystem.CompareDirectoriesMetadata(&state.subFS.DirectoryInode,
+		&state.requiredFS.DirectoryInode, nil) {
+		makeDirectory(request, &state.requiredFS.DirectoryInode, "/", false)
+	}
 	compareDirectories(request, &state,
 		&state.subFS.DirectoryInode, &state.requiredFS.DirectoryInode,
 		"/", filter)
