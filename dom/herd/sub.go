@@ -159,6 +159,20 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.status = statusSubNotReady
 		return
 	}
+	if previousStatus == statusFetching && reply.LastFetchError != nil {
+		sub.status = statusFailedToFetch
+		if sub.fileSystem == nil {
+			sub.generationCount = 0 // Force a full poll next cycle.
+			return
+		}
+	}
+	if previousStatus == statusUpdating && reply.LastUpdateError != nil {
+		sub.status = statusFailedToUpdate
+		if sub.fileSystem == nil {
+			sub.generationCount = 0 // Force a full poll next cycle.
+			return
+		}
+	}
 	if sub.generationCountAtChangeStart == sub.generationCount {
 		sub.status = statusWaitingForNextFullPoll
 		return
