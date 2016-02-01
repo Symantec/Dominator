@@ -115,8 +115,6 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		logger.Printf("Error calling %s.Poll()\t%s\n", sub.hostname, err)
 		return
 	}
-	sub.startTime = reply.StartTime
-	sub.pollTime = reply.PollTime
 	sub.lastPollSucceededTime = time.Now()
 	if reply.GenerationCount == 0 {
 		sub.reclaim()
@@ -126,6 +124,9 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.lastShortPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
 		shortPollDistribution.Add(sub.lastShortPollDuration)
+		if sub.startTime != reply.StartTime {
+			sub.generationCount = 0 // Sub has restarted: force a full poll.
+		}
 	} else {
 		if err := fs.RebuildInodePointers(); err != nil {
 			sub.status = statusFailedToPoll
@@ -144,6 +145,8 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		logger.Printf("Polled: %s, GenerationCount=%d\n",
 			sub.hostname, reply.GenerationCount)
 	}
+	sub.startTime = reply.StartTime
+	sub.pollTime = reply.PollTime
 	if reply.FetchInProgress {
 		sub.status = statusFetching
 		return
@@ -155,6 +158,20 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	if sub.generationCount < 1 {
 		sub.status = statusSubNotReady
 		return
+	}
+	if previousStatus == statusFetching && reply.LastFetchError != nil {
+		sub.status = statusFailedToFetch
+		if sub.fileSystem == nil {
+			sub.generationCount = 0 // Force a full poll next cycle.
+			return
+		}
+	}
+	if previousStatus == statusUpdating && reply.LastUpdateError != nil {
+		sub.status = statusFailedToUpdate
+		if sub.fileSystem == nil {
+			sub.generationCount = 0 // Force a full poll next cycle.
+			return
+		}
 	}
 	if sub.generationCountAtChangeStart == sub.generationCount {
 		sub.status = statusWaitingForNextFullPoll

@@ -62,11 +62,16 @@ func (t *rpcType) fetch(request sub.FetchRequest,
 		return errors.New("update in progress")
 	}
 	t.fetchInProgress = true
-	go t.doFetch(request)
+	go func() {
+		t.lastFetchError = t.doFetch(request)
+		if t.lastFetchError != nil && *exitOnFetchFailure {
+			os.Exit(1)
+		}
+	}()
 	return nil
 }
 
-func (t *rpcType) doFetch(request sub.FetchRequest) {
+func (t *rpcType) doFetch(request sub.FetchRequest) error {
 	defer t.clearFetchInProgress()
 	objectServer := objectclient.NewObjectClient(request.ServerAddress)
 	benchmark := false
@@ -80,10 +85,7 @@ func (t *rpcType) doFetch(request sub.FetchRequest) {
 	objectsReader, err := objectServer.GetObjects(request.Hashes)
 	if err != nil {
 		t.logger.Printf("Error getting object reader:\t%s\n", err.Error())
-		if *exitOnFetchFailure {
-			os.Exit(1)
-		}
-		return
+		return err
 	}
 	defer objectsReader.Close()
 	var totalLength uint64
@@ -92,20 +94,14 @@ func (t *rpcType) doFetch(request sub.FetchRequest) {
 		length, reader, err := objectsReader.NextObject()
 		if err != nil {
 			t.logger.Println(err)
-			if *exitOnFetchFailure {
-				os.Exit(1)
-			}
-			return
+			return err
 		}
 		err = readOne(t.objectsDir, hash, length,
 			t.networkReaderContext.NewReader(reader))
 		reader.Close()
 		if err != nil {
 			t.logger.Println(err)
-			if *exitOnFetchFailure {
-				os.Exit(1)
-			}
-			return
+			return err
 		}
 		totalLength += length
 	}
@@ -122,6 +118,7 @@ func (t *rpcType) doFetch(request sub.FetchRequest) {
 	t.logger.Printf("Fetch() complete. Read: %s in %s (%s/s)\n",
 		format.FormatBytes(totalLength), duration, format.FormatBytes(speed))
 	t.rescanObjectCacheChannel <- true
+	return nil
 }
 
 func enoughBytesForBenchmark(objectServer *objectclient.ObjectClient,
