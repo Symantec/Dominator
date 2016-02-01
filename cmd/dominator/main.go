@@ -135,34 +135,34 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
 		os.Exit(1)
 	}
+	scanTokenChannel := make(chan bool, 1)
+	scanTokenChannel <- true
 	nextCycleStopTime := time.Now().Add(interval)
-	haveMdb := false
 	for {
 		select {
 		case mdb := <-mdbChannel:
 			herd.MdbUpdate(mdb)
-			haveMdb = true
 			if *debug {
 				showMdb(mdb)
 			}
 			runtime.GC() // An opportune time to take out the garbage.
-		default:
-			// Do work.
-			if herd.PollNextSub() {
+		case <-scanTokenChannel:
+			// Scan one sub.
+			if herd.PollNextSub() { // We've reached the end of a scan cycle.
 				if *debug {
 					fmt.Print(".")
 				}
-				var sleepTime time.Duration
-				if haveMdb {
-					sleepTime = nextCycleStopTime.Sub(time.Now())
-				} else {
-					sleepTime = time.Millisecond * 100
-				}
-				time.Sleep(sleepTime)
+				go func(sleepDuration time.Duration) {
+					if sleepDuration < 0 { // There was no time to rest.
+						runtime.GC()
+					} else {
+						time.Sleep(sleepDuration)
+					}
+					scanTokenChannel <- true
+				}(nextCycleStopTime.Sub(time.Now()))
 				nextCycleStopTime = time.Now().Add(interval)
-				if sleepTime < 0 { // There was no time to rest.
-					runtime.GC() // An opportune time to take out the garbage.
-				}
+			} else {
+				scanTokenChannel <- true
 			}
 		}
 	}
