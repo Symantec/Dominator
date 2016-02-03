@@ -292,8 +292,8 @@ func main() {
 		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 	configuration.NetworkReaderContext = networkReaderContext
 	rescanObjectCacheChannel := rpcd.Setup(&configuration, &fsh, objectsDir,
-		networkReaderContext, netbenchFilename, oldTriggersFilename,
-		disableScanner, logger)
+		workingRootDir, networkReaderContext, netbenchFilename,
+		oldTriggersFilename, disableScanner, logger)
 	configMetricsDir, err := tricorder.RegisterDirectory("/config")
 	if err != nil {
 		fmt.Fprintf(os.Stderr,

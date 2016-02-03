@@ -18,6 +18,9 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 		if strings.Contains(err.Error(), ErrorConnectionRefused.Error()) {
 			return nil, ErrorConnectionRefused
 		}
+		if strings.Contains(err.Error(), ErrorNoRouteToHost.Error()) {
+			return nil, ErrorNoRouteToHost
+		}
 		return nil, err
 	}
 	path := rpcPath

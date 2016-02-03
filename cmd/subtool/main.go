@@ -52,6 +52,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  fetch hashesFile")
 	fmt.Fprintln(os.Stderr, "  get-config")
+	fmt.Fprintln(os.Stderr, "  get-file remoteFile localFile")
 	fmt.Fprintln(os.Stderr, "  poll")
 	fmt.Fprintln(os.Stderr, "  set-config")
 }
@@ -67,6 +68,7 @@ type subcommand struct {
 var subcommands = []subcommand{
 	{"fetch", 1, fetchSubcommand},
 	{"get-config", 0, getConfigSubcommand},
+	{"get-file", 2, getFileSubcommand},
 	{"poll", 0, pollSubcommand},
 	{"set-config", 0, setConfigSubcommand},
 }

@@ -27,6 +27,17 @@ type GetConfigurationRequest struct {
 
 type GetConfigurationResponse Configuration
 
+// The GetFiles() RPC is fully streamed.
+// The client sends a stream of strings (filenames) it wants. An empty string
+// signals the end of the stream.
+// The server (the sub) sends a stream of GetFileResponse messages. No response
+// is sent for the end-of-stream signal.
+
+type GetFileResponse struct {
+	Error error
+	Size  uint64
+}
+
 type PollRequest struct {
 	HaveGeneration uint64
 }

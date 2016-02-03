@@ -3,6 +3,7 @@ package client
 import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
+	"io"
 )
 
 func CallCleanup(client *srpc.Client, request sub.CleanupRequest,
@@ -35,4 +36,9 @@ func CallSetConfiguration(client *srpc.Client,
 func CallUpdate(client *srpc.Client, request sub.UpdateRequest,
 	reply *sub.UpdateResponse) error {
 	return callUpdate(client, request, reply)
+}
+
+func GetFiles(client *srpc.Client, filenames []string,
+	readerFunc func(reader io.Reader, size uint64) error) error {
+	return getFiles(client, filenames, readerFunc)
 }
