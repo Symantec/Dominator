@@ -12,6 +12,7 @@ type rpcType struct {
 	scannerConfiguration         *scanner.Configuration
 	fileSystemHistory            *scanner.FileSystemHistory
 	objectsDir                   string
+	rootDir                      string
 	networkReaderContext         *rateio.ReaderContext
 	netbenchFilename             string
 	oldTriggersFilename          string
@@ -20,6 +21,7 @@ type rpcType struct {
 	logger                       *log.Logger
 	rwLock                       sync.RWMutex
 	pollLock                     sync.Mutex
+	getFilesLock                 sync.Mutex
 	fetchInProgress              bool // Fetch() & Update() mutually exclusive.
 	updateInProgress             bool
 	startTimeNanoSeconds         int32 // For Fetch() or Update().
@@ -30,7 +32,8 @@ type rpcType struct {
 }
 
 func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
-	objectsDirname string, netReaderContext *rateio.ReaderContext,
+	objectsDirname string, rootDirname string,
+	netReaderContext *rateio.ReaderContext,
 	netbenchFname string, oldTriggersFname string,
 	disableScannerFunction func(disableScanner bool),
 	logger *log.Logger) <-chan bool {
@@ -39,6 +42,7 @@ func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 		scannerConfiguration:     configuration,
 		fileSystemHistory:        fsh,
 		objectsDir:               objectsDirname,
+		rootDir:                  rootDirname,
 		networkReaderContext:     netReaderContext,
 		netbenchFilename:         netbenchFname,
 		oldTriggersFilename:      oldTriggersFname,
