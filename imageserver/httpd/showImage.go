@@ -9,14 +9,14 @@ import (
 	"net/http"
 )
 
-func showImageHandler(w http.ResponseWriter, req *http.Request) {
+func (s state) showImageHandler(w http.ResponseWriter, req *http.Request) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
 	imageName := req.URL.RawQuery
 	fmt.Fprintf(writer, "<title>image %s</title>\n", imageName)
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<h3>")
-	image := imageDataBase.GetImage(imageName)
+	image := s.imageDataBase.GetImage(imageName)
 	if image == nil {
 		fmt.Fprintf(writer, "Image: %s UNKNOWN!\n", imageName)
 		return

@@ -10,7 +10,7 @@ import (
 	"sort"
 )
 
-func listImagesHandler(w http.ResponseWriter, req *http.Request) {
+func (s state) listImagesHandler(w http.ResponseWriter, req *http.Request) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
 	fmt.Fprintln(writer, "<title>imageserver images</title>")
@@ -21,7 +21,7 @@ func listImagesHandler(w http.ResponseWriter, req *http.Request) {
                           </style>`)
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<h3>")
-	imageNames := imageDataBase.ListImages()
+	imageNames := s.imageDataBase.ListImages()
 	sort.Strings(imageNames)
 	fmt.Fprintln(writer, `<table border="1" style="width:100%">`)
 	fmt.Fprintln(writer, "  <tr>")
@@ -32,7 +32,7 @@ func listImagesHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "    <th>Triggers</th>")
 	fmt.Fprintln(writer, "  </tr>")
 	for _, name := range imageNames {
-		showImage(writer, name, imageDataBase.GetImage(name))
+		showImage(writer, name, s.imageDataBase.GetImage(name))
 	}
 	fmt.Fprintln(writer, "</table>")
 	fmt.Fprintln(writer, "</body>")

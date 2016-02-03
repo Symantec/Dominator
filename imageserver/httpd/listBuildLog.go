@@ -6,14 +6,14 @@ import (
 	"net/http"
 )
 
-func listBuildLogHandler(w http.ResponseWriter, req *http.Request) {
+func (s state) listBuildLogHandler(w http.ResponseWriter, req *http.Request) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
 	imageName := req.URL.RawQuery
 	fmt.Fprintf(writer, "<title>image %s</title>\n", imageName)
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<h3>")
-	image := imageDataBase.GetImage(imageName)
+	image := s.imageDataBase.GetImage(imageName)
 	if image == nil {
 		fmt.Fprintf(writer, "Image: %s UNKNOWN!\n", imageName)
 		return
@@ -28,6 +28,6 @@ func listBuildLogHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	fmt.Fprintf(writer, "Build log for image: %s<br>\n", imageName)
 	fmt.Fprintln(writer, "</h3>")
-	listObject(writer, objectServer, image.BuildLog.Object)
+	listObject(writer, s.objectServer, image.BuildLog.Object)
 	fmt.Fprintln(writer, "</body>")
 }
