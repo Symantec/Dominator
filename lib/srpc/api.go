@@ -22,6 +22,7 @@ import (
 
 var (
 	ErrorConnectionRefused    = errors.New("connection refused")
+	ErrorNoRouteToHost        = errors.New("no route to host")
 	ErrorMissingCertificate   = errors.New("missing certificate")
 	ErrorBadCertificate       = errors.New("bad certificate")
 	ErrorAccessToMethodDenied = errors.New("access to method denied")
