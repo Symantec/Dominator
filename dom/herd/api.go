@@ -22,6 +22,7 @@ const (
 	statusConnecting
 	statusDNSError
 	statusConnectionRefused
+	statusNoRouteToHost
 	statusConnectTimeout
 	statusMissingCertificate
 	statusBadCertificate
