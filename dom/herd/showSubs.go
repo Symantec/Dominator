@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/format"
 	"io"
 	"net/http"
 	"strings"
@@ -68,18 +69,17 @@ func showSub(writer io.Writer, sub *Sub) {
 		subURL, sub.hostname)
 	sub.herd.showImage(writer, sub.requiredImage)
 	sub.herd.showImage(writer, sub.plannedImage)
-	fmt.Fprintf(writer, "    <td>%v</td>\n", sub.busy)
+	sub.showBusy(writer)
 	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.status)
 	if sub.startTime.IsZero() || sub.pollTime.IsZero() {
 		fmt.Fprintf(writer, "    <td></td>\n")
 	} else {
-		fmt.Fprintf(writer, "    <td>%s</td>\n", sub.pollTime.Sub(sub.startTime))
+		showTime(writer, sub.pollTime.Sub(sub.startTime))
 	}
 	if sub.lastPollSucceededTime.IsZero() {
 		fmt.Fprintf(writer, "    <td></td>\n")
 	} else {
-		fmt.Fprintf(writer, "    <td>%s</td>\n",
-			time.Since(sub.lastPollSucceededTime))
+		showTime(writer, time.Since(sub.lastPollSucceededTime))
 	}
 	showTime(writer, sub.lastConnectDuration)
 	showTime(writer, sub.lastShortPollDuration)
@@ -89,15 +89,35 @@ func showSub(writer io.Writer, sub *Sub) {
 }
 
 func (herd *Herd) showImage(writer io.Writer, name string) {
-	if image, err := herd.getImage(name); image != nil {
+	if name == "" {
+		fmt.Fprintln(writer, "    <td></td>")
+	} else if image, err := herd.getImage(name); err != nil {
+		fmt.Fprintf(writer, "    <td><font color=\"red\">%s</font></td>\n", err)
+	} else if image != nil {
 		fmt.Fprintf(writer,
 			"    <td><a href=\"http://%s/showImage?%s\">%s</a></td>\n",
 			herd.imageServerAddress, name, name)
-	} else if err != nil {
-		fmt.Fprintf(writer, "    <td><font color=\"red\">%s</font></td>\n", err)
 	} else {
 		fmt.Fprintf(writer, "    <td><font color=\"grey\">%s</font></td>\n",
 			name)
+	}
+}
+
+func (sub *Sub) showBusy(writer io.Writer) {
+	if sub.busy {
+		if sub.busyStartTime.IsZero() {
+			fmt.Fprintln(writer, "    <td>busy</td>")
+		} else {
+			fmt.Fprintf(writer, "    <td>%s</td>\n",
+				format.Duration(time.Since(sub.busyStartTime)))
+		}
+	} else {
+		if sub.busyStartTime.IsZero() {
+			fmt.Fprintln(writer, "    <td></td>")
+		} else {
+			fmt.Fprintf(writer, "    <td><font color=\"grey\">%s</font></td>\n",
+				format.Duration(sub.busyStopTime.Sub(sub.busyStartTime)))
+		}
 	}
 }
 
@@ -105,11 +125,6 @@ func showTime(writer io.Writer, duration time.Duration) {
 	if duration < 1 {
 		fmt.Fprintf(writer, "    <td></td>\n")
 	} else {
-		seconds := duration.Seconds()
-		if seconds <= 1.0 {
-			fmt.Fprintf(writer, "    <td>%.fms</td>\n", seconds*1e3)
-		} else {
-			fmt.Fprintf(writer, "    <td>%.fs</td>\n", seconds)
-		}
+		fmt.Fprintf(writer, "    <td>%s</td>\n", format.Duration(duration))
 	}
 }

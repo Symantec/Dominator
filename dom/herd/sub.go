@@ -28,6 +28,7 @@ func (sub *Sub) tryMakeBusy() bool {
 	if sub.busy {
 		return false
 	}
+	sub.busyStartTime = time.Now()
 	sub.busy = true
 	return true
 }
@@ -35,6 +36,7 @@ func (sub *Sub) tryMakeBusy() bool {
 func (sub *Sub) makeUnbusy() {
 	sub.busyMutex.Lock()
 	defer sub.busyMutex.Unlock()
+	sub.busyStopTime = time.Now()
 	sub.busy = false
 }
 

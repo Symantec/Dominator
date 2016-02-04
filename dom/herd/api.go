@@ -55,6 +55,8 @@ type Sub struct {
 	plannedImage                 string
 	busyMutex                    sync.Mutex
 	busy                         bool
+	busyStartTime                time.Time
+	busyStopTime                 time.Time
 	havePlannedImage             bool
 	startTime                    time.Time
 	pollTime                     time.Time
