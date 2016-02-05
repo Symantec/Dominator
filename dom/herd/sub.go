@@ -92,10 +92,6 @@ func (sub *Sub) connectAndPoll() {
 	sub.lastConnectDuration =
 		sub.lastConnectionSucceededTime.Sub(sub.lastConnectionStartTime)
 	connectDistribution.Add(sub.lastConnectDuration)
-	if sub.herd.getImageNoError(sub.requiredImage) == nil {
-		sub.status = statusImageNotReady
-		return
-	}
 	sub.herd.pollSemaphore <- true
 	sub.status = statusPolling
 	sub.poll(srpcClient, previousStatus)
@@ -114,6 +110,12 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
 	sub.lastPollStartTime = time.Now()
+	haveImage := false
+	if sub.herd.getImageNoError(sub.requiredImage) == nil {
+		request.ShortPollOnly = true
+	} else {
+		haveImage = true
+	}
 	logger := sub.herd.logger
 	if err := client.CallPoll(srpcClient, request, &reply); err != nil {
 		sub.pollTime = time.Time{}
@@ -165,7 +167,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.status = statusUpdating
 		return
 	}
-	if sub.generationCount < 1 {
+	if reply.GenerationCount < 1 {
 		sub.status = statusSubNotReady
 		return
 	}
@@ -182,6 +184,10 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 			sub.generationCount = 0 // Force a full poll next cycle.
 			return
 		}
+	}
+	if !haveImage {
+		sub.status = statusImageNotReady
+		return
 	}
 	if sub.generationCountAtChangeStart == sub.generationCount {
 		sub.status = statusWaitingForNextFullPoll
