@@ -15,8 +15,10 @@ type HtmlWriter interface {
 
 var htmlWriters []HtmlWriter
 
-var imageDataBase *scanner.ImageDataBase
-var objectServer *filesystem.ObjectServer
+type state struct {
+	imageDataBase *scanner.ImageDataBase
+	objectServer  *filesystem.ObjectServer
+}
 
 func StartServer(portNum uint, imdb *scanner.ImageDataBase,
 	objSrv *filesystem.ObjectServer, daemon bool) error {
@@ -24,16 +26,15 @@ func StartServer(portNum uint, imdb *scanner.ImageDataBase,
 	if err != nil {
 		return err
 	}
-	imageDataBase = imdb
-	objectServer = objSrv
+	myState := state{imageDataBase: imdb, objectServer: objSrv}
 	http.HandleFunc("/", statusHandler)
-	http.HandleFunc("/listBuildLog", listBuildLogHandler)
-	http.HandleFunc("/listFilter", listFilterHandler)
-	http.HandleFunc("/listImage", listImageHandler)
-	http.HandleFunc("/listImages", listImagesHandler)
-	http.HandleFunc("/listReleaseNotes", listReleaseNotesHandler)
-	http.HandleFunc("/listTriggers", listTriggersHandler)
-	http.HandleFunc("/showImage", showImageHandler)
+	http.HandleFunc("/listBuildLog", myState.listBuildLogHandler)
+	http.HandleFunc("/listFilter", myState.listFilterHandler)
+	http.HandleFunc("/listImage", myState.listImageHandler)
+	http.HandleFunc("/listImages", myState.listImagesHandler)
+	http.HandleFunc("/listReleaseNotes", myState.listReleaseNotesHandler)
+	http.HandleFunc("/listTriggers", myState.listTriggersHandler)
+	http.HandleFunc("/showImage", myState.showImageHandler)
 	if daemon {
 		go http.Serve(listener, nil)
 	} else {

@@ -55,6 +55,8 @@ type Sub struct {
 	plannedImage                 string
 	busyMutex                    sync.Mutex
 	busy                         bool
+	busyStartTime                time.Time
+	busyStopTime                 time.Time
 	havePlannedImage             bool
 	startTime                    time.Time
 	pollTime                     time.Time
@@ -64,6 +66,7 @@ type Sub struct {
 	generationCountAtChangeStart uint64
 	status                       subStatus
 	lastConnectionStartTime      time.Time
+	lastReachableTime            time.Time
 	lastConnectionSucceededTime  time.Time
 	lastConnectDuration          time.Duration
 	lastPollStartTime            time.Time

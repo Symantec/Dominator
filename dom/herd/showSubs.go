@@ -4,26 +4,42 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/format"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 )
 
+func showAliveSubsHandler(w http.ResponseWriter, req *http.Request) {
+	httpdHerd.showSubs(w, "alive ", selectAliveSub)
+}
+
 func showAllSubsHandler(w http.ResponseWriter, req *http.Request) {
 	httpdHerd.showSubs(w, "", nil)
 }
 
-func showAliveSubsHandler(w http.ResponseWriter, req *http.Request) {
-	httpdHerd.showSubs(w, "alive ", selectAliveSub)
+func showCompliantSubsHandler(w http.ResponseWriter, req *http.Request) {
+	httpdHerd.showSubs(w, "compliant ", selectCompliantSub)
 }
 
 func showDeviantSubsHandler(w http.ResponseWriter, req *http.Request) {
 	httpdHerd.showSubs(w, "deviant ", selectDeviantSub)
 }
 
-func showCompliantSubsHandler(w http.ResponseWriter, req *http.Request) {
-	httpdHerd.showSubs(w, "compliant ", selectCompliantSub)
+func showReachableSubsHandler(w http.ResponseWriter, req *http.Request) {
+	var duration rDuration
+	switch req.URL.RawQuery {
+	case "1m":
+		duration = rDuration(time.Second * 60)
+	case "10m":
+		duration = rDuration(time.Second * 600)
+	case "1h":
+		duration = rDuration(time.Second * 3600)
+	case "1d":
+		duration = rDuration(time.Second * 3600 * 24)
+	}
+	httpdHerd.showSubs(w, "reachable ", duration.selector)
 }
 
 func (herd *Herd) showSubs(w io.Writer, subType string,
@@ -68,18 +84,17 @@ func showSub(writer io.Writer, sub *Sub) {
 		subURL, sub.hostname)
 	sub.herd.showImage(writer, sub.requiredImage)
 	sub.herd.showImage(writer, sub.plannedImage)
-	fmt.Fprintf(writer, "    <td>%v</td>\n", sub.busy)
+	sub.showBusy(writer)
 	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.status)
 	if sub.startTime.IsZero() || sub.pollTime.IsZero() {
 		fmt.Fprintf(writer, "    <td></td>\n")
 	} else {
-		fmt.Fprintf(writer, "    <td>%s</td>\n", sub.pollTime.Sub(sub.startTime))
+		showTime(writer, sub.pollTime.Sub(sub.startTime))
 	}
 	if sub.lastPollSucceededTime.IsZero() {
 		fmt.Fprintf(writer, "    <td></td>\n")
 	} else {
-		fmt.Fprintf(writer, "    <td>%s</td>\n",
-			time.Since(sub.lastPollSucceededTime))
+		showTime(writer, time.Since(sub.lastPollSucceededTime))
 	}
 	showTime(writer, sub.lastConnectDuration)
 	showTime(writer, sub.lastShortPollDuration)
@@ -89,15 +104,35 @@ func showSub(writer io.Writer, sub *Sub) {
 }
 
 func (herd *Herd) showImage(writer io.Writer, name string) {
-	if image, err := herd.getImage(name); image != nil {
+	if name == "" {
+		fmt.Fprintln(writer, "    <td></td>")
+	} else if image, err := herd.getImage(name); err != nil {
+		fmt.Fprintf(writer, "    <td><font color=\"red\">%s</font></td>\n", err)
+	} else if image != nil {
 		fmt.Fprintf(writer,
 			"    <td><a href=\"http://%s/showImage?%s\">%s</a></td>\n",
 			herd.imageServerAddress, name, name)
-	} else if err != nil {
-		fmt.Fprintf(writer, "    <td><font color=\"red\">%s</font></td>\n", err)
 	} else {
 		fmt.Fprintf(writer, "    <td><font color=\"grey\">%s</font></td>\n",
 			name)
+	}
+}
+
+func (sub *Sub) showBusy(writer io.Writer) {
+	if sub.busy {
+		if sub.busyStartTime.IsZero() {
+			fmt.Fprintln(writer, "    <td>busy</td>")
+		} else {
+			fmt.Fprintf(writer, "    <td>%s</td>\n",
+				format.Duration(time.Since(sub.busyStartTime)))
+		}
+	} else {
+		if sub.busyStartTime.IsZero() {
+			fmt.Fprintln(writer, "    <td></td>")
+		} else {
+			fmt.Fprintf(writer, "    <td><font color=\"grey\">%s</font></td>\n",
+				format.Duration(sub.busyStopTime.Sub(sub.busyStartTime)))
+		}
 	}
 }
 
@@ -105,11 +140,6 @@ func showTime(writer io.Writer, duration time.Duration) {
 	if duration < 1 {
 		fmt.Fprintf(writer, "    <td></td>\n")
 	} else {
-		seconds := duration.Seconds()
-		if seconds <= 1.0 {
-			fmt.Fprintf(writer, "    <td>%.fms</td>\n", seconds*1e3)
-		} else {
-			fmt.Fprintf(writer, "    <td>%.fs</td>\n", seconds)
-		}
+		fmt.Fprintf(writer, "    <td>%s</td>\n", format.Duration(duration))
 	}
 }
