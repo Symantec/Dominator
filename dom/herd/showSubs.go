@@ -11,20 +11,35 @@ import (
 	"time"
 )
 
+func showAliveSubsHandler(w http.ResponseWriter, req *http.Request) {
+	httpdHerd.showSubs(w, "alive ", selectAliveSub)
+}
+
 func showAllSubsHandler(w http.ResponseWriter, req *http.Request) {
 	httpdHerd.showSubs(w, "", nil)
 }
 
-func showAliveSubsHandler(w http.ResponseWriter, req *http.Request) {
-	httpdHerd.showSubs(w, "alive ", selectAliveSub)
+func showCompliantSubsHandler(w http.ResponseWriter, req *http.Request) {
+	httpdHerd.showSubs(w, "compliant ", selectCompliantSub)
 }
 
 func showDeviantSubsHandler(w http.ResponseWriter, req *http.Request) {
 	httpdHerd.showSubs(w, "deviant ", selectDeviantSub)
 }
 
-func showCompliantSubsHandler(w http.ResponseWriter, req *http.Request) {
-	httpdHerd.showSubs(w, "compliant ", selectCompliantSub)
+func showReachableSubsHandler(w http.ResponseWriter, req *http.Request) {
+	var duration rDuration
+	switch req.URL.RawQuery {
+	case "1m":
+		duration = rDuration(time.Second * 60)
+	case "10m":
+		duration = rDuration(time.Second * 600)
+	case "1h":
+		duration = rDuration(time.Second * 3600)
+	case "1d":
+		duration = rDuration(time.Second * 3600 * 24)
+	}
+	httpdHerd.showSubs(w, "reachable ", duration.selector)
 }
 
 func (herd *Herd) showSubs(w io.Writer, subType string,

@@ -66,6 +66,7 @@ type Sub struct {
 	generationCountAtChangeStart uint64
 	status                       subStatus
 	lastConnectionStartTime      time.Time
+	lastReachableTime            time.Time
 	lastConnectionSucceededTime  time.Time
 	lastConnectDuration          time.Duration
 	lastPollStartTime            time.Time

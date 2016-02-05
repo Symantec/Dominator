@@ -7,6 +7,15 @@ import (
 	"time"
 )
 
+type rDuration time.Duration
+
+func (d rDuration) selector(sub *Sub) bool {
+	if time.Since(sub.lastReachableTime) <= time.Duration(d) {
+		return true
+	}
+	return false
+}
+
 func (herd *Herd) writeHtml(writer io.Writer) {
 	numSubs := herd.countSelectedSubs(nil)
 	fmt.Fprintf(writer, "Time since current cycle start: %s<br>\n",
@@ -27,6 +36,19 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 	numSubs = herd.countSelectedSubs(selectAliveSub)
 	fmt.Fprintf(writer,
 		"Number of alive subs: <a href=\"showAliveSubs\">%d</a><br>\n",
+		numSubs)
+	fmt.Fprint(writer, "Number of reachable subs in last: ")
+	numSubs = herd.countSelectedSubs(rDuration(time.Second * 60).selector)
+	fmt.Fprintf(writer, "<a href=\"showReachableSubs?1m\">1 min(%d)</a>, ",
+		numSubs)
+	numSubs = herd.countSelectedSubs(rDuration(time.Second * 600).selector)
+	fmt.Fprintf(writer, "<a href=\"showReachableSubs?10m\">10 min(%d)</a>, ",
+		numSubs)
+	numSubs = herd.countSelectedSubs(rDuration(time.Second * 3600).selector)
+	fmt.Fprintf(writer, "<a href=\"showReachableSubs?1h\">1 hour(%d)</a>, ",
+		numSubs)
+	numSubs = herd.countSelectedSubs(rDuration(time.Second * 3600 * 24).selector)
+	fmt.Fprintf(writer, "<a href=\"showReachableSubs?1d\">1 day(%d)</a><br>\n",
 		numSubs)
 	numSubs = herd.countSelectedSubs(selectDeviantSub)
 	fmt.Fprintf(writer,

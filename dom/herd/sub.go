@@ -48,6 +48,7 @@ func (sub *Sub) connectAndPoll() {
 	sub.lastConnectionStartTime = time.Now()
 	srpcClient, err := srpc.DialHTTP("tcp", address,
 		time.Second*time.Duration(*subConnectTimeout))
+	dialReturnedTime := time.Now()
 	if err != nil {
 		sub.pollTime = time.Time{}
 		if err, ok := err.(*net.OpError); ok {
@@ -69,10 +70,12 @@ func (sub *Sub) connectAndPoll() {
 			return
 		}
 		if err == srpc.ErrorMissingCertificate {
+			sub.lastReachableTime = dialReturnedTime
 			sub.status = statusMissingCertificate
 			return
 		}
 		if err == srpc.ErrorBadCertificate {
+			sub.lastReachableTime = dialReturnedTime
 			sub.status = statusBadCertificate
 			return
 		}
@@ -84,7 +87,8 @@ func (sub *Sub) connectAndPoll() {
 	}
 	defer srpcClient.Close()
 	sub.status = statusWaitingToPoll
-	sub.lastConnectionSucceededTime = time.Now()
+	sub.lastReachableTime = dialReturnedTime
+	sub.lastConnectionSucceededTime = dialReturnedTime
 	sub.lastConnectDuration =
 		sub.lastConnectionSucceededTime.Sub(sub.lastConnectionStartTime)
 	connectDistribution.Add(sub.lastConnectDuration)
