@@ -11,8 +11,6 @@ var startTime time.Time = time.Now()
 
 func (t *rpcType) Poll(conn *srpc.Conn) error {
 	defer conn.Flush()
-	t.pollLock.Lock()
-	defer t.pollLock.Unlock()
 	var request sub.PollRequest
 	var response sub.PollResponse
 	decoder := gob.NewDecoder(conn)
@@ -34,6 +32,7 @@ func (t *rpcType) Poll(conn *srpc.Conn) error {
 	response.GenerationCount = t.fileSystemHistory.GenerationCount()
 	fs := t.fileSystemHistory.FileSystem()
 	if fs != nil &&
+		!request.ShortPollOnly &&
 		request.HaveGeneration != t.fileSystemHistory.GenerationCount() {
 		response.FileSystemFollows = true
 	}
