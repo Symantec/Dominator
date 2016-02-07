@@ -71,6 +71,10 @@ func (fs *FileSystem) Encode(writer io.Writer) error {
 	return fs.encode(writer)
 }
 
+func (fs *FileSystem) Filter(filter *filter.Filter) *FileSystem {
+	return fs.filter(filter)
+}
+
 func (fs *FileSystem) Listf(w io.Writer, listSelector ListSelector,
 	filter *filter.Filter) error {
 	return fs.list(w, listSelector, filter)
