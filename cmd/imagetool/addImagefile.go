@@ -23,10 +23,10 @@ import (
 	"strings"
 )
 
-func addImageSubcommand(args []string) {
+func addImagefileSubcommand(args []string) {
 	imageClient, imageSClient, objectClient := getClients()
-	err := addImage(imageClient, imageSClient, objectClient, args[0], args[1],
-		args[2], args[3])
+	err := addImagefile(imageClient, imageSClient, objectClient, args[0],
+		args[1], args[2], args[3])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error adding image: \"%s\"\t%s\n", args[0], err)
 		os.Exit(1)
@@ -34,7 +34,7 @@ func addImageSubcommand(args []string) {
 	os.Exit(0)
 }
 
-func addImage(imageClient *rpc.Client, imageSClient *srpc.Client,
+func addImagefile(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient,
 	name, imageFilename, filterFilename, triggersFilename string) error {
 	var request imageserver.AddImageRequest
@@ -66,21 +66,8 @@ func addImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 		return errors.New("image exists")
 	}
 	var newImage image.Image
-	if filterFilename != "" {
-		newImage.Filter, err = filter.LoadFilter(filterFilename)
-		if err != nil {
-			return err
-		}
-	}
-	if err := loadTriggers(&newImage, triggersFilename); err != nil {
-		return err
-	}
-	newImage.BuildLog, err = getAnnotation(objectClient, *buildLog)
-	if err != nil {
-		return err
-	}
-	newImage.ReleaseNotes, err = getAnnotation(objectClient, *releaseNotes)
-	if err != nil {
+	if err := loadImageFiles(&newImage, objectClient, filterFilename,
+		triggersFilename); err != nil {
 		return err
 	}
 	request.ImageName = name
@@ -94,6 +81,29 @@ func addImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 	err = client.CallAddImage(imageSClient, request, &reply)
 	if err != nil {
 		return errors.New("remote error: " + err.Error())
+	}
+	return nil
+}
+
+func loadImageFiles(image *image.Image, objectClient *objectclient.ObjectClient,
+	filterFilename, triggersFilename string) error {
+	var err error
+	if filterFilename != "" {
+		image.Filter, err = filter.LoadFilter(filterFilename)
+		if err != nil {
+			return err
+		}
+	}
+	if err := loadTriggers(image, triggersFilename); err != nil {
+		return err
+	}
+	image.BuildLog, err = getAnnotation(objectClient, *buildLog)
+	if err != nil {
+		return err
+	}
+	image.ReleaseNotes, err = getAnnotation(objectClient, *releaseNotes)
+	if err != nil {
+		return err
 	}
 	return nil
 }
