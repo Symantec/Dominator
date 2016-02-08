@@ -21,6 +21,8 @@ var (
 		"Name of file containing the user SSL certificate")
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
+	deleteFilter = flag.String("deleteFilter", "",
+		"Name of delete filter file for adds subcommand")
 	filterFile = flag.String("filterFile", "",
 		"Filter file to apply when diffing images")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
@@ -44,6 +46,7 @@ func printUsage() {
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  add    name imagefile filterfile triggerfile")
+	fmt.Fprintln(os.Stderr, "  adds   name subname filterfile triggerfile")
 	fmt.Fprintln(os.Stderr, "  check  name")
 	fmt.Fprintln(os.Stderr, "  delete name")
 	fmt.Fprintln(os.Stderr, "  diff   tool left right")
@@ -75,7 +78,8 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
-	{"add", 4, addImageSubcommand},
+	{"add", 4, addImagefileSubcommand},
+	{"adds", 4, addImagesubSubcommand},
 	{"check", 1, checkImageSubcommand},
 	{"delete", 1, deleteImageSubcommand},
 	{"diff", 3, diffSubcommand},

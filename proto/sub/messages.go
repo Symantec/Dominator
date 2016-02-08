@@ -40,6 +40,7 @@ type GetFileResponse struct {
 
 type PollRequest struct {
 	HaveGeneration uint64
+	ShortPollOnly  bool // If true, do not send FileSystem or ObjectCache.
 }
 
 type PollResponse struct {

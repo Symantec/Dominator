@@ -1,5 +1,5 @@
 [Unit]
-Description=Domiator subject daemon
+Description=Dominator subject daemon
 After=network.target
 
 [Service]

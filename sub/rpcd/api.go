@@ -20,7 +20,6 @@ type rpcType struct {
 	disableScannerFunc           func(disableScanner bool)
 	logger                       *log.Logger
 	rwLock                       sync.RWMutex
-	pollLock                     sync.Mutex
 	getFilesLock                 sync.Mutex
 	fetchInProgress              bool // Fetch() & Update() mutually exclusive.
 	updateInProgress             bool
