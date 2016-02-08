@@ -21,7 +21,7 @@ func Duration(duration time.Duration) string {
 	if ns := duration.Nanoseconds(); ns < 1000 {
 		return fmt.Sprintf("%dns", ns)
 	} else if us := float64(duration) / float64(time.Microsecond); us < 1000 {
-		return fmt.Sprintf("%.3gfµs", us)
+		return fmt.Sprintf("%.3gµs", us)
 	} else if ms := float64(duration) / float64(time.Millisecond); ms < 1000 {
 		return fmt.Sprintf("%.3gms", ms)
 	} else if s := float64(duration) / float64(time.Second); s < 60 {
