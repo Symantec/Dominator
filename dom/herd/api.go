@@ -37,6 +37,7 @@ const (
 	statusFetchDenied
 	statusFailedToFetch
 	statusComputingUpdate
+	statusSendingUpdate
 	statusUpdating
 	statusUpdateDenied
 	statusFailedToUpdate

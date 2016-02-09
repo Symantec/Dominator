@@ -289,6 +289,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	if sub.buildUpdateRequest(&request) {
 		return true, statusSynced
 	}
+	sub.status = statusSendingUpdate
 	if err := client.CallUpdate(srpcClient, request, &reply); err != nil {
 		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
 		if err == srpc.ErrorAccessToMethodDenied {
