@@ -50,12 +50,8 @@ func addImagesub(imageClient *rpc.Client, imageSClient *srpc.Client,
 	if err != nil {
 		return err
 	}
-	if *deleteFilter != "" {
-		filter, err := filter.LoadFilter(*deleteFilter)
-		if err != nil {
-			return err
-		}
-		fs = fs.Filter(filter)
+	if fs, err = applyDeleteFilter(fs); err != nil {
+		return err
 	}
 	fs = fs.Filter(newImage.Filter)
 	if err := copyMissingObjects(fs, objectClient, subName); err != nil {
@@ -69,6 +65,18 @@ func addImagesub(imageClient *rpc.Client, imageSClient *srpc.Client,
 		return errors.New("remote error: " + err.Error())
 	}
 	return nil
+}
+
+func applyDeleteFilter(fs *filesystem.FileSystem) (
+	*filesystem.FileSystem, error) {
+	if *deleteFilter == "" {
+		return fs, nil
+	}
+	filter, err := filter.LoadFilter(*deleteFilter)
+	if err != nil {
+		return nil, err
+	}
+	return fs.Filter(filter), nil
 }
 
 func copyMissingObjects(fs *filesystem.FileSystem,
