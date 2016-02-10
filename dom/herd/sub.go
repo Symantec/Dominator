@@ -189,11 +189,11 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.status = statusImageNotReady
 		return
 	}
-	if sub.generationCountAtChangeStart == sub.generationCount {
-		sub.status = statusWaitingForNextFullPoll
-		return
-	}
 	if sub.fileSystem == nil {
+		if sub.generationCountAtChangeStart == sub.generationCount {
+			sub.status = statusWaitingForNextFullPoll
+			return
+		}
 		sub.status = previousStatus
 		if previousStatus != statusSynced {
 			// Force a full poll next cycle so that we can see the state of the
