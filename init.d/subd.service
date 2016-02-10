@@ -4,6 +4,7 @@ After=network.target
 
 [Service]
 ExecStart=/usr/local/sbin/subd
+ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=1
 

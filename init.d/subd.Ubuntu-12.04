@@ -1,0 +1,54 @@
+#! /bin/bash --posix
+
+### BEGIN INIT INFO
+# Provides:		subd
+# Required-Start:	$local_fs $syslog
+# Required-Stop:	$local_fs $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 6
+# Short-Description:	Dominator subject daemon
+### END INIT INFO
+
+set -e
+
+# /etc/init.d/subd: start and stop the Dominator subject daemon
+
+test -x /usr/local/sbin/subd || exit 0
+
+umask 022
+
+. /lib/lsb/init-functions
+
+export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
+readonly pidfile="/var/run/subd.pid"
+
+case "$1" in
+  start)
+	log_daemon_msg "Starting Dominator subject daemon" "subd" || true
+	/usr/local/sbin/subd < /dev/null &> /dev/null &
+	;;
+  stop)
+	log_daemon_msg "Stopping Dominator subject daemon" "subd" || true
+	kill -TERM $(cat "$pidfile")
+	;;
+
+  reload|force-reload)
+	kill -HUP $(cat "$pidfile")
+	;;
+
+  restart)
+	kill -HUP $(cat "$pidfile")
+	;;
+
+  start-if-down)
+	[ -s "$pidfile" ] && kill -0 $(cat "$pidfile") &> /dev/null && exit
+	log_daemon_msg "Starting Dominator subject daemon" "subd" || true
+	/usr/local/sbin/subd < /dev/null &> /dev/null &
+	;;
+
+  *)
+	log_action_msg "Usage: /etc/init.d/subd {start|stop|reload|force-reload|restart}" || true
+	exit 1
+esac
+
+exit 0

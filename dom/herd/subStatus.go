@@ -44,6 +44,8 @@ func (status subStatus) string() string {
 		return "fetch failed"
 	case statusComputingUpdate:
 		return "computing update"
+	case statusSendingUpdate:
+		return "sending update"
 	case statusUpdating:
 		return "updating"
 	case statusUpdateDenied:

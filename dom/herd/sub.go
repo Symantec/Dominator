@@ -189,11 +189,11 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.status = statusImageNotReady
 		return
 	}
-	if sub.generationCountAtChangeStart == sub.generationCount {
-		sub.status = statusWaitingForNextFullPoll
-		return
-	}
 	if sub.fileSystem == nil {
+		if sub.generationCountAtChangeStart == sub.generationCount {
+			sub.status = statusWaitingForNextFullPoll
+			return
+		}
 		sub.status = previousStatus
 		if previousStatus != statusSynced {
 			// Force a full poll next cycle so that we can see the state of the
@@ -289,6 +289,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	if sub.buildUpdateRequest(&request) {
 		return true, statusSynced
 	}
+	sub.status = statusSendingUpdate
 	if err := client.CallUpdate(srpcClient, request, &reply); err != nil {
 		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
 		if err == srpc.ErrorAccessToMethodDenied {

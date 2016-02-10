@@ -22,7 +22,7 @@ var (
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
 	deleteFilter = flag.String("deleteFilter", "",
-		"Name of delete filter file for adds subcommand")
+		"Name of delete filter file for adds subcommand and right image")
 	filterFile = flag.String("filterFile", "",
 		"Filter file to apply when diffing images")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
