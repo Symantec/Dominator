@@ -89,15 +89,7 @@ func (inode *DirectoryInode) write(name string) error {
 			return err
 		}
 	}
-	if err := os.Lchown(name, int(inode.Uid), int(inode.Gid)); err != nil {
-		return err
-	}
-	if inode.Mode & ^modePerm != syscall.S_IFDIR {
-		if err := syscall.Chmod(name, uint32(inode.Mode)); err != nil {
-			return err
-		}
-	}
-	return nil
+	return inode.writeMetadata(name)
 }
 
 func (inode *DirectoryInode) make(name string) error {

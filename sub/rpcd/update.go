@@ -355,7 +355,8 @@ func (t *rpcType) makeDirectories(directoriesToMake []sub.Inode,
 				t.lastUpdateError = err
 				t.logger.Println(err)
 			} else {
-				t.logger.Printf("Made directory: %s\n", fullPathname)
+				t.logger.Printf("Made directory: %s (mode=%s)\n",
+					fullPathname, inode.Mode)
 			}
 		}
 	}
