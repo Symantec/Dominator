@@ -251,7 +251,10 @@ func makeRegularInode(fullPathname string,
 		}
 		err = fsutil.ForceRename(objectPathname, fullPathname)
 	} else {
-		_, err = os.Create(fullPathname)
+		var file *os.File
+		if file, err = os.Create(fullPathname); err == nil {
+			file.Close()
+		}
 	}
 	if err != nil {
 		logger.Println(err)
