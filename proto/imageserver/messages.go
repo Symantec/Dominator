@@ -35,6 +35,14 @@ type GetImageResponse struct {
 	Image *image.Image
 }
 
+// The GetImageUpdates() RPC is fully streamed.
+// The client sends no information to the server.
+// The server sends a stream of ImageUpdate messages.
+
+type ImageUpdate struct {
+	Name string
+}
+
 type ListImagesRequest struct {
 }
 
