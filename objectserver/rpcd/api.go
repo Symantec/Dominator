@@ -10,7 +10,7 @@ import (
 	"net/rpc"
 )
 
-type objectServer struct {
+type rpcType struct {
 	objectServer objectserver.ObjectServer
 }
 
@@ -30,7 +30,7 @@ func (hw *htmlWriter) WriteHtml(writer io.Writer) {
 
 func Setup(objSrv objectserver.ObjectServer, logger *log.Logger) *htmlWriter {
 	getSemaphore := make(chan bool, 100)
-	rpcObj := &objectServer{objSrv}
+	rpcObj := &rpcType{objSrv}
 	srpcObj := &srpcType{objSrv, getSemaphore, logger}
 	rpc.RegisterName("ObjectServer", rpcObj)
 	srpc.RegisterName("ObjectServer", srpcObj)

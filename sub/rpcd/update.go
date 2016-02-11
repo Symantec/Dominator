@@ -251,7 +251,10 @@ func makeRegularInode(fullPathname string,
 		}
 		err = fsutil.ForceRename(objectPathname, fullPathname)
 	} else {
-		_, err = os.Create(fullPathname)
+		var file *os.File
+		if file, err = os.Create(fullPathname); err == nil {
+			file.Close()
+		}
 	}
 	if err != nil {
 		logger.Println(err)
@@ -355,7 +358,8 @@ func (t *rpcType) makeDirectories(directoriesToMake []sub.Inode,
 				t.lastUpdateError = err
 				t.logger.Println(err)
 			} else {
-				t.logger.Printf("Made directory: %s\n", fullPathname)
+				t.logger.Printf("Made directory: %s (mode=%s)\n",
+					fullPathname, inode.Mode)
 			}
 		}
 	}

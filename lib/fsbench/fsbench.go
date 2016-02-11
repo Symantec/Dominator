@@ -76,6 +76,7 @@ func GetReadSpeed(name string) (bytesPerSecond, blocksPerSecond uint64,
 	if err != nil {
 		return
 	}
+	defer file.Close()
 	var tread uint = 0
 	buffer := make([]byte, BUFLEN)
 	var rusage_start, rusage_stop syscall.Rusage
