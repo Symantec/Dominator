@@ -35,12 +35,18 @@ type GetImageResponse struct {
 	Image *image.Image
 }
 
+const (
+	OperationAddImage = iota
+	OperationDeleteImage
+)
+
 // The GetImageUpdates() RPC is fully streamed.
 // The client sends no information to the server.
 // The server sends a stream of ImageUpdate messages.
 
 type ImageUpdate struct {
-	Name string
+	Name      string
+	Operation uint
 }
 
 type ListImagesRequest struct {
