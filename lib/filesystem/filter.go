@@ -6,6 +6,9 @@ import (
 )
 
 func (fs *FileSystem) filter(filter *filter.Filter) *FileSystem {
+	if filter == nil {
+		return fs
+	}
 	if err := fs.RebuildInodePointers(); err != nil {
 		panic(err)
 	}
