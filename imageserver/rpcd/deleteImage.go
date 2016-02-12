@@ -32,6 +32,7 @@ func (t *srpcType) deleteImage(request imageserver.DeleteImageRequest,
 	if t.replicationMaster != "" {
 		return errors.New(replicationMessage + t.replicationMaster)
 	}
+	t.logger.Printf("DeleteImage(%s)\n", request.ImageName)
 	err := t.imageDataBase.DeleteImage(request.ImageName)
 	if err == nil {
 		response.Success = true
