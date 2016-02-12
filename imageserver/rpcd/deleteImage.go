@@ -2,6 +2,7 @@ package rpcd
 
 import (
 	"encoding/gob"
+	"errors"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
@@ -28,6 +29,9 @@ func (t *srpcType) DeleteImage(conn *srpc.Conn) error {
 func (t *srpcType) deleteImage(request imageserver.DeleteImageRequest,
 	reply *imageserver.DeleteImageResponse) error {
 	var response imageserver.DeleteImageResponse
+	if t.replicationMaster != "" {
+		return errors.New(replicationMessage + t.replicationMaster)
+	}
 	err := t.imageDataBase.DeleteImage(request.ImageName)
 	if err == nil {
 		response.Success = true

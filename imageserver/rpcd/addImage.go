@@ -31,6 +31,9 @@ func (t *srpcType) AddImage(conn *srpc.Conn) error {
 
 func (t *srpcType) addImage(request imageserver.AddImageRequest,
 	reply *imageserver.AddImageResponse) error {
+	if t.replicationMaster != "" {
+		return errors.New(replicationMessage + t.replicationMaster)
+	}
 	if t.imageDataBase.CheckImage(request.ImageName) {
 		return errors.New("image already exists")
 	}
