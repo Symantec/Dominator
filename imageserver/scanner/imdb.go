@@ -29,6 +29,7 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
 		encoder := gob.NewEncoder(writer)
 		encoder.Encode(image)
 		imdb.imageMap[name] = image
+		imdb.addNotifiers.send(name)
 		return nil
 	}
 }
@@ -49,6 +50,7 @@ func (imdb *ImageDataBase) deleteImage(name string) error {
 			return err
 		}
 		delete(imdb.imageMap, name)
+		imdb.deleteNotifiers.send(name)
 		return nil
 	} else {
 		return errors.New("image: " + name + " does not exist")
@@ -75,4 +77,44 @@ func (imdb *ImageDataBase) countImages() uint {
 	imdb.RLock()
 	defer imdb.RUnlock()
 	return uint(len(imdb.imageMap))
+}
+
+func (imdb *ImageDataBase) registerAddNotifier() <-chan string {
+	channel := make(chan string, 1)
+	imdb.Lock()
+	defer imdb.Unlock()
+	imdb.addNotifiers[channel] = channel
+	return channel
+}
+
+func (imdb *ImageDataBase) unregisterAddNotifier(channel <-chan string) {
+	imdb.Lock()
+	defer imdb.Unlock()
+	delete(imdb.addNotifiers, channel)
+}
+
+func (imdb *ImageDataBase) registerDeleteNotifier() <-chan string {
+	channel := make(chan string, 1)
+	imdb.Lock()
+	defer imdb.Unlock()
+	imdb.deleteNotifiers[channel] = channel
+	return channel
+}
+
+func (imdb *ImageDataBase) unregisterDeleteNotifier(channel <-chan string) {
+	imdb.Lock()
+	defer imdb.Unlock()
+	delete(imdb.deleteNotifiers, channel)
+}
+
+func (n notifiers) send(name string) {
+	sendChannels := make([]chan<- string, 0, len(n))
+	for _, sendChannel := range n {
+		sendChannels = append(sendChannels, sendChannel)
+	}
+	go func() {
+		for _, sendChannel := range sendChannels {
+			sendChannel <- name
+		}
+	}()
 }

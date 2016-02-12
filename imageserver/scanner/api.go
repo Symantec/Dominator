@@ -15,11 +15,15 @@ type Object struct {
 	length uint64
 }
 
+type notifiers map[<-chan string]chan<- string
+
 type ImageDataBase struct {
 	sync.RWMutex
 	// Protected by lock.
-	baseDir  string
-	imageMap map[string]*image.Image
+	baseDir         string
+	imageMap        map[string]*image.Image
+	addNotifiers    notifiers
+	deleteNotifiers notifiers
 	// Unprotected by lock.
 	objectServer objectserver.ObjectServer
 }
@@ -59,4 +63,20 @@ func (imdb *ImageDataBase) CountImages() uint {
 
 func (imdb *ImageDataBase) ObjectServer() objectserver.ObjectServer {
 	return imdb.objectServer
+}
+
+func (imdb *ImageDataBase) RegisterAddNotifier() <-chan string {
+	return imdb.registerAddNotifier()
+}
+
+func (imdb *ImageDataBase) UnregisterAddNotifier(channel <-chan string) {
+	imdb.unregisterAddNotifier(channel)
+}
+
+func (imdb *ImageDataBase) RegisterDeleteNotifier() <-chan string {
+	return imdb.registerDeleteNotifier()
+}
+
+func (imdb *ImageDataBase) UnregisterDeleteNotifier(channel <-chan string) {
+	imdb.unregisterDeleteNotifier(channel)
 }

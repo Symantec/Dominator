@@ -13,15 +13,23 @@ type rpcType struct {
 }
 
 type srpcType struct {
-	imageDataBase *scanner.ImageDataBase
-	logger        *log.Logger
+	imageDataBase     *scanner.ImageDataBase
+	replicationMaster string
+	logger            *log.Logger
 }
 
-func Setup(imdb *scanner.ImageDataBase, lg *log.Logger) {
+var replicationMessage = "cannot make changes while under replication control" +
+	", go to master: "
+
+func Setup(imdb *scanner.ImageDataBase, replicationMaster string,
+	lg *log.Logger) {
 	rpcObj := rpcType{
 		imageDataBase: imdb,
 		logger:        lg}
 	rpc.RegisterName("ImageServer", &rpcObj)
-	srpcObj := srpcType(rpcObj)
+	srpcObj := srpcType{
+		imageDataBase:     imdb,
+		replicationMaster: replicationMaster,
+		logger:            lg}
 	srpc.RegisterName("ImageServer", &srpcObj)
 }
