@@ -44,4 +44,10 @@ func setupTls(caFile, certFile, keyFile string) {
 	}
 	serverConfig.Certificates = append(serverConfig.Certificates, cert)
 	srpc.RegisterServerTlsConfig(serverConfig, true)
+	// Setup client.
+	clientConfig := new(tls.Config)
+	clientConfig.InsecureSkipVerify = true
+	clientConfig.MinVersion = tls.VersionTLS12
+	clientConfig.Certificates = append(clientConfig.Certificates, cert)
+	srpc.RegisterClientTlsConfig(clientConfig)
 }

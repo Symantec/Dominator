@@ -25,6 +25,11 @@ var (
 	debug    = flag.Bool("debug", false, "If true, show debugging output")
 	imageDir = flag.String("imageDir", "/var/lib/imageserver",
 		"Name of image server data directory.")
+	imageServerHostname = flag.String("imageServerHostname", "",
+		"Hostname of image server to receive updates from")
+	imageServerPortNum = flag.Uint("imageServerPortNum",
+		constants.ImageServerPortNumber,
+		"Port number of image server")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
 	keyFile = flag.String("keyFile", "/etc/ssl/imageserver/key.pem",
@@ -64,6 +69,10 @@ func main() {
 	httpd.AddHtmlWriter(imdb)
 	httpd.AddHtmlWriter(rpcHtmlWriter)
 	httpd.AddHtmlWriter(circularBuffer)
+	if *imageServerHostname != "" {
+		go replicator(fmt.Sprintf("%s:%d", *imageServerHostname,
+			*imageServerPortNum), imdb, objSrv, logger)
+	}
 	if err = httpd.StartServer(*portNum, imdb, objSrv, false); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
 		os.Exit(1)
