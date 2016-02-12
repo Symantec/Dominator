@@ -8,11 +8,13 @@ import (
 
 func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 	defer conn.Flush()
+	t.logger.Println("New replication client connected")
 	encoder := gob.NewEncoder(conn)
 	for _, imageName := range t.imageDataBase.ListImages() {
 		var imageUpdate imageserver.ImageUpdate
 		imageUpdate.Name = imageName
 		if err := encoder.Encode(imageUpdate); err != nil {
+			t.logger.Println(err)
 			return err
 		}
 	}
@@ -26,11 +28,13 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 		case imageName := <-addChannel:
 			if err := sendUpdate(encoder, imageName,
 				imageserver.OperationAddImage); err != nil {
+				t.logger.Println(err)
 				return err
 			}
 		case imageName := <-deleteChannel:
 			if err := sendUpdate(encoder, imageName,
 				imageserver.OperationDeleteImage); err != nil {
+				t.logger.Println(err)
 				return err
 			}
 		}
