@@ -46,6 +46,7 @@ func printUsage() {
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  add    name imagefile filterfile triggerfile")
+	fmt.Fprintln(os.Stderr, "  addi   name imagename filterfile triggerfile")
 	fmt.Fprintln(os.Stderr, "  adds   name subname filterfile triggerfile")
 	fmt.Fprintln(os.Stderr, "  check  name")
 	fmt.Fprintln(os.Stderr, "  delete name")
@@ -80,6 +81,7 @@ type subcommand struct {
 var subcommands = []subcommand{
 	{"add", 4, addImagefileSubcommand},
 	{"adds", 4, addImagesubSubcommand},
+	{"addi", 4, addImageimageSubcommand},
 	{"check", 1, checkImageSubcommand},
 	{"delete", 1, deleteImageSubcommand},
 	{"diff", 3, diffSubcommand},
