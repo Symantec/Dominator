@@ -18,7 +18,10 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 			return err
 		}
 	}
-	conn.Flush()
+	if err := conn.Flush(); err != nil {
+		t.logger.Println(err)
+		return err
+	}
 	addChannel := t.imageDataBase.RegisterAddNotifier()
 	deleteChannel := t.imageDataBase.RegisterDeleteNotifier()
 	defer t.imageDataBase.UnregisterAddNotifier(addChannel)
@@ -38,7 +41,10 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 				return err
 			}
 		}
-		conn.Flush()
+		if err := conn.Flush(); err != nil {
+			t.logger.Println(err)
+			return err
+		}
 	}
 }
 
