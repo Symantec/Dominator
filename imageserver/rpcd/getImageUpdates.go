@@ -18,10 +18,18 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 			return err
 		}
 	}
+	// Signal end of initial image list.
+	var imageUpdate imageserver.ImageUpdate
+	if err := encoder.Encode(imageUpdate); err != nil {
+		t.logger.Println(err)
+		return err
+	}
 	if err := conn.Flush(); err != nil {
 		t.logger.Println(err)
 		return err
 	}
+	t.logger.Println(
+		"Finished sending initial image list to replication client")
 	addChannel := t.imageDataBase.RegisterAddNotifier()
 	deleteChannel := t.imageDataBase.RegisterDeleteNotifier()
 	defer t.imageDataBase.UnregisterAddNotifier(addChannel)
