@@ -158,9 +158,9 @@ func main() {
 					} else {
 						time.Sleep(sleepDuration)
 					}
+					nextCycleStopTime = time.Now().Add(interval)
 					scanTokenChannel <- true
 				}(nextCycleStopTime.Sub(time.Now()))
-				nextCycleStopTime = time.Now().Add(interval)
 			} else {
 				scanTokenChannel <- true
 			}

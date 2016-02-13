@@ -235,9 +235,9 @@ func (t *rpcType) makeInodes(inodesToMake []sub.Inode, rootDirectoryName string,
 func makeRegularInode(fullPathname string,
 	inode *filesystem.RegularInode, multiplyUsedObjects map[hash.Hash]uint64,
 	objectsDir string, logger *log.Logger) error {
-	var err error
+	var objectPathname string
 	if inode.Size > 0 {
-		objectPathname := path.Join(objectsDir,
+		objectPathname = path.Join(objectsDir,
 			objectcache.HashToFilename(inode.Hash))
 		numCopies := multiplyUsedObjects[inode.Hash]
 		if numCopies > 1 {
@@ -249,14 +249,16 @@ func makeRegularInode(fullPathname string,
 				multiplyUsedObjects[inode.Hash] = numCopies
 			}
 		}
-		err = fsutil.ForceRename(objectPathname, fullPathname)
 	} else {
-		var file *os.File
-		if file, err = os.Create(fullPathname); err == nil {
+		objectPathname = fmt.Sprintf("%s.empty.%d", fullPathname, os.Getpid())
+		if file, err := os.OpenFile(objectPathname,
+			os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600); err != nil {
+			return err
+		} else {
 			file.Close()
 		}
 	}
-	if err != nil {
+	if err := fsutil.ForceRename(objectPathname, fullPathname); err != nil {
 		logger.Println(err)
 		return err
 	}
