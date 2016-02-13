@@ -47,8 +47,8 @@ type PollResponse struct {
 	NetworkSpeed                 uint64
 	FetchInProgress              bool // Fetch() and Update() mutually exclusive
 	UpdateInProgress             bool
-	LastFetchError               error
-	LastUpdateError              error
+	LastFetchError               string
+	LastUpdateError              string
 	LastUpdateHadTriggerFailures bool
 	StartTime                    time.Time
 	PollTime                     time.Time

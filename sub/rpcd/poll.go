@@ -27,6 +27,12 @@ func (t *rpcType) Poll(conn *srpc.Conn) error {
 	response.UpdateInProgress = t.updateInProgress
 	response.LastUpdateHadTriggerFailures = t.lastUpdateHadTriggerFailures
 	t.rwLock.RUnlock()
+	if t.lastFetchError != nil {
+		response.LastFetchError = t.lastFetchError.Error()
+	}
+	if t.lastUpdateError != nil {
+		response.LastUpdateError = t.lastUpdateError.Error()
+	}
 	response.StartTime = startTime
 	response.PollTime = time.Now()
 	response.GenerationCount = t.fileSystemHistory.GenerationCount()
