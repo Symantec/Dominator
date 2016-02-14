@@ -18,7 +18,9 @@ import (
 func replicator(address string, imdb *scanner.ImageDataBase,
 	objSrv *fsdriver.ObjectServer, logger *log.Logger) {
 	timeout := time.Second * 60
+	var nextSleepStopTime time.Time
 	for {
+		nextSleepStopTime = time.Now().Add(timeout)
 		if client, err := srpc.DialHTTP("tcp", address, timeout); err != nil {
 			logger.Printf("Error dialling: %s %s\n", address, err)
 		} else {
@@ -34,7 +36,7 @@ func replicator(address string, imdb *scanner.ImageDataBase,
 			}
 			client.Close()
 		}
-		time.Sleep(timeout)
+		time.Sleep(nextSleepStopTime.Sub(time.Now()))
 	}
 }
 
