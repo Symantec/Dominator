@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"github.com/Symantec/Dominator/lib/image"
+	"log"
 	"os"
 	"path"
 )
@@ -29,7 +30,7 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
 		encoder := gob.NewEncoder(writer)
 		encoder.Encode(image)
 		imdb.imageMap[name] = image
-		imdb.addNotifiers.send(name)
+		imdb.addNotifiers.send(name, "add", imdb.logger)
 		return nil
 	}
 }
@@ -50,7 +51,7 @@ func (imdb *ImageDataBase) deleteImage(name string) error {
 			return err
 		}
 		delete(imdb.imageMap, name)
-		imdb.deleteNotifiers.send(name)
+		imdb.deleteNotifiers.send(name, "delete", imdb.logger)
 		return nil
 	} else {
 		return errors.New("image: " + name + " does not exist")
@@ -107,14 +108,20 @@ func (imdb *ImageDataBase) unregisterDeleteNotifier(channel <-chan string) {
 	delete(imdb.deleteNotifiers, channel)
 }
 
-func (n notifiers) send(name string) {
-	sendChannels := make([]chan<- string, 0, len(n))
-	for _, sendChannel := range n {
-		sendChannels = append(sendChannels, sendChannel)
-	}
-	go func() {
-		for _, sendChannel := range sendChannels {
-			sendChannel <- name
+func (n notifiers) send(name string, operation string, logger *log.Logger) {
+	if len(n) < 1 {
+		return
+	} else {
+		plural := "s"
+		if len(n) < 2 {
+			plural = ""
 		}
-	}()
+		logger.Printf("Sending %s notification to: %d listener%s\n",
+			operation, len(n), plural)
+	}
+	for _, sendChannel := range n {
+		go func(channel chan<- string) {
+			channel <- name
+		}(sendChannel)
+	}
 }

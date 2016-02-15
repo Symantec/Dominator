@@ -29,6 +29,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 	imdb.addNotifiers = make(notifiers)
 	imdb.deleteNotifiers = make(notifiers)
 	imdb.objectServer = objSrv
+	imdb.logger = logger
 	startTime := time.Now()
 	if err = imdb.scanDirectory(""); err != nil {
 		return nil, err
