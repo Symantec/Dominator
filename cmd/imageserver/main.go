@@ -63,11 +63,13 @@ func main() {
 	tricorder.RegisterMetric("/image-count",
 		func() uint { return imdb.CountImages() },
 		units.None, "number of images")
-	imageserverRpcd.Setup(imdb, *imageServerHostname, logger)
-	rpcHtmlWriter := objectserverRpcd.Setup(objSrv, logger)
+	imgSrvRpcHtmlWriter := imageserverRpcd.Setup(imdb, *imageServerHostname,
+		logger)
+	objSrvRpcHtmlWriter := objectserverRpcd.Setup(objSrv, logger)
 	rpc.HandleHTTP()
 	httpd.AddHtmlWriter(imdb)
-	httpd.AddHtmlWriter(rpcHtmlWriter)
+	httpd.AddHtmlWriter(imgSrvRpcHtmlWriter)
+	httpd.AddHtmlWriter(objSrvRpcHtmlWriter)
 	httpd.AddHtmlWriter(circularBuffer)
 	if *imageServerHostname != "" {
 		go replicator(fmt.Sprintf("%s:%d", *imageServerHostname,

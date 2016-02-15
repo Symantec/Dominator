@@ -10,6 +10,8 @@ import (
 func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 	defer conn.Flush()
 	t.logger.Println("New replication client connected")
+	t.incrementNumReplicationClients(true)
+	defer t.incrementNumReplicationClients(false)
 	encoder := gob.NewEncoder(conn)
 	for _, imageName := range t.imageDataBase.ListImages() {
 		var imageUpdate imageserver.ImageUpdate
@@ -62,6 +64,16 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 			t.logger.Println(err)
 			return err
 		}
+	}
+}
+
+func (t *srpcType) incrementNumReplicationClients(increment bool) {
+	t.numReplicationClientsLock.Lock()
+	defer t.numReplicationClientsLock.Unlock()
+	if increment {
+		t.numReplicationClients++
+	} else {
+		t.numReplicationClients--
 	}
 }
 
