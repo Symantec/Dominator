@@ -32,6 +32,9 @@ func (t *srpcType) deleteImage(request imageserver.DeleteImageRequest,
 	if t.replicationMaster != "" {
 		return errors.New(replicationMessage + t.replicationMaster)
 	}
+	if !t.imageDataBase.CheckImage(request.ImageName) {
+		return errors.New("image does not exist")
+	}
 	t.logger.Printf("DeleteImage(%s)\n", request.ImageName)
 	err := t.imageDataBase.DeleteImage(request.ImageName)
 	if err == nil {

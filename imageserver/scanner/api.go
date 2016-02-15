@@ -26,6 +26,7 @@ type ImageDataBase struct {
 	deleteNotifiers notifiers
 	// Unprotected by lock.
 	objectServer objectserver.ObjectServer
+	logger       *log.Logger
 }
 
 func LoadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,

@@ -17,8 +17,10 @@ import (
 
 func replicator(address string, imdb *scanner.ImageDataBase,
 	objSrv *fsdriver.ObjectServer, logger *log.Logger) {
-	timeout := time.Second * 60
+	timeout := time.Second * 15
+	var nextSleepStopTime time.Time
 	for {
+		nextSleepStopTime = time.Now().Add(timeout)
 		if client, err := srpc.DialHTTP("tcp", address, timeout); err != nil {
 			logger.Printf("Error dialling: %s %s\n", address, err)
 		} else {
@@ -34,7 +36,10 @@ func replicator(address string, imdb *scanner.ImageDataBase,
 			}
 			client.Close()
 		}
-		time.Sleep(timeout)
+		time.Sleep(nextSleepStopTime.Sub(time.Now()))
+		if timeout < time.Minute {
+			timeout *= 2
+		}
 	}
 }
 
@@ -42,14 +47,24 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 	objSrv *fsdriver.ObjectServer, logger *log.Logger) error {
 	logger.Printf("Replicator: connected to: %s\n", address)
 	decoder := gob.NewDecoder(conn)
+	initialImages := make(map[string]struct{})
 	for {
 		var imageUpdate imageserver.ImageUpdate
 		if err := decoder.Decode(&imageUpdate); err != nil {
-			logger.Printf("decode err: %s\n", err)
-			return err
+			return errors.New("decode err: " + err.Error())
+		}
+		if imageUpdate.Name == "" {
+			if initialImages != nil {
+				deleteMissingImages(imdb, initialImages, logger)
+				initialImages = nil
+			}
+			continue
 		}
 		switch imageUpdate.Operation {
 		case imageserver.OperationAddImage:
+			if initialImages != nil {
+				initialImages[imageUpdate.Name] = struct{}{}
+			}
 			if err := addImage(address, imdb, objSrv, imageUpdate.Name,
 				logger); err != nil {
 				return err
@@ -59,6 +74,22 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 			if err := imdb.DeleteImage(imageUpdate.Name); err != nil {
 				return err
 			}
+		}
+	}
+}
+
+func deleteMissingImages(imdb *scanner.ImageDataBase,
+	imagesToKeep map[string]struct{}, logger *log.Logger) {
+	missingImages := make([]string, 0)
+	for _, imageName := range imdb.ListImages() {
+		if _, ok := imagesToKeep[imageName]; !ok {
+			missingImages = append(missingImages, imageName)
+		}
+	}
+	for _, imageName := range missingImages {
+		logger.Printf("Replicator(%s): delete missing image\n", imageName)
+		if err := imdb.DeleteImage(imageName); err != nil {
+			logger.Println(err)
 		}
 	}
 }

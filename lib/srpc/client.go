@@ -23,6 +23,14 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 		}
 		return nil, err
 	}
+	if tcpConn, ok := unsecuredConn.(*net.TCPConn); ok {
+		if err := tcpConn.SetKeepAlive(true); err != nil {
+			return nil, err
+		}
+		if err := tcpConn.SetKeepAlivePeriod(time.Minute * 5); err != nil {
+			return nil, err
+		}
+	}
 	path := rpcPath
 	if tlsConfig != nil {
 		path = tlsRpcPath

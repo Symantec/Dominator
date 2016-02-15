@@ -45,7 +45,7 @@ const (
 // The server sends a stream of ImageUpdate messages.
 
 type ImageUpdate struct {
-	Name      string
+	Name      string // "" signifies initial list is sent, changes to follow.
 	Operation uint
 }
 

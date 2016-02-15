@@ -6,10 +6,12 @@ import (
 	"errors"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 )
 
 const (
@@ -87,6 +89,16 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 	if err != nil {
 		log.Println("rpc hijacking ", req.RemoteAddr, ": ", err.Error())
 		return
+	}
+	if tcpConn, ok := unsecuredConn.(*net.TCPConn); ok {
+		if err := tcpConn.SetKeepAlive(true); err != nil {
+			log.Println("error setting keepalive: ", err.Error())
+			return
+		}
+		if err := tcpConn.SetKeepAlivePeriod(time.Minute * 5); err != nil {
+			log.Println("error setting keepalive period: ", err.Error())
+			return
+		}
 	}
 	_, err = io.WriteString(unsecuredConn, "HTTP/1.0 "+connectString+"\n\n")
 	if err != nil {
