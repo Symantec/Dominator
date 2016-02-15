@@ -75,6 +75,8 @@ type Sub struct {
 	lastShortPollDuration        time.Duration
 	lastFullPollDuration         time.Duration
 	lastComputeUpdateCpuDuration time.Duration
+	lastUpdateTime               time.Time
+	lastSyncTime                 time.Time
 }
 
 type missingImage struct {
