@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
+	"io"
 )
 
 func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
@@ -34,6 +35,7 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 	deleteChannel := t.imageDataBase.RegisterDeleteNotifier()
 	defer t.imageDataBase.UnregisterAddNotifier(addChannel)
 	defer t.imageDataBase.UnregisterDeleteNotifier(deleteChannel)
+	closeChannel := getCloseNotifier(conn)
 	for {
 		select {
 		case imageName := <-addChannel:
@@ -48,12 +50,33 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 				t.logger.Println(err)
 				return err
 			}
+		case err := <-closeChannel:
+			if err == io.EOF {
+				t.logger.Println("Replication client disconnected")
+				return nil
+			}
+			t.logger.Println(err)
+			return err
 		}
 		if err := conn.Flush(); err != nil {
 			t.logger.Println(err)
 			return err
 		}
 	}
+}
+
+func getCloseNotifier(conn *srpc.Conn) <-chan error {
+	closeChannel := make(chan error)
+	go func() {
+		for {
+			buf := make([]byte, 1)
+			if _, err := conn.Read(buf); err != nil {
+				closeChannel <- err
+				return
+			}
+		}
+	}()
+	return closeChannel
 }
 
 func sendUpdate(encoder *gob.Encoder, name string, operation uint) error {
