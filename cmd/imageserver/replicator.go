@@ -17,7 +17,7 @@ import (
 
 func replicator(address string, imdb *scanner.ImageDataBase,
 	objSrv *fsdriver.ObjectServer, logger *log.Logger) {
-	timeout := time.Second * 60
+	timeout := time.Second * 15
 	var nextSleepStopTime time.Time
 	for {
 		nextSleepStopTime = time.Now().Add(timeout)
@@ -37,6 +37,9 @@ func replicator(address string, imdb *scanner.ImageDataBase,
 			client.Close()
 		}
 		time.Sleep(nextSleepStopTime.Sub(time.Now()))
+		if timeout < time.Minute {
+			timeout *= 2
+		}
 	}
 }
 
@@ -48,8 +51,7 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 	for {
 		var imageUpdate imageserver.ImageUpdate
 		if err := decoder.Decode(&imageUpdate); err != nil {
-			logger.Printf("decode err: %s\n", err)
-			return err
+			return errors.New("decode err: " + err.Error())
 		}
 		if imageUpdate.Name == "" {
 			if initialImages != nil {
