@@ -2,7 +2,7 @@ package scanner
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filesystem/scanner"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsrateio"
@@ -65,9 +65,7 @@ func (fsh *FileSystemHistory) WriteHtml(writer io.Writer) {
 type FileSystem struct {
 	configuration     *Configuration
 	rootDirectoryName string
-	dev               uint64
-	inodeNumber       uint64
-	filesystem.FileSystem
+	scanner.FileSystem
 	cacheDirectoryName string
 	objectcache.ObjectCache
 }
