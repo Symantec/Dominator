@@ -19,8 +19,8 @@ type decoderData struct {
 	directoryTable  map[string]*filesystem.DirectoryInode
 }
 
-func decode(tarReader *tar.Reader, dataHandler DataHandler,
-	filter *filter.Filter) (*filesystem.FileSystem, error) {
+func decode(tarReader *tar.Reader, hasher Hasher, filter *filter.Filter) (
+	*filesystem.FileSystem, error) {
 	var decoderData decoderData
 	decoderData.inodeTable = make(map[string]uint64)
 	decoderData.directoryTable = make(map[string]*filesystem.DirectoryInode)
@@ -47,7 +47,7 @@ func decode(tarReader *tar.Reader, dataHandler DataHandler,
 		if filter != nil && filter.Match(header.Name) {
 			continue
 		}
-		err = decoderData.addHeader(tarReader, dataHandler, header)
+		err = decoderData.addHeader(tarReader, hasher, header)
 		if err != nil {
 			return nil, err
 		}
@@ -72,8 +72,8 @@ func normaliseFilename(filename string) string {
 	return filename
 }
 
-func (decoderData *decoderData) addHeader(tarReader *tar.Reader,
-	dataHandler DataHandler, header *tar.Header) error {
+func (decoderData *decoderData) addHeader(tarReader *tar.Reader, hasher Hasher,
+	header *tar.Header) error {
 	parentDir, ok := decoderData.directoryTable[path.Dir(header.Name)]
 	if !ok {
 		return errors.New(fmt.Sprintf(
@@ -81,7 +81,7 @@ func (decoderData *decoderData) addHeader(tarReader *tar.Reader,
 	}
 	leafName := path.Base(header.Name)
 	if header.Typeflag == tar.TypeReg || header.Typeflag == tar.TypeRegA {
-		return decoderData.addRegularFile(tarReader, dataHandler, header,
+		return decoderData.addRegularFile(tarReader, hasher, header,
 			parentDir, leafName)
 	} else if header.Typeflag == tar.TypeLink {
 		return decoderData.addHardlink(header, parentDir, leafName)
@@ -103,8 +103,8 @@ func (decoderData *decoderData) addHeader(tarReader *tar.Reader,
 }
 
 func (decoderData *decoderData) addRegularFile(tarReader *tar.Reader,
-	dataHandler DataHandler, header *tar.Header,
-	parent *filesystem.DirectoryInode, name string) error {
+	hasher Hasher, header *tar.Header, parent *filesystem.DirectoryInode,
+	name string) error {
 	var newInode filesystem.RegularInode
 	newInode.Mode = filesystem.FileMode((header.Mode & ^syscall.S_IFMT) |
 		syscall.S_IFREG)
@@ -115,8 +115,7 @@ func (decoderData *decoderData) addRegularFile(tarReader *tar.Reader,
 	newInode.Size = uint64(header.Size)
 	if header.Size > 0 {
 		var err error
-		newInode.Hash, err = dataHandler.HandleData(tarReader,
-			uint64(header.Size))
+		newInode.Hash, err = hasher.Hash(tarReader, uint64(header.Size))
 		if err != nil {
 			return err
 		}

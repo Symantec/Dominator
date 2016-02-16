@@ -8,11 +8,11 @@ import (
 	"io"
 )
 
-type DataHandler interface {
-	HandleData(reader io.Reader, length uint64) (hash.Hash, error)
+type Hasher interface {
+	Hash(reader io.Reader, length uint64) (hash.Hash, error)
 }
 
-func Decode(tarReader *tar.Reader, dataHandler DataHandler,
-	filter *filter.Filter) (*filesystem.FileSystem, error) {
-	return decode(tarReader, dataHandler, filter)
+func Decode(tarReader *tar.Reader, hasher Hasher, filter *filter.Filter) (
+	*filesystem.FileSystem, error) {
+	return decode(tarReader, hasher, filter)
 }
