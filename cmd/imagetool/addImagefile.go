@@ -76,11 +76,6 @@ func (h *hasher) Hash(reader io.Reader, length uint64) (
 	return hash, nil
 }
 
-func (h *hasher) HandleData(reader io.Reader, length uint64) (
-	hash.Hash, error) {
-	return h.Hash(reader, length)
-}
-
 func buildImage(objectClient *objectclient.ObjectClient, filter *filter.Filter,
 	imageFilename string) (*filesystem.FileSystem, error) {
 	fi, err := os.Lstat(imageFilename)
