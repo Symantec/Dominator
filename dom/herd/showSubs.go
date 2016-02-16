@@ -63,6 +63,8 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
 	fmt.Fprintln(writer, "    <th>Status</th>")
 	fmt.Fprintln(writer, "    <th>Uptime</th>")
 	fmt.Fprintln(writer, "    <th>Staleness</th>")
+	fmt.Fprintln(writer, "    <th>Last Update</th>")
+	fmt.Fprintln(writer, "    <th>Last Sync</th>")
 	fmt.Fprintln(writer, "    <th>Connect</th>")
 	fmt.Fprintln(writer, "    <th>Short Poll</th>")
 	fmt.Fprintln(writer, "    <th>Full Poll</th>")
@@ -86,20 +88,15 @@ func showSub(writer io.Writer, sub *Sub) {
 	sub.herd.showImage(writer, sub.plannedImage)
 	sub.showBusy(writer)
 	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.status)
-	if sub.startTime.IsZero() || sub.pollTime.IsZero() {
-		fmt.Fprintf(writer, "    <td></td>\n")
-	} else {
-		showTime(writer, sub.pollTime.Sub(sub.startTime))
-	}
-	if sub.lastPollSucceededTime.IsZero() {
-		fmt.Fprintf(writer, "    <td></td>\n")
-	} else {
-		showTime(writer, time.Since(sub.lastPollSucceededTime))
-	}
-	showTime(writer, sub.lastConnectDuration)
-	showTime(writer, sub.lastShortPollDuration)
-	showTime(writer, sub.lastFullPollDuration)
-	showTime(writer, sub.lastComputeUpdateCpuDuration)
+	timeNow := time.Now()
+	showSince(writer, sub.pollTime, sub.startTime)
+	showSince(writer, timeNow, sub.lastPollSucceededTime)
+	showSince(writer, timeNow, sub.lastUpdateTime)
+	showSince(writer, timeNow, sub.lastSyncTime)
+	showDuration(writer, sub.lastConnectDuration)
+	showDuration(writer, sub.lastShortPollDuration)
+	showDuration(writer, sub.lastFullPollDuration)
+	showDuration(writer, sub.lastComputeUpdateCpuDuration)
 	fmt.Fprintf(writer, "  </tr>\n")
 }
 
@@ -136,7 +133,15 @@ func (sub *Sub) showBusy(writer io.Writer) {
 	}
 }
 
-func showTime(writer io.Writer, duration time.Duration) {
+func showSince(writer io.Writer, now time.Time, since time.Time) {
+	if now.IsZero() || since.IsZero() {
+		fmt.Fprintf(writer, "    <td></td>\n")
+	} else {
+		showDuration(writer, now.Sub(since))
+	}
+}
+
+func showDuration(writer io.Writer, duration time.Duration) {
 	if duration < 1 {
 		fmt.Fprintf(writer, "    <td></td>\n")
 	} else {

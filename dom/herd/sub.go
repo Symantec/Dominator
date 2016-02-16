@@ -223,6 +223,9 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		}
 	}
 	sub.status = statusSynced
+	if !sub.lastUpdateTime.IsZero() {
+		sub.lastSyncTime = time.Now()
+	}
 	sub.cleanup(srpcClient, sub.plannedImage)
 	sub.reclaim()
 }
@@ -290,6 +293,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 		return true, statusSynced
 	}
 	sub.status = statusSendingUpdate
+	sub.lastUpdateTime = time.Now()
 	if err := client.CallUpdate(srpcClient, request, &reply); err != nil {
 		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
 		if err == srpc.ErrorAccessToMethodDenied {
