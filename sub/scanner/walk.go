@@ -13,7 +13,7 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	fileSystem.cacheDirectoryName = cacheDirectoryName
 	fs, err := scanner.ScanFileSystem(rootDirectoryName,
 		configuration.FsScanContext, configuration.ScanFilter,
-		checkScanDisableRequest, &oldFS.FileSystem)
+		checkScanDisableRequest, nil, &oldFS.FileSystem)
 	if err != nil {
 		return nil, err
 	}

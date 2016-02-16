@@ -7,6 +7,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/fsrateio"
+	"github.com/Symantec/Dominator/lib/hash"
 	"io"
 	"os"
 	"path"
@@ -24,6 +25,8 @@ func myGC() {
 	}
 	myCountGC++
 }
+
+type defaultHasher bool
 
 func makeRegularInode(stat *syscall.Stat_t) *filesystem.RegularInode {
 	var inode filesystem.RegularInode
@@ -56,13 +59,18 @@ func makeSpecialInode(stat *syscall.Stat_t) *filesystem.SpecialInode {
 
 func scanFileSystem(rootDirectoryName string,
 	fsScanContext *fsrateio.ReaderContext, scanFilter *filter.Filter,
-	checkScanDisableRequest func() bool, oldFS *FileSystem) (
+	checkScanDisableRequest func() bool, hasher Hasher, oldFS *FileSystem) (
 	*FileSystem, error) {
 	var fileSystem FileSystem
 	fileSystem.rootDirectoryName = rootDirectoryName
 	fileSystem.fsScanContext = fsScanContext
 	fileSystem.scanFilter = scanFilter
 	fileSystem.checkScanDisableRequest = checkScanDisableRequest
+	if hasher == nil {
+		fileSystem.hasher = new(defaultHasher)
+	} else {
+		fileSystem.hasher = hasher
+	}
 	var stat syscall.Stat_t
 	if err := syscall.Lstat(rootDirectoryName, &stat); err != nil {
 		return nil, err
@@ -301,6 +309,21 @@ func addSpecialFile(dirent *filesystem.DirectoryEntry,
 	return nil
 }
 
+func (*defaultHasher) Hash(reader io.Reader, length uint64) (hash.Hash, error) {
+	hasher := sha512.New()
+	var hashVal hash.Hash
+	nCopied, err := io.Copy(hasher, reader)
+	if err != nil {
+		return hashVal, err
+	}
+	if nCopied != int64(length) {
+		return hashVal, fmt.Errorf("read: %d, expected: %d bytes",
+			nCopied, length)
+	}
+	copy(hashVal[:], hasher.Sum(nil))
+	return hashVal, nil
+}
+
 func scanRegularInode(inode *filesystem.RegularInode, fileSystem *FileSystem,
 	myPathName string) error {
 	f, err := os.Open(path.Join(fileSystem.rootDirectoryName, myPathName))
@@ -312,17 +335,10 @@ func scanRegularInode(inode *filesystem.RegularInode, fileSystem *FileSystem,
 	if fileSystem.fsScanContext != nil {
 		reader = fileSystem.fsScanContext.NewReader(f)
 	}
-	hash := sha512.New()
-	nCopied, err := io.Copy(hash, reader)
+	inode.Hash, err = fileSystem.hasher.Hash(reader, inode.Size)
 	if err != nil {
-		return err
+		return fmt.Errorf("scanRegularInode(%s): %s", myPathName, err)
 	}
-	if nCopied != int64(inode.Size) {
-		return fmt.Errorf(
-			"scanRegularInode(%s): read: %d, expected: %d bytes",
-			myPathName, nCopied, inode.Size)
-	}
-	copy(inode.Hash[:], hash.Sum(nil))
 	return nil
 }
 
