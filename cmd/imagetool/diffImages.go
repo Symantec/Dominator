@@ -8,6 +8,7 @@ import (
 	imgclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"github.com/Symantec/Dominator/proto/sub"
@@ -53,7 +54,7 @@ func getTypedImage(typedName string) (*filesystem.FileSystem, error) {
 		return readImage(name)
 	case 'i':
 		_, imageSClient, _ := getClients()
-		return getImage(imageSClient, name)
+		return getFsOfImage(imageSClient, name)
 	case 's':
 		return pollImage(name)
 	default:
@@ -75,8 +76,7 @@ func readImage(name string) (*filesystem.FileSystem, error) {
 	return &fileSystem, nil
 }
 
-func getImage(client *srpc.Client, name string) (
-	*filesystem.FileSystem, error) {
+func getImage(client *srpc.Client, name string) (*image.Image, error) {
 	var request imageserver.GetImageRequest
 	request.ImageName = name
 	var reply imageserver.GetImageResponse
@@ -87,7 +87,16 @@ func getImage(client *srpc.Client, name string) (
 		return nil, errors.New(name + ": not found")
 	}
 	reply.Image.FileSystem.RebuildInodePointers()
-	return reply.Image.FileSystem, nil
+	return reply.Image, nil
+}
+
+func getFsOfImage(client *srpc.Client, name string) (
+	*filesystem.FileSystem, error) {
+	if image, err := getImage(client, name); err != nil {
+		return nil, err
+	} else {
+		return image.FileSystem, nil
+	}
 }
 
 func pollImage(name string) (*filesystem.FileSystem, error) {

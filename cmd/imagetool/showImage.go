@@ -16,7 +16,7 @@ func showImageSubcommand(args []string) {
 }
 
 func showImage(client *srpc.Client, image string) error {
-	fs, err := getImage(client, image)
+	fs, err := getFsOfImage(client, image)
 	if err != nil {
 		return err
 	}
