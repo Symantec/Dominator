@@ -43,12 +43,13 @@ func addReplaceImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 	baseFilenameToInodeTable := buildFilenameToInodeTable(
 		request.Image.FileSystem)
 	for _, layerImageName := range layerImageNames {
-		fs, err := buildImage(objectClient, request.Image.Filter, layerImageName)
+		fs, err := buildImage(objectClient, request.Image.Filter,
+			layerImageName)
 		if err != nil {
 			return err
 		}
-		if err := layerImages(request.Image.FileSystem, baseFilenameToInodeTable,
-			fs); err != nil {
+		if err := layerImages(request.Image.FileSystem,
+			baseFilenameToInodeTable, fs); err != nil {
 			return err
 		}
 	}
