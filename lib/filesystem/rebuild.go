@@ -57,6 +57,19 @@ func (inode *DirectoryInode) buildInodeToFilenamesTable(fs *FileSystem,
 	}
 }
 
+func (fs *FileSystem) buildFilenameToInodeTable() FilenameToInodeTable {
+	if fs.filenameToInodeTable == nil {
+		fs.filenameToInodeTable = make(map[string]uint64)
+		for inum, filenames := range fs.InodeToFilenamesTable() {
+			for _, filename := range filenames {
+				fs.filenameToInodeTable[filename] = inum
+			}
+		}
+
+	}
+	return fs.filenameToInodeTable
+}
+
 func (fs *FileSystem) buildHashToInodesTable() HashToInodesTable {
 	if fs.hashToInodesTable == nil {
 		fs.hashToInodesTable = make(HashToInodesTable)
