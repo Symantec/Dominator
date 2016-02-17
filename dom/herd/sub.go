@@ -146,7 +146,6 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 				sub.hostname, err)
 			return
 		}
-		fs.BuildInodeToFilenamesTable()
 		fs.BuildEntryMap()
 		sub.fileSystem = fs
 		sub.objectCache = reply.ObjectCache

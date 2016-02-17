@@ -39,8 +39,8 @@ type HashToInodesTable map[hash.Hash][]uint64
 
 type FileSystem struct {
 	InodeTable            InodeTable
-	InodeToFilenamesTable InodeToFilenamesTable
-	HashToInodesTable     HashToInodesTable
+	inodeToFilenamesTable InodeToFilenamesTable
+	hashToInodesTable     HashToInodesTable
 	NumRegularInodes      uint64
 	TotalDataBytes        uint64
 	DirectoryCount        uint64
@@ -51,12 +51,12 @@ func (fs *FileSystem) RebuildInodePointers() error {
 	return fs.rebuildInodePointers()
 }
 
-func (fs *FileSystem) BuildInodeToFilenamesTable() {
-	fs.buildInodeToFilenamesTable()
+func (fs *FileSystem) InodeToFilenamesTable() InodeToFilenamesTable {
+	return fs.buildInodeToFilenamesTable()
 }
 
-func (fs *FileSystem) BuildHashToInodesTable() {
-	fs.buildHashToInodesTable()
+func (fs *FileSystem) HashToInodesTable() HashToInodesTable {
+	return fs.buildHashToInodesTable()
 }
 
 func (fs *FileSystem) ComputeTotalDataBytes() {

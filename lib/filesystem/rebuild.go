@@ -37,31 +37,37 @@ func (inode *DirectoryInode) rebuildInodePointers(fs *FileSystem) error {
 	return nil
 }
 
-func (fs *FileSystem) buildInodeToFilenamesTable() {
-	fs.InodeToFilenamesTable = make(InodeToFilenamesTable)
-	fs.DirectoryInode.buildInodeToFilenamesTable(fs, "/")
+func (fs *FileSystem) buildInodeToFilenamesTable() InodeToFilenamesTable {
+	if fs.inodeToFilenamesTable == nil {
+		fs.inodeToFilenamesTable = make(InodeToFilenamesTable)
+		fs.DirectoryInode.buildInodeToFilenamesTable(fs, "/")
+	}
+	return fs.inodeToFilenamesTable
 }
 
 func (inode *DirectoryInode) buildInodeToFilenamesTable(fs *FileSystem,
 	name string) {
 	for _, dirent := range inode.EntryList {
 		name := path.Join(name, dirent.Name)
-		fs.InodeToFilenamesTable[dirent.InodeNumber] = append(
-			fs.InodeToFilenamesTable[dirent.InodeNumber], name)
+		fs.inodeToFilenamesTable[dirent.InodeNumber] = append(
+			fs.inodeToFilenamesTable[dirent.InodeNumber], name)
 		if inode, ok := dirent.inode.(*DirectoryInode); ok {
 			inode.buildInodeToFilenamesTable(fs, name)
 		}
 	}
 }
 
-func (fs *FileSystem) buildHashToInodesTable() {
-	fs.HashToInodesTable = make(HashToInodesTable)
-	for inum, inode := range fs.InodeTable {
-		if inode, ok := inode.(*RegularInode); ok && inode.Size > 0 {
-			fs.HashToInodesTable[inode.Hash] = append(
-				fs.HashToInodesTable[inode.Hash], inum)
+func (fs *FileSystem) buildHashToInodesTable() HashToInodesTable {
+	if fs.hashToInodesTable == nil {
+		fs.hashToInodesTable = make(HashToInodesTable)
+		for inum, inode := range fs.InodeTable {
+			if inode, ok := inode.(*RegularInode); ok && inode.Size > 0 {
+				fs.hashToInodesTable[inode.Hash] = append(
+					fs.hashToInodesTable[inode.Hash], inum)
+			}
 		}
 	}
+	return fs.hashToInodesTable
 }
 
 func (fs *FileSystem) computeTotalDataBytes() {

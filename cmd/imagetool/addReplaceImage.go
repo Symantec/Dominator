@@ -53,7 +53,6 @@ func addReplaceImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 			return err
 		}
 	}
-	request.Image.FileSystem.InodeToFilenamesTable = nil
 	err = client.CallAddImage(imageSClient, request, &reply)
 	if err != nil {
 		return errors.New("remote error: " + err.Error())
@@ -62,9 +61,8 @@ func addReplaceImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 }
 
 func buildFilenameToInodeTable(fs *filesystem.FileSystem) map[string]uint64 {
-	fs.BuildInodeToFilenamesTable()
 	table := make(map[string]uint64)
-	for inum, filenames := range fs.InodeToFilenamesTable {
+	for inum, filenames := range fs.InodeToFilenamesTable() {
 		for _, filename := range filenames {
 			table[filename] = inum
 		}
