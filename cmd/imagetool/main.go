@@ -48,6 +48,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  add    name imagefile filterfile triggerfile")
 	fmt.Fprintln(os.Stderr, "  addi   name imagename filterfile triggerfile")
 	fmt.Fprintln(os.Stderr, "  adds   name subname filterfile triggerfile")
+	fmt.Fprintln(os.Stderr, "  addrep name baseimage layerimage...")
 	fmt.Fprintln(os.Stderr, "  check  name")
 	fmt.Fprintln(os.Stderr, "  delete name")
 	fmt.Fprintln(os.Stderr, "  diff   tool left right")
@@ -74,20 +75,22 @@ type commandFunc func([]string)
 
 type subcommand struct {
 	command string
-	numArgs int
+	minArgs int
+	maxArgs int
 	cmdFunc commandFunc
 }
 
 var subcommands = []subcommand{
-	{"add", 4, addImagefileSubcommand},
-	{"adds", 4, addImagesubSubcommand},
-	{"addi", 4, addImageimageSubcommand},
-	{"check", 1, checkImageSubcommand},
-	{"delete", 1, deleteImageSubcommand},
-	{"diff", 3, diffSubcommand},
-	{"get", 2, getImageSubcommand},
-	{"list", 0, listImagesSubcommand},
-	{"show", 1, showImageSubcommand},
+	{"add", 4, 4, addImagefileSubcommand},
+	{"adds", 4, 4, addImagesubSubcommand},
+	{"addi", 4, 4, addImageimageSubcommand},
+	{"addrep", 3, -1, addReplaceImageSubcommand},
+	{"check", 1, 1, checkImageSubcommand},
+	{"delete", 1, 1, deleteImageSubcommand},
+	{"diff", 3, 3, diffSubcommand},
+	{"get", 2, 2, getImageSubcommand},
+	{"list", 0, 0, listImagesSubcommand},
+	{"show", 1, 0, showImageSubcommand},
 }
 
 var imageRpcClient *rpc.Client
@@ -160,9 +163,12 @@ func main() {
 		}
 	}
 	setupTls(*certFile, *keyFile)
+	numSubcommandArgs := flag.NArg() - 1
 	for _, subcommand := range subcommands {
 		if flag.Arg(0) == subcommand.command {
-			if flag.NArg()-1 != subcommand.numArgs {
+			if numSubcommandArgs < subcommand.minArgs ||
+				(subcommand.maxArgs >= 0 &&
+					numSubcommandArgs > subcommand.maxArgs) {
 				printUsage()
 				os.Exit(2)
 			}

@@ -33,7 +33,7 @@ func getImageAndWrite(imageClient *srpc.Client,
 		return err
 	}
 	defer os.RemoveAll(inodesDir)
-	fs, err := getImage(imageClient, name)
+	fs, err := getFsOfImage(imageClient, name)
 	if err != nil {
 		return err
 	}
