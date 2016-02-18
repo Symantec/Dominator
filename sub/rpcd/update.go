@@ -146,6 +146,9 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 		t.lastUpdateHadTriggerFailures = true
 	}
 	timeTaken := time.Since(startTime)
+	if t.lastUpdateError != nil {
+		t.logger.Printf("Update(): last error: %s\n", t.lastUpdateError)
+	}
 	t.logger.Printf("Update() completed in %s (change window: %s)\n",
 		timeTaken, fsChangeDuration)
 }
