@@ -74,6 +74,7 @@ func (t *rpcType) update(request sub.UpdateRequest,
 		return errors.New("update in progress")
 	}
 	t.updateInProgress = true
+	t.lastUpdateError = nil
 	go t.doUpdate(request, fs.RootDirectoryName())
 	return nil
 }
@@ -145,6 +146,9 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 		t.lastUpdateHadTriggerFailures = true
 	}
 	timeTaken := time.Since(startTime)
+	if t.lastUpdateError != nil {
+		t.logger.Printf("Update(): last error: %s\n", t.lastUpdateError)
+	}
 	t.logger.Printf("Update() completed in %s (change window: %s)\n",
 		timeTaken, fsChangeDuration)
 }
@@ -413,10 +417,8 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 				if *disableTriggers {
 					return hadFailures
 				}
-				err := runCommand("reboot")
-				if err != nil {
+				if !runCommand(logger, "reboot") {
 					hadFailures = true
-					logger.Print(err)
 				}
 				return hadFailures
 			}
@@ -439,35 +441,32 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 		if *disableTriggers {
 			continue
 		}
-		err := runCommand("run-in-mntns", ppid, "service", trigger.Service,
-			action)
-		if err != nil {
+		if !runCommand(logger,
+			"run-in-mntns", ppid, "service", trigger.Service, action) {
 			hadFailures = true
-			logger.Print(err)
 		}
 	}
 	if needRestart {
 		logger.Printf("%sAction: service subd restart\n", logPrefix)
-		err := runCommand("run-in-mntns", ppid, "service", "subd", "restart")
-		if err != nil {
+		if !runCommand(logger,
+			"run-in-mntns", ppid, "service", "subd", "restart") {
 			hadFailures = true
-			logger.Print(err)
 		}
 	}
 	return hadFailures
 }
 
-func runCommand(name string, args ...string) error {
+func runCommand(logger *log.Logger, name string, args ...string) bool {
 	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+	if logs, err := cmd.CombinedOutput(); err != nil {
 		errMsg := "error running: " + name
 		for _, arg := range args {
 			errMsg += " " + arg
 		}
 		errMsg += ": " + err.Error()
-		return errors.New(errMsg)
+		logger.Printf("error running: %s\n", errMsg)
+		logger.Println(string(logs))
+		return false
 	}
-	return nil
+	return true
 }

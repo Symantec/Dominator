@@ -69,8 +69,6 @@ func (herd *Herd) getImageHaveLock(name string) (*image.Image, error) {
 		}
 		delete(herd.missingImages, name)
 		reply.Image.FileSystem.BuildEntryMap()
-		reply.Image.FileSystem.BuildInodeToFilenamesTable()
-		reply.Image.FileSystem.BuildHashToInodesTable()
 		herd.imagesByName[name] = reply.Image
 		herd.logger.Printf("Got image: %s\n", name)
 	}

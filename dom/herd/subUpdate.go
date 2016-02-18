@@ -16,7 +16,6 @@ type state struct {
 	requiredInodeToSubInode map[uint64]uint64
 	inodesChanged           map[uint64]bool   // Required inode number.
 	inodesCreated           map[uint64]string // Required inode number.
-	subFilenameToInode      map[string]uint64
 	subObjectCacheUsage     map[hash.Hash]uint64
 }
 
@@ -172,7 +171,7 @@ func relink(request *subproto.UpdateRequest, state *state,
 		return
 	}
 	makeHardlink(request,
-		myPathName, state.subFS.InodeToFilenamesTable[subInum][0])
+		myPathName, state.subFS.InodeToFilenamesTable()[subInum][0])
 }
 
 func makeHardlink(request *subproto.UpdateRequest, newLink, target string) {
@@ -218,12 +217,12 @@ func addInode(request *subproto.UpdateRequest, state *state,
 		return
 	}
 	// Try to find a sibling inode.
-	names := state.requiredFS.InodeToFilenamesTable[requiredEntry.InodeNumber]
+	names := state.requiredFS.InodeToFilenamesTable()[requiredEntry.InodeNumber]
 	if len(names) > 1 {
 		var sameDataInode filesystem.GenericInode
 		var sameDataName string
 		for _, name := range names {
-			if inum, found := state.getSubInodeFromFilename(name); found {
+			if inum, found := state.subFS.FilenameToInodeTable()[name]; found {
 				subInode := state.subFS.InodeTable[inum]
 				_, sameMetadata, sameData := filesystem.CompareInodes(
 					subInode, requiredInode, nil)
@@ -249,13 +248,10 @@ func addInode(request *subproto.UpdateRequest, state *state,
 				state.subObjectCacheUsage[inode.Hash]++
 			} else {
 				// Not in object cache: grab it from file-system.
-				if state.subFS.HashToInodesTable == nil {
-					state.subFS.BuildHashToInodesTable()
-				}
-				if ilist, ok := state.subFS.HashToInodesTable[inode.Hash]; ok {
+				if inos, ok := state.subFS.HashToInodesTable()[inode.Hash]; ok {
 					var fileToCopy subproto.FileToCopyToCache
 					fileToCopy.Name =
-						state.subFS.InodeToFilenamesTable[ilist[0]][0]
+						state.subFS.InodeToFilenamesTable()[inos[0]][0]
 					fileToCopy.Hash = inode.Hash
 					request.FilesToCopyToCache = append(
 						request.FilesToCopyToCache, fileToCopy)
@@ -271,17 +267,4 @@ func addInode(request *subproto.UpdateRequest, state *state,
 	inode.GenericInode = requiredEntry.Inode()
 	request.InodesToMake = append(request.InodesToMake, inode)
 	state.inodesCreated[requiredEntry.InodeNumber] = myPathName
-}
-
-func (state *state) getSubInodeFromFilename(name string) (uint64, bool) {
-	if state.subFilenameToInode == nil {
-		state.subFilenameToInode = make(map[string]uint64)
-		for inum, names := range state.subFS.InodeToFilenamesTable {
-			for _, n := range names {
-				state.subFilenameToInode[n] = inum
-			}
-		}
-	}
-	inum, ok := state.subFilenameToInode[name]
-	return inum, ok
 }

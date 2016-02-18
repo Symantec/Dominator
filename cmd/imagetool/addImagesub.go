@@ -82,12 +82,8 @@ func applyDeleteFilter(fs *filesystem.FileSystem) (
 func copyMissingObjects(fs *filesystem.FileSystem,
 	objectClient *objectclient.ObjectClient, subName string) error {
 	// Check to see which objects are in the objectserver.
-	fs.BuildHashToInodesTable()
-	defer func() {
-		fs.HashToInodesTable = nil // Set to nil to prevent export.
-	}()
 	hashes := make([]hash.Hash, 0, fs.NumRegularInodes)
-	for hash, _ := range fs.HashToInodesTable {
+	for hash, _ := range fs.HashToInodesTable() {
 		hashes = append(hashes, hash)
 	}
 	objectSizes, err := objectClient.CheckObjects(hashes)
@@ -103,16 +99,12 @@ func copyMissingObjects(fs *filesystem.FileSystem,
 	if len(missingHashes) < 1 {
 		return nil
 	}
-	fs.BuildInodeToFilenamesTable()
-	defer func() {
-		fs.InodeToFilenamesTable = nil // Set to nil to prevent export.
-	}()
 	// Get missing objects from sub.
 	filesForMissingObjects := make([]string, 0, len(missingHashes))
 	for _, hash := range missingHashes {
-		if inums, ok := fs.HashToInodesTable[hash]; !ok {
+		if inums, ok := fs.HashToInodesTable()[hash]; !ok {
 			return fmt.Errorf("no inode for object: %x", hash)
-		} else if files, ok := fs.InodeToFilenamesTable[inums[0]]; !ok {
+		} else if files, ok := fs.InodeToFilenamesTable()[inums[0]]; !ok {
 			return fmt.Errorf("no file for inode: %d", inums[0])
 		} else {
 			filesForMissingObjects = append(filesForMissingObjects, files[0])

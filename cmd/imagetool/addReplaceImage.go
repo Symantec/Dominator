@@ -40,19 +40,16 @@ func addReplaceImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 	if err != nil {
 		return err
 	}
-	baseFilenameToInodeTable := buildFilenameToInodeTable(
-		request.Image.FileSystem)
 	for _, layerImageName := range layerImageNames {
-		fs, err := buildImage(objectClient, request.Image.Filter, layerImageName)
+		fs, err := buildImage(objectClient, request.Image.Filter,
+			layerImageName)
 		if err != nil {
 			return err
 		}
-		if err := layerImages(request.Image.FileSystem, baseFilenameToInodeTable,
-			fs); err != nil {
+		if err := layerImages(request.Image.FileSystem, fs); err != nil {
 			return err
 		}
 	}
-	request.Image.FileSystem.InodeToFilenamesTable = nil
 	err = client.CallAddImage(imageSClient, request, &reply)
 	if err != nil {
 		return errors.New("remote error: " + err.Error())
@@ -60,27 +57,14 @@ func addReplaceImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 	return nil
 }
 
-func buildFilenameToInodeTable(fs *filesystem.FileSystem) map[string]uint64 {
-	fs.BuildInodeToFilenamesTable()
-	table := make(map[string]uint64)
-	for inum, filenames := range fs.InodeToFilenamesTable {
-		for _, filename := range filenames {
-			table[filename] = inum
-		}
-	}
-	return table
-}
-
 func layerImages(baseFS *filesystem.FileSystem,
-	baseFilenameToInodeTable map[string]uint64,
 	layerFS *filesystem.FileSystem) error {
-	layerFilenameToInodeTable := buildFilenameToInodeTable(layerFS)
-	for filename, layerInum := range layerFilenameToInodeTable {
+	for filename, layerInum := range layerFS.FilenameToInodeTable() {
 		layerInode := layerFS.InodeTable[layerInum]
 		if _, ok := layerInode.(*filesystem.DirectoryInode); ok {
 			continue
 		}
-		baseInum, ok := baseFilenameToInodeTable[filename]
+		baseInum, ok := baseFS.FilenameToInodeTable()[filename]
 		if !ok {
 			return errors.New(filename + " missing in base image")
 		}

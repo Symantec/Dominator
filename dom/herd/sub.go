@@ -146,7 +146,6 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 				sub.hostname, err)
 			return
 		}
-		fs.BuildInodeToFilenamesTable()
 		fs.BuildEntryMap()
 		sub.fileSystem = fs
 		sub.objectCache = reply.ObjectCache
@@ -172,6 +171,8 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if previousStatus == statusFetching && reply.LastFetchError != "" {
+		logger.Printf("Fetch failure for: %s: %s\n",
+			sub.hostname, reply.LastFetchError)
 		sub.status = statusFailedToFetch
 		if sub.fileSystem == nil {
 			sub.generationCount = 0 // Force a full poll next cycle.
@@ -179,6 +180,8 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		}
 	}
 	if previousStatus == statusUpdating && reply.LastUpdateError != "" {
+		logger.Printf("Update failure for: %s: %s\n",
+			sub.hostname, reply.LastUpdateError)
 		sub.status = statusFailedToUpdate
 		if sub.fileSystem == nil {
 			sub.generationCount = 0 // Force a full poll next cycle.
