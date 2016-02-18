@@ -50,6 +50,10 @@ func (fsh *FileSystemHistory) FileSystem() *FileSystem {
 	return fsh.fileSystem
 }
 
+func (fsh *FileSystemHistory) ScanCount() uint64 {
+	return fsh.scanCount
+}
+
 func (fsh *FileSystemHistory) GenerationCount() uint64 {
 	return fsh.generationCount
 }
