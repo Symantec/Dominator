@@ -74,6 +74,7 @@ func (t *rpcType) update(request sub.UpdateRequest,
 		return errors.New("update in progress")
 	}
 	t.updateInProgress = true
+	t.lastUpdateError = nil
 	go t.doUpdate(request, fs.RootDirectoryName())
 	return nil
 }
