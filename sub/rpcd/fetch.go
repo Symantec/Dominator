@@ -89,6 +89,7 @@ func (t *rpcType) doFetch(request sub.FetchRequest) error {
 	}
 	defer objectsReader.Close()
 	var totalLength uint64
+	defer func() { t.rescanObjectCacheChannel <- true }()
 	timeStart := time.Now()
 	for _, hash := range request.Hashes {
 		length, reader, err := objectsReader.NextObject()
@@ -117,7 +118,6 @@ func (t *rpcType) doFetch(request sub.FetchRequest) error {
 	}
 	t.logger.Printf("Fetch() complete. Read: %s in %s (%s/s)\n",
 		format.FormatBytes(totalLength), duration, format.FormatBytes(speed))
-	t.rescanObjectCacheChannel <- true
 	return nil
 }
 
