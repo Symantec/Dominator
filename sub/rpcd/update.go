@@ -413,10 +413,8 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 				if *disableTriggers {
 					return hadFailures
 				}
-				err := runCommand("reboot")
-				if err != nil {
+				if !runCommand(logger, "reboot") {
 					hadFailures = true
-					logger.Print(err)
 				}
 				return hadFailures
 			}
@@ -439,35 +437,32 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 		if *disableTriggers {
 			continue
 		}
-		err := runCommand("run-in-mntns", ppid, "service", trigger.Service,
-			action)
-		if err != nil {
+		if !runCommand(logger,
+			"run-in-mntns", ppid, "service", trigger.Service, action) {
 			hadFailures = true
-			logger.Print(err)
 		}
 	}
 	if needRestart {
 		logger.Printf("%sAction: service subd restart\n", logPrefix)
-		err := runCommand("run-in-mntns", ppid, "service", "subd", "restart")
-		if err != nil {
+		if !runCommand(logger,
+			"run-in-mntns", ppid, "service", "subd", "restart") {
 			hadFailures = true
-			logger.Print(err)
 		}
 	}
 	return hadFailures
 }
 
-func runCommand(name string, args ...string) error {
+func runCommand(logger *log.Logger, name string, args ...string) bool {
 	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+	if logs, err := cmd.CombinedOutput(); err != nil {
 		errMsg := "error running: " + name
 		for _, arg := range args {
 			errMsg += " " + arg
 		}
 		errMsg += ": " + err.Error()
-		return errors.New(errMsg)
+		logger.Printf("error running: %s\n", errMsg)
+		logger.Println(string(logs))
+		return false
 	}
-	return nil
+	return true
 }
