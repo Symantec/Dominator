@@ -52,6 +52,7 @@ type PollResponse struct {
 	LastUpdateHadTriggerFailures bool
 	StartTime                    time.Time
 	PollTime                     time.Time
+	ScanCount                    uint64
 	GenerationCount              uint64
 	FileSystem                   *filesystem.FileSystem // Streamed separately.
 	FileSystemFollows            bool
