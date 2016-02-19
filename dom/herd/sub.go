@@ -179,30 +179,39 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 			return
 		}
 	}
-	if previousStatus == statusUpdating && reply.LastUpdateError != "" {
-		logger.Printf("Update failure for: %s: %s\n",
-			sub.hostname, reply.LastUpdateError)
-		sub.status = statusFailedToUpdate
-		if sub.fileSystem == nil {
-			sub.generationCount = 0 // Force a full poll next cycle.
-			return
+	if previousStatus == statusUpdating {
+		// Transition from updating to update ended (may be partial/failed).
+		if reply.LastUpdateError != "" {
+			logger.Printf("Update failure for: %s: %s\n",
+				sub.hostname, reply.LastUpdateError)
+			sub.status = statusFailedToUpdate
+		} else {
+			sub.status = statusWaitingForNextFullPoll
 		}
+		sub.scanCountAtLastUpdateEnd = reply.ScanCount
+		sub.reclaim()
+		return
 	}
 	if !haveImage {
 		sub.status = statusImageNotReady
 		return
 	}
-	if sub.fileSystem == nil {
-		if sub.generationCountAtChangeStart == sub.generationCount {
-			sub.status = statusWaitingForNextFullPoll
-			return
-		}
+	if (previousStatus == statusFailedToUpdate ||
+		previousStatus == statusWaitingForNextFullPoll) &&
+		sub.scanCountAtLastUpdateEnd == reply.ScanCount {
+		// Need to wait until sub has performed a new scan.
 		sub.status = previousStatus
-		if previousStatus != statusSynced {
+		if sub.fileSystem != nil {
 			// Force a full poll next cycle so that we can see the state of the
-			// sub and recompute/retry what needs to be done.
+			// sub and if there is a new scan recompute/retry that needs to be
+			// done.
 			sub.generationCount = 0
+			sub.reclaim()
 		}
+		return
+	}
+	if sub.fileSystem == nil {
+		sub.status = previousStatus
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(srpcClient,
@@ -225,10 +234,11 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 			return
 		}
 	}
-	sub.status = statusSynced
-	if !sub.lastUpdateTime.IsZero() {
+	if previousStatus == statusWaitingForNextFullPoll &&
+		!sub.lastUpdateTime.IsZero() {
 		sub.lastSyncTime = time.Now()
 	}
+	sub.status = statusSynced
 	sub.cleanup(srpcClient, sub.plannedImage)
 	sub.reclaim()
 }
@@ -283,7 +293,6 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 		}
 		return false, statusFailedToFetch
 	}
-	sub.generationCountAtChangeStart = sub.generationCount
 	return false, statusFetching
 }
 
@@ -304,7 +313,6 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 		}
 		return false, statusFailedToUpdate
 	}
-	sub.generationCountAtChangeStart = sub.generationCount
 	return false, statusUpdating
 }
 
@@ -347,7 +355,5 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 	if err := client.CallCleanup(srpcClient, request, &reply); err != nil {
 		logger.Printf("Error calling %s:Subd.Cleanup()\t%s\n",
 			sub.hostname, err)
-	} else {
-		sub.generationCountAtChangeStart = sub.generationCount
 	}
 }
