@@ -31,6 +31,8 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 	imdb.objectServer = objSrv
 	imdb.logger = logger
 	startTime := time.Now()
+	var rusageStart, rusageStop syscall.Rusage
+	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
 	if err = imdb.scanDirectory(""); err != nil {
 		return nil, err
 	}
@@ -39,8 +41,13 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 		if imdb.CountImages() != 1 {
 			plural = "s"
 		}
-		logger.Printf("Loaded %d image%s in %s\n",
-			imdb.CountImages(), plural, time.Since(startTime))
+		syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStop)
+		userTime := time.Duration(rusageStop.Utime.Sec)*time.Second +
+			time.Duration(rusageStop.Utime.Usec)*time.Microsecond -
+			time.Duration(rusageStart.Utime.Sec)*time.Second -
+			time.Duration(rusageStart.Utime.Usec)*time.Microsecond
+		logger.Printf("Loaded %d image%s in %s (%s user CPUtime)\n",
+			imdb.CountImages(), plural, time.Since(startTime), userTime)
 	}
 	return imdb, nil
 }
