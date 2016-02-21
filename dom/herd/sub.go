@@ -196,19 +196,23 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.status = statusImageNotReady
 		return
 	}
-	if (previousStatus == statusFailedToUpdate ||
-		previousStatus == statusWaitingForNextFullPoll) &&
-		sub.scanCountAtLastUpdateEnd == reply.ScanCount {
-		// Need to wait until sub has performed a new scan.
-		sub.status = previousStatus
-		if sub.fileSystem != nil {
-			// Force a full poll next cycle so that we can see the state of the
-			// sub and if there is a new scan recompute/retry that needs to be
-			// done.
-			sub.generationCount = 0
-			sub.reclaim()
+	if previousStatus == statusFailedToUpdate ||
+		previousStatus == statusWaitingForNextFullPoll {
+		if sub.scanCountAtLastUpdateEnd == reply.ScanCount {
+			// Need to wait until sub has performed a new scan.
+			if sub.fileSystem != nil {
+				sub.reclaim()
+			}
+			sub.status = previousStatus
+			return
 		}
-		return
+		if sub.fileSystem == nil {
+			// Force a full poll next cycle so that we can see the state of the
+			// sub.
+			sub.generationCount = 0
+			sub.status = previousStatus
+			return
+		}
 	}
 	if sub.fileSystem == nil {
 		sub.status = previousStatus
