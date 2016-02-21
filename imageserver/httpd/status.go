@@ -15,7 +15,7 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "<center>")
 	fmt.Fprintln(writer, "<h1>imageserver status page</h1>")
 	fmt.Fprintln(writer, "</center>")
-	html.WriteHeader(writer)
+	html.WriteHeaderWithRequest(writer, req)
 	fmt.Fprintln(writer, "<h3>")
 	for _, htmlWriter := range htmlWriters {
 		htmlWriter.WriteHtml(writer)
