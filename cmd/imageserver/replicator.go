@@ -11,13 +11,15 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	fsdriver "github.com/Symantec/Dominator/objectserver/filesystem"
 	"github.com/Symantec/Dominator/proto/imageserver"
+	"io"
 	"log"
 	"time"
 )
 
 func replicator(address string, imdb *scanner.ImageDataBase,
 	objSrv *fsdriver.ObjectServer, logger *log.Logger) {
-	timeout := time.Second * 15
+	initialTimeout := time.Second * 15
+	timeout := initialTimeout
 	var nextSleepStopTime time.Time
 	for {
 		nextSleepStopTime = time.Now().Add(timeout)
@@ -30,7 +32,14 @@ func replicator(address string, imdb *scanner.ImageDataBase,
 			} else {
 				if err := getUpdates(address, conn, imdb, objSrv,
 					logger); err != nil {
-					logger.Println(err)
+					if err == io.EOF {
+						logger.Println("Connection to replicator closed")
+						if nextSleepStopTime.Sub(time.Now()) < 1 {
+							timeout = initialTimeout
+						}
+					} else {
+						logger.Println(err)
+					}
 				}
 				conn.Close()
 			}
@@ -51,6 +60,9 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 	for {
 		var imageUpdate imageserver.ImageUpdate
 		if err := decoder.Decode(&imageUpdate); err != nil {
+			if err == io.EOF {
+				return err
+			}
 			return errors.New("decode err: " + err.Error())
 		}
 		if imageUpdate.Name == "" {
