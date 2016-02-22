@@ -9,9 +9,54 @@ import (
 	"log"
 	"os"
 	"path"
+	"runtime"
 	"syscall"
 	"time"
 )
+
+type concurrencyState struct {
+	semaphore    chan struct{}
+	errorChannel chan error
+	pending      uint64
+}
+
+func newConcurrencyState() *concurrencyState {
+	state := new(concurrencyState)
+	state.semaphore = make(chan struct{}, runtime.NumCPU())
+	state.errorChannel = make(chan error)
+	return state
+}
+
+func (state *concurrencyState) goFunc(doFunc func(string) error,
+	filename string) error {
+	for {
+		select {
+		case err := <-state.errorChannel:
+			state.pending--
+			if err != nil {
+				return err
+			}
+		case state.semaphore <- struct{}{}:
+			state.pending++
+			go func(filename string) {
+				state.errorChannel <- doFunc(filename)
+				<-state.semaphore
+			}(filename)
+			return nil
+		}
+	}
+}
+
+func (state *concurrencyState) close() error {
+	close(state.semaphore)
+	for ; state.pending > 0; state.pending-- {
+		if err := <-state.errorChannel; err != nil {
+			return err
+		}
+	}
+	close(state.errorChannel)
+	return nil
+}
 
 func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 	logger *log.Logger) (*ImageDataBase, error) {
@@ -30,8 +75,14 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 	imdb.deleteNotifiers = make(notifiers)
 	imdb.objectServer = objSrv
 	imdb.logger = logger
+	state := newConcurrencyState()
 	startTime := time.Now()
-	if err = imdb.scanDirectory(""); err != nil {
+	var rusageStart, rusageStop syscall.Rusage
+	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
+	if err := imdb.scanDirectory("", state); err != nil {
+		return nil, err
+	}
+	if err := state.close(); err != nil {
 		return nil, err
 	}
 	if logger != nil {
@@ -39,13 +90,19 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 		if imdb.CountImages() != 1 {
 			plural = "s"
 		}
-		logger.Printf("Loaded %d image%s in %s\n",
-			imdb.CountImages(), plural, time.Since(startTime))
+		syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStop)
+		userTime := time.Duration(rusageStop.Utime.Sec)*time.Second +
+			time.Duration(rusageStop.Utime.Usec)*time.Microsecond -
+			time.Duration(rusageStart.Utime.Sec)*time.Second -
+			time.Duration(rusageStart.Utime.Usec)*time.Microsecond
+		logger.Printf("Loaded %d image%s in %s (%s user CPUtime)\n",
+			imdb.CountImages(), plural, time.Since(startTime), userTime)
 	}
 	return imdb, nil
 }
 
-func (imdb *ImageDataBase) scanDirectory(dirname string) error {
+func (imdb *ImageDataBase) scanDirectory(dirname string,
+	state *concurrencyState) error {
 	file, err := os.Open(path.Join(imdb.baseDir, dirname))
 	if err != nil {
 		return err
@@ -63,9 +120,9 @@ func (imdb *ImageDataBase) scanDirectory(dirname string) error {
 			return err
 		}
 		if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
-			err = imdb.scanDirectory(filename)
+			err = imdb.scanDirectory(filename, state)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
-			err = imdb.loadFile(filename)
+			err = state.goFunc(imdb.loadFile, filename)
 		}
 		if err != nil {
 			if err == syscall.ENOENT {
@@ -89,6 +146,8 @@ func (imdb *ImageDataBase) loadFile(filename string) error {
 		return err
 	}
 	image.FileSystem.RebuildInodePointers()
+	imdb.Lock()
+	defer imdb.Unlock()
 	imdb.imageMap[filename] = &image
 	return nil
 }
