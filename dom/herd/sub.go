@@ -136,7 +136,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.lastShortPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
 		shortPollDistribution.Add(sub.lastShortPollDuration)
-		if sub.startTime != reply.StartTime {
+		if !sub.startTime.Equal(reply.StartTime) {
 			sub.generationCount = 0 // Sub has restarted: force a full poll.
 		}
 	} else {
