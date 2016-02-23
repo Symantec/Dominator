@@ -76,7 +76,9 @@ func (objSrv *ObjectServer) addObject(reader io.Reader, length uint64,
 			"expected length: %d, got: %d for: %s\n",
 			len(data), nWritten, tmpFilename))
 	}
+	objSrv.rwLock.Lock()
 	objSrv.sizesMap[hash] = uint64(len(data))
+	objSrv.rwLock.Unlock()
 	return hash, true, os.Rename(tmpFilename, filename)
 }
 
