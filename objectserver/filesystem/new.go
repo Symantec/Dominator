@@ -3,6 +3,7 @@ package filesystem
 import (
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/concurrent"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"log"
@@ -29,10 +30,14 @@ func newObjectServer(baseDir string, logger *log.Logger) (
 		logger = log.New(os.Stdout, "", log.LstdFlags)
 	}
 	objSrv.logger = logger
+	state := concurrent.NewState(0)
 	startTime := time.Now()
 	var rusageStart, rusageStop syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
-	if err = scanDirectory(&objSrv, baseDir, ""); err != nil {
+	if err = scanDirectory(&objSrv, baseDir, "", state); err != nil {
+		return nil, err
+	}
+	if err := state.Reap(); err != nil {
 		return nil, err
 	}
 	plural := ""
@@ -49,7 +54,8 @@ func newObjectServer(baseDir string, logger *log.Logger) (
 	return &objSrv, nil
 }
 
-func scanDirectory(objSrv *ObjectServer, baseDir string, subpath string) error {
+func scanDirectory(objSrv *ObjectServer, baseDir string, subpath string,
+	state *concurrent.State) error {
 	myPathName := path.Join(baseDir, subpath)
 	file, err := os.Open(myPathName)
 	if err != nil {
@@ -68,8 +74,19 @@ func scanDirectory(objSrv *ObjectServer, baseDir string, subpath string) error {
 		}
 		filename := path.Join(subpath, name)
 		if fi.IsDir() {
-			if err = scanDirectory(objSrv, baseDir, filename); err != nil {
-				return err
+			if state == nil {
+				if err := scanDirectory(objSrv, baseDir, filename,
+					nil); err != nil {
+					return err
+				}
+			} else {
+				// GoRun() cannot be used recursively, so limit concurrency to
+				// the top level. It's also more efficient this way.
+				if err := state.GoRun(func() error {
+					return scanDirectory(objSrv, baseDir, filename, nil)
+				}); err != nil {
+					return err
+				}
 			}
 		} else {
 			if fi.Size() < 1 {
@@ -80,7 +97,9 @@ func scanDirectory(objSrv *ObjectServer, baseDir string, subpath string) error {
 			if err != nil {
 				return err
 			}
+			objSrv.rwLock.Lock()
 			objSrv.sizesMap[hash] = uint64(fi.Size())
+			objSrv.rwLock.Unlock()
 		}
 	}
 	return nil

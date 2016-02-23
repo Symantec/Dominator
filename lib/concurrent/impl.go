@@ -16,11 +16,17 @@ func newState(numConcurrent uint) *State {
 }
 
 func (state *State) goRun(doFunc func() error) error {
+	if state.entered {
+		panic("GoRun is not re-entrant safe")
+	}
+	state.entered = true
+	defer func() { state.entered = false }()
 	for {
 		select {
 		case err := <-state.errorChannel:
 			state.pending--
 			if err != nil {
+				state.reap()
 				return err
 			}
 		case state.semaphore <- struct{}{}:
