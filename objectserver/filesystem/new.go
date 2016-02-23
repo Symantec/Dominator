@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"syscall"
 	"time"
 )
 
@@ -29,6 +30,8 @@ func newObjectServer(baseDir string, logger *log.Logger) (
 	}
 	objSrv.logger = logger
 	startTime := time.Now()
+	var rusageStart, rusageStop syscall.Rusage
+	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
 	if err = scanDirectory(&objSrv, baseDir, ""); err != nil {
 		return nil, err
 	}
@@ -36,8 +39,13 @@ func newObjectServer(baseDir string, logger *log.Logger) (
 	if len(objSrv.sizesMap) != 1 {
 		plural = "s"
 	}
-	logger.Printf("Scanned %d object%s in %s\n",
-		len(objSrv.sizesMap), plural, time.Since(startTime))
+	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStop)
+	userTime := time.Duration(rusageStop.Utime.Sec)*time.Second +
+		time.Duration(rusageStop.Utime.Usec)*time.Microsecond -
+		time.Duration(rusageStart.Utime.Sec)*time.Second -
+		time.Duration(rusageStart.Utime.Usec)*time.Microsecond
+	logger.Printf("Scanned %d object%s in %s (%s user CPUtime)\n",
+		len(objSrv.sizesMap), plural, time.Since(startTime), userTime)
 	return &objSrv, nil
 }
 

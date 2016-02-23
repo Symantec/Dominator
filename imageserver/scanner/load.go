@@ -4,59 +4,15 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/concurrent"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/objectserver"
 	"log"
 	"os"
 	"path"
-	"runtime"
 	"syscall"
 	"time"
 )
-
-type concurrencyState struct {
-	semaphore    chan struct{}
-	errorChannel chan error
-	pending      uint64
-}
-
-func newConcurrencyState() *concurrencyState {
-	state := new(concurrencyState)
-	state.semaphore = make(chan struct{}, runtime.NumCPU())
-	state.errorChannel = make(chan error)
-	return state
-}
-
-func (state *concurrencyState) goFunc(doFunc func(string) error,
-	filename string) error {
-	for {
-		select {
-		case err := <-state.errorChannel:
-			state.pending--
-			if err != nil {
-				return err
-			}
-		case state.semaphore <- struct{}{}:
-			state.pending++
-			go func(filename string) {
-				state.errorChannel <- doFunc(filename)
-				<-state.semaphore
-			}(filename)
-			return nil
-		}
-	}
-}
-
-func (state *concurrencyState) close() error {
-	close(state.semaphore)
-	for ; state.pending > 0; state.pending-- {
-		if err := <-state.errorChannel; err != nil {
-			return err
-		}
-	}
-	close(state.errorChannel)
-	return nil
-}
 
 func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 	logger *log.Logger) (*ImageDataBase, error) {
@@ -75,14 +31,14 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 	imdb.deleteNotifiers = make(notifiers)
 	imdb.objectServer = objSrv
 	imdb.logger = logger
-	state := newConcurrencyState()
+	state := concurrent.NewState(0)
 	startTime := time.Now()
 	var rusageStart, rusageStop syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
 	if err := imdb.scanDirectory("", state); err != nil {
 		return nil, err
 	}
-	if err := state.close(); err != nil {
+	if err := state.Reap(); err != nil {
 		return nil, err
 	}
 	if logger != nil {
@@ -102,7 +58,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 }
 
 func (imdb *ImageDataBase) scanDirectory(dirname string,
-	state *concurrencyState) error {
+	state *concurrent.State) error {
 	file, err := os.Open(path.Join(imdb.baseDir, dirname))
 	if err != nil {
 		return err
@@ -122,7 +78,9 @@ func (imdb *ImageDataBase) scanDirectory(dirname string,
 		if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
 			err = imdb.scanDirectory(filename, state)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
-			err = state.goFunc(imdb.loadFile, filename)
+			err = state.GoRun(func() error {
+				return imdb.loadFile(filename)
+			})
 		}
 		if err != nil {
 			if err == syscall.ENOENT {
