@@ -1,6 +1,7 @@
 package fsutil
 
 import (
+	"hash"
 	"io"
 )
 
@@ -49,4 +50,42 @@ func LoadLines(filename string) ([]string, error) {
 // command-line programme "chattr -ai pathname...".
 func MakeMutable(pathname ...string) error {
 	return makeMutable(pathname...)
+}
+
+type ChecksumReader struct {
+	checksummer hash.Hash
+	reader      io.Reader
+}
+
+func NewChecksumReader(reader io.Reader) *ChecksumReader {
+	return newChecksumReader(reader)
+}
+
+func (r *ChecksumReader) Read(p []byte) (int, error) {
+	return r.read(p)
+}
+
+func (r *ChecksumReader) ReadByte() (byte, error) {
+	return r.readByte()
+}
+
+func (r *ChecksumReader) VerifyChecksum() error {
+	return r.verifyChecksum()
+}
+
+type ChecksumWriter struct {
+	checksummer hash.Hash
+	writer      io.Writer
+}
+
+func NewChecksumWriter(writer io.Writer) *ChecksumWriter {
+	return newChecksumWriter(writer)
+}
+
+func (w *ChecksumWriter) Write(p []byte) (int, error) {
+	return w.write(p)
+}
+
+func (w *ChecksumWriter) WriteChecksum() error {
+	return w.writeChecksum()
 }
