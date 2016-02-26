@@ -37,7 +37,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 	startTime := time.Now()
 	var rusageStart, rusageStop syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
-	if err := imdb.scanDirectory("", state); err != nil {
+	if err := imdb.scanDirectory("", state, logger); err != nil {
 		return nil, err
 	}
 	if err := state.Reap(); err != nil {
@@ -60,7 +60,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 }
 
 func (imdb *ImageDataBase) scanDirectory(dirname string,
-	state *concurrent.State) error {
+	state *concurrent.State, logger *log.Logger) error {
 	file, err := os.Open(path.Join(imdb.baseDir, dirname))
 	if err != nil {
 		return err
@@ -78,13 +78,10 @@ func (imdb *ImageDataBase) scanDirectory(dirname string,
 			return err
 		}
 		if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
-			err = imdb.scanDirectory(filename, state)
+			err = imdb.scanDirectory(filename, state, logger)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
 			err = state.GoRun(func() error {
-				if err := imdb.loadFile(filename); err != nil {
-					return fmt.Errorf("cannot load image: %s: %s", filename, err)
-				}
-				return nil
+				return imdb.loadFile(filename, logger)
 			})
 		}
 		if err != nil {
@@ -97,7 +94,7 @@ func (imdb *ImageDataBase) scanDirectory(dirname string,
 	return nil
 }
 
-func (imdb *ImageDataBase) loadFile(filename string) error {
+func (imdb *ImageDataBase) loadFile(filename string, logger *log.Logger) error {
 	file, err := os.Open(path.Join(imdb.baseDir, filename))
 	if err != nil {
 		return err
@@ -110,6 +107,10 @@ func (imdb *ImageDataBase) loadFile(filename string) error {
 		return err
 	}
 	if err := reader.VerifyChecksum(); err != nil {
+		if err == fsutil.ErrorChecksumMismatch {
+			logger.Printf("Checksum mismatch for image: %s\n", filename)
+			return nil
+		}
 		if err != io.EOF {
 			return err
 		}
