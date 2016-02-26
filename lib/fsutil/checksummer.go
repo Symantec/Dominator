@@ -41,11 +41,12 @@ func (r *ChecksumReader) verifyChecksum() error {
 		return err
 	}
 	if nRead != r.checksummer.Size() {
-		return fmt.Errorf("ChecksumReader.Checksum(): expected: %d got: %d bytes",
+		return fmt.Errorf(
+			"ChecksumReader.Checksum(): expected: %d got: %d bytes",
 			r.checksummer.Size(), nRead)
 	}
 	if !bytes.Equal(buf, r.checksummer.Sum(nil)) {
-		return fmt.Errorf("checksum mismatch")
+		return ErrorChecksumMismatch
 	}
 	return nil
 }

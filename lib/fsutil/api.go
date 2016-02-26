@@ -1,8 +1,13 @@
 package fsutil
 
 import (
+	"errors"
 	"hash"
 	"io"
+)
+
+var (
+	ErrorChecksumMismatch = errors.New("checksum mismatch")
 )
 
 // CopyToFile will create a new file, writre length bytes from reader to the
