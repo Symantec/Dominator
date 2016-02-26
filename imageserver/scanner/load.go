@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/concurrent"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/objectserver"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -79,7 +81,10 @@ func (imdb *ImageDataBase) scanDirectory(dirname string,
 			err = imdb.scanDirectory(filename, state)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
 			err = state.GoRun(func() error {
-				return imdb.loadFile(filename)
+				if err := imdb.loadFile(filename); err != nil {
+					return fmt.Errorf("cannot load image: %s: %s", filename, err)
+				}
+				return nil
 			})
 		}
 		if err != nil {
@@ -98,10 +103,16 @@ func (imdb *ImageDataBase) loadFile(filename string) error {
 		return err
 	}
 	defer file.Close()
-	decoder := gob.NewDecoder(file)
+	reader := fsutil.NewChecksumReader(file)
+	decoder := gob.NewDecoder(reader)
 	var image image.Image
-	if err = decoder.Decode(&image); err != nil {
+	if err := decoder.Decode(&image); err != nil {
 		return err
+	}
+	if err := reader.VerifyChecksum(); err != nil {
+		if err != io.EOF {
+			return err
+		}
 	}
 	image.FileSystem.RebuildInodePointers()
 	imdb.Lock()
