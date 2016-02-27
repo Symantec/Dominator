@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/gob"
 	"errors"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/image"
 	"log"
 	"os"
@@ -25,8 +26,10 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
 			return err
 		}
 		defer file.Close()
-		writer := bufio.NewWriter(file)
-		defer writer.Flush()
+		w := bufio.NewWriter(file)
+		defer w.Flush()
+		writer := fsutil.NewChecksumWriter(w)
+		defer writer.WriteChecksum()
 		encoder := gob.NewEncoder(writer)
 		encoder.Encode(image)
 		imdb.imageMap[name] = image
