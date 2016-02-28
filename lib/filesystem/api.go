@@ -26,8 +26,9 @@ const (
 )
 
 type GenericInode interface {
-	GetUid() uint32
-	GetGid() uint32
+	// GetUid() and GetGid() may be added if needed.
+	//GetUid() uint32
+	//GetGid() uint32
 	List(w io.Writer, name string, numLinksTable NumLinksTable,
 		numLinks int, listSelector ListSelector, filter *filter.Filter) error
 	WriteMetadata(name string) error
