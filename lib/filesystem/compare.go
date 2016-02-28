@@ -86,6 +86,10 @@ func compareDirectoryEntries(left, right *DirectoryEntry,
 		if right, ok := right.inode.(*RegularInode); ok {
 			return compareRegularInodes(left, right, logWriter)
 		}
+	case *ComputedRegularInode:
+		if right, ok := right.inode.(*ComputedRegularInode); ok {
+			return compareComputedRegularInodes(left, right, logWriter)
+		}
 	case *SymlinkInode:
 		if right, ok := right.inode.(*SymlinkInode); ok {
 			return compareSymlinkInodes(left, right, logWriter)
@@ -117,6 +121,13 @@ func compareInodes(left, right GenericInode, logWriter io.Writer) (
 			sameType = true
 			sameMetadata = compareRegularInodesMetadata(left, right, logWriter)
 			sameData = compareRegularInodesData(left, right, logWriter)
+		}
+	case *ComputedRegularInode:
+		if right, ok := right.(*ComputedRegularInode); ok {
+			sameType = true
+			sameMetadata = compareComputedRegularInodesMetadata(left, right,
+				logWriter)
+			sameData = compareComputedRegularInodesData(left, right, logWriter)
 		}
 	case *SymlinkInode:
 		if right, ok := right.(*SymlinkInode); ok {
@@ -209,6 +220,62 @@ func compareRegularInodesData(left, right *RegularInode,
 			}
 			return false
 		}
+	}
+	return true
+}
+
+func compareComputedRegularInodes(left, right *ComputedRegularInode,
+	logWriter io.Writer) bool {
+	if left == right {
+		return true
+	}
+	if !compareComputedRegularInodesMetadata(left, right, logWriter) {
+		return false
+	}
+	return compareComputedRegularInodesData(left, right, logWriter)
+}
+
+func compareComputedRegularInodesMetadata(left, right *ComputedRegularInode,
+	logWriter io.Writer) bool {
+	if left.Mode != right.Mode {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Mode: left vs. right: %o vs. %o\n",
+				left.Mode, right.Mode)
+		}
+		return false
+	}
+	if left.Uid != right.Uid {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Uid: left vs. right: %d vs. %d\n",
+				left.Uid, right.Uid)
+		}
+		return false
+	}
+	if left.Gid != right.Gid {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Gid: left vs. right: %d vs. %d\n",
+				left.Gid, right.Gid)
+		}
+		return false
+	}
+	if left.Source != right.Source {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "Gid: left vs. right: %s vs. %s\n",
+				left.Source, right.Source)
+		}
+		return false
+	}
+	return true
+}
+
+func compareComputedRegularInodesData(left, right *ComputedRegularInode,
+	logWriter io.Writer) bool {
+	if left.Source != right.Source {
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "data source: left vs. right: %s vs. %s\n",
+				left.Source, right.Source)
+		}
+		return false
 	}
 	return true
 }

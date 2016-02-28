@@ -22,6 +22,27 @@ func forceWriteMetadata(inode GenericInode, name string) error {
 	return inode.WriteMetadata(name)
 }
 
+func (inode *DirectoryInode) write(name string) error {
+	if inode.make(name) != nil {
+		fsutil.ForceRemoveAll(name)
+		if err := inode.make(name); err != nil {
+			return err
+		}
+	}
+	return inode.writeMetadata(name)
+}
+
+func (inode *DirectoryInode) make(name string) error {
+	return syscall.Mkdir(name, uint32(inode.Mode))
+}
+
+func (inode *DirectoryInode) writeMetadata(name string) error {
+	if err := os.Lchown(name, int(inode.Uid), int(inode.Gid)); err != nil {
+		return err
+	}
+	return syscall.Chmod(name, uint32(inode.Mode))
+}
+
 func (inode *RegularInode) writeMetadata(name string) error {
 	if err := os.Lchown(name, int(inode.Uid), int(inode.Gid)); err != nil {
 		return err
@@ -80,25 +101,4 @@ func (inode *SpecialInode) writeMetadata(name string) error {
 	}
 	t := time.Unix(inode.MtimeSeconds, int64(inode.MtimeNanoSeconds))
 	return os.Chtimes(name, t, t)
-}
-
-func (inode *DirectoryInode) write(name string) error {
-	if inode.make(name) != nil {
-		fsutil.ForceRemoveAll(name)
-		if err := inode.make(name); err != nil {
-			return err
-		}
-	}
-	return inode.writeMetadata(name)
-}
-
-func (inode *DirectoryInode) make(name string) error {
-	return syscall.Mkdir(name, uint32(inode.Mode))
-}
-
-func (inode *DirectoryInode) writeMetadata(name string) error {
-	if err := os.Lchown(name, int(inode.Uid), int(inode.Gid)); err != nil {
-		return err
-	}
-	return syscall.Chmod(name, uint32(inode.Mode))
 }
