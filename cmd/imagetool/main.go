@@ -19,6 +19,8 @@ var (
 	certFile = flag.String("certFile",
 		path.Join(os.Getenv("HOME"), ".ssl/cert.pem"),
 		"Name of file containing the user SSL certificate")
+	computedFiles = flag.String("computedFiles", "",
+		"Name of file containing computed files list")
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
 	deleteFilter = flag.String("deleteFilter", "",
