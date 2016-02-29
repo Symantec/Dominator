@@ -42,14 +42,14 @@ func (s state) listComputedInodesHandler(w http.ResponseWriter,
 func listComputedInodes(writer io.Writer,
 	directoryInode *filesystem.DirectoryInode, name string) {
 	for _, dirent := range directoryInode.EntryList {
-		fmt.Fprintln(writer, "  <tr>")
 		if inode, ok := dirent.Inode().(*filesystem.ComputedRegularInode); ok {
+			fmt.Fprintln(writer, "  <tr>")
 			fmt.Fprintf(writer, "    <td>%s</td>\n",
 				path.Join(name, dirent.Name))
 			fmt.Fprintf(writer, "    <td>%s</td>\n", inode.Source)
+			fmt.Fprintln(writer, "  </tr>")
 		} else if inode, ok := dirent.Inode().(*filesystem.DirectoryInode); ok {
 			listComputedInodes(writer, inode, path.Join(name, dirent.Name))
 		}
-		fmt.Fprintln(writer, "  </tr>")
 	}
 }
