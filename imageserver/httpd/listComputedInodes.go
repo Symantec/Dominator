@@ -33,7 +33,7 @@ func (s state) listComputedInodesHandler(w http.ResponseWriter,
 		fmt.Fprintln(writer, "    <th>Data Source</th>")
 		fmt.Fprintln(writer, "  </tr>")
 		// Walk the file-system to leverage stable and friendly sort order.
-		listComputedInodes(writer, &image.FileSystem.DirectoryInode, "")
+		listComputedInodes(writer, &image.FileSystem.DirectoryInode, "/")
 		fmt.Fprintln(writer, "</table>")
 	}
 	fmt.Fprintln(writer, "</body>")
@@ -42,6 +42,7 @@ func (s state) listComputedInodesHandler(w http.ResponseWriter,
 func listComputedInodes(writer io.Writer,
 	directoryInode *filesystem.DirectoryInode, name string) {
 	for _, dirent := range directoryInode.EntryList {
+		fmt.Fprintln(writer, "  <tr>")
 		if inode, ok := dirent.Inode().(*filesystem.ComputedRegularInode); ok {
 			fmt.Fprintf(writer, "    <td>%s</td>\n",
 				path.Join(name, dirent.Name))
@@ -49,5 +50,6 @@ func listComputedInodes(writer io.Writer,
 		} else if inode, ok := dirent.Inode().(*filesystem.DirectoryInode); ok {
 			listComputedInodes(writer, inode, path.Join(name, dirent.Name))
 		}
+		fmt.Fprintln(writer, "  </tr>")
 	}
 }
