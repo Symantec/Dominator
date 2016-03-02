@@ -17,14 +17,22 @@ func listImagesSubcommand(args []string) {
 }
 
 func listImages(client *rpc.Client) error {
+	imageNames, err := getImages(client)
+	if err != nil {
+		return err
+	}
+	for _, name := range imageNames {
+		fmt.Println(name)
+	}
+	return nil
+}
+
+func getImages(client *rpc.Client) ([]string, error) {
 	var request imageserver.ListImagesRequest
 	var reply imageserver.ListImagesResponse
 	err := client.Call("ImageServer.ListImages", request, &reply)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	for _, name := range reply.ImageNames {
-		fmt.Println(name)
-	}
-	return nil
+	return reply.ImageNames, nil
 }

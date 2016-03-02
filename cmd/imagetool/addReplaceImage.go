@@ -10,12 +10,24 @@ import (
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"net/rpc"
 	"os"
+	"strconv"
+	"strings"
 )
 
 func addReplaceImageSubcommand(args []string) {
 	imageClient, imageSClient, objectClient := getClients()
 	err := addReplaceImage(imageClient, imageSClient, objectClient, args[0],
 		args[1], args[2:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error adding image: \"%s\"\t%s\n", args[0], err)
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
+func bulkAddReplaceImagesSubcommand(args []string) {
+	imageClient, imageSClient, objectClient := getClients()
+	err := bulkAddReplaceImages(imageClient, imageSClient, objectClient, args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error adding image: \"%s\"\t%s\n", args[0], err)
 		os.Exit(1)
@@ -53,6 +65,40 @@ func addReplaceImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 	err = client.CallAddImage(imageSClient, request, &reply)
 	if err != nil {
 		return errors.New("remote error: " + err.Error())
+	}
+	return nil
+}
+
+func bulkAddReplaceImages(imageClient *rpc.Client, imageSClient *srpc.Client,
+	objectClient *objectclient.ObjectClient, layerImageNames []string) error {
+	imageNames, err := getImages(imageClient)
+	if err != nil {
+		return err
+	}
+	baseNames := make(map[string]uint64)
+	for _, name := range imageNames {
+		fields := strings.Split(name, ".")
+		nFields := len(fields)
+		if nFields < 2 {
+			continue
+		}
+		lastField := fields[nFields-1]
+		if version, err := strconv.ParseUint(lastField, 10, 64); err != nil {
+			continue
+		} else {
+			name := strings.Join(fields[:nFields-1], ".")
+			if oldVersion := baseNames[name]; version >= oldVersion {
+				baseNames[name] = version
+			}
+		}
+	}
+	for baseName, version := range baseNames {
+		oldName := fmt.Sprintf("%s.%d", baseName, version)
+		newName := fmt.Sprintf("%s.%d", baseName, version+1)
+		if err := addReplaceImage(imageClient, imageSClient, objectClient,
+			newName, oldName, layerImageNames); err != nil {
+			return err
+		}
 	}
 	return nil
 }

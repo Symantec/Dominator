@@ -51,6 +51,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  addi   name imagename filterfile triggerfile")
 	fmt.Fprintln(os.Stderr, "  adds   name subname filterfile triggerfile")
 	fmt.Fprintln(os.Stderr, "  addrep name baseimage layerimage...")
+	fmt.Fprintln(os.Stderr, "  bulk-addrep layerimage...")
 	fmt.Fprintln(os.Stderr, "  check  name")
 	fmt.Fprintln(os.Stderr, "  delete name")
 	fmt.Fprintln(os.Stderr, "  diff   tool left right")
@@ -87,6 +88,7 @@ var subcommands = []subcommand{
 	{"adds", 4, 4, addImagesubSubcommand},
 	{"addi", 4, 4, addImageimageSubcommand},
 	{"addrep", 3, -1, addReplaceImageSubcommand},
+	{"bulk-addrep", 1, -1, bulkAddReplaceImagesSubcommand},
 	{"check", 1, 1, checkImageSubcommand},
 	{"delete", 1, 1, deleteImageSubcommand},
 	{"diff", 3, 3, diffSubcommand},
