@@ -38,6 +38,7 @@ const (
 	statusFailedToFetch
 	statusComputingUpdate
 	statusSendingUpdate
+	statusMissingComputedFile
 	statusUpdating
 	statusUpdateDenied
 	statusFailedToUpdate
@@ -54,6 +55,7 @@ type Sub struct {
 	hostname                     string
 	requiredImage                string
 	plannedImage                 string
+	computedInodes               map[string]*filesystem.RegularInode
 	busyMutex                    sync.Mutex
 	busy                         bool
 	busyStartTime                time.Time
@@ -64,6 +66,7 @@ type Sub struct {
 	fileSystem                   *filesystem.FileSystem
 	objectCache                  objectcache.ObjectCache
 	generationCount              uint64
+	computedFilesChangeTime      time.Time
 	scanCountAtLastUpdateEnd     uint64
 	status                       subStatus
 	lastConnectionStartTime      time.Time

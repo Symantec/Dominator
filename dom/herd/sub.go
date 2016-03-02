@@ -106,6 +106,11 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.havePlannedImage = true
 		sub.generationCount = 0 // Force a full poll.
 	}
+	// If the computed files have changed since the last sync, force a full poll
+	if previousStatus == statusSynced &&
+		sub.computedFilesChangeTime.After(sub.lastSyncTime) {
+		sub.generationCount = 0 // Force a full poll.
+	}
 	var request subproto.PollRequest
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
@@ -305,7 +310,9 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	logger := sub.herd.logger
 	var request subproto.UpdateRequest
 	var reply subproto.UpdateResponse
-	if sub.buildUpdateRequest(&request) {
+	if idle, missing := sub.buildUpdateRequest(&request); missing {
+		return false, statusMissingComputedFile
+	} else if idle {
 		return true, statusSynced
 	}
 	sub.status = statusSendingUpdate

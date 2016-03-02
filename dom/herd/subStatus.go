@@ -46,6 +46,8 @@ func (status subStatus) string() string {
 		return "computing update"
 	case statusSendingUpdate:
 		return "sending update"
+	case statusMissingComputedFile:
+		return "missing computed file"
 	case statusUpdating:
 		return "updating"
 	case statusUpdateDenied:
