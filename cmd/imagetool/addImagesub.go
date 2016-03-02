@@ -54,6 +54,9 @@ func addImagesub(imageClient *rpc.Client, imageSClient *srpc.Client,
 		return err
 	}
 	fs = fs.Filter(newImage.Filter)
+	if err := spliceComputedFiles(fs); err != nil {
+		return err
+	}
 	if err := copyMissingObjects(fs, objectClient, subName); err != nil {
 		return err
 	}

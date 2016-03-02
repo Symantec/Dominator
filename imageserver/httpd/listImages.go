@@ -28,6 +28,7 @@ func (s state) listImagesHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "    <th>Name</th>")
 	fmt.Fprintln(writer, "    <th>Data Size</th>")
 	fmt.Fprintln(writer, "    <th>Data Inodes</th>")
+	fmt.Fprintln(writer, "    <th>Computed Inodes</th>")
 	fmt.Fprintln(writer, "    <th>Filter Lines</th>")
 	fmt.Fprintln(writer, "    <th>Triggers</th>")
 	fmt.Fprintln(writer, "  </tr>")
@@ -46,6 +47,13 @@ func showImage(writer io.Writer, name string, image *image.Image) {
 		name, format.FormatBytes(image.FileSystem.TotalDataBytes))
 	fmt.Fprintf(writer, "    <td><a href=\"listImage?%s\">%d</a></td>\n",
 		name, image.FileSystem.NumRegularInodes)
+	if numInodes := image.FileSystem.NumComputedRegularInodes(); numInodes < 1 {
+		fmt.Fprintln(writer, "    <td>0</td>")
+	} else {
+		fmt.Fprintf(writer,
+			"    <td><a href=\"listComputedInodes?%s\">%d</a></td>\n",
+			name, numInodes)
+	}
 	if image.Filter == nil {
 		fmt.Fprintln(writer, "    <td>(sparse filter)</td>")
 	} else {

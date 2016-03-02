@@ -27,6 +27,11 @@ func (s state) showImageHandler(w http.ResponseWriter, req *http.Request) {
 		imageName, format.FormatBytes(image.FileSystem.TotalDataBytes))
 	fmt.Fprintf(writer, "Number of data inodes: %d<br>\n",
 		image.FileSystem.NumRegularInodes)
+	if numInodes := image.FileSystem.NumComputedRegularInodes(); numInodes > 0 {
+		fmt.Fprintf(writer,
+			"Number of computed inodes: <a href=\"listComputedInodes?%s\">%d</a><br>\n",
+			imageName, numInodes)
+	}
 	if image.Filter == nil {
 		fmt.Fprintln(writer, "Image has no filter: sparse image<br>")
 	} else {

@@ -26,8 +26,9 @@ const (
 )
 
 type GenericInode interface {
-	GetUid() uint32
-	GetGid() uint32
+	// GetUid() and GetGid() may be added if needed.
+	//GetUid() uint32
+	//GetGid() uint32
 	List(w io.Writer, name string, numLinksTable NumLinksTable,
 		numLinks int, listSelector ListSelector, filter *filter.Filter) error
 	WriteMetadata(name string) error
@@ -39,13 +40,14 @@ type FilenameToInodeTable map[string]uint64
 type HashToInodesTable map[hash.Hash][]uint64
 
 type FileSystem struct {
-	InodeTable            InodeTable
-	inodeToFilenamesTable InodeToFilenamesTable
-	filenameToInodeTable  FilenameToInodeTable
-	hashToInodesTable     HashToInodesTable
-	NumRegularInodes      uint64
-	TotalDataBytes        uint64
-	DirectoryCount        uint64
+	InodeTable               InodeTable
+	inodeToFilenamesTable    InodeToFilenamesTable
+	filenameToInodeTable     FilenameToInodeTable
+	hashToInodesTable        HashToInodesTable
+	NumRegularInodes         uint64
+	TotalDataBytes           uint64
+	numComputedRegularInodes *uint64
+	DirectoryCount           uint64
 	DirectoryInode
 }
 
@@ -88,6 +90,10 @@ func (fs *FileSystem) Listf(w io.Writer, listSelector ListSelector,
 
 func (fs *FileSystem) List(w io.Writer) error {
 	return fs.list(w, ListSelectAll, nil)
+}
+
+func (fs *FileSystem) NumComputedRegularInodes() uint64 {
+	return fs.computeNumComputedRegularInodes()
 }
 
 func (fs *FileSystem) String() string {
@@ -175,6 +181,23 @@ func (inode *RegularInode) List(w io.Writer, name string,
 
 func (inode *RegularInode) WriteMetadata(name string) error {
 	return inode.writeMetadata(name)
+}
+
+type ComputedRegularInode struct {
+	Mode   FileMode
+	Uid    uint32
+	Gid    uint32
+	Source string
+}
+
+func (inode *ComputedRegularInode) List(w io.Writer, name string,
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector, filter *filter.Filter) error {
+	return inode.list(w, name, numLinksTable, numLinks, listSelector)
+}
+
+func (inode *ComputedRegularInode) WriteMetadata(name string) error {
+	panic("cannot write metadata for computed file: " + name)
 }
 
 type SymlinkInode struct {

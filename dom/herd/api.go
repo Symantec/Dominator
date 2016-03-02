@@ -38,6 +38,7 @@ const (
 	statusFailedToFetch
 	statusComputingUpdate
 	statusSendingUpdate
+	statusMissingComputedFile
 	statusUpdating
 	statusUpdateDenied
 	statusFailedToUpdate
@@ -54,6 +55,7 @@ type Sub struct {
 	hostname                     string
 	requiredImage                string
 	plannedImage                 string
+	computedInodes               map[string]*filesystem.RegularInode
 	busyMutex                    sync.Mutex
 	busy                         bool
 	busyStartTime                time.Time
@@ -64,6 +66,7 @@ type Sub struct {
 	fileSystem                   *filesystem.FileSystem
 	objectCache                  objectcache.ObjectCache
 	generationCount              uint64
+	computedFilesChangeTime      time.Time
 	scanCountAtLastUpdateEnd     uint64
 	status                       subStatus
 	lastConnectionStartTime      time.Time
@@ -94,8 +97,9 @@ type Herd struct {
 	subsByIndex          []*Sub // Sorted by Sub.hostname.
 	imagesByName         map[string]*image.Image
 	missingImages        map[string]missingImage
-	connectionSemaphore  chan bool
-	pollSemaphore        chan bool
+	connectionSemaphore  chan struct{}
+	pollSemaphore        chan struct{}
+	computeSemaphore     chan struct{}
 	currentScanStartTime time.Time
 	previousScanDuration time.Duration
 }

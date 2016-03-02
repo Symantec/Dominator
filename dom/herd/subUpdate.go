@@ -11,6 +11,7 @@ import (
 )
 
 type state struct {
+	sub                     *Sub
 	subFS                   *filesystem.FileSystem
 	requiredFS              *filesystem.FileSystem
 	requiredInodeToSubInode map[uint64]uint64
@@ -20,8 +21,12 @@ type state struct {
 }
 
 // Returns true if no update needs to be performed.
-func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) bool {
+func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
+	bool, bool) {
+	sub.herd.computeSemaphore <- struct{}{}
+	defer func() { <-sub.herd.computeSemaphore }()
 	var state state
+	state.sub = sub
 	state.subFS = sub.fileSystem
 	requiredImage := sub.herd.getImageNoError(sub.requiredImage)
 	state.requiredFS = requiredImage.FileSystem
@@ -41,9 +46,11 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) bool {
 		&state.requiredFS.DirectoryInode, nil) {
 		makeDirectory(request, &state.requiredFS.DirectoryInode, "/", false)
 	}
-	compareDirectories(request, &state,
+	if !compareDirectories(request, &state,
 		&state.subFS.DirectoryInode, &state.requiredFS.DirectoryInode,
-		"/", filter)
+		"/", filter) {
+		return false, true
+	}
 	// Look for multiply used objects and tell the sub.
 	for obj, useCount := range state.subObjectCacheUsage {
 		if useCount > 1 {
@@ -69,14 +76,14 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) bool {
 		sub.herd.logger.Printf(
 			"buildUpdateRequest(%s) took: %s user CPU time\n",
 			sub.hostname, sub.lastComputeUpdateCpuDuration)
-		return false
+		return false, false
 	}
-	return true
+	return true, false
 }
 
 func compareDirectories(request *subproto.UpdateRequest, state *state,
 	subDirectory, requiredDirectory *filesystem.DirectoryInode,
-	myPathName string, filter *filter.Filter) {
+	myPathName string, filter *filter.Filter) bool {
 	// First look for entries that should be deleted.
 	if filter != nil && subDirectory != nil {
 		for name := range subDirectory.EntriesByName {
@@ -100,13 +107,28 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 				subEntry = se
 			}
 		}
+		requiredInode := requiredEntry.Inode()
+		if _, ok := requiredInode.(*filesystem.ComputedRegularInode); ok {
+			// Replace with computed file.
+			inode, ok := state.sub.computedInodes[pathname]
+			if !ok {
+				state.sub.herd.logger.Printf(
+					"compareDirectories(%s): missing computed file: %s\n",
+					state.sub.hostname, pathname)
+				return true
+			}
+			newEntry := new(filesystem.DirectoryEntry)
+			newEntry.Name = name
+			newEntry.InodeNumber = requiredEntry.InodeNumber
+			newEntry.SetInode(inode)
+			requiredEntry = newEntry
+		}
 		if subEntry == nil {
 			addEntry(request, state, requiredEntry, pathname)
 		} else {
 			compareEntries(request, state, subEntry, requiredEntry, pathname)
 		}
 		// If a directory: descend (possibly with the directory for the sub).
-		requiredInode := requiredEntry.Inode()
 		if requiredInode, ok := requiredInode.(*filesystem.DirectoryInode); ok {
 			var subInode *filesystem.DirectoryInode
 			if subEntry != nil {
@@ -118,6 +140,7 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 				pathname, filter)
 		}
 	}
+	return false
 }
 
 func addEntry(request *subproto.UpdateRequest, state *state,

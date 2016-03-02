@@ -12,6 +12,9 @@ import (
 )
 
 func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
+	if err := verifyImage(image); err != nil {
+		return err
+	}
 	imdb.Lock()
 	defer imdb.Unlock()
 	if _, ok := imdb.imageMap[name]; ok {

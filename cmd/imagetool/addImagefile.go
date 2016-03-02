@@ -56,6 +56,9 @@ func addImagefile(imageClient *rpc.Client, imageSClient *srpc.Client,
 	if err != nil {
 		return errors.New("error building image: " + err.Error())
 	}
+	if err := spliceComputedFiles(newImage.FileSystem); err != nil {
+		return err
+	}
 	err = client.CallAddImage(imageSClient, request, &reply)
 	if err != nil {
 		return errors.New("remote error: " + err.Error())

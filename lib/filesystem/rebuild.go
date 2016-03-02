@@ -94,6 +94,19 @@ func (fs *FileSystem) computeTotalDataBytes() {
 	}
 }
 
+func (fs *FileSystem) computeNumComputedRegularInodes() uint64 {
+	if fs.numComputedRegularInodes == nil {
+		var numInodes uint64
+		for _, inode := range fs.InodeTable {
+			if _, ok := inode.(*ComputedRegularInode); ok {
+				numInodes++
+			}
+		}
+		fs.numComputedRegularInodes = &numInodes
+	}
+	return *fs.numComputedRegularInodes
+}
+
 func (inode *DirectoryInode) buildEntryMap() {
 	inode.EntriesByName = make(map[string]*DirectoryEntry)
 	for _, dirent := range inode.EntryList {

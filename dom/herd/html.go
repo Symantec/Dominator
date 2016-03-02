@@ -67,7 +67,7 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 	showDurationStats(writer, fullPollDurations, "Full poll")
 	fmt.Fprintf(writer, "Connection slots: %d out of %d<br>\n",
 		len(herd.connectionSemaphore), cap(herd.connectionSemaphore))
-	fmt.Fprintf(writer, "RPC slots: %d out of %d<br>\n",
+	fmt.Fprintf(writer, "Poll slots: %d out of %d<br>\n",
 		len(herd.pollSemaphore), cap(herd.pollSemaphore))
 }
 

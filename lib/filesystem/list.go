@@ -78,6 +78,22 @@ func (inode *RegularInode) list(w io.Writer, name string,
 	return err
 }
 
+func (inode *ComputedRegularInode) list(w io.Writer, name string,
+	numLinksTable NumLinksTable, numLinks int,
+	listSelector ListSelector) error {
+	if err := listUntilName(w, inode.Mode, numLinks, inode.Uid, inode.Gid,
+		0, -1, -1, name, false, listSelector); err != nil {
+		return err
+	}
+	var err error
+	if listSelector&ListSelectSkipData == 0 {
+		_, err = fmt.Fprintf(w, " <- %s\n", inode.Source)
+	} else {
+		_, err = io.WriteString(w, "\n")
+	}
+	return err
+}
+
 func (inode *SymlinkInode) list(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int,
 	listSelector ListSelector) error {
@@ -129,10 +145,12 @@ func listUntilName(w io.Writer, mode FileMode, numLinks int, uid uint32,
 		var err error
 		switch mode & syscall.S_IFMT {
 		case syscall.S_IFREG:
-			_, err = fmt.Fprintf(w, "%10d ", data)
-		case syscall.S_IFBLK:
-			_, err = fmt.Fprintf(w, "%#10x ", data)
-		case syscall.S_IFCHR:
+			if data == 0 && seconds < 0 && nanoSeconds < 0 {
+				_, err = fmt.Fprintf(w, "%10s ", "computed")
+			} else {
+				_, err = fmt.Fprintf(w, "%10d ", data)
+			}
+		case syscall.S_IFBLK, syscall.S_IFCHR:
 			_, err = fmt.Fprintf(w, "%#10x ", data)
 		default:
 			_, err = fmt.Fprintf(w, "%11s", "")
