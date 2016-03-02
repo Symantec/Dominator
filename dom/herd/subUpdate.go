@@ -23,6 +23,8 @@ type state struct {
 // Returns true if no update needs to be performed.
 func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 	bool, bool) {
+	sub.herd.computeSemaphore <- struct{}{}
+	defer func() { <-sub.herd.computeSemaphore }()
 	var state state
 	state.sub = sub
 	state.subFS = sub.fileSystem

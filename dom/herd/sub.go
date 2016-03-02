@@ -92,7 +92,7 @@ func (sub *Sub) connectAndPoll() {
 	sub.lastConnectDuration =
 		sub.lastConnectionSucceededTime.Sub(sub.lastConnectionStartTime)
 	connectDistribution.Add(sub.lastConnectDuration)
-	sub.herd.pollSemaphore <- true
+	sub.herd.pollSemaphore <- struct{}{}
 	sub.status = statusPolling
 	sub.poll(srpcClient, previousStatus)
 	<-sub.herd.pollSemaphore

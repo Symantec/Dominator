@@ -28,14 +28,11 @@ func newHerd(imageServerAddress string, logger *log.Logger) *Herd {
 	} else {
 		maxConnAttempts *= 100
 	}
-	herd.connectionSemaphore = make(chan bool, maxConnAttempts)
-	herd.pollSemaphore = make(chan bool, runtime.NumCPU()*2)
+	herd.connectionSemaphore = make(chan struct{}, maxConnAttempts)
+	herd.pollSemaphore = make(chan struct{}, runtime.NumCPU()*10)
+	herd.computeSemaphore = make(chan struct{}, runtime.NumCPU())
 	herd.currentScanStartTime = time.Now()
 	return &herd
-}
-
-func (herd *Herd) decrementConnectionSemaphore() {
-	<-herd.connectionSemaphore
 }
 
 func (herd *Herd) pollNextSub() bool {
@@ -52,9 +49,9 @@ func (herd *Herd) pollNextSub() bool {
 	if sub.busy { // Quick lockless check.
 		return false
 	}
-	herd.connectionSemaphore <- true
+	herd.connectionSemaphore <- struct{}{}
 	go func() {
-		defer herd.decrementConnectionSemaphore()
+		defer func() { <-herd.connectionSemaphore }()
 		if !sub.tryMakeBusy() {
 			return
 		}

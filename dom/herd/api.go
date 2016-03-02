@@ -97,8 +97,9 @@ type Herd struct {
 	subsByIndex          []*Sub // Sorted by Sub.hostname.
 	imagesByName         map[string]*image.Image
 	missingImages        map[string]missingImage
-	connectionSemaphore  chan bool
-	pollSemaphore        chan bool
+	connectionSemaphore  chan struct{}
+	pollSemaphore        chan struct{}
+	computeSemaphore     chan struct{}
 	currentScanStartTime time.Time
 	previousScanDuration time.Duration
 }
