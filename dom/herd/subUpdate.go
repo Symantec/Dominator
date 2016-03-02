@@ -46,7 +46,7 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 		&state.requiredFS.DirectoryInode, nil) {
 		makeDirectory(request, &state.requiredFS.DirectoryInode, "/", false)
 	}
-	if !compareDirectories(request, &state,
+	if compareDirectories(request, &state,
 		&state.subFS.DirectoryInode, &state.requiredFS.DirectoryInode,
 		"/", filter) {
 		return false, true
