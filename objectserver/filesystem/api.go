@@ -39,6 +39,16 @@ func (objSrv *ObjectServer) GetObject(hashVal hash.Hash) (
 	return objSrv.getObject(hashVal)
 }
 
+func (objSrv *ObjectServer) ListObjects() []hash.Hash {
+	return objSrv.listObjects()
+}
+
+func (objSrv *ObjectServer) NumObjects() uint64 {
+	objSrv.rwLock.RLock()
+	defer objSrv.rwLock.RUnlock()
+	return uint64(len(objSrv.sizesMap))
+}
+
 type ObjectsReader struct {
 	objectServer *ObjectServer
 	hashes       []hash.Hash
