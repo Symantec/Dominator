@@ -12,6 +12,10 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 	t.logger.Println("New replication client connected")
 	t.incrementNumReplicationClients(true)
 	defer t.incrementNumReplicationClients(false)
+	addChannel := t.imageDataBase.RegisterAddNotifier()
+	deleteChannel := t.imageDataBase.RegisterDeleteNotifier()
+	defer t.imageDataBase.UnregisterAddNotifier(addChannel)
+	defer t.imageDataBase.UnregisterDeleteNotifier(deleteChannel)
 	encoder := gob.NewEncoder(conn)
 	for _, imageName := range t.imageDataBase.ListImages() {
 		var imageUpdate imageserver.ImageUpdate
@@ -33,10 +37,6 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 	}
 	t.logger.Println(
 		"Finished sending initial image list to replication client")
-	addChannel := t.imageDataBase.RegisterAddNotifier()
-	deleteChannel := t.imageDataBase.RegisterDeleteNotifier()
-	defer t.imageDataBase.UnregisterAddNotifier(addChannel)
-	defer t.imageDataBase.UnregisterDeleteNotifier(deleteChannel)
 	closeChannel := getCloseNotifier(conn)
 	for {
 		select {
