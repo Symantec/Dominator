@@ -33,7 +33,7 @@ func replicator(address string, imdb *scanner.ImageDataBase,
 				if err := getUpdates(address, conn, imdb, objSrv,
 					logger); err != nil {
 					if err == io.EOF {
-						logger.Println("Connection to replicator closed")
+						logger.Println("Connection to image replicator closed")
 						if nextSleepStopTime.Sub(time.Now()) < 1 {
 							timeout = initialTimeout
 						}
@@ -54,7 +54,7 @@ func replicator(address string, imdb *scanner.ImageDataBase,
 
 func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 	objSrv *fsdriver.ObjectServer, logger *log.Logger) error {
-	logger.Printf("Replicator: connected to: %s\n", address)
+	logger.Printf("Image replicator: connected to: %s\n", address)
 	decoder := gob.NewDecoder(conn)
 	initialImages := make(map[string]struct{})
 	for {
