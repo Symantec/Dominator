@@ -32,6 +32,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
+	fmt.Fprintln(os.Stderr, "  add    files...")
 	fmt.Fprintln(os.Stderr, "  check  hash")
 	fmt.Fprintln(os.Stderr, "  get    hash baseOutputFilename")
 	fmt.Fprintln(os.Stderr, "  mget   hashesFile directory")
@@ -41,14 +42,16 @@ type commandFunc func(objectserver.ObjectServer, []string)
 
 type subcommand struct {
 	command string
-	numArgs int
+	minArgs int
+	maxArgs int
 	cmdFunc commandFunc
 }
 
 var subcommands = []subcommand{
-	{"check", 1, checkObjectSubcommand},
-	{"get", 2, getObjectSubcommand},
-	{"mget", 2, getObjectsSubcommand},
+	{"add", 1, -1, addObjectsSubcommand},
+	{"check", 1, 1, checkObjectSubcommand},
+	{"get", 2, 2, getObjectSubcommand},
+	{"mget", 2, 2, getObjectsSubcommand},
 }
 
 func main() {
@@ -61,9 +64,12 @@ func main() {
 	setupTls(*certFile, *keyFile)
 	objectServer := objectclient.NewObjectClient(fmt.Sprintf("%s:%d",
 		*objectServerHostname, *objectServerPortNum))
+	numSubcommandArgs := flag.NArg() - 1
 	for _, subcommand := range subcommands {
 		if flag.Arg(0) == subcommand.command {
-			if flag.NArg()-1 != subcommand.numArgs {
+			if numSubcommandArgs < subcommand.minArgs ||
+				(subcommand.maxArgs >= 0 &&
+					numSubcommandArgs > subcommand.maxArgs) {
 				printUsage()
 				os.Exit(2)
 			}
