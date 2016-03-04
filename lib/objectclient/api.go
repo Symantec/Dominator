@@ -52,7 +52,6 @@ func (or *ObjectsReader) NextObject() (uint64, io.ReadCloser, error) {
 }
 
 type ObjectAdderQueue struct {
-	client          *srpc.Client
 	conn            *srpc.Conn
 	encoder         *gob.Encoder
 	getResponseChan chan<- bool
@@ -60,8 +59,8 @@ type ObjectAdderQueue struct {
 	sendSemaphore   chan bool
 }
 
-func NewObjectAdderQueue(objClient *ObjectClient) (*ObjectAdderQueue, error) {
-	return newObjectAdderQueue(objClient)
+func NewObjectAdderQueue(client *srpc.Client) (*ObjectAdderQueue, error) {
+	return newObjectAdderQueue(client)
 }
 
 func (objQ *ObjectAdderQueue) Add(reader io.Reader, length uint64) (

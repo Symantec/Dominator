@@ -53,8 +53,7 @@ func addReplaceImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 		return err
 	}
 	for _, layerImageName := range layerImageNames {
-		fs, err := buildImage(objectClient, request.Image.Filter,
-			layerImageName)
+		fs, err := buildImage(imageSClient, request.Image.Filter, layerImageName)
 		if err != nil {
 			return err
 		}

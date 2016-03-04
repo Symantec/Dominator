@@ -51,7 +51,7 @@ func addImagefile(imageClient *rpc.Client, imageSClient *srpc.Client,
 	}
 	request.ImageName = name
 	request.Image = &newImage
-	request.Image.FileSystem, err = buildImage(objectClient, newImage.Filter,
+	request.Image.FileSystem, err = buildImage(imageSClient, newImage.Filter,
 		imageFilename)
 	if err != nil {
 		return errors.New("error building image: " + err.Error())
@@ -79,14 +79,14 @@ func (h *hasher) Hash(reader io.Reader, length uint64) (
 	return hash, nil
 }
 
-func buildImage(objectClient *objectclient.ObjectClient, filter *filter.Filter,
+func buildImage(imageSClient *srpc.Client, filter *filter.Filter,
 	imageFilename string) (*filesystem.FileSystem, error) {
 	fi, err := os.Lstat(imageFilename)
 	if err != nil {
 		return nil, err
 	}
 	var h hasher
-	h.objQ, err = objectclient.NewObjectAdderQueue(objectClient)
+	h.objQ, err = objectclient.NewObjectAdderQueue(imageSClient)
 	if err != nil {
 		return nil, err
 	}
