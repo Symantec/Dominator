@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
@@ -13,7 +14,10 @@ import (
 	"syscall"
 )
 
-const buflen = 65536
+const (
+	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
+	buflen    = 65536
+)
 
 func (objSrv *ObjectServer) addObject(reader io.Reader, length uint64,
 	expectedHash *hash.Hash) (hash.Hash, bool, error) {
@@ -38,26 +42,14 @@ func (objSrv *ObjectServer) addObject(reader io.Reader, length uint64,
 	if err = os.MkdirAll(path.Dir(filename), syscall.S_IRWXU); err != nil {
 		return hashVal, false, err
 	}
-	tmpFilename := filename + "~"
-	file, err := os.OpenFile(tmpFilename, os.O_CREATE|os.O_WRONLY, 0660)
-	if err != nil {
+	if err := fsutil.CopyToFile(filename, filePerms, bytes.NewReader(data),
+		length); err != nil {
 		return hashVal, false, err
-	}
-	defer os.Remove(tmpFilename)
-	defer file.Close()
-	nWritten, err := file.Write(data)
-	if err != nil {
-		return hashVal, false, err
-	}
-	if nWritten != len(data) {
-		return hashVal, false, errors.New(fmt.Sprintf(
-			"expected length: %d, got: %d for: %s\n",
-			len(data), nWritten, tmpFilename))
 	}
 	objSrv.rwLock.Lock()
 	objSrv.sizesMap[hashVal] = uint64(len(data))
 	objSrv.rwLock.Unlock()
-	return hashVal, true, os.Rename(tmpFilename, filename)
+	return hashVal, true, nil
 }
 
 func collisionCheck(data []byte, filename string, size int64) error {
