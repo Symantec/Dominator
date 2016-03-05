@@ -1,12 +1,17 @@
 package lib
 
 import (
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/objectserver"
+	"io"
 	"log"
 )
 
-func AddObjects(conn *srpc.Conn, objSrv objectserver.ObjectServer,
-	logger *log.Logger) error {
-	return addObjects(conn, objSrv, logger)
+type ObjectAdder interface {
+	AddObject(reader io.Reader, length uint64, expectedHash *hash.Hash) (
+		hash.Hash, bool, error)
+}
+
+func AddObjects(conn *srpc.Conn, adder ObjectAdder, logger *log.Logger) error {
+	return addObjects(conn, adder, logger)
 }
