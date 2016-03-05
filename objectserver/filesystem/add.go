@@ -3,83 +3,53 @@ package filesystem
 import (
 	"bufio"
 	"bytes"
-	"crypto/sha512"
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
 	"os"
 	"path"
+	"syscall"
 )
 
-const buflen = 65536
+const (
+	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
+	buflen    = 65536
+)
 
 func (objSrv *ObjectServer) addObject(reader io.Reader, length uint64,
 	expectedHash *hash.Hash) (hash.Hash, bool, error) {
-	var hash hash.Hash
-	if length < 1 {
-		return hash, false, errors.New("zero length object cannot be added")
-	}
-	data := make([]byte, length)
-	nRead, err := io.ReadFull(reader, data)
+	hashVal, data, err := objectcache.ReadObject(reader, length, expectedHash)
 	if err != nil {
-		return hash, false, err
+		return hashVal, false, err
 	}
-	if uint64(nRead) != length {
-		return hash, false, errors.New(fmt.Sprintf(
-			"failed to read data, wanted: %d, got: %d bytes", length, nRead))
-	}
-	hasher := sha512.New()
-	if hasher.Size() != len(hash) {
-		return hash, false, errors.New("Incompatible hash size")
-	}
-	if _, err := hasher.Write(data); err != nil {
-		return hash, false, err
-	}
-	copy(hash[:], hasher.Sum(nil))
-	if expectedHash != nil {
-		if hash != *expectedHash {
-			return hash, false, errors.New(fmt.Sprintf(
-				"Hash mismatch. Computed=%x, expected=%x", hash, *expectedHash))
-		}
-	}
-	filename := path.Join(objSrv.baseDir, objectcache.HashToFilename(hash))
+	filename := path.Join(objSrv.baseDir, objectcache.HashToFilename(hashVal))
 	// Check for existing object and collision.
 	fi, err := os.Lstat(filename)
 	if err == nil {
 		if !fi.Mode().IsRegular() {
-			return hash, false, errors.New("Existing non-file: " + filename)
+			return hashVal, false, errors.New("Existing non-file: " + filename)
 		}
 		if err := collisionCheck(data, filename, fi.Size()); err != nil {
-			return hash, false, errors.New("Collision detected: " + err.Error())
+			return hashVal, false, errors.New(
+				"Collision detected: " + err.Error())
 		}
 		// No collision and no error: it's the same object. Go home early.
-		return hash, false, nil
+		return hashVal, false, nil
 	}
-	if err = os.MkdirAll(path.Dir(filename), 0755); err != nil {
-		return hash, false, err
+	if err = os.MkdirAll(path.Dir(filename), syscall.S_IRWXU); err != nil {
+		return hashVal, false, err
 	}
-	tmpFilename := filename + "~"
-	file, err := os.OpenFile(tmpFilename, os.O_CREATE|os.O_WRONLY, 0660)
-	if err != nil {
-		return hash, false, err
-	}
-	defer os.Remove(tmpFilename)
-	defer file.Close()
-	nWritten, err := file.Write(data)
-	if err != nil {
-		return hash, false, err
-	}
-	if nWritten != len(data) {
-		return hash, false, errors.New(fmt.Sprintf(
-			"expected length: %d, got: %d for: %s\n",
-			len(data), nWritten, tmpFilename))
+	if err := fsutil.CopyToFile(filename, filePerms, bytes.NewReader(data),
+		length); err != nil {
+		return hashVal, false, err
 	}
 	objSrv.rwLock.Lock()
-	objSrv.sizesMap[hash] = uint64(len(data))
+	objSrv.sizesMap[hashVal] = uint64(len(data))
 	objSrv.rwLock.Unlock()
-	return hash, true, os.Rename(tmpFilename, filename)
+	return hashVal, true, nil
 }
 
 func collisionCheck(data []byte, filename string, size int64) error {

@@ -57,7 +57,8 @@ func addImagesub(imageClient *rpc.Client, imageSClient *srpc.Client,
 	if err := spliceComputedFiles(fs); err != nil {
 		return err
 	}
-	if err := copyMissingObjects(fs, objectClient, subName); err != nil {
+	if err := copyMissingObjects(fs, imageSClient, objectClient,
+		subName); err != nil {
 		return err
 	}
 	newImage.FileSystem = fs
@@ -82,7 +83,7 @@ func applyDeleteFilter(fs *filesystem.FileSystem) (
 	return fs.Filter(filter), nil
 }
 
-func copyMissingObjects(fs *filesystem.FileSystem,
+func copyMissingObjects(fs *filesystem.FileSystem, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, subName string) error {
 	// Check to see which objects are in the objectserver.
 	hashes := make([]hash.Hash, 0, fs.NumRegularInodes)
@@ -113,7 +114,7 @@ func copyMissingObjects(fs *filesystem.FileSystem,
 			filesForMissingObjects = append(filesForMissingObjects, files[0])
 		}
 	}
-	objAdderQueue, err := objectclient.NewObjectAdderQueue(objectClient)
+	objAdderQueue, err := objectclient.NewObjectAdderQueue(imageSClient)
 	if err != nil {
 		return err
 	}

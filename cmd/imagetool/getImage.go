@@ -14,7 +14,10 @@ import (
 	"syscall"
 )
 
-var dirPerms os.FileMode = syscall.S_IRWXU
+const (
+	dirPerms  = syscall.S_IRWXU
+	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
+)
 
 func getImageSubcommand(args []string) {
 	_, imageSClient, objectClient := getClients()
@@ -104,7 +107,7 @@ func writeObject(objectsReader objectserver.ObjectsReader, hash hash.Hash,
 		return errors.New("mismatched lengths")
 	}
 	filename := path.Join(inodesDir, fmt.Sprintf("%d", inodeNumber))
-	return fsutil.CopyToFile(filename, reader, int64(rlength))
+	return fsutil.CopyToFile(filename, filePerms, reader, rlength)
 }
 
 func writeInodes(inodeTable filesystem.InodeTable, inodesDir string) error {

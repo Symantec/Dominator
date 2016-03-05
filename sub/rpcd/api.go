@@ -30,6 +30,11 @@ type rpcType struct {
 	lastUpdateHadTriggerFailures bool
 }
 
+type addObjectsHandlerType struct {
+	objectsDir string
+	logger     *log.Logger
+}
+
 func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 	objectsDirname string, rootDirname string,
 	netReaderContext *rateio.ReaderContext,
@@ -49,5 +54,9 @@ func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 		disableScannerFunc:       disableScannerFunction,
 		logger:                   logger}
 	srpc.RegisterName("Subd", rpcObj)
+	addObjectsHandler := &addObjectsHandlerType{
+		objectsDir: objectsDirname,
+		logger:     logger}
+	srpc.RegisterName("ObjectServer", addObjectsHandler)
 	return rescanObjectCacheChannel
 }

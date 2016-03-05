@@ -11,16 +11,11 @@ import (
 	"io"
 )
 
-func newObjectAdderQueue(objClient *ObjectClient) (*ObjectAdderQueue, error) {
+func newObjectAdderQueue(client *srpc.Client) (*ObjectAdderQueue, error) {
 	var objQ ObjectAdderQueue
 	var err error
-	objQ.client, err = srpc.DialHTTP("tcp", objClient.address, 0)
+	objQ.conn, err = client.Call("ObjectServer.AddObjects")
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error dialing\t%s\n", err.Error()))
-	}
-	objQ.conn, err = objQ.client.Call("ObjectServer.AddObjects")
-	if err != nil {
-		objQ.client.Close()
 		return nil, err
 	}
 	objQ.encoder = gob.NewEncoder(objQ.conn)
@@ -77,8 +72,7 @@ func (objQ *ObjectAdderQueue) close() error {
 	err = updateError(err, objQ.conn.Flush())
 	close(objQ.getResponseChan)
 	err = updateError(err, objQ.consumeErrors(true))
-	err = updateError(err, objQ.conn.Close())
-	return updateError(err, objQ.client.Close())
+	return updateError(err, objQ.conn.Close())
 }
 
 func updateError(oldError, newError error) error {
