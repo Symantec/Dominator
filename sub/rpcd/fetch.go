@@ -19,6 +19,8 @@ import (
 	"time"
 )
 
+const filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
+
 var (
 	exitOnFetchFailure = flag.Bool("exitOnFetchFailure", false,
 		"If true, exit if there are fetch failures. For debugging only")
@@ -144,7 +146,7 @@ func readOne(objectsDir string, hash hash.Hash, length uint64,
 	if err := os.MkdirAll(dirname, syscall.S_IRWXU); err != nil {
 		return err
 	}
-	return fsutil.CopyToFile(filename, reader, int64(length))
+	return fsutil.CopyToFile(filename, filePerms, reader, length)
 }
 
 func (t *rpcType) clearFetchInProgress() {

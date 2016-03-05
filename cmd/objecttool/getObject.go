@@ -7,7 +7,10 @@ import (
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/objectserver"
 	"os"
+	"syscall"
 )
+
+const filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
 
 func getObjectSubcommand(objSrv objectserver.ObjectServer, args []string) {
 	hash, err := objectcache.FilenameToHash(args[0])
@@ -37,5 +40,5 @@ func getObject(objSrv objectserver.ObjectServer, hashVal hash.Hash,
 	}
 	defer reader.Close()
 	filename := fmt.Sprintf("%s.%x", baseOutputFilename, hashVal)
-	return fsutil.CopyToFile(filename, reader, int64(size))
+	return fsutil.CopyToFile(filename, filePerms, reader, size)
 }

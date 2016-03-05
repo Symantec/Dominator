@@ -66,5 +66,5 @@ func getObjects(objSrv objectserver.ObjectServer,
 func readOne(dirname string, hash hash.Hash, length uint64,
 	reader io.Reader) error {
 	filename := fmt.Sprintf("%s/%x", dirname, hash)
-	return fsutil.CopyToFile(filename, reader, int64(length))
+	return fsutil.CopyToFile(filename, filePerms, reader, length)
 }
