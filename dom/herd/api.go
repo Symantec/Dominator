@@ -1,6 +1,7 @@
 package herd
 
 import (
+	"github.com/Symantec/Dominator/dom/objectserver"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/mdb"
@@ -36,6 +37,10 @@ const (
 	statusFetching
 	statusFetchDenied
 	statusFailedToFetch
+	statusPushing
+	statusPushDenied
+	statusFailedToPush
+	statusFailedToGetObject
 	statusComputingUpdate
 	statusSendingUpdate
 	statusMissingComputedFile
@@ -90,6 +95,7 @@ type missingImage struct {
 type Herd struct {
 	sync.RWMutex         // Protect map and slice mutations.
 	imageServerAddress   string
+	objectServer         *objectserver.ObjectServer
 	logger               *log.Logger
 	htmlWriters          []HtmlWriter
 	nextSubToPoll        uint
@@ -99,13 +105,15 @@ type Herd struct {
 	missingImages        map[string]missingImage
 	connectionSemaphore  chan struct{}
 	pollSemaphore        chan struct{}
+	pushSemaphore        chan struct{}
 	computeSemaphore     chan struct{}
 	currentScanStartTime time.Time
 	previousScanDuration time.Duration
 }
 
-func NewHerd(imageServerAddress string, logger *log.Logger) *Herd {
-	return newHerd(imageServerAddress, logger)
+func NewHerd(imageServerAddress string, objectServer *objectserver.ObjectServer,
+	logger *log.Logger) *Herd {
+	return newHerd(imageServerAddress, objectServer, logger)
 }
 
 func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {

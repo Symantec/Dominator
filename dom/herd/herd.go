@@ -1,6 +1,7 @@
 package herd
 
 import (
+	"github.com/Symantec/Dominator/dom/objectserver"
 	"github.com/Symantec/Dominator/lib/image"
 	"log"
 	"runtime"
@@ -8,9 +9,11 @@ import (
 	"time"
 )
 
-func newHerd(imageServerAddress string, logger *log.Logger) *Herd {
+func newHerd(imageServerAddress string, objectServer *objectserver.ObjectServer,
+	logger *log.Logger) *Herd {
 	var herd Herd
 	herd.imageServerAddress = imageServerAddress
+	herd.objectServer = objectServer
 	herd.logger = logger
 	herd.subsByName = make(map[string]*Sub)
 	herd.imagesByName = make(map[string]*image.Image)
@@ -30,6 +33,7 @@ func newHerd(imageServerAddress string, logger *log.Logger) *Herd {
 	}
 	herd.connectionSemaphore = make(chan struct{}, maxConnAttempts)
 	herd.pollSemaphore = make(chan struct{}, runtime.NumCPU()*10)
+	herd.pushSemaphore = make(chan struct{}, runtime.NumCPU())
 	herd.computeSemaphore = make(chan struct{}, runtime.NumCPU())
 	herd.currentScanStartTime = time.Now()
 	return &herd
