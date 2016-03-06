@@ -2,10 +2,9 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/gob"
-	"encoding/json"
 	"errors"
+	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"log"
 	"net/http"
@@ -172,14 +171,8 @@ func writeMdb(mdb *mdb.Mdb, mdbFileName string) error {
 			return err
 		}
 	default:
-		b, err := json.Marshal(mdb.Machines)
-		if err != nil {
-			return err
-		}
-		var out bytes.Buffer
-		json.Indent(&out, b, "", "    ")
-		_, err = out.WriteTo(writer)
-		if err != nil {
+		if err := json.WriteWithIndent(writer, "    ",
+			mdb.Machines); err != nil {
 			return err
 		}
 		writer.Write([]byte("\n"))
