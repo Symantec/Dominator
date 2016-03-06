@@ -81,11 +81,10 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
 func showSub(writer io.Writer, sub *Sub) {
 	fmt.Fprintf(writer, "  <tr>\n")
 	subURL := fmt.Sprintf("http://%s:%d/",
-		strings.SplitN(sub.hostname, "*", 2)[0], constants.SubPortNumber)
-	fmt.Fprintf(writer, "    <td><a href=\"%s\">%s</a></td>\n",
-		subURL, sub.hostname)
-	sub.herd.showImage(writer, sub.requiredImage)
-	sub.herd.showImage(writer, sub.plannedImage)
+		strings.SplitN(sub.String(), "*", 2)[0], constants.SubPortNumber)
+	fmt.Fprintf(writer, "    <td><a href=\"%s\">%s</a></td>\n", subURL, sub)
+	sub.herd.showImage(writer, sub.mdb.RequiredImage)
+	sub.herd.showImage(writer, sub.mdb.PlannedImage)
 	sub.showBusy(writer)
 	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.status)
 	timeNow := time.Now()

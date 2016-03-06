@@ -17,7 +17,7 @@ func listSubs(writer io.Writer) {
 	httpdHerd.RLock()
 	subs := make([]string, 0, len(httpdHerd.subsByIndex))
 	for _, sub := range httpdHerd.subsByIndex {
-		subs = append(subs, sub.hostname)
+		subs = append(subs, sub.mdb.Hostname)
 	}
 	httpdHerd.RUnlock()
 	for _, name := range subs {

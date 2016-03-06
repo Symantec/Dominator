@@ -57,9 +57,7 @@ type HtmlWriter interface {
 
 type Sub struct {
 	herd                         *Herd
-	hostname                     string
-	requiredImage                string
-	plannedImage                 string
+	mdb                          mdb.Machine
 	computedInodes               map[string]*filesystem.RegularInode
 	busyMutex                    sync.Mutex
 	busy                         bool
@@ -85,6 +83,10 @@ type Sub struct {
 	lastComputeUpdateCpuDuration time.Duration
 	lastUpdateTime               time.Time
 	lastSyncTime                 time.Time
+}
+
+func (sub *Sub) String() string {
+	return sub.mdb.Hostname
 }
 
 type missingImage struct {

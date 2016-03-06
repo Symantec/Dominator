@@ -35,29 +35,27 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int, int) {
 	// Mark for delete all current subs, then later unmark ones in the new MDB.
 	subsToDelete := make(map[string]bool)
 	for _, sub := range herd.subsByName {
-		subsToDelete[sub.hostname] = true
+		subsToDelete[sub.mdb.Hostname] = true
 	}
 	for _, machine := range mdb.Machines { // Sorted by Hostname.
 		sub := herd.subsByName[machine.Hostname]
 		if sub == nil {
 			sub = new(Sub)
 			sub.herd = herd
-			sub.hostname = machine.Hostname
+			sub.mdb = machine
 			herd.subsByName[machine.Hostname] = sub
 			numNew++
 		} else {
-			if sub.requiredImage != machine.RequiredImage ||
-				sub.plannedImage != machine.PlannedImage {
+			if sub.mdb != machine {
+				sub.mdb = machine
 				sub.generationCount = 0 // Force a full poll.
 				numChanged++
 			}
 		}
-		subsToDelete[sub.hostname] = false
+		subsToDelete[machine.Hostname] = false
 		herd.subsByIndex = append(herd.subsByIndex, sub)
-		sub.requiredImage = machine.RequiredImage
-		sub.plannedImage = machine.PlannedImage
-		herd.getImageHaveLock(sub.requiredImage) // Preload.
-		if image, _ := herd.getImageHaveLock(sub.plannedImage); image == nil {
+		herd.getImageHaveLock(machine.RequiredImage) // Preload.
+		if img, _ := herd.getImageHaveLock(machine.PlannedImage); img == nil {
 			sub.havePlannedImage = false
 		} else {
 			sub.havePlannedImage = true
@@ -72,8 +70,8 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int, int) {
 	}
 	imageUseMap := make(map[string]bool) // Unreferenced by default.
 	for _, sub := range herd.subsByName {
-		imageUseMap[sub.requiredImage] = true
-		imageUseMap[sub.plannedImage] = true
+		imageUseMap[sub.mdb.RequiredImage] = true
+		imageUseMap[sub.mdb.PlannedImage] = true
 	}
 	// Clean up unreferenced images.
 	for name, used := range imageUseMap {
