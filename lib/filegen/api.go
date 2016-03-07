@@ -38,15 +38,15 @@ func New(logger *log.Logger) *Manager {
 	return newManager(logger)
 }
 
-// RegisterGeneratorForPath registers a FileGenerator for a specific pathname.
-func (m *Manager) RegisterGeneratorForPath(pathname string, gen FileGenerator) {
-	m.registerGeneratorForPath(pathname, gen)
-}
-
 // RegisterFileForPath registers a source file for a specific pathname. The
 // source file is used as the data source.
 func (m *Manager) RegisterFileForPath(pathname string, sourceFile string) {
 	m.registerFileForPath(pathname, sourceFile)
+}
+
+// RegisterGeneratorForPath registers a FileGenerator for a specific pathname.
+func (m *Manager) RegisterGeneratorForPath(pathname string, gen FileGenerator) {
+	m.registerGeneratorForPath(pathname, gen)
 }
 
 // WriteHtml will write status information about the Manager to w, with
