@@ -10,7 +10,7 @@ import (
 
 type ObjectServer struct {
 	baseDir  string
-	rwLock   sync.RWMutex         // Proect map mutations.
+	rwLock   sync.RWMutex         // Protect map mutations.
 	sizesMap map[hash.Hash]uint64 // Only set if object is known.
 	logger   *log.Logger
 }
