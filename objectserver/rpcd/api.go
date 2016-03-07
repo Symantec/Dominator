@@ -1,8 +1,8 @@
 package rpcd
 
 import (
+	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/objectserver"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"

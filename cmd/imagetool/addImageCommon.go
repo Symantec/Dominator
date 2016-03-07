@@ -6,7 +6,7 @@ import (
 	"errors"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/objectclient"
+	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"os"
 )

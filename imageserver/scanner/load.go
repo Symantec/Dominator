@@ -7,7 +7,7 @@ import (
 	"github.com/Symantec/Dominator/lib/concurrent"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/objectserver"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	"io"
 	"log"
 	"os"

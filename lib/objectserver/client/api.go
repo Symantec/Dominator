@@ -1,10 +1,10 @@
-package objectclient
+package client
 
 import (
 	"encoding/gob"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/objectserver"
 	"io"
 )
 

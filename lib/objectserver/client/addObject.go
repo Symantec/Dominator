@@ -1,4 +1,4 @@
-package objectclient
+package client
 
 import (
 	"encoding/gob"

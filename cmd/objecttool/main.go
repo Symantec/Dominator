@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/lib/objectclient"
-	"github.com/Symantec/Dominator/objectserver"
+	"github.com/Symantec/Dominator/lib/objectserver"
+	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"os"
 	"path"
 )

@@ -1,4 +1,4 @@
-package objectclient
+package client
 
 import (
 	"crypto/sha512"
