@@ -28,7 +28,7 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 	var state state
 	state.sub = sub
 	state.subFS = sub.fileSystem
-	requiredImage := sub.herd.getImageNoError(sub.requiredImage)
+	requiredImage := sub.herd.getImageNoError(sub.mdb.RequiredImage)
 	state.requiredFS = requiredImage.FileSystem
 	filter := requiredImage.Filter
 	request.Triggers = requiredImage.Triggers
@@ -75,7 +75,7 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 		len(request.InodesToChange) > 0 {
 		sub.herd.logger.Printf(
 			"buildUpdateRequest(%s) took: %s user CPU time\n",
-			sub.hostname, sub.lastComputeUpdateCpuDuration)
+			sub, sub.lastComputeUpdateCpuDuration)
 		return false, false
 	}
 	return true, false
@@ -114,7 +114,7 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 			if !ok {
 				state.sub.herd.logger.Printf(
 					"compareDirectories(%s): missing computed file: %s\n",
-					state.sub.hostname, pathname)
+					state.sub, pathname)
 				return true
 			}
 			newEntry := new(filesystem.DirectoryEntry)

@@ -2,9 +2,8 @@ package httpd
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/json"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/json"
 	"net/http"
 )
 
@@ -21,10 +20,7 @@ func (s state) listTriggersHandler(w http.ResponseWriter, req *http.Request) {
 	} else {
 		fmt.Fprintf(writer, "Triggers for image: %s\n", imageName)
 		fmt.Fprintln(writer, "<pre>")
-		b, _ := json.Marshal(image.Triggers.Triggers)
-		var out bytes.Buffer
-		json.Indent(&out, b, "", "    ")
-		out.WriteTo(writer)
+		json.WriteWithIndent(writer, "    ", image.Triggers.Triggers)
 		fmt.Fprintln(writer, "</pre>")
 	}
 	fmt.Fprintln(writer, "</body>")

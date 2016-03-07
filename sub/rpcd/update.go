@@ -1,7 +1,7 @@
 package rpcd
 
 import (
-	"bytes"
+	"bufio"
 	"encoding/gob"
 	"encoding/json"
 	"errors"
@@ -10,6 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
+	jsonlib "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/triggers"
@@ -132,14 +133,12 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 	matchedNewTriggers := request.Triggers.GetMatchedTriggers()
 	file, err = os.Create(t.oldTriggersFilename)
 	if err == nil {
-		b, err := json.Marshal(request.Triggers.Triggers)
-		if err == nil {
-			var out bytes.Buffer
-			json.Indent(&out, b, "", "    ")
-			out.WriteTo(file)
-		} else {
-			t.logger.Printf("Error marshaling triggers: %s", err.Error())
+		writer := bufio.NewWriter(file)
+		if err := jsonlib.WriteWithIndent(writer, "    ",
+			request.Triggers.Triggers); err != nil {
+			t.logger.Printf("Error marshaling triggers: %s", err)
 		}
+		writer.Flush()
 		file.Close()
 	}
 	if runTriggers(matchedNewTriggers, "start", t.logger) {

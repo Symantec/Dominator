@@ -42,6 +42,14 @@ func (status subStatus) string() string {
 		return "fetch denied"
 	case statusFailedToFetch:
 		return "fetch failed"
+	case statusPushing:
+		return "pushing"
+	case statusPushDenied:
+		return "push denied"
+	case statusFailedToPush:
+		return "failed to push"
+	case statusFailedToGetObject:
+		return "failed to get object"
 	case statusComputingUpdate:
 		return "computing update"
 	case statusSendingUpdate:

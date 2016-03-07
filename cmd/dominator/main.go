@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/dom/herd"
 	"github.com/Symantec/Dominator/dom/mdbd"
+	"github.com/Symantec/Dominator/dom/objectserver"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/Dominator/lib/mdb"
@@ -26,7 +27,7 @@ var (
 	certDir = flag.String("certDir", "/etc/ssl/Dominator",
 		"Name of file (relative to certDir) containing the SSL certificate")
 	certFile = flag.String("certFile", "cert.pem",
-		"Name of file (relative to stateDir) containing the SSL certificate")
+		"Name of file (relative to certDir) containing the SSL certificate")
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
 	fdLimit = flag.Uint64("fdLimit", getFdLimit(),
@@ -44,6 +45,8 @@ var (
 		"File to read MDB data from, relative to stateDir (default format is JSON)")
 	minInterval = flag.Uint("minInterval", 1,
 		"Minimum interval between loops (in seconds)")
+	objectsDir = flag.String("objectsDir", "objects",
+		"Directory containing computed objects, relative to stateDir")
 	portNum = flag.Uint("portNum", constants.DomPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
 	stateDir = flag.String("stateDir", "/var/lib/Dominator",
@@ -128,8 +131,14 @@ func main() {
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	mdbChannel := mdbd.StartMdbDaemon(path.Join(*stateDir, *mdbFile), logger)
+	objectServer, err := objectserver.NewObjectServer(
+		path.Join(*stateDir, *objectsDir), logger)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot load objectcache: %s\n", err)
+		os.Exit(1)
+	}
 	herd := herd.NewHerd(fmt.Sprintf("%s:%d", *imageServerHostname,
-		*imageServerPortNum), logger)
+		*imageServerPortNum), objectServer, logger)
 	herd.AddHtmlWriter(circularBuffer)
 	if err = herd.StartServer(*portNum, true); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)

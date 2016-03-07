@@ -6,6 +6,7 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/objectclient"
 	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
@@ -43,7 +44,7 @@ func (sub *Sub) makeUnbusy() {
 func (sub *Sub) connectAndPoll() {
 	previousStatus := sub.status
 	sub.status = statusConnecting
-	hostname := strings.SplitN(sub.hostname, "*", 2)[0]
+	hostname := strings.SplitN(sub.mdb.Hostname, "*", 2)[0]
 	address := fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber)
 	sub.lastConnectionStartTime = time.Now()
 	srpcClient, err := srpc.DialHTTP("tcp", address,
@@ -102,7 +103,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	// If the planned image has just become available, force a full poll.
 	if previousStatus == statusSynced &&
 		!sub.havePlannedImage &&
-		sub.herd.getImageNoError(sub.plannedImage) != nil {
+		sub.herd.getImageNoError(sub.mdb.PlannedImage) != nil {
 		sub.havePlannedImage = true
 		sub.generationCount = 0 // Force a full poll.
 	}
@@ -116,7 +117,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	var reply subproto.PollResponse
 	sub.lastPollStartTime = time.Now()
 	haveImage := false
-	if sub.herd.getImageNoError(sub.requiredImage) == nil {
+	if sub.herd.getImageNoError(sub.mdb.RequiredImage) == nil {
 		request.ShortPollOnly = true
 	} else {
 		haveImage = true
@@ -129,7 +130,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		} else {
 			sub.status = statusFailedToPoll
 		}
-		logger.Printf("Error calling %s.Poll()\t%s\n", sub.hostname, err)
+		logger.Printf("Error calling %s.Poll()\t%s\n", sub, err)
 		return
 	}
 	sub.lastPollSucceededTime = time.Now()
@@ -147,8 +148,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	} else {
 		if err := fs.RebuildInodePointers(); err != nil {
 			sub.status = statusFailedToPoll
-			logger.Printf("Error building pointers for: %s %s\n",
-				sub.hostname, err)
+			logger.Printf("Error building pointers for: %s %s\n", sub, err)
 			return
 		}
 		fs.BuildEntryMap()
@@ -159,7 +159,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
 		fullPollDistribution.Add(sub.lastFullPollDuration)
 		logger.Printf("Polled: %s, GenerationCount=%d\n",
-			sub.hostname, reply.GenerationCount)
+			sub, reply.GenerationCount)
 	}
 	sub.startTime = reply.StartTime
 	sub.pollTime = reply.PollTime
@@ -176,8 +176,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if previousStatus == statusFetching && reply.LastFetchError != "" {
-		logger.Printf("Fetch failure for: %s: %s\n",
-			sub.hostname, reply.LastFetchError)
+		logger.Printf("Fetch failure for: %s: %s\n", sub, reply.LastFetchError)
 		sub.status = statusFailedToFetch
 		if sub.fileSystem == nil {
 			sub.generationCount = 0 // Force a full poll next cycle.
@@ -188,7 +187,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		// Transition from updating to update ended (may be partial/failed).
 		if reply.LastUpdateError != "" {
 			logger.Printf("Update failure for: %s: %s\n",
-				sub.hostname, reply.LastUpdateError)
+				sub, reply.LastUpdateError)
 			sub.status = statusFailedToUpdate
 		} else {
 			sub.status = statusWaitingForNextFullPoll
@@ -224,7 +223,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(srpcClient,
-		sub.requiredImage); !idle {
+		sub.mdb.RequiredImage); !idle {
 		sub.status = status
 		sub.reclaim()
 		return
@@ -236,7 +235,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(srpcClient,
-		sub.plannedImage); !idle {
+		sub.mdb.PlannedImage); !idle {
 		if status != statusImageNotReady {
 			sub.status = status
 			sub.reclaim()
@@ -248,7 +247,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.lastSyncTime = time.Now()
 	}
 	sub.status = statusSynced
-	sub.cleanup(srpcClient, sub.plannedImage)
+	sub.cleanup(srpcClient, sub.mdb.PlannedImage)
 	sub.reclaim()
 }
 
@@ -265,44 +264,97 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 	if image == nil {
 		return false, statusImageNotReady
 	}
-	missingObjects := make(map[hash.Hash]struct{})
-	for _, inode := range image.FileSystem.InodeTable {
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			if inode.Size > 0 {
-				missingObjects[inode.Hash] = struct{}{}
+	logger := sub.herd.logger
+	logger.Println("Computing missing objects") // HACK
+	objectsToFetch := make(map[hash.Hash]struct{})
+	objectsToPush := make(map[hash.Hash]struct{})
+	for inum, inode := range image.FileSystem.InodeTable {
+		if rInode, ok := inode.(*filesystem.RegularInode); ok {
+			if rInode.Size > 0 {
+				objectsToFetch[rInode.Hash] = struct{}{}
+			}
+		} else if _, ok := inode.(*filesystem.ComputedRegularInode); ok {
+			pathname := image.FileSystem.InodeToFilenamesTable()[inum][0]
+			if inode, ok := sub.computedInodes[pathname]; !ok {
+				logger.Printf(
+					"fetchMissingObjects(%s): missing computed file: %s\n",
+					sub, pathname)
+				return false, statusMissingComputedFile
+			} else {
+				objectsToPush[inode.Hash] = struct{}{}
 			}
 		}
 	}
+	logger.Printf("computed objects: %d\n", len(objectsToPush))
 	for _, hash := range sub.objectCache {
-		delete(missingObjects, hash)
+		delete(objectsToFetch, hash)
+		delete(objectsToPush, hash)
 	}
 	for _, inode := range sub.fileSystem.InodeTable {
 		if inode, ok := inode.(*filesystem.RegularInode); ok {
 			if inode.Size > 0 {
-				delete(missingObjects, inode.Hash)
+				delete(objectsToFetch, inode.Hash)
+				delete(objectsToPush, inode.Hash)
 			}
 		}
 	}
-	if len(missingObjects) < 1 {
-		return true, statusSynced
-	}
-	logger := sub.herd.logger
-	logger.Printf("Calling %s.Fetch() for: %d objects\n",
-		sub.hostname, len(missingObjects))
-	var request subproto.FetchRequest
-	var reply subproto.FetchResponse
-	request.ServerAddress = sub.herd.imageServerAddress
-	for hash := range missingObjects {
-		request.Hashes = append(request.Hashes, hash)
-	}
-	if err := client.CallFetch(srpcClient, request, &reply); err != nil {
-		logger.Printf("Error calling %s.Fetch()\t%s\n", sub.hostname, err)
-		if err == srpc.ErrorAccessToMethodDenied {
-			return false, statusFetchDenied
+	logger.Printf("objects to push: %d\n", len(objectsToPush))
+	var returnAvailable bool = true
+	var returnStatus subStatus = statusSynced
+	if len(objectsToFetch) > 0 {
+		logger.Printf("Calling %s.Fetch() for: %d objects\n",
+			sub, len(objectsToFetch))
+		var request subproto.FetchRequest
+		var reply subproto.FetchResponse
+		request.ServerAddress = sub.herd.imageServerAddress
+		for hash := range objectsToFetch {
+			request.Hashes = append(request.Hashes, hash)
 		}
-		return false, statusFailedToFetch
+		if err := client.CallFetch(srpcClient, request, &reply); err != nil {
+			logger.Printf("Error calling %s.Fetch()\t%s\n", sub, err)
+			if err == srpc.ErrorAccessToMethodDenied {
+				return false, statusFetchDenied
+			}
+			return false, statusFailedToFetch
+		}
+		returnAvailable = false
+		returnStatus = statusFetching
 	}
-	return false, statusFetching
+	if len(objectsToPush) > 0 {
+		sub.herd.pushSemaphore <- struct{}{}
+		defer func() { <-sub.herd.pushSemaphore }()
+		sub.status = statusPushing
+		objQ, err := objectclient.NewObjectAdderQueue(srpcClient)
+		if err != nil {
+			logger.Printf("Error creating object adder queue for: %s: %s\n",
+				sub, err)
+			if err == srpc.ErrorAccessToMethodDenied {
+				return false, statusPushDenied
+			}
+			return false, statusFailedToPush
+		}
+		for hashVal := range objectsToPush {
+			length, reader, err := sub.herd.objectServer.GetObject(hashVal)
+			if err != nil {
+				logger.Printf("Error getting object: %x: %s\n", hashVal, err)
+				objQ.Close()
+				return false, statusFailedToGetObject
+			}
+			_, err = objQ.Add(reader, length)
+			reader.Close()
+			if err != nil {
+				logger.Printf("Error pushing: %x to: %s: %s\n",
+					hashVal, sub, err)
+				objQ.Close()
+				return false, statusFailedToPush
+			}
+		}
+		if err := objQ.Close(); err != nil {
+			logger.Printf("Error pushing objects to: %s: %s\n", sub, err)
+			return false, statusFailedToPush
+		}
+	}
+	return returnAvailable, returnStatus
 }
 
 // Returns true if no update needs to be performed.
@@ -318,7 +370,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	sub.status = statusSendingUpdate
 	sub.lastUpdateTime = time.Now()
 	if err := client.CallUpdate(srpcClient, request, &reply); err != nil {
-		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub.hostname, err)
+		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub, err)
 		if err == srpc.ErrorAccessToMethodDenied {
 			return false, statusUpdateDenied
 		}
@@ -364,7 +416,6 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 		request.Hashes = append(request.Hashes, hash)
 	}
 	if err := client.CallCleanup(srpcClient, request, &reply); err != nil {
-		logger.Printf("Error calling %s:Subd.Cleanup()\t%s\n",
-			sub.hostname, err)
+		logger.Printf("Error calling %s:Subd.Cleanup()\t%s\n", sub, err)
 	}
 }
