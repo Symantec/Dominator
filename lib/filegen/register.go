@@ -1,7 +1,6 @@
 package filegen
 
 import (
-	"github.com/Symantec/Dominator/lib/hash"
 	"sort"
 )
 
@@ -11,7 +10,7 @@ func (m *Manager) registerGeneratorForPath(pathname string,
 		panic(pathname + " already registered")
 	}
 	notifyChan := make(chan struct{}, 1)
-	pathMgr := &pathManager{gen, make(map[string]hash.Hash)}
+	pathMgr := &pathManager{gen, make(map[string]expiringHash)}
 	m.pathManagers[pathname] = pathMgr
 	go m.processPathDataInvalidations(pathname, notifyChan)
 	return notifyChan
@@ -21,7 +20,7 @@ func (m *Manager) processPathDataInvalidations(pathname string,
 	ch <-chan struct{}) {
 	pathMgr := m.pathManagers[pathname]
 	for range ch {
-		pathMgr.machineHashes = make(map[string]hash.Hash)
+		pathMgr.machineHashes = make(map[string]expiringHash)
 		// TODO(rgooch): Notify RPC clients.
 	}
 }

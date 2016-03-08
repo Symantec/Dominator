@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Symantec/Dominator/lib/objectserver/memory"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"log"
 	"time"
@@ -18,6 +19,8 @@ type rpcType struct {
 func newManager(logger *log.Logger) *Manager {
 	manager := new(Manager)
 	manager.pathManagers = make(map[string]*pathManager)
+	manager.machineData = make(map[string]mdb.Machine)
+	manager.objectServer = memory.NewObjectServer()
 	manager.logger = logger
 	close(manager.registerGeneratorForPath("/etc/mdb.json", jsonType{}))
 	srpc.RegisterName("FileGenerator", &rpcType{manager})

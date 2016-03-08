@@ -12,8 +12,10 @@ package filegen
 import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	"io"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -28,13 +30,23 @@ type FileGenerator interface {
 		data []byte, validUntil time.Time, err error)
 }
 
+type expiringHash struct {
+	hash       hash.Hash
+	validUntil time.Time
+}
+
 type pathManager struct {
 	generator     FileGenerator
-	machineHashes map[string]hash.Hash
+	machineHashes map[string]expiringHash
 }
 
 type Manager struct {
+	rwMutex sync.RWMutex
+	// Protected by lock.
 	pathManagers map[string]*pathManager
+	machineData  map[string]mdb.Machine
+	// Not protected by lock.
+	objectServer objectserver.ObjectServer
 	logger       *log.Logger
 }
 
