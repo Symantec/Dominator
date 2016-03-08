@@ -36,8 +36,15 @@ type expiringHash struct {
 }
 
 type pathManager struct {
-	generator     FileGenerator
+	generator FileGenerator
+	rwMutex   sync.RWMutex
+	// Protected by lock.
 	machineHashes map[string]expiringHash
+}
+
+type notificationData struct {
+	pathname string
+	hostname string
 }
 
 type Manager struct {
@@ -45,6 +52,7 @@ type Manager struct {
 	// Protected by lock.
 	pathManagers map[string]*pathManager
 	machineData  map[string]mdb.Machine
+	notifiers    map[<-chan notificationData]chan<- notificationData
 	// Not protected by lock.
 	objectServer objectserver.ObjectServer
 	logger       *log.Logger
@@ -70,11 +78,14 @@ func (m *Manager) RegisterFileForPath(pathname string, sourceFile string) {
 // RegisterGeneratorForPath registers a FileGenerator for a specific pathname.
 // It returns a channel to which notification messages may be sent indicating
 // that the data should be regenerated, even if the machine data has not
-// changed. An internal goroutine reads from this channel, which terminates if
-// the channel is closed. The channel should be closed if the data should only
-// be regenerated if the machine data changes.
+// changed. If the empty string is sent to the channel, it indicates that data
+// should be regenerated for all machines, otherwise it indicates that data should
+// be regenerated for a specific machine.
+// An internal goroutine reads from the channel, which terminates if the channel
+// is closed. The channel should be closed if the data should only be regenerated
+// if the machine data changes.
 func (m *Manager) RegisterGeneratorForPath(pathname string,
-	gen FileGenerator) chan<- struct{} {
+	gen FileGenerator) chan<- string {
 	return m.registerGeneratorForPath(pathname, gen)
 }
 

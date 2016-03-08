@@ -20,6 +20,7 @@ func newManager(logger *log.Logger) *Manager {
 	manager := new(Manager)
 	manager.pathManagers = make(map[string]*pathManager)
 	manager.machineData = make(map[string]mdb.Machine)
+	manager.notifiers = make(map[<-chan notificationData]chan<- notificationData)
 	manager.objectServer = memory.NewObjectServer()
 	manager.logger = logger
 	close(manager.registerGeneratorForPath("/etc/mdb.json", jsonType{}))
