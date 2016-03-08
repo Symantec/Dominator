@@ -10,6 +10,7 @@
 package filegen
 
 import (
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"io"
 	"log"
@@ -27,9 +28,14 @@ type FileGenerator interface {
 		data []byte, validUntil time.Time, err error)
 }
 
+type pathManager struct {
+	generator     FileGenerator
+	machineHashes map[string]hash.Hash
+}
+
 type Manager struct {
-	fileGenerators map[string]FileGenerator
-	logger         *log.Logger
+	pathManagers map[string]*pathManager
+	logger       *log.Logger
 }
 
 // New creates a new *Manager. Only one should be created per application.
@@ -50,8 +56,14 @@ func (m *Manager) RegisterFileForPath(pathname string, sourceFile string) {
 }
 
 // RegisterGeneratorForPath registers a FileGenerator for a specific pathname.
-func (m *Manager) RegisterGeneratorForPath(pathname string, gen FileGenerator) {
-	m.registerGeneratorForPath(pathname, gen)
+// It returns a channel to which notification messages may be sent indicating
+// that the data should be regenerated, even if the machine data has not
+// changed. An internal goroutine reads from this channel, which terminates if
+// the channel is closed. The channel should be closed if the data should only
+// be regenerated if the machine data changes.
+func (m *Manager) RegisterGeneratorForPath(pathname string,
+	gen FileGenerator) chan<- struct{} {
+	return m.registerGeneratorForPath(pathname, gen)
 }
 
 // WriteHtml will write status information about the Manager to w, with
