@@ -46,6 +46,7 @@ func main() {
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	manager := filegen.New(logger)
 	httpd.AddHtmlWriter(manager)
+	httpd.AddHtmlWriter(circularBuffer)
 	for _, pathname := range flag.Args() {
 		if err := registerSourceDirectory(manager, pathname, "/"); err != nil {
 			fmt.Fprintln(os.Stderr, err)
