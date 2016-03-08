@@ -25,6 +25,7 @@ func StartServer(portNum uint, manager *filegen.Manager, daemon bool) error {
 	}
 	myState := &state{manager}
 	http.HandleFunc("/", myState.statusHandler)
+	http.HandleFunc("/listGenerators", myState.listGeneratorsHandler)
 	if daemon {
 		go http.Serve(listener, nil)
 	} else {

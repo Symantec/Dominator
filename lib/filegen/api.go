@@ -38,6 +38,11 @@ func New(logger *log.Logger) *Manager {
 	return newManager(logger)
 }
 
+// GetRegisteredPaths returns a slice of filenames which have generators.
+func (m *Manager) GetRegisteredPaths() []string {
+	return m.getRegisteredPaths()
+}
+
 // RegisterFileForPath registers a source file for a specific pathname. The
 // source file is used as the data source.
 func (m *Manager) RegisterFileForPath(pathname string, sourceFile string) {
