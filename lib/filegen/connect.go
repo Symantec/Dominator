@@ -7,6 +7,7 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"io/ioutil"
+	"sync"
 	"time"
 )
 
@@ -24,39 +25,67 @@ func (m *Manager) connect(conn *srpc.Conn) error {
 		m.rwMutex.Lock()
 		delete(m.notifiers, notifierChannel)
 		m.rwMutex.Unlock()
+		close(notifierChannel)
 	}()
+	transmitLock := new(sync.Mutex)
 	decoder := gob.NewDecoder(conn)
 	encoder := gob.NewEncoder(conn)
+	go m.handleNotifications(conn, decoder, encoder, transmitLock,
+		notifierChannel)
 	for ; ; conn.Flush() {
-		var request proto.ClientRequest
-		var serverMessage proto.ServerMessage
-		if err := decoder.Decode(&request); err != nil {
+		if err := m.handleMessage(decoder, encoder, transmitLock); err != nil {
 			return err
 		}
-		if request := request.YieldRequest; request != nil {
-			m.updateMachineData(request.Machine)
-			fileInfos := make([]proto.FileInfo, len(request.Pathnames))
-			serverMessage.YieldResponse = &proto.YieldResponse{
-				Hostname: request.Machine.Hostname,
-				Files:    fileInfos}
-			for index, pathname := range request.Pathnames {
-				fileInfos[index] = m.computeFile(request.Machine, pathname)
-			}
-		}
-		if request := request.GetObjectRequest; request != nil {
-			_, reader, err := m.objectServer.GetObject(request.Hash)
-			if err != nil {
-				m.logger.Println(err)
-			} else {
-				data, _ := ioutil.ReadAll(reader)
-				serverMessage.GetObjectResponse = &proto.GetObjectResponse{
-					Hash: request.Hash,
-					Data: data}
-				reader.Close()
-			}
-		}
-		return encoder.Encode(serverMessage)
 	}
+}
+
+func (m *Manager) handleNotifications(conn *srpc.Conn, decoder *gob.Decoder,
+	encoder *gob.Encoder, transmitLock *sync.Mutex,
+	notificationChannel <-chan notificationData) {
+	for notification := range notificationChannel {
+		var serverMessage proto.ServerMessage
+		serverMessage.InvalidateNotice = &proto.InvalidateNotice{
+			Pathname: notification.pathname,
+			Hostname: notification.hostname}
+		transmitLock.Lock()
+		encoder.Encode(serverMessage)
+		transmitLock.Unlock()
+		conn.Flush()
+	}
+}
+
+func (m *Manager) handleMessage(decoder *gob.Decoder, encoder *gob.Encoder,
+	transmitLock *sync.Mutex) error {
+	var request proto.ClientRequest
+	var serverMessage proto.ServerMessage
+	if err := decoder.Decode(&request); err != nil {
+		return err
+	}
+	if request := request.YieldRequest; request != nil {
+		m.updateMachineData(request.Machine)
+		fileInfos := make([]proto.FileInfo, len(request.Pathnames))
+		serverMessage.YieldResponse = &proto.YieldResponse{
+			Hostname: request.Machine.Hostname,
+			Files:    fileInfos}
+		for index, pathname := range request.Pathnames {
+			fileInfos[index] = m.computeFile(request.Machine, pathname)
+		}
+	}
+	if request := request.GetObjectRequest; request != nil {
+		_, reader, err := m.objectServer.GetObject(request.Hash)
+		if err != nil {
+			m.logger.Println(err)
+		} else {
+			data, _ := ioutil.ReadAll(reader)
+			serverMessage.GetObjectResponse = &proto.GetObjectResponse{
+				Hash: request.Hash,
+				Data: data}
+			reader.Close()
+		}
+	}
+	transmitLock.Lock()
+	defer transmitLock.Unlock()
+	return encoder.Encode(serverMessage)
 }
 
 func (m *Manager) updateMachineData(machine mdb.Machine) {
