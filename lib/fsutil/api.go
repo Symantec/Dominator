@@ -4,6 +4,7 @@ import (
 	"errors"
 	"hash"
 	"io"
+	"log"
 	"os"
 )
 
@@ -57,6 +58,13 @@ func LoadLines(filename string) ([]string, error) {
 // command-line programme "chattr -ai pathname...".
 func MakeMutable(pathname ...string) error {
 	return makeMutable(pathname...)
+}
+
+// WatchFile watches the file given by pathname and yields a new io.Reader when
+// a new inode is found and it is a regular file.
+// Any errors are logged to the logger if it is not nil.
+func WatchFile(pathname string, logger *log.Logger) <-chan io.Reader {
+	return watchFile(pathname, logger)
 }
 
 type ChecksumReader struct {
