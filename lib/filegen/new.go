@@ -17,15 +17,15 @@ type rpcType struct {
 }
 
 func newManager(logger *log.Logger) *Manager {
-	manager := new(Manager)
-	manager.pathManagers = make(map[string]*pathManager)
-	manager.machineData = make(map[string]mdb.Machine)
-	manager.notifiers = make(map[<-chan notificationData]chan<- notificationData)
-	manager.objectServer = memory.NewObjectServer()
-	manager.logger = logger
-	close(manager.registerGeneratorForPath("/etc/mdb.json", jsonType{}))
-	srpc.RegisterName("FileGenerator", &rpcType{manager})
-	return manager
+	m := new(Manager)
+	m.pathManagers = make(map[string]*pathManager)
+	m.machineData = make(map[string]mdb.Machine)
+	m.notifiers = make(map[<-chan notificationData]chan<- notificationData)
+	m.objectServer = memory.NewObjectServer()
+	m.logger = logger
+	close(m.registerGeneratorForPath("/etc/mdb.json", jsonType{}))
+	srpc.RegisterName("FileGenerator", &rpcType{m})
+	return m
 }
 
 func (jsonType) Generate(machine mdb.Machine, logger *log.Logger) (
