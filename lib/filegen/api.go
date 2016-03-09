@@ -12,7 +12,7 @@ package filegen
 import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/mdb"
-	"github.com/Symantec/Dominator/lib/objectserver"
+	"github.com/Symantec/Dominator/lib/objectserver/memory"
 	"io"
 	"log"
 	"sync"
@@ -54,7 +54,7 @@ type Manager struct {
 	machineData  map[string]mdb.Machine
 	notifiers    map[<-chan notificationData]chan<- notificationData
 	// Not protected by lock.
-	objectServer objectserver.ObjectServer
+	objectServer *memory.ObjectServer
 	logger       *log.Logger
 }
 
