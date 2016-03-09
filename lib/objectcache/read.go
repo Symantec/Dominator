@@ -6,22 +6,32 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/hash"
 	"io"
+	"io/ioutil"
 )
 
 func readObject(reader io.Reader, length uint64, expectedHash *hash.Hash) (
 	hash.Hash, []byte, error) {
 	var hashVal hash.Hash
+	var data []byte
+	var err error
 	if length < 1 {
-		return hashVal, nil, errors.New("zero length object cannot be added")
-	}
-	data := make([]byte, length)
-	nRead, err := io.ReadFull(reader, data)
-	if err != nil {
-		return hashVal, nil, err
-	}
-	if uint64(nRead) != length {
-		return hashVal, nil, fmt.Errorf(
-			"failed to read data, wanted: %d, got: %d bytes", length, nRead)
+		data, err = ioutil.ReadAll(reader)
+		if err != nil {
+			return hashVal, nil, err
+		}
+		if len(data) < 1 {
+			return hashVal, nil, errors.New("zero length object cannot be added")
+		}
+	} else {
+		data = make([]byte, length)
+		nRead, err := io.ReadFull(reader, data)
+		if err != nil {
+			return hashVal, nil, err
+		}
+		if uint64(nRead) != length {
+			return hashVal, nil, fmt.Errorf(
+				"failed to read data, wanted: %d, got: %d bytes", length, nRead)
+		}
 	}
 	hasher := sha512.New()
 	if hasher.Size() != len(hashVal) {
