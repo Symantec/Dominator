@@ -3,12 +3,12 @@ package mdbd
 import (
 	"encoding/gob"
 	"encoding/json"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/mdb"
+	"io"
 	"log"
-	"os"
 	"path"
 	"sort"
-	"syscall"
 	"time"
 )
 
@@ -24,69 +24,44 @@ type genericDecoder interface {
 
 func watchDaemon(mdbFileName string, mdbChannel chan<- *mdb.Mdb,
 	logger *log.Logger) {
-	var lastStat syscall.Stat_t
-	var lastMdbFile *os.File
 	var lastMdb *mdb.Mdb
-	for ; ; time.Sleep(time.Second) {
-		var stat syscall.Stat_t
-		if err := syscall.Stat(mdbFileName, &stat); err != nil {
-			logger.Printf("Error stating file: %s\t%s\n", mdbFileName, err)
+	for reader := range fsutil.WatchFile(mdbFileName, logger) {
+		mdb := loadFile(reader, mdbFileName, logger)
+		if mdb == nil {
 			continue
 		}
-		if stat.Ino != lastStat.Ino {
-			mdb, file := loadFile(mdbFileName, logger)
-			if file == nil {
-				continue
+		compareStartTime := time.Now()
+		if lastMdb == nil || !compare(lastMdb, mdb) {
+			if lastMdb != nil {
+				mdbCompareTimeDistribution.Add(time.Since(compareStartTime))
 			}
-			// By holding onto the file, we guarantee that the inode number
-			// for the file we've opened cannot be reused until we've seen a new
-			// inode.
-			if lastMdbFile != nil {
-				lastMdbFile.Close()
-			}
-			lastMdbFile = file
-			lastStat = stat
-			if mdb == nil {
-				continue
-			}
-			compareStartTime := time.Now()
-			if lastMdb == nil || !compare(lastMdb, mdb) {
-				if lastMdb != nil {
-					mdbCompareTimeDistribution.Add(time.Since(compareStartTime))
-				}
-				mdbChannel <- mdb
-				lastMdb = mdb
-			}
+			mdbChannel <- mdb
+			lastMdb = mdb
 		}
 	}
 }
 
-func loadFile(mdbFileName string, logger *log.Logger) (*mdb.Mdb, *os.File) {
-	file, err := os.Open(mdbFileName)
-	if err != nil {
-		logger.Printf("Error opening file\t%s\n", err)
-		return nil, nil
-	}
-	decoder := getDecoder(file)
+func loadFile(reader io.Reader, filename string, logger *log.Logger) *mdb.Mdb {
+	decoder := getDecoder(reader, filename)
 	var mdb mdb.Mdb
 	decodeStartTime := time.Now()
-	if err = decoder.Decode(&mdb.Machines); err != nil {
+	if err := decoder.Decode(&mdb.Machines); err != nil {
 		logger.Printf("Error decoding\t%s\n", err)
-		return nil, file
+		return nil
 	}
 	sortStartTime := time.Now()
 	mdbDecodeTimeDistribution.Add(sortStartTime.Sub(decodeStartTime))
 	sort.Sort(&mdb)
 	mdbSortTimeDistribution.Add(time.Since(sortStartTime))
-	return &mdb, file
+	return &mdb
 }
 
-func getDecoder(mdbFile *os.File) genericDecoder {
-	switch path.Ext(mdbFile.Name()) {
+func getDecoder(reader io.Reader, filename string) genericDecoder {
+	switch path.Ext(filename) {
 	case ".gob":
-		return gob.NewDecoder(mdbFile)
+		return gob.NewDecoder(reader)
 	default:
-		return json.NewDecoder(mdbFile)
+		return json.NewDecoder(reader)
 	}
 }
 
