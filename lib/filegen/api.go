@@ -70,7 +70,8 @@ func (m *Manager) GetRegisteredPaths() []string {
 }
 
 // RegisterFileForPath registers a source file for a specific pathname. The
-// source file is used as the data source.
+// source file is used as the data source. If the source file changes, the data
+// are re-read.
 func (m *Manager) RegisterFileForPath(pathname string, sourceFile string) {
 	m.registerFileForPath(pathname, sourceFile)
 }
