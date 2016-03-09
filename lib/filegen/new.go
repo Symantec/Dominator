@@ -23,7 +23,7 @@ func newManager(logger *log.Logger) *Manager {
 	m.notifiers = make(map[<-chan notificationData]chan<- notificationData)
 	m.objectServer = memory.NewObjectServer()
 	m.logger = logger
-	close(m.registerGeneratorForPath("/etc/mdb.json", jsonType{}))
+	close(m.registerDataGeneratorForPath("/etc/mdb.json", jsonType{}))
 	srpc.RegisterName("FileGenerator", &rpcType{m})
 	return m
 }

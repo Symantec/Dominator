@@ -36,7 +36,7 @@ type expiringHash struct {
 }
 
 type pathManager struct {
-	generator FileGenerator
+	generator hashGenerator
 	rwMutex   sync.RWMutex
 	// Protected by lock.
 	machineHashes map[string]expiringHash
@@ -87,7 +87,7 @@ func (m *Manager) RegisterFileForPath(pathname string, sourceFile string) {
 // if the machine data changes.
 func (m *Manager) RegisterGeneratorForPath(pathname string,
 	gen FileGenerator) chan<- string {
-	return m.registerGeneratorForPath(pathname, gen)
+	return m.registerDataGeneratorForPath(pathname, gen)
 }
 
 // WriteHtml will write status information about the Manager to w, with

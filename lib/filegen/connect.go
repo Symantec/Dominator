@@ -1,7 +1,6 @@
 package filegen
 
 import (
-	"bytes"
 	"encoding/gob"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -120,14 +119,8 @@ func (m *Manager) computeFile(machine mdb.Machine,
 		}
 	}
 	m.rwMutex.RUnlock()
-	data, validUntil, err := pathMgr.generator.Generate(machine, m.logger)
+	hashVal, validUntil, err := pathMgr.generator.generate(machine, m.logger)
 	if err != nil {
-		return fileInfo
-	}
-	hashVal, _, err := m.objectServer.AddObject(bytes.NewReader(data),
-		uint64(len(data)), nil)
-	if err != nil {
-		m.logger.Println(err)
 		return fileInfo
 	}
 	fileInfo.Hash = hashVal
