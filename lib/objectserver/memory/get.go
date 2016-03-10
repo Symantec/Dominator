@@ -19,18 +19,13 @@ func (objSrv *ObjectServer) getObjects(hashes []hash.Hash) (
 
 func (objSrv *ObjectServer) getObject(hashVal hash.Hash) (
 	uint64, io.ReadCloser, error) {
-	hashes := make([]hash.Hash, 1)
-	hashes[0] = hashVal
-	objectsReader, err := objSrv.GetObjects(hashes)
-	if err != nil {
-		return 0, nil, err
+	objSrv.rwLock.RLock()
+	defer objSrv.rwLock.RUnlock()
+	if data, ok := objSrv.objectMap[hashVal]; !ok {
+		return 0, nil, errors.New("missing object")
+	} else {
+		return uint64(len(data)), ioutil.NopCloser(bytes.NewReader(data)), nil
 	}
-	defer objectsReader.Close()
-	size, reader, err := objectsReader.NextObject()
-	if err != nil {
-		return 0, nil, err
-	}
-	return size, reader, nil
 }
 
 func (or *ObjectsReader) nextObject() (uint64, io.ReadCloser, error) {

@@ -27,6 +27,11 @@ func (objClient *ObjectClient) CheckObjects(hashes []hash.Hash) (
 	return objClient.checkObjects(hashes)
 }
 
+func (objClient *ObjectClient) GetObject(hashVal hash.Hash) (
+	uint64, io.ReadCloser, error) {
+	return objectserver.GetObject(objClient, hashVal)
+}
+
 func (objClient *ObjectClient) GetObjects(hashes []hash.Hash) (
 	objectserver.ObjectsReader, error) {
 	return objClient.getObjects(hashes)

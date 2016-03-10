@@ -29,14 +29,14 @@ func (objSrv *ObjectServer) CheckObjects(hashes []hash.Hash) ([]uint64, error) {
 	return objSrv.checkObjects(hashes)
 }
 
+func (objSrv *ObjectServer) GetObject(hashVal hash.Hash) (
+	uint64, io.ReadCloser, error) {
+	return objectserver.GetObject(objSrv, hashVal)
+}
+
 func (objSrv *ObjectServer) GetObjects(hashes []hash.Hash) (
 	objectserver.ObjectsReader, error) {
 	return objSrv.getObjects(hashes)
-}
-
-func (objSrv *ObjectServer) GetObject(hashVal hash.Hash) (
-	uint64, io.ReadCloser, error) {
-	return objSrv.getObject(hashVal)
 }
 
 func (objSrv *ObjectServer) ListObjects() []hash.Hash {
