@@ -90,6 +90,16 @@ func (m *Manager) RegisterGeneratorForPath(pathname string,
 	return m.registerDataGeneratorForPath(pathname, gen)
 }
 
+// RegisterTemplateFileForPath registers a template file for a specific pathname.
+// The template file is used to generate the data, modified by the machine data.
+// If the template file changes and watchForUpdates is true, the template file is
+// re-read and the data are regenerated.
+// The template file syntax is defined by the text/template standard package.
+func (m *Manager) RegisterTemplateFileForPath(pathname string,
+	templateFile string, watchForUpdates bool) error {
+	return m.registerTemplateFileForPath(pathname, templateFile, watchForUpdates)
+}
+
 // WriteHtml will write status information about the Manager to w, with
 // appropriate HTML markups.
 func (m *Manager) WriteHtml(writer io.Writer) {
