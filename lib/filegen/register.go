@@ -67,7 +67,8 @@ func (m *Manager) getRegisteredPaths() []string {
 	return pathnames
 }
 
-func (g *hashGeneratorWrapper) generate(machine mdb.Machine, logger *log.Logger) (
+func (g *hashGeneratorWrapper) generate(machine mdb.Machine,
+	logger *log.Logger) (
 	hash.Hash, time.Time, error) {
 	data, validUntil, err := g.dataGenerator.Generate(machine, logger)
 	if err != nil {

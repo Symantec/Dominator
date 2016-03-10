@@ -16,9 +16,10 @@ import (
 )
 
 type templateGenerator struct {
-	objectServer *memory.ObjectServer
-	logger       *log.Logger
-	template     *template.Template
+	objectServer    *memory.ObjectServer
+	logger          *log.Logger
+	template        *template.Template
+	notifierChannel chan<- string
 }
 
 func (m *Manager) registerTemplateFileForPath(pathname string,
@@ -26,6 +27,7 @@ func (m *Manager) registerTemplateFileForPath(pathname string,
 	tgen := &templateGenerator{
 		objectServer: m.objectServer,
 		logger:       m.logger}
+	tgen.notifierChannel = m.registerHashGeneratorForPath(pathname, tgen)
 	if watchForUpdates {
 		readerChannel := fsutil.WatchFile(templateFile, m.logger)
 		go tgen.handleReaders(readerChannel)
@@ -38,11 +40,11 @@ func (m *Manager) registerTemplateFileForPath(pathname string,
 			return err
 		}
 	}
-	m.registerHashGeneratorForPath(pathname, tgen)
 	return nil
 }
 
-func (tgen *templateGenerator) generate(machine mdb.Machine, logger *log.Logger) (
+func (tgen *templateGenerator) generate(machine mdb.Machine,
+	logger *log.Logger) (
 	hash.Hash, time.Time, error) {
 	if tgen.template == nil {
 		return hash.Hash{}, time.Time{}, errors.New("no template data yet")
@@ -74,5 +76,6 @@ func (tgen *templateGenerator) handleReader(reader io.Reader) error {
 		return err
 	}
 	tgen.template = tmpl
+	tgen.notifierChannel <- ""
 	return nil
 }

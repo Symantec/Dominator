@@ -12,9 +12,10 @@ import (
 )
 
 type fileGenerator struct {
-	objectServer *memory.ObjectServer
-	logger       *log.Logger
-	hash         *hash.Hash
+	objectServer    *memory.ObjectServer
+	logger          *log.Logger
+	hash            *hash.Hash
+	notifierChannel chan<- string
 }
 
 func (m *Manager) registerFileForPath(pathname string, sourceFile string) {
@@ -22,8 +23,9 @@ func (m *Manager) registerFileForPath(pathname string, sourceFile string) {
 	fgen := &fileGenerator{
 		objectServer: m.objectServer,
 		logger:       m.logger}
+	fgen.notifierChannel = m.registerHashGeneratorForPath(pathname, fgen)
 	go fgen.handleReaders(readerChannel)
-	m.registerHashGeneratorForPath(pathname, fgen)
+
 }
 
 func (fgen *fileGenerator) generate(machine mdb.Machine, logger *log.Logger) (
@@ -42,5 +44,6 @@ func (fgen *fileGenerator) handleReaders(readerChannel <-chan io.Reader) {
 			continue
 		}
 		fgen.hash = &hashVal
+		fgen.notifierChannel <- ""
 	}
 }

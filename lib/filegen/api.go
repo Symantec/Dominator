@@ -80,24 +80,26 @@ func (m *Manager) RegisterFileForPath(pathname string, sourceFile string) {
 // It returns a channel to which notification messages may be sent indicating
 // that the data should be regenerated, even if the machine data has not
 // changed. If the empty string is sent to the channel, it indicates that data
-// should be regenerated for all machines, otherwise it indicates that data should
-// be regenerated for a specific machine.
+// should be regenerated for all machines, otherwise it indicates that data
+// should be regenerated for a specific machine.
 // An internal goroutine reads from the channel, which terminates if the channel
-// is closed. The channel should be closed if the data should only be regenerated
-// if the machine data changes.
+// is closed. The channel should be closed if the data should only be
+// regenerated if the machine data changes.
 func (m *Manager) RegisterGeneratorForPath(pathname string,
 	gen FileGenerator) chan<- string {
 	return m.registerDataGeneratorForPath(pathname, gen)
 }
 
-// RegisterTemplateFileForPath registers a template file for a specific pathname.
+// RegisterTemplateFileForPath registers a template file for a specific
+// pathname.
 // The template file is used to generate the data, modified by the machine data.
-// If the template file changes and watchForUpdates is true, the template file is
-// re-read and the data are regenerated.
+// If the template file changes and watchForUpdates is true, the template file
+// is re-read and the data are regenerated.
 // The template file syntax is defined by the text/template standard package.
 func (m *Manager) RegisterTemplateFileForPath(pathname string,
 	templateFile string, watchForUpdates bool) error {
-	return m.registerTemplateFileForPath(pathname, templateFile, watchForUpdates)
+	return m.registerTemplateFileForPath(pathname, templateFile,
+		watchForUpdates)
 }
 
 // WriteHtml will write status information about the Manager to w, with
