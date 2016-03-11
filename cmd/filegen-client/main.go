@@ -54,7 +54,7 @@ func (m *machineType) handleUpdates(objSrv *memory.ObjectServer) {
 				fmt.Println(err)
 			} else {
 				io.Copy(os.Stderr, reader)
-				fmt.Println("-------------------------------------------------")
+				fmt.Println("\n-----------------------------------------------")
 			}
 		}
 	}
