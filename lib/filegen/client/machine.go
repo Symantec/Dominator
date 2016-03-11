@@ -1,6 +1,8 @@
 package client
 
 import (
+	"github.com/Symantec/Dominator/lib/hash"
+	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"reflect"
 )
 
@@ -21,6 +23,7 @@ func (m *Manager) addMachine(machine *machineType) {
 		panic(hostname + ": already added")
 	}
 	m.machineMap[hostname] = machine
+	m.sendYieldRequests(machine)
 }
 
 func (m *Manager) removeMachine(hostname string) {
@@ -34,17 +37,73 @@ func (m *Manager) removeMachine(hostname string) {
 
 func (m *Manager) updateMachine(machine *machineType) {
 	hostname := machine.machine.Hostname
-	if oldMachine, ok := m.machineMap[hostname]; !ok {
+	if mapMachine, ok := m.machineMap[hostname]; !ok {
 		panic(hostname + ": not present")
 	} else {
-		sendRequest := false
-		if machine.machine != oldMachine.machine {
-			sendRequest = true
+		sendRequests := false
+		if machine.machine != mapMachine.machine {
+			mapMachine.machine = machine.machine
+			sendRequests = true
 		}
-		if !reflect.DeepEqual(machine.computedFiles, oldMachine.computedFiles) {
-			sendRequest = true
-			machine.computedFiles = oldMachine.computedFiles
+		if !reflect.DeepEqual(machine.computedFiles, mapMachine.computedFiles) {
+			sendRequests = true
+			mapMachine.computedFiles = machine.computedFiles
 		}
-		_ = sendRequest // HACK
+		if sendRequests {
+			m.sendYieldRequests(mapMachine)
+		}
+	}
+}
+
+func (m *Manager) sendYieldRequests(machine *machineType) {
+	connectionMap := make(map[string][]string)
+	for pathname, sourceName := range machine.computedFiles {
+		connectionMap[sourceName] = append(connectionMap[sourceName], pathname)
+	}
+	for sourceName, pathnames := range connectionMap {
+		source, ok := m.sourceMap[sourceName]
+		if !ok {
+			source = new(sourceType)
+			sendChannel := make(chan proto.ClientRequest, 4096)
+			source.sendChannel = sendChannel
+			m.sourceMap[sourceName] = source
+			go sendClientRequests(sourceName, sendChannel,
+				m.serverMessageChannel, m.logger)
+		}
+		var request proto.ClientRequest
+		request.YieldRequest = &proto.YieldRequest{machine.machine, pathnames}
+		source.sendChannel <- request
+	}
+}
+
+func (m *Manager) handleYieldResponse(machine *machineType,
+	files []proto.FileInfo) {
+	objectsToWaitFor := make(map[hash.Hash]struct{})
+	for _, file := range files {
+		sourceName, ok := machine.computedFiles[file.Pathname]
+		if !ok {
+			m.logger.Printf("no source name for: %s on: %s\n",
+				file.Pathname, machine.machine.Hostname)
+			continue
+		}
+		source, ok := m.sourceMap[sourceName]
+		if !ok {
+			panic("no source for: " + sourceName)
+		}
+		hashes := make([]hash.Hash, 1)
+		hashes[0] = file.Hash
+		if lengths, err := m.objectServer.CheckObjects(hashes); err != nil {
+			panic(err)
+		} else if lengths[0] < 1 {
+			var request proto.ClientRequest
+			request.GetObjectRequest = &proto.GetObjectRequest{file.Hash}
+			source.sendChannel <- request
+			objectsToWaitFor[file.Hash] = struct{}{}
+		}
+	}
+	if len(objectsToWaitFor) > 0 {
+		// TODO(rgooch): Wait for objects and re-send this response.
+	} else {
+		machine.updateChannel <- files
 	}
 }

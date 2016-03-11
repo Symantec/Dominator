@@ -3,7 +3,6 @@ package client
 import (
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver"
-	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"log"
 )
@@ -21,21 +20,26 @@ type Machine struct {
 type machineType struct {
 	machine       mdb.Machine
 	updateChannel chan<- []proto.FileInfo
-	computedFiles map[string]string // source = map[pathname]
+	computedFiles map[string]string // map[pathname] => source
 }
 
-type connection struct {
-	client *srpc.Client
-	conn   *srpc.Conn
+type sourceType struct {
+	sendChannel chan<- proto.ClientRequest
+}
+
+type serverMessageType struct {
+	source        string
+	serverMessage proto.ServerMessage
 }
 
 type Manager struct {
-	connMap              map[string]*connection
+	sourceMap            map[string]*sourceType
 	objectServer         objectserver.ObjectServer
 	machineMap           map[string]*machineType
 	addMachineChannel    chan *machineType
 	removeMachineChannel chan string
 	updateMachineChannel chan *machineType
+	serverMessageChannel chan *serverMessageType
 	logger               *log.Logger
 }
 
