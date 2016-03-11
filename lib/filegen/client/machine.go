@@ -10,7 +10,7 @@ func buildMachine(machine Machine) *machineType {
 		computedFiles[computedFile.Pathname] = computedFile.Source
 	}
 	return &machineType{
-		machine:       machine.machine,
+		machine:       machine.Machine,
 		computedFiles: computedFiles}
 }
 

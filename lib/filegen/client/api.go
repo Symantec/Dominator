@@ -14,7 +14,7 @@ type ComputedFile struct {
 }
 
 type Machine struct {
-	machine       mdb.Machine
+	Machine       mdb.Machine
 	ComputedFiles []ComputedFile
 }
 
