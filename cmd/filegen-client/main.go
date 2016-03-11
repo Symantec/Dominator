@@ -48,7 +48,7 @@ func (m *machineType) handleUpdates(objSrv *memory.ObjectServer) {
 	for fileInfos := range m.updateChannel {
 		fmt.Printf("For machine: %s:\n", m.machine.Machine.Hostname)
 		for _, fileInfo := range fileInfos {
-			fmt.Printf("  pathname: %s, hash=%x. Contents:\n",
+			fmt.Printf("  pathname: %s\n    hash=%x\n    contents:\n",
 				fileInfo.Pathname, fileInfo.Hash)
 			if _, reader, err := objSrv.GetObject(fileInfo.Hash); err != nil {
 				fmt.Println(err)
