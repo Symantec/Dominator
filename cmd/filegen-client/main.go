@@ -61,6 +61,7 @@ func (m *machineType) handleUpdates(objSrv *memory.ObjectServer) {
 }
 
 func main() {
+	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() != 2 {
 		printUsage()
