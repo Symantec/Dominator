@@ -3,9 +3,11 @@ package client
 import (
 	"bytes"
 	"encoding/gob"
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
+	"io"
 	"log"
 	"time"
 )
@@ -19,6 +21,7 @@ func newManager(objSrv objectserver.ObjectServer, logger *log.Logger) *Manager {
 		removeMachineChannel: make(chan string),
 		updateMachineChannel: make(chan *machineType),
 		serverMessageChannel: make(chan *serverMessageType),
+		objectWaiters:        make(map[hash.Hash][]chan<- hash.Hash),
 		logger:               logger}
 	go m.manage()
 	return m
@@ -45,8 +48,14 @@ func (m *Manager) processMessage(serverMessage *serverMessageType) {
 		if _, _, err := m.objectServer.AddObject(
 			bytes.NewReader(msg.Data), 0, &msg.Hash); err != nil {
 			m.logger.Println(err)
+		} else {
+			if waiters, ok := m.objectWaiters[msg.Hash]; ok {
+				for _, channel := range waiters {
+					channel <- msg.Hash
+				}
+				delete(m.objectWaiters, msg.Hash)
+			}
 		}
-		// TODO(rgooch): Broadcast receipt of object.
 	}
 	if msg := serverMessage.serverMessage.InvalidateNotice; msg != nil {
 		// TODO(rgooch): Remove and implement.
@@ -118,7 +127,9 @@ func receiveServerMessages(source string, conn *srpc.Conn,
 	for {
 		var message proto.ServerMessage
 		if err := decoder.Decode(&message); err != nil {
-			logger.Println(err)
+			if err != io.EOF {
+				logger.Println(err)
+			}
 			return
 		}
 		serverMessageChannel <- &serverMessageType{source, message}

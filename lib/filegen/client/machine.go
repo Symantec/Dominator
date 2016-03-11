@@ -79,6 +79,7 @@ func (m *Manager) sendYieldRequests(machine *machineType) {
 func (m *Manager) handleYieldResponse(machine *machineType,
 	files []proto.FileInfo) {
 	objectsToWaitFor := make(map[hash.Hash]struct{})
+	waiterChannel := make(chan hash.Hash)
 	for _, file := range files {
 		sourceName, ok := machine.computedFiles[file.Pathname]
 		if !ok {
@@ -99,11 +100,31 @@ func (m *Manager) handleYieldResponse(machine *machineType,
 			request.GetObjectRequest = &proto.GetObjectRequest{file.Hash}
 			source.sendChannel <- request
 			objectsToWaitFor[file.Hash] = struct{}{}
+			if _, ok := m.objectWaiters[file.Hash]; !ok {
+				m.objectWaiters[file.Hash] = make([]chan<- hash.Hash, 0, 1)
+			}
+			m.objectWaiters[file.Hash] = append(m.objectWaiters[file.Hash],
+				waiterChannel)
 		}
 	}
 	if len(objectsToWaitFor) > 0 {
-		// TODO(rgooch): Wait for objects and re-send this response.
+		go waitForObjectsAndSendUpdate(waiterChannel, objectsToWaitFor,
+			machine.updateChannel, files)
 	} else {
 		machine.updateChannel <- files
+	}
+}
+
+func waitForObjectsAndSendUpdate(objectChannel <-chan hash.Hash,
+	objectsToWaitFor map[hash.Hash]struct{},
+	updateChannel chan<- []proto.FileInfo, files []proto.FileInfo) {
+	defer func() {
+		recover() // If updateChannel is closed, it means the machine went away.
+	}()
+	for hashVal := range objectChannel {
+		delete(objectsToWaitFor, hashVal)
+		if len(objectsToWaitFor) < 1 {
+			updateChannel <- files // This will panic if the machine went away.
+		}
 	}
 }

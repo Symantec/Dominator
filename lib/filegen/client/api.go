@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
@@ -40,6 +41,7 @@ type Manager struct {
 	removeMachineChannel chan string
 	updateMachineChannel chan *machineType
 	serverMessageChannel chan *serverMessageType
+	objectWaiters        map[hash.Hash][]chan<- hash.Hash
 	logger               *log.Logger
 }
 
