@@ -2,9 +2,11 @@ package filegen
 
 import (
 	"encoding/gob"
+	"errors"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
+	"io"
 	"io/ioutil"
 	"sync"
 	"time"
@@ -27,19 +29,23 @@ func (m *Manager) connect(conn *srpc.Conn) error {
 		close(notifierChannel)
 	}()
 	transmitLock := new(sync.Mutex)
+	// The client is must keep the same encoder/decoder pair over the lifetime
+	// of the connection.
 	decoder := gob.NewDecoder(conn)
 	encoder := gob.NewEncoder(conn)
-	go m.handleNotifications(conn, decoder, encoder, transmitLock,
-		notifierChannel)
+	go m.handleNotifications(conn, encoder, transmitLock, notifierChannel)
 	for ; ; conn.Flush() {
 		if err := m.handleMessage(decoder, encoder, transmitLock); err != nil {
-			return err
+			if err == io.EOF {
+				return nil
+			}
+			return errors.New("error handling message: " + err.Error())
 		}
 	}
 }
 
-func (m *Manager) handleNotifications(conn *srpc.Conn, decoder *gob.Decoder,
-	encoder *gob.Encoder, transmitLock *sync.Mutex,
+func (m *Manager) handleNotifications(conn *srpc.Conn, encoder *gob.Encoder,
+	transmitLock *sync.Mutex,
 	notificationChannel <-chan notificationData) {
 	for notification := range notificationChannel {
 		var serverMessage proto.ServerMessage
@@ -58,7 +64,10 @@ func (m *Manager) handleMessage(decoder *gob.Decoder, encoder *gob.Encoder,
 	var request proto.ClientRequest
 	var serverMessage proto.ServerMessage
 	if err := decoder.Decode(&request); err != nil {
-		return err
+		if err == io.EOF {
+			return err
+		}
+		return errors.New("error decoding ClientRequest: " + err.Error())
 	}
 	if request := request.YieldRequest; request != nil {
 		m.updateMachineData(request.Machine)
