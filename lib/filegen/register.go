@@ -5,6 +5,7 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver/memory"
+	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"log"
 	"sort"
 	"time"
@@ -44,15 +45,41 @@ func (m *Manager) processPathDataInvalidations(pathname string,
 	machineNameChannel <-chan string) {
 	pathMgr := m.pathManagers[pathname]
 	for machineName := range machineNameChannel {
-		notification := notificationData{pathname, machineName}
 		pathMgr.rwMutex.Lock()
 		if machineName == "" {
-			pathMgr.machineHashes = make(map[string]expiringHash)
+			for _, mdbData := range m.machineData {
+				hashVal, validUntil, err := pathMgr.generator.generate(mdbData,
+					m.logger)
+				if err != nil {
+					continue
+				}
+				pathMgr.machineHashes[mdbData.Hostname] = expiringHash{
+					hashVal, validUntil}
+				files := make([]proto.FileInfo, 1)
+				files[0].Pathname = pathname
+				files[0].Hash = hashVal
+				files[0].ValidUntil = validUntil
+				yieldResponse := &proto.YieldResponse{mdbData.Hostname, files}
+				for _, notificationChannel := range m.notifiers {
+					notificationChannel <- yieldResponse
+				}
+			}
 		} else {
-			delete(pathMgr.machineHashes, machineName)
-		}
-		for _, notificationChannel := range m.notifiers {
-			notificationChannel <- notification
+			hashVal, validUntil, err := pathMgr.generator.generate(
+				m.machineData[machineName], m.logger)
+			if err != nil {
+				continue
+			}
+			pathMgr.machineHashes[machineName] = expiringHash{
+				hashVal, validUntil}
+			files := make([]proto.FileInfo, 1)
+			files[0].Pathname = pathname
+			files[0].Hash = hashVal
+			files[0].ValidUntil = validUntil
+			yieldResponse := &proto.YieldResponse{machineName, files}
+			for _, notificationChannel := range m.notifiers {
+				notificationChannel <- yieldResponse
+			}
 		}
 		pathMgr.rwMutex.Unlock()
 	}

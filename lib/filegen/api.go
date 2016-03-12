@@ -13,6 +13,7 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver/memory"
+	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"io"
 	"log"
 	"sync"
@@ -42,17 +43,12 @@ type pathManager struct {
 	machineHashes map[string]expiringHash
 }
 
-type notificationData struct {
-	pathname string
-	hostname string
-}
-
 type Manager struct {
 	rwMutex sync.RWMutex
 	// Protected by lock.
 	pathManagers map[string]*pathManager
 	machineData  map[string]mdb.Machine
-	notifiers    map[<-chan notificationData]chan<- notificationData
+	notifiers    map[<-chan *proto.YieldResponse]chan<- *proto.YieldResponse
 	// Not protected by lock.
 	objectServer *memory.ObjectServer
 	logger       *log.Logger

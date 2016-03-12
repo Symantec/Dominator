@@ -18,7 +18,7 @@ func (t *rpcType) Connect(conn *srpc.Conn) error {
 
 func (m *Manager) connect(conn *srpc.Conn) error {
 	defer conn.Flush()
-	notifierChannel := make(chan notificationData, 1)
+	notifierChannel := make(chan *proto.YieldResponse, 1)
 	m.rwMutex.Lock()
 	m.notifiers[notifierChannel] = notifierChannel
 	m.rwMutex.Unlock()
@@ -29,7 +29,7 @@ func (m *Manager) connect(conn *srpc.Conn) error {
 		close(notifierChannel)
 	}()
 	transmitLock := new(sync.Mutex)
-	// The client is must keep the same encoder/decoder pair over the lifetime
+	// The client must keep the same encoder/decoder pair over the lifetime
 	// of the connection.
 	decoder := gob.NewDecoder(conn)
 	encoder := gob.NewEncoder(conn)
@@ -46,16 +46,16 @@ func (m *Manager) connect(conn *srpc.Conn) error {
 
 func (m *Manager) handleNotifications(conn *srpc.Conn, encoder *gob.Encoder,
 	transmitLock *sync.Mutex,
-	notificationChannel <-chan notificationData) {
-	for notification := range notificationChannel {
+	notificationChannel <-chan *proto.YieldResponse) {
+	for yieldResponse := range notificationChannel {
 		var serverMessage proto.ServerMessage
-		serverMessage.InvalidateNotice = &proto.InvalidateNotice{
-			Pathname: notification.pathname,
-			Hostname: notification.hostname}
+		serverMessage.YieldResponse = yieldResponse
 		transmitLock.Lock()
 		encoder.Encode(serverMessage)
 		transmitLock.Unlock()
-		conn.Flush()
+		if len(notificationChannel) < 1 {
+			conn.Flush()
+		}
 	}
 }
 
