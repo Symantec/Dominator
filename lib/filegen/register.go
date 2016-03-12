@@ -60,8 +60,9 @@ func (m *Manager) processPathDataInvalidations(pathname string,
 				files[0].Hash = hashVal
 				files[0].ValidUntil = validUntil
 				yieldResponse := &proto.YieldResponse{mdbData.Hostname, files}
-				for _, notificationChannel := range m.notifiers {
-					notificationChannel <- yieldResponse
+				message := &proto.ServerMessage{YieldResponse: yieldResponse}
+				for _, clientChannel := range m.clients {
+					clientChannel <- message
 				}
 			}
 		} else {
@@ -77,8 +78,9 @@ func (m *Manager) processPathDataInvalidations(pathname string,
 			files[0].Hash = hashVal
 			files[0].ValidUntil = validUntil
 			yieldResponse := &proto.YieldResponse{machineName, files}
-			for _, notificationChannel := range m.notifiers {
-				notificationChannel <- yieldResponse
+			message := &proto.ServerMessage{YieldResponse: yieldResponse}
+			for _, clientChannel := range m.clients {
+				clientChannel <- message
 			}
 		}
 		pathMgr.rwMutex.Unlock()

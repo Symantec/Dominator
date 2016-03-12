@@ -48,7 +48,7 @@ type Manager struct {
 	// Protected by lock.
 	pathManagers map[string]*pathManager
 	machineData  map[string]mdb.Machine
-	notifiers    map[<-chan *proto.YieldResponse]chan<- *proto.YieldResponse
+	clients      map[<-chan *proto.ServerMessage]chan<- *proto.ServerMessage
 	// Not protected by lock.
 	objectServer *memory.ObjectServer
 	logger       *log.Logger

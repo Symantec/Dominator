@@ -8,7 +8,7 @@ import (
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"io"
 	"io/ioutil"
-	"sync"
+	"log"
 	"time"
 )
 
@@ -18,24 +18,22 @@ func (t *rpcType) Connect(conn *srpc.Conn) error {
 
 func (m *Manager) connect(conn *srpc.Conn) error {
 	defer conn.Flush()
-	notifierChannel := make(chan *proto.YieldResponse, 1)
+	clientChannel := make(chan *proto.ServerMessage, 4096)
 	m.rwMutex.Lock()
-	m.notifiers[notifierChannel] = notifierChannel
+	m.clients[clientChannel] = clientChannel
 	m.rwMutex.Unlock()
 	defer func() {
 		m.rwMutex.Lock()
-		delete(m.notifiers, notifierChannel)
+		delete(m.clients, clientChannel)
 		m.rwMutex.Unlock()
-		close(notifierChannel)
+		close(clientChannel)
 	}()
-	transmitLock := new(sync.Mutex)
 	// The client must keep the same encoder/decoder pair over the lifetime
 	// of the connection.
 	decoder := gob.NewDecoder(conn)
-	encoder := gob.NewEncoder(conn)
-	go m.handleNotifications(conn, encoder, transmitLock, notifierChannel)
-	for ; ; conn.Flush() {
-		if err := m.handleMessage(decoder, encoder, transmitLock); err != nil {
+	go handleTransmits(conn, clientChannel, m.logger)
+	for {
+		if err := m.handleMessage(decoder, clientChannel); err != nil {
 			if err == io.EOF {
 				return nil
 			}
@@ -44,31 +42,35 @@ func (m *Manager) connect(conn *srpc.Conn) error {
 	}
 }
 
-func (m *Manager) handleNotifications(conn *srpc.Conn, encoder *gob.Encoder,
-	transmitLock *sync.Mutex,
-	notificationChannel <-chan *proto.YieldResponse) {
-	for yieldResponse := range notificationChannel {
-		var serverMessage proto.ServerMessage
-		serverMessage.YieldResponse = yieldResponse
-		transmitLock.Lock()
-		encoder.Encode(serverMessage)
-		transmitLock.Unlock()
-		if len(notificationChannel) < 1 {
+func handleTransmits(conn *srpc.Conn, messageChan <-chan *proto.ServerMessage,
+	logger *log.Logger) {
+	encoder := gob.NewEncoder(conn)
+	for message := range messageChan {
+		if err := encoder.Encode(message); err != nil {
+			if err == io.EOF {
+				// Drain and terminate.
+				for range messageChan {
+				}
+				return
+			}
+			logger.Println(err)
+		}
+		if len(messageChan) < 1 {
 			conn.Flush()
 		}
 	}
 }
 
-func (m *Manager) handleMessage(decoder *gob.Decoder, encoder *gob.Encoder,
-	transmitLock *sync.Mutex) error {
+func (m *Manager) handleMessage(decoder *gob.Decoder,
+	messageChan chan<- *proto.ServerMessage) error {
 	var request proto.ClientRequest
-	var serverMessage proto.ServerMessage
 	if err := decoder.Decode(&request); err != nil {
 		if err == io.EOF {
 			return err
 		}
 		return errors.New("error decoding ClientRequest: " + err.Error())
 	}
+	serverMessage := new(proto.ServerMessage)
 	if request := request.YieldRequest; request != nil {
 		m.updateMachineData(request.Machine)
 		fileInfos := make([]proto.FileInfo, len(request.Pathnames))
@@ -82,7 +84,7 @@ func (m *Manager) handleMessage(decoder *gob.Decoder, encoder *gob.Encoder,
 	if request := request.GetObjectRequest; request != nil {
 		_, reader, err := m.objectServer.GetObject(request.Hash)
 		if err != nil {
-			m.logger.Println(err)
+			return err
 		} else {
 			data, _ := ioutil.ReadAll(reader)
 			serverMessage.GetObjectResponse = &proto.GetObjectResponse{
@@ -91,9 +93,8 @@ func (m *Manager) handleMessage(decoder *gob.Decoder, encoder *gob.Encoder,
 			reader.Close()
 		}
 	}
-	transmitLock.Lock()
-	defer transmitLock.Unlock()
-	return encoder.Encode(serverMessage)
+	messageChan <- serverMessage
+	return nil
 }
 
 func (m *Manager) updateMachineData(machine mdb.Machine) {

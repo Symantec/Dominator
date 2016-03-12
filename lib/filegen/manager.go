@@ -21,8 +21,8 @@ func newManager(logger *log.Logger) *Manager {
 	m := new(Manager)
 	m.pathManagers = make(map[string]*pathManager)
 	m.machineData = make(map[string]mdb.Machine)
-	m.notifiers = make(
-		map[<-chan *proto.YieldResponse]chan<- *proto.YieldResponse)
+	m.clients = make(
+		map[<-chan *proto.ServerMessage]chan<- *proto.ServerMessage)
 	m.objectServer = memory.NewObjectServer()
 	m.logger = logger
 	close(m.registerDataGeneratorForPath("/etc/mdb.json", jsonType{}))
