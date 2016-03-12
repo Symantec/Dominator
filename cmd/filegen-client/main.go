@@ -25,6 +25,8 @@ var (
 		"Name of file containing the user SSL key")
 	mdbFile = flag.String("mdbFile", "/var/lib/Dominator/mdb",
 		"File to read MDB data from (default format is JSON)")
+
+	outputSemaphore = make(chan struct{}, 1)
 )
 
 func printUsage() {
@@ -46,6 +48,7 @@ type machineType struct {
 
 func (m *machineType) handleUpdates(objSrv *memory.ObjectServer) {
 	for fileInfos := range m.updateChannel {
+		outputSemaphore <- struct{}{}
 		fmt.Printf("For machine: %s:\n", m.machine.Machine.Hostname)
 		for _, fileInfo := range fileInfos {
 			fmt.Printf("  pathname: %s\n    hash=%x\n    contents:\n",
@@ -57,6 +60,7 @@ func (m *machineType) handleUpdates(objSrv *memory.ObjectServer) {
 				fmt.Println("\n-----------------------------------------------")
 			}
 		}
+		<-outputSemaphore
 	}
 }
 
