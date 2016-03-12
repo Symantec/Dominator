@@ -25,11 +25,6 @@ type GetObjectResponse struct {
 	Data []byte
 }
 
-type InvalidateNotice struct {
-	Pathname string
-	Hostname string
-}
-
 type FileInfo struct {
 	Pathname   string
 	Hash       hash.Hash
@@ -45,6 +40,5 @@ type YieldResponse struct {
 // due to internal state changes in the server.
 type ServerMessage struct {
 	GetObjectResponse *GetObjectResponse
-	InvalidateNotice  *InvalidateNotice
 	YieldResponse     *YieldResponse
 }

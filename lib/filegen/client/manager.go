@@ -43,7 +43,6 @@ func (m *Manager) manage() {
 }
 
 func (m *Manager) processMessage(serverMessage *serverMessageType) {
-	source := serverMessage.source
 	if msg := serverMessage.serverMessage.GetObjectResponse; msg != nil {
 		if _, _, err := m.objectServer.AddObject(
 			bytes.NewReader(msg.Data), 0, &msg.Hash); err != nil {
@@ -56,10 +55,6 @@ func (m *Manager) processMessage(serverMessage *serverMessageType) {
 				delete(m.objectWaiters, msg.Hash)
 			}
 		}
-	}
-	if msg := serverMessage.serverMessage.InvalidateNotice; msg != nil {
-		// TODO(rgooch): Remove and implement.
-		m.logger.Printf("InvalidateNotice from: %s\n", source)
 	}
 	if msg := serverMessage.serverMessage.YieldResponse; msg != nil {
 		if machine, ok := m.machineMap[msg.Hostname]; ok {
