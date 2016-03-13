@@ -28,9 +28,7 @@ func (m *Manager) addMachine(machine *machineType) {
 		panic(hostname + ": already added")
 	}
 	m.machineMap[hostname] = machine
-	for sourceName := range machine.sourceToPaths {
-		m.getSource(sourceName)
-	}
+	m.sendYieldRequests(machine)
 }
 
 func (m *Manager) removeMachine(hostname string) {
@@ -67,15 +65,12 @@ func (m *Manager) updateMachine(machine *machineType) {
 }
 
 func (m *Manager) sendYieldRequests(machine *machineType) {
-	connectionMap := make(map[string][]string)
-	for pathname, sourceName := range machine.computedFiles {
-		connectionMap[sourceName] = append(connectionMap[sourceName], pathname)
-	}
-	for sourceName, pathnames := range connectionMap {
-		source := m.getSource(sourceName)
-		request := &proto.ClientRequest{
-			YieldRequest: &proto.YieldRequest{machine.machine, pathnames}}
-		source.sendChannel <- request
+	for sourceName, pathnames := range machine.sourceToPaths {
+		if source, existing := m.getSource(sourceName); existing {
+			request := &proto.ClientRequest{
+				YieldRequest: &proto.YieldRequest{machine.machine, pathnames}}
+			source.sendChannel <- request
+		}
 	}
 }
 
