@@ -8,7 +8,6 @@ import (
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"io"
 	"io/ioutil"
-	"log"
 	"time"
 )
 
@@ -26,37 +25,41 @@ func (m *Manager) connect(conn *srpc.Conn) error {
 		m.rwMutex.Lock()
 		delete(m.clients, clientChannel)
 		m.rwMutex.Unlock()
-		close(clientChannel)
 	}()
+	closeNotifyChannel := make(chan struct{})
 	// The client must keep the same encoder/decoder pair over the lifetime
 	// of the connection.
-	decoder := gob.NewDecoder(conn)
-	go handleTransmits(conn, clientChannel, m.logger)
+	go m.handleClientRequests(gob.NewDecoder(conn), clientChannel,
+		closeNotifyChannel)
+	encoder := gob.NewEncoder(conn)
 	for {
-		if err := m.handleRequest(decoder, clientChannel); err != nil {
-			if err == io.EOF {
-				return nil
+		select {
+		case serverMessage := <-clientChannel:
+			if err := encoder.Encode(serverMessage); err != nil {
+				m.logger.Printf("error encoding ServerMessage: %s\n", err)
+				return err
 			}
-			return errors.New("error handling message: " + err.Error())
+			if len(clientChannel) < 1 {
+				if err := conn.Flush(); err != nil {
+					m.logger.Printf("error flushing: %s\n", err)
+					return err
+				}
+			}
+		case <-closeNotifyChannel:
+			return nil
 		}
 	}
 }
 
-func handleTransmits(conn *srpc.Conn, messageChan <-chan *proto.ServerMessage,
-	logger *log.Logger) {
-	encoder := gob.NewEncoder(conn)
-	for message := range messageChan {
-		if err := encoder.Encode(message); err != nil {
-			if err == io.EOF {
-				// Drain and terminate.
-				for range messageChan {
-				}
-				return
+func (m *Manager) handleClientRequests(decoder *gob.Decoder,
+	messageChan chan<- *proto.ServerMessage,
+	closeNotifyChannel chan<- struct{}) {
+	for {
+		if err := m.handleRequest(decoder, messageChan); err != nil {
+			if err != io.EOF {
+				m.logger.Println(err)
 			}
-			logger.Println(err)
-		}
-		if len(messageChan) < 1 {
-			conn.Flush()
+			closeNotifyChannel <- struct{}{}
 		}
 	}
 }
