@@ -155,7 +155,9 @@ func handleServerMessages(sourceName string, decoder *gob.Decoder,
 	for {
 		var message proto.ServerMessage
 		if err := decoder.Decode(&message); err != nil {
-			if err != io.EOF {
+			if err == io.EOF {
+				logger.Printf("connection to source: %s closed\n", sourceName)
+			} else {
 				logger.Println(err)
 			}
 			closeNotifyChannel <- struct{}{}
