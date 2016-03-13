@@ -4,8 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
+	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/image"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
@@ -22,6 +24,29 @@ var (
 	logUnknownSubConnectErrors = flag.Bool("logUnknownSubConnectErrors", false,
 		"If true, log unknown sub connection errors")
 )
+
+func (sub *Sub) getComputedFiles(im *image.Image) []filegenclient.ComputedFile {
+	if im == nil {
+		return nil
+	}
+	numComputed := im.FileSystem.NumComputedRegularInodes()
+	if numComputed < 1 {
+		return nil
+	}
+	computedFiles := make([]filegenclient.ComputedFile, 0, numComputed)
+	inodeToFilenamesTable := im.FileSystem.InodeToFilenamesTable()
+	for inum, inode := range im.FileSystem.InodeTable {
+		if inode, ok := inode.(*filesystem.ComputedRegularInode); ok {
+			if filenames, ok := inodeToFilenamesTable[inum]; ok {
+				if len(filenames) == 1 {
+					computedFiles = append(computedFiles,
+						filegenclient.ComputedFile{filenames[0], inode.Source})
+				}
+			}
+		}
+	}
+	return computedFiles
+}
 
 func (sub *Sub) tryMakeBusy() bool {
 	sub.busyMutex.Lock()
@@ -42,6 +67,9 @@ func (sub *Sub) makeUnbusy() {
 }
 
 func (sub *Sub) connectAndPoll() {
+	if sub.processFileUpdates() {
+		sub.generationCount = 0 // Force a full poll.
+	}
 	previousStatus := sub.status
 	sub.status = statusConnecting
 	hostname := strings.SplitN(sub.mdb.Hostname, "*", 2)[0]
@@ -97,6 +125,51 @@ func (sub *Sub) connectAndPoll() {
 	sub.status = statusPolling
 	sub.poll(srpcClient, previousStatus)
 	<-sub.herd.pollSemaphore
+}
+
+func (sub *Sub) processFileUpdates() bool {
+	haveUpdates := false
+	for {
+		image := sub.herd.getImageNoError(sub.mdb.RequiredImage)
+		if image != nil && sub.computedInodes == nil {
+			sub.computedInodes = make(map[string]*filesystem.RegularInode)
+			sub.herd.computedFilesManager.Update(
+				filegenclient.Machine{sub.mdb, sub.getComputedFiles(image)})
+		}
+		select {
+		case fileInfos := <-sub.fileUpdateChannel:
+			if image == nil {
+				continue
+			}
+			filenameToInodeTable := image.FileSystem.FilenameToInodeTable()
+			for _, fileInfo := range fileInfos {
+				inum, ok := filenameToInodeTable[fileInfo.Pathname]
+				if !ok {
+					continue
+				}
+				genericInode, ok := image.FileSystem.InodeTable[inum]
+				if !ok {
+					continue
+				}
+				cInode, ok := genericInode.(*filesystem.ComputedRegularInode)
+				if !ok {
+					continue
+				}
+				rInode := new(filesystem.RegularInode)
+				rInode.Mode = cInode.Mode
+				rInode.Uid = cInode.Uid
+				rInode.Gid = cInode.Gid
+				rInode.MtimeSeconds = -1 // The time is set during the compute.
+				rInode.Size = fileInfo.Length
+				rInode.Hash = fileInfo.Hash
+				sub.computedInodes[fileInfo.Pathname] = rInode
+				haveUpdates = true
+			}
+		default:
+			return haveUpdates
+		}
+	}
+	return haveUpdates
 }
 
 func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
@@ -223,7 +296,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(srpcClient,
-		sub.mdb.RequiredImage); !idle {
+		sub.mdb.RequiredImage, true); !idle {
 		sub.status = status
 		sub.reclaim()
 		return
@@ -235,7 +308,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(srpcClient,
-		sub.mdb.PlannedImage); !idle {
+		sub.mdb.PlannedImage, false); !idle {
 		if status != statusImageNotReady {
 			sub.status = status
 			sub.reclaim()
@@ -258,14 +331,14 @@ func (sub *Sub) reclaim() {
 }
 
 // Returns true if all required objects are available.
-func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
+func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
+	pushComputedFiles bool) (
 	bool, subStatus) {
 	image := sub.herd.getImageNoError(imageName)
 	if image == nil {
 		return false, statusImageNotReady
 	}
 	logger := sub.herd.logger
-	logger.Println("Computing missing objects") // HACK
 	objectsToFetch := make(map[hash.Hash]struct{})
 	objectsToPush := make(map[hash.Hash]struct{})
 	for inum, inode := range image.FileSystem.InodeTable {
@@ -273,19 +346,20 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 			if rInode.Size > 0 {
 				objectsToFetch[rInode.Hash] = struct{}{}
 			}
-		} else if _, ok := inode.(*filesystem.ComputedRegularInode); ok {
-			pathname := image.FileSystem.InodeToFilenamesTable()[inum][0]
-			if inode, ok := sub.computedInodes[pathname]; !ok {
-				logger.Printf(
-					"fetchMissingObjects(%s): missing computed file: %s\n",
-					sub, pathname)
-				return false, statusMissingComputedFile
-			} else {
-				objectsToPush[inode.Hash] = struct{}{}
+		} else if pushComputedFiles {
+			if _, ok := inode.(*filesystem.ComputedRegularInode); ok {
+				pathname := image.FileSystem.InodeToFilenamesTable()[inum][0]
+				if inode, ok := sub.computedInodes[pathname]; !ok {
+					logger.Printf(
+						"fetchMissingObjects(%s): missing computed file: %s\n",
+						sub, pathname)
+					return false, statusMissingComputedFile
+				} else {
+					objectsToPush[inode.Hash] = struct{}{}
+				}
 			}
 		}
 	}
-	logger.Printf("computed objects: %d\n", len(objectsToPush))
 	for _, hash := range sub.objectCache {
 		delete(objectsToFetch, hash)
 		delete(objectsToPush, hash)
@@ -298,7 +372,6 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 			}
 		}
 	}
-	logger.Printf("objects to push: %d\n", len(objectsToPush))
 	var returnAvailable bool = true
 	var returnStatus subStatus = statusSynced
 	if len(objectsToFetch) > 0 {
@@ -352,6 +425,13 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string) (
 		if err := objQ.Close(); err != nil {
 			logger.Printf("Error pushing objects to: %s: %s\n", sub, err)
 			return false, statusFailedToPush
+		}
+		if returnAvailable {
+			// Update local copy of objectcache, since there will not be
+			// another Poll() before the update computation.
+			for hashVal := range objectsToPush {
+				sub.objectCache = append(sub.objectCache, hashVal)
+			}
 		}
 	}
 	return returnAvailable, returnStatus

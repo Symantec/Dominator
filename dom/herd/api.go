@@ -7,6 +7,7 @@ import (
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectserver"
+	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"io"
 	"log"
 	"sync"
@@ -60,6 +61,7 @@ type Sub struct {
 	herd                         *Herd
 	mdb                          mdb.Machine
 	computedInodes               map[string]*filesystem.RegularInode
+	fileUpdateChannel            <-chan []proto.FileInfo
 	busyMutex                    sync.Mutex
 	busy                         bool
 	busyStartTime                time.Time

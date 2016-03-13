@@ -117,6 +117,7 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 					state.sub, pathname)
 				return true
 			}
+			setComputedFileMtime(inode, subEntry)
 			newEntry := new(filesystem.DirectoryEntry)
 			newEntry.Name = name
 			newEntry.InodeNumber = requiredEntry.InodeNumber
@@ -141,6 +142,24 @@ func compareDirectories(request *subproto.UpdateRequest, state *state,
 		}
 	}
 	return false
+}
+
+func setComputedFileMtime(requiredInode *filesystem.RegularInode,
+	subEntry *filesystem.DirectoryEntry) {
+	if requiredInode.MtimeSeconds >= 0 {
+		return
+	}
+	if subEntry != nil {
+		subInode := subEntry.Inode()
+		if subInode, ok := subInode.(*filesystem.RegularInode); ok {
+			if requiredInode.Hash == subInode.Hash {
+				requiredInode.MtimeNanoSeconds = subInode.MtimeNanoSeconds
+				requiredInode.MtimeSeconds = subInode.MtimeSeconds
+				return
+			}
+		}
+	}
+	requiredInode.MtimeSeconds = time.Now().Unix()
 }
 
 func addEntry(request *subproto.UpdateRequest, state *state,
