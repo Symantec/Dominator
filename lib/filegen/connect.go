@@ -132,14 +132,17 @@ func (m *Manager) computeFile(machine mdb.Machine,
 		}
 	}
 	m.rwMutex.RUnlock()
-	hashVal, validUntil, err := pathMgr.generator.generate(machine, m.logger)
+	hashVal, length, validUntil, err := pathMgr.generator.generate(machine,
+		m.logger)
 	if err != nil {
 		return fileInfo
 	}
 	fileInfo.Hash = hashVal
+	fileInfo.Length = length
 	fileInfo.ValidUntil = validUntil
 	m.rwMutex.Lock()
 	defer m.rwMutex.Unlock()
-	pathMgr.machineHashes[machine.Hostname] = expiringHash{hashVal, validUntil}
+	pathMgr.machineHashes[machine.Hostname] = expiringHash{
+		hashVal, length, validUntil}
 	return fileInfo
 }

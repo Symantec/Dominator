@@ -28,6 +28,7 @@ type GetObjectResponse struct {
 type FileInfo struct {
 	Pathname   string
 	Hash       hash.Hash
+	Length     uint64
 	ValidUntil time.Time
 }
 

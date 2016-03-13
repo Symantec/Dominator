@@ -13,7 +13,7 @@ import (
 
 type hashGenerator interface {
 	generate(machine mdb.Machine, logger *log.Logger) (
-		hashVal hash.Hash, validUntil time.Time, err error)
+		hashVal hash.Hash, length uint64, validUntil time.Time, err error)
 }
 
 type hashGeneratorWrapper struct {
@@ -48,16 +48,17 @@ func (m *Manager) processPathDataInvalidations(pathname string,
 		pathMgr.rwMutex.Lock()
 		if machineName == "" {
 			for _, mdbData := range m.machineData {
-				hashVal, validUntil, err := pathMgr.generator.generate(mdbData,
-					m.logger)
+				hashVal, length, validUntil, err := pathMgr.generator.generate(
+					mdbData, m.logger)
 				if err != nil {
 					continue
 				}
 				pathMgr.machineHashes[mdbData.Hostname] = expiringHash{
-					hashVal, validUntil}
+					hashVal, length, validUntil}
 				files := make([]proto.FileInfo, 1)
 				files[0].Pathname = pathname
 				files[0].Hash = hashVal
+				files[0].Length = length
 				files[0].ValidUntil = validUntil
 				yieldResponse := &proto.YieldResponse{mdbData.Hostname, files}
 				message := &proto.ServerMessage{YieldResponse: yieldResponse}
@@ -66,16 +67,17 @@ func (m *Manager) processPathDataInvalidations(pathname string,
 				}
 			}
 		} else {
-			hashVal, validUntil, err := pathMgr.generator.generate(
+			hashVal, length, validUntil, err := pathMgr.generator.generate(
 				m.machineData[machineName], m.logger)
 			if err != nil {
 				continue
 			}
 			pathMgr.machineHashes[machineName] = expiringHash{
-				hashVal, validUntil}
+				hashVal, length, validUntil}
 			files := make([]proto.FileInfo, 1)
 			files[0].Pathname = pathname
 			files[0].Hash = hashVal
+			files[0].Length = length
 			files[0].ValidUntil = validUntil
 			yieldResponse := &proto.YieldResponse{machineName, files}
 			message := &proto.ServerMessage{YieldResponse: yieldResponse}
@@ -98,15 +100,16 @@ func (m *Manager) getRegisteredPaths() []string {
 
 func (g *hashGeneratorWrapper) generate(machine mdb.Machine,
 	logger *log.Logger) (
-	hash.Hash, time.Time, error) {
+	hash.Hash, uint64, time.Time, error) {
 	data, validUntil, err := g.dataGenerator.Generate(machine, logger)
 	if err != nil {
-		return hash.Hash{}, time.Time{}, err
+		return hash.Hash{}, 0, time.Time{}, err
 	}
-	hashVal, _, err := g.objectServer.AddObject(bytes.NewReader(data),
-		uint64(len(data)), nil)
+	length := uint64(len(data))
+	hashVal, _, err := g.objectServer.AddObject(bytes.NewReader(data), length,
+		nil)
 	if err != nil {
-		return hash.Hash{}, time.Time{}, err
+		return hash.Hash{}, 0, time.Time{}, err
 	}
-	return hashVal, validUntil, nil
+	return hashVal, length, validUntil, nil
 }
