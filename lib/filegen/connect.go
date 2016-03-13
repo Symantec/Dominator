@@ -33,7 +33,7 @@ func (m *Manager) connect(conn *srpc.Conn) error {
 	decoder := gob.NewDecoder(conn)
 	go handleTransmits(conn, clientChannel, m.logger)
 	for {
-		if err := m.handleMessage(decoder, clientChannel); err != nil {
+		if err := m.handleRequest(decoder, clientChannel); err != nil {
 			if err == io.EOF {
 				return nil
 			}
@@ -61,7 +61,7 @@ func handleTransmits(conn *srpc.Conn, messageChan <-chan *proto.ServerMessage,
 	}
 }
 
-func (m *Manager) handleMessage(decoder *gob.Decoder,
+func (m *Manager) handleRequest(decoder *gob.Decoder,
 	messageChan chan<- *proto.ServerMessage) error {
 	var request proto.ClientRequest
 	if err := decoder.Decode(&request); err != nil {
