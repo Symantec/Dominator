@@ -13,6 +13,7 @@ import (
 )
 
 func newManager(objSrv objectserver.ObjectServer, logger *log.Logger) *Manager {
+	sourceConnectChannel := make(chan string)
 	m := &Manager{
 		sourceMap:            make(map[string]*sourceType),
 		objectServer:         objSrv,
@@ -21,13 +22,14 @@ func newManager(objSrv objectserver.ObjectServer, logger *log.Logger) *Manager {
 		removeMachineChannel: make(chan string),
 		updateMachineChannel: make(chan *machineType),
 		serverMessageChannel: make(chan *serverMessageType),
+		sourceConnectChannel: sourceConnectChannel,
 		objectWaiters:        make(map[hash.Hash][]chan<- hash.Hash),
 		logger:               logger}
-	go m.manage()
+	go m.manage(sourceConnectChannel)
 	return m
 }
 
-func (m *Manager) manage() {
+func (m *Manager) manage(sourceConnectChannel <-chan string) {
 	for {
 		select {
 		case machine := <-m.addMachineChannel:
@@ -38,6 +40,8 @@ func (m *Manager) manage() {
 			m.updateMachine(machine)
 		case serverMessage := <-m.serverMessageChannel:
 			m.processMessage(serverMessage)
+		case sourceName := <-sourceConnectChannel:
+			m.processSourceConnect(sourceName)
 		}
 	}
 }
@@ -63,70 +67,100 @@ func (m *Manager) processMessage(serverMessage *serverMessageType) {
 	}
 }
 
-func sendClientRequests(source string, channel <-chan proto.ClientRequest,
-	serverMessageChannel chan<- *serverMessageType, logger *log.Logger) {
-	var client *srpc.Client
-	var conn *srpc.Conn
-	// The server keeps the same encoder/decoder pair over the lifetime of the
-	// connection, so we must do the same.
-	var encoder *gob.Encoder
-	for request := range channel {
-		client, conn, encoder = sendClientRequest(source, client, conn, encoder,
-			request, serverMessageChannel, logger)
-		if len(channel) < 1 {
-			conn.Flush()
+func (m *Manager) processSourceConnect(sourceName string) {
+	source := m.sourceMap[sourceName]
+	for _, machine := range m.machineMap {
+		if pathnames, ok := machine.sourceToPaths[sourceName]; ok {
+			request := &proto.ClientRequest{
+				YieldRequest: &proto.YieldRequest{machine.machine, pathnames}}
+			source.sendChannel <- request
 		}
 	}
 }
 
-func sendClientRequest(source string, client *srpc.Client, conn *srpc.Conn,
-	encoder *gob.Encoder, request proto.ClientRequest,
-	serverMessageChannel chan<- *serverMessageType, logger *log.Logger) (
-	*srpc.Client, *srpc.Conn, *gob.Encoder) {
-	for {
-		var err error
-		if conn == nil {
-			client, err = srpc.DialHTTP("tcp", source, time.Second*15)
-			if err != nil {
-				logger.Println(err)
-				time.Sleep(time.Second * 15)
-				continue
-			}
-			conn, err = client.Call("FileGenerator.Connect")
-			if err != nil {
-				client.Close()
-				client = nil
-				logger.Println(err)
-				time.Sleep(time.Second * 15)
-				continue
-			}
-			encoder = gob.NewEncoder(conn)
-			go receiveServerMessages(source, conn, serverMessageChannel, logger)
+func (m *Manager) getSource(sourceName string) *sourceType {
+	source, ok := m.sourceMap[sourceName]
+	if ok {
+		return source
+	}
+	source = new(sourceType)
+	sendChannel := make(chan *proto.ClientRequest, 4096)
+	source.sendChannel = sendChannel
+	m.sourceMap[sourceName] = source
+	go manageSource(sourceName, m.sourceConnectChannel, sendChannel,
+		m.serverMessageChannel, m.logger)
+	return source
+}
+
+func manageSource(sourceName string, sourceConnectChannel chan<- string,
+	clientRequestChannel <-chan *proto.ClientRequest,
+	serverMessageChannel chan<- *serverMessageType, logger *log.Logger) {
+	closeNotifyChannel := make(chan struct{})
+	initialTimeout := time.Second
+	timeout := initialTimeout
+	for ; ; time.Sleep(timeout) {
+		if timeout < time.Minute {
+			timeout *= 2
 		}
-		if err := encoder.Encode(request); err != nil {
-			conn.Close()
-			conn = nil
-			client.Close()
-			client = nil
-			logger.Println(err)
-			time.Sleep(time.Second * 15)
+		client, err := srpc.DialHTTP("tcp", sourceName, timeout)
+		if err != nil {
+			logger.Printf("error connecting to: %s: %s\n", sourceName, err)
 			continue
 		}
-		return client, conn, encoder
+		conn, err := client.Call("FileGenerator.Connect")
+		if err != nil {
+			client.Close()
+			logger.Println(err)
+			continue
+		}
+		timeout = initialTimeout
+		// The server keeps the same encoder/decoder pair over the lifetime of
+		// the connection, so we must do the same.
+		go handleServerMessages(sourceName, gob.NewDecoder(conn),
+			serverMessageChannel, closeNotifyChannel, logger)
+		sourceConnectChannel <- sourceName
+		sendClientRequests(conn, clientRequestChannel, closeNotifyChannel,
+			logger)
+		conn.Close()
+		client.Close()
 	}
 }
 
-func receiveServerMessages(source string, conn *srpc.Conn,
-	serverMessageChannel chan<- *serverMessageType, logger *log.Logger) {
-	decoder := gob.NewDecoder(conn)
+func sendClientRequests(conn *srpc.Conn,
+	clientRequestChannel <-chan *proto.ClientRequest,
+	closeNotifyChannel <-chan struct{}, logger *log.Logger) {
+	encoder := gob.NewEncoder(conn)
+	for {
+		select {
+		case clientRequest := <-clientRequestChannel:
+			if err := encoder.Encode(clientRequest); err != nil {
+				logger.Printf("error encoding client request: %s\n", err)
+				return
+			}
+			if len(clientRequestChannel) < 1 {
+				if err := conn.Flush(); err != nil {
+					logger.Printf("error flushing: %s\n", err)
+					return
+				}
+			}
+		case <-closeNotifyChannel:
+			return
+		}
+	}
+}
+
+func handleServerMessages(sourceName string, decoder *gob.Decoder,
+	serverMessageChannel chan<- *serverMessageType,
+	closeNotifyChannel chan<- struct{}, logger *log.Logger) {
 	for {
 		var message proto.ServerMessage
 		if err := decoder.Decode(&message); err != nil {
 			if err != io.EOF {
 				logger.Println(err)
 			}
+			closeNotifyChannel <- struct{}{}
 			return
 		}
-		serverMessageChannel <- &serverMessageType{source, message}
+		serverMessageChannel <- &serverMessageType{sourceName, message}
 	}
 }

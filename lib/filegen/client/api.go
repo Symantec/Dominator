@@ -21,11 +21,12 @@ type Machine struct {
 type machineType struct {
 	machine       mdb.Machine
 	updateChannel chan<- []proto.FileInfo
-	computedFiles map[string]string // map[pathname] => source
+	computedFiles map[string]string   // map[pathname] => source
+	sourceToPaths map[string][]string // map[source] => []pathnames
 }
 
 type sourceType struct {
-	sendChannel chan<- proto.ClientRequest
+	sendChannel chan<- *proto.ClientRequest
 }
 
 type serverMessageType struct {
@@ -41,6 +42,7 @@ type Manager struct {
 	removeMachineChannel chan string
 	updateMachineChannel chan *machineType
 	serverMessageChannel chan *serverMessageType
+	sourceConnectChannel chan<- string
 	objectWaiters        map[hash.Hash][]chan<- hash.Hash
 	logger               *log.Logger
 }

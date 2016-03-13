@@ -8,12 +8,17 @@ import (
 
 func buildMachine(machine Machine) *machineType {
 	computedFiles := make(map[string]string, len(machine.ComputedFiles))
+	sourceToPaths := make(map[string][]string)
 	for _, computedFile := range machine.ComputedFiles {
 		computedFiles[computedFile.Pathname] = computedFile.Source
+		pathnames := sourceToPaths[computedFile.Source]
+		pathnames = append(pathnames, computedFile.Pathname)
+		sourceToPaths[computedFile.Source] = pathnames
 	}
 	return &machineType{
 		machine:       machine.Machine,
-		computedFiles: computedFiles}
+		computedFiles: computedFiles,
+		sourceToPaths: sourceToPaths}
 }
 
 func (m *Manager) addMachine(machine *machineType) {
@@ -23,7 +28,9 @@ func (m *Manager) addMachine(machine *machineType) {
 		panic(hostname + ": already added")
 	}
 	m.machineMap[hostname] = machine
-	m.sendYieldRequests(machine)
+	for sourceName := range machine.sourceToPaths {
+		m.getSource(sourceName)
+	}
 }
 
 func (m *Manager) removeMachine(hostname string) {
@@ -49,6 +56,10 @@ func (m *Manager) updateMachine(machine *machineType) {
 			sendRequests = true
 			mapMachine.computedFiles = machine.computedFiles
 		}
+		if !reflect.DeepEqual(machine.sourceToPaths, mapMachine.sourceToPaths) {
+			sendRequests = true
+			mapMachine.sourceToPaths = machine.sourceToPaths
+		}
 		if sendRequests {
 			m.sendYieldRequests(mapMachine)
 		}
@@ -61,17 +72,9 @@ func (m *Manager) sendYieldRequests(machine *machineType) {
 		connectionMap[sourceName] = append(connectionMap[sourceName], pathname)
 	}
 	for sourceName, pathnames := range connectionMap {
-		source, ok := m.sourceMap[sourceName]
-		if !ok {
-			source = new(sourceType)
-			sendChannel := make(chan proto.ClientRequest, 4096)
-			source.sendChannel = sendChannel
-			m.sourceMap[sourceName] = source
-			go sendClientRequests(sourceName, sendChannel,
-				m.serverMessageChannel, m.logger)
-		}
-		var request proto.ClientRequest
-		request.YieldRequest = &proto.YieldRequest{machine.machine, pathnames}
+		source := m.getSource(sourceName)
+		request := &proto.ClientRequest{
+			YieldRequest: &proto.YieldRequest{machine.machine, pathnames}}
 		source.sendChannel <- request
 	}
 }
@@ -96,8 +99,8 @@ func (m *Manager) handleYieldResponse(machine *machineType,
 		if lengths, err := m.objectServer.CheckObjects(hashes); err != nil {
 			panic(err)
 		} else if lengths[0] < 1 {
-			var request proto.ClientRequest
-			request.GetObjectRequest = &proto.GetObjectRequest{file.Hash}
+			request := &proto.ClientRequest{
+				GetObjectRequest: &proto.GetObjectRequest{file.Hash}}
 			source.sendChannel <- request
 			objectsToWaitFor[file.Hash] = struct{}{}
 			if _, ok := m.objectWaiters[file.Hash]; !ok {
