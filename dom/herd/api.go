@@ -1,11 +1,12 @@
 package herd
 
 import (
-	"github.com/Symantec/Dominator/dom/objectserver"
+	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectcache"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	"io"
 	"log"
 	"sync"
@@ -97,7 +98,8 @@ type missingImage struct {
 type Herd struct {
 	sync.RWMutex         // Protect map and slice mutations.
 	imageServerAddress   string
-	objectServer         *objectserver.ObjectServer
+	objectServer         objectserver.ObjectServer
+	computedFilesManager *filegenclient.Manager
 	logger               *log.Logger
 	htmlWriters          []HtmlWriter
 	nextSubToPoll        uint
@@ -113,7 +115,7 @@ type Herd struct {
 	previousScanDuration time.Duration
 }
 
-func NewHerd(imageServerAddress string, objectServer *objectserver.ObjectServer,
+func NewHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	logger *log.Logger) *Herd {
 	return newHerd(imageServerAddress, objectServer, logger)
 }

@@ -1,19 +1,21 @@
 package herd
 
 import (
-	"github.com/Symantec/Dominator/dom/objectserver"
+	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	"log"
 	"runtime"
 	"syscall"
 	"time"
 )
 
-func newHerd(imageServerAddress string, objectServer *objectserver.ObjectServer,
+func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	logger *log.Logger) *Herd {
 	var herd Herd
 	herd.imageServerAddress = imageServerAddress
 	herd.objectServer = objectServer
+	herd.computedFilesManager = filegenclient.New(objectServer, logger)
 	herd.logger = logger
 	herd.subsByName = make(map[string]*Sub)
 	herd.imagesByName = make(map[string]*image.Image)
