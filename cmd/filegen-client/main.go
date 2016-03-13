@@ -95,6 +95,7 @@ func main() {
 				machine := &machineType{
 					machine: client.Machine{mdbEntry, computedFiles}}
 				if oldMachine, ok := machines[mdbEntry.Hostname]; !ok {
+					machines[mdbEntry.Hostname] = machine
 					machine.updateChannel = manager.Add(machine.machine, 1)
 					go machine.handleUpdates(objectServer)
 				} else {
@@ -104,6 +105,7 @@ func main() {
 			}
 			for hostname := range machinesToDelete {
 				manager.Remove(hostname)
+				delete(machines, hostname)
 			}
 		}
 	}
