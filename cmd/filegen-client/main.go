@@ -95,7 +95,7 @@ func main() {
 				machine := &machineType{
 					machine: client.Machine{mdbEntry, computedFiles}}
 				if oldMachine, ok := machines[mdbEntry.Hostname]; !ok {
-					machine.updateChannel = manager.Add(machine.machine)
+					machine.updateChannel = manager.Add(machine.machine, 1)
 					go machine.handleUpdates(objectServer)
 				} else {
 					oldMachine.machine = machine.machine

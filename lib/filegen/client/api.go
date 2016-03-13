@@ -54,9 +54,9 @@ func New(objSrv objectserver.ObjectServer, logger *log.Logger) *Manager {
 }
 
 // Add will add a machine to the Manager. Re-adding a machine will result in a
-// panic.
-func (m *Manager) Add(machine Machine) <-chan []proto.FileInfo {
-	updateChannel := make(chan []proto.FileInfo)
+// panic. The length of the channel buffer is given by size.
+func (m *Manager) Add(machine Machine, size uint) <-chan []proto.FileInfo {
+	updateChannel := make(chan []proto.FileInfo, size)
 	mach := buildMachine(machine)
 	mach.updateChannel = updateChannel
 	m.addMachineChannel <- mach
