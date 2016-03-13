@@ -1,23 +1,19 @@
-package filesystem
+package memory
 
 import (
 	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/objectserver"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	"io"
-	"log"
 	"sync"
 )
 
 type ObjectServer struct {
-	baseDir  string
-	rwLock   sync.RWMutex         // Proect map mutations.
-	sizesMap map[hash.Hash]uint64 // Only set if object is known.
-	logger   *log.Logger
+	rwLock    sync.RWMutex // Protect map mutations.
+	objectMap map[hash.Hash][]byte
 }
 
-func NewObjectServer(baseDir string, logger *log.Logger) (
-	*ObjectServer, error) {
-	return newObjectServer(baseDir, logger)
+func NewObjectServer() *ObjectServer {
+	return newObjectServer()
 }
 
 func (objSrv *ObjectServer) AddObject(reader io.Reader, length uint64,
@@ -29,14 +25,14 @@ func (objSrv *ObjectServer) CheckObjects(hashes []hash.Hash) ([]uint64, error) {
 	return objSrv.checkObjects(hashes)
 }
 
-func (objSrv *ObjectServer) GetObjects(hashes []hash.Hash) (
-	objectserver.ObjectsReader, error) {
-	return objSrv.getObjects(hashes)
-}
-
 func (objSrv *ObjectServer) GetObject(hashVal hash.Hash) (
 	uint64, io.ReadCloser, error) {
 	return objSrv.getObject(hashVal)
+}
+
+func (objSrv *ObjectServer) GetObjects(hashes []hash.Hash) (
+	objectserver.ObjectsReader, error) {
+	return objSrv.getObjects(hashes)
 }
 
 func (objSrv *ObjectServer) ListObjects() []hash.Hash {
@@ -46,7 +42,7 @@ func (objSrv *ObjectServer) ListObjects() []hash.Hash {
 func (objSrv *ObjectServer) NumObjects() uint64 {
 	objSrv.rwLock.RLock()
 	defer objSrv.rwLock.RUnlock()
-	return uint64(len(objSrv.sizesMap))
+	return uint64(len(objSrv.objectMap))
 }
 
 type ObjectsReader struct {

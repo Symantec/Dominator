@@ -2,7 +2,7 @@ package objectserver
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/objectserver/filesystem"
+	"github.com/Symantec/Dominator/lib/objectserver/filesystem"
 	"log"
 	"os"
 	"syscall"

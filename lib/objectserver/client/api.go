@@ -1,10 +1,10 @@
-package objectclient
+package client
 
 import (
 	"encoding/gob"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/objectserver"
 	"io"
 )
 
@@ -25,6 +25,11 @@ func (objClient *ObjectClient) AddObject(reader io.Reader, length uint64,
 func (objClient *ObjectClient) CheckObjects(hashes []hash.Hash) (
 	[]uint64, error) {
 	return objClient.checkObjects(hashes)
+}
+
+func (objClient *ObjectClient) GetObject(hashVal hash.Hash) (
+	uint64, io.ReadCloser, error) {
+	return objectserver.GetObject(objClient, hashVal)
 }
 
 func (objClient *ObjectClient) GetObjects(hashes []hash.Hash) (

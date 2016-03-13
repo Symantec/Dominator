@@ -3,7 +3,7 @@ package httpd
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/imageserver/scanner"
-	"github.com/Symantec/Dominator/objectserver/filesystem"
+	"github.com/Symantec/Dominator/lib/objectserver/filesystem"
 	"io"
 	"net"
 	"net/http"

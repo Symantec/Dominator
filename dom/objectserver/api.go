@@ -2,7 +2,7 @@ package objectserver
 
 import (
 	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/objectserver/filesystem"
+	"github.com/Symantec/Dominator/lib/objectserver/filesystem"
 	"io"
 	"log"
 )

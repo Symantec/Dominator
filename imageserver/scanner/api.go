@@ -2,7 +2,7 @@ package scanner
 
 import (
 	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/objectserver"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	"io"
 	"log"
 	"sync"

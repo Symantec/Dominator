@@ -8,7 +8,7 @@ import (
 	"github.com/Symantec/Dominator/imageserver/scanner"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/logbuf"
-	"github.com/Symantec/Dominator/objectserver/filesystem"
+	"github.com/Symantec/Dominator/lib/objectserver/filesystem"
 	objectserverRpcd "github.com/Symantec/Dominator/objectserver/rpcd"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
