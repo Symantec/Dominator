@@ -78,10 +78,11 @@ func (m *Manager) processSourceConnect(sourceName string) {
 	}
 }
 
-func (m *Manager) getSource(sourceName string) *sourceType {
+// Returns true if the source was already set up.
+func (m *Manager) getSource(sourceName string) (*sourceType, bool) {
 	source, ok := m.sourceMap[sourceName]
 	if ok {
-		return source
+		return source, true
 	}
 	source = new(sourceType)
 	sendChannel := make(chan *proto.ClientRequest, 4096)
@@ -89,7 +90,7 @@ func (m *Manager) getSource(sourceName string) *sourceType {
 	m.sourceMap[sourceName] = source
 	go manageSource(sourceName, m.sourceConnectChannel, sendChannel,
 		m.serverMessageChannel, m.logger)
-	return source
+	return source, false
 }
 
 func manageSource(sourceName string, sourceConnectChannel chan<- string,
@@ -155,7 +156,9 @@ func handleServerMessages(sourceName string, decoder *gob.Decoder,
 	for {
 		var message proto.ServerMessage
 		if err := decoder.Decode(&message); err != nil {
-			if err != io.EOF {
+			if err == io.EOF {
+				logger.Printf("connection to source: %s closed\n", sourceName)
+			} else {
 				logger.Println(err)
 			}
 			closeNotifyChannel <- struct{}{}

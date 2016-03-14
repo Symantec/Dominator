@@ -3,7 +3,6 @@ package filegenerator
 import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/mdb"
-	"time"
 )
 
 type GetObjectRequest struct {
@@ -26,9 +25,9 @@ type GetObjectResponse struct {
 }
 
 type FileInfo struct {
-	Pathname   string
-	Hash       hash.Hash
-	ValidUntil time.Time
+	Pathname string
+	Hash     hash.Hash
+	Length   uint64
 }
 
 type YieldResponse struct {

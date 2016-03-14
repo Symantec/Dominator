@@ -25,6 +25,7 @@ func (objSrv *ObjectServer) addObject(reader io.Reader, length uint64,
 	if err != nil {
 		return hashVal, false, err
 	}
+	length = uint64(len(data))
 	filename := path.Join(objSrv.baseDir, objectcache.HashToFilename(hashVal))
 	// Check for existing object and collision.
 	fi, err := os.Lstat(filename)

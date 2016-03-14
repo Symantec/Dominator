@@ -45,17 +45,17 @@ func (m *Manager) registerTemplateFileForPath(pathname string,
 
 func (tgen *templateGenerator) generate(machine mdb.Machine,
 	logger *log.Logger) (
-	hash.Hash, time.Time, error) {
+	hash.Hash, uint64, time.Time, error) {
 	if tgen.template == nil {
-		return hash.Hash{}, time.Time{}, errors.New("no template data yet")
+		return hash.Hash{}, 0, time.Time{}, errors.New("no template data yet")
 	}
 	buffer := new(bytes.Buffer)
 	if err := tgen.template.Execute(buffer, machine); err != nil {
-		return hash.Hash{}, time.Time{}, err
+		return hash.Hash{}, 0, time.Time{}, err
 	}
-	hashVal, _, err := tgen.objectServer.AddObject(buffer, uint64(buffer.Len()),
-		nil)
-	return hashVal, time.Time{}, err
+	length := uint64(buffer.Len())
+	hashVal, _, err := tgen.objectServer.AddObject(buffer, length, nil)
+	return hashVal, length, time.Time{}, err
 }
 
 func (tgen *templateGenerator) handleReaders(readerChannel <-chan io.Reader) {

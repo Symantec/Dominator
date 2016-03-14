@@ -20,7 +20,8 @@ func readObject(reader io.Reader, length uint64, expectedHash *hash.Hash) (
 			return hashVal, nil, err
 		}
 		if len(data) < 1 {
-			return hashVal, nil, errors.New("zero length object cannot be added")
+			return hashVal, nil,
+				errors.New("zero length object cannot be added")
 		}
 	} else {
 		data = make([]byte, length)

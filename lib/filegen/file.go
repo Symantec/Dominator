@@ -15,6 +15,7 @@ type fileGenerator struct {
 	objectServer    *memory.ObjectServer
 	logger          *log.Logger
 	hash            *hash.Hash
+	length          uint64
 	notifierChannel chan<- string
 }
 
@@ -29,11 +30,11 @@ func (m *Manager) registerFileForPath(pathname string, sourceFile string) {
 }
 
 func (fgen *fileGenerator) generate(machine mdb.Machine, logger *log.Logger) (
-	hash.Hash, time.Time, error) {
+	hash.Hash, uint64, time.Time, error) {
 	if fgen.hash == nil {
-		return hash.Hash{}, time.Time{}, errors.New("no hash yet")
+		return hash.Hash{}, 0, time.Time{}, errors.New("no hash yet")
 	}
-	return *fgen.hash, time.Time{}, nil
+	return *fgen.hash, fgen.length, time.Time{}, nil
 }
 
 func (fgen *fileGenerator) handleReaders(readerChannel <-chan io.Reader) {
@@ -44,6 +45,14 @@ func (fgen *fileGenerator) handleReaders(readerChannel <-chan io.Reader) {
 			continue
 		}
 		fgen.hash = &hashVal
+		hashes := make([]hash.Hash, 1)
+		hashes[0] = hashVal
+		lengths, err := fgen.objectServer.CheckObjects(hashes)
+		if err != nil {
+			fgen.logger.Println(err)
+			continue
+		}
+		fgen.length = lengths[0]
 		fgen.notifierChannel <- ""
 	}
 }

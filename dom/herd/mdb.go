@@ -1,6 +1,7 @@
 package herd
 
 import (
+	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"time"
 )
@@ -39,23 +40,30 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int, int) {
 	}
 	for _, machine := range mdb.Machines { // Sorted by Hostname.
 		sub := herd.subsByName[machine.Hostname]
+		img, _ := herd.getImageHaveLock(machine.RequiredImage) // Preload.
 		if sub == nil {
 			sub = new(Sub)
 			sub.herd = herd
 			sub.mdb = machine
 			herd.subsByName[machine.Hostname] = sub
+			sub.fileUpdateChannel = herd.computedFilesManager.Add(
+				filegenclient.Machine{machine, sub.getComputedFiles(img)}, 16)
 			numNew++
 		} else {
+			if sub.mdb.RequiredImage != machine.RequiredImage {
+				sub.computedInodes = nil
+			}
 			if sub.mdb != machine {
 				sub.mdb = machine
 				sub.generationCount = 0 // Force a full poll.
+				herd.computedFilesManager.Update(
+					filegenclient.Machine{machine, sub.getComputedFiles(img)})
 				numChanged++
 			}
 		}
 		subsToDelete[machine.Hostname] = false
 		herd.subsByIndex = append(herd.subsByIndex, sub)
-		herd.getImageHaveLock(machine.RequiredImage) // Preload.
-		if img, _ := herd.getImageHaveLock(machine.PlannedImage); img == nil {
+		if img, _ = herd.getImageHaveLock(machine.PlannedImage); img == nil {
 			sub.havePlannedImage = false
 		} else {
 			sub.havePlannedImage = true

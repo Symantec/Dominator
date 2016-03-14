@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/dom/herd"
 	"github.com/Symantec/Dominator/dom/mdbd"
-	"github.com/Symantec/Dominator/dom/objectserver"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/Dominator/lib/mdb"
+	objectserver "github.com/Symantec/Dominator/lib/objectserver/filesystem"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"log"
 	"os"
@@ -20,6 +20,8 @@ import (
 	"syscall"
 	"time"
 )
+
+const dirPerms = syscall.S_IRWXU
 
 var (
 	caFile = flag.String("CAfile", "/etc/ssl/CA.pem",
@@ -102,6 +104,19 @@ func pathJoin(first, second string) string {
 	return path.Join(first, second)
 }
 
+func newObjectServer(objectsDir string, logger *log.Logger) (
+	*objectserver.ObjectServer, error) {
+	fi, err := os.Stat(objectsDir)
+	if err != nil {
+		if err := os.Mkdir(objectsDir, dirPerms); err != nil {
+			return nil, err
+		}
+	} else if !fi.IsDir() {
+		return nil, fmt.Errorf("%s is not a directory\n", objectsDir)
+	}
+	return objectserver.NewObjectServer(objectsDir, logger)
+}
+
 func main() {
 	flag.Parse()
 	tricorder.RegisterFlags()
@@ -131,8 +146,8 @@ func main() {
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	mdbChannel := mdbd.StartMdbDaemon(path.Join(*stateDir, *mdbFile), logger)
-	objectServer, err := objectserver.NewObjectServer(
-		path.Join(*stateDir, *objectsDir), logger)
+	objectServer, err := newObjectServer(path.Join(*stateDir, *objectsDir),
+		logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot load objectcache: %s\n", err)
 		os.Exit(1)

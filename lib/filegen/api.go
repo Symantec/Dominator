@@ -33,6 +33,7 @@ type FileGenerator interface {
 
 type expiringHash struct {
 	hash       hash.Hash
+	length     uint64
 	validUntil time.Time
 }
 

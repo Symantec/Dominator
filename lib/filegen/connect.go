@@ -124,22 +124,25 @@ func (m *Manager) computeFile(machine mdb.Machine,
 		return fileInfo
 	}
 	if fi, ok := pathMgr.machineHashes[machine.Hostname]; ok {
-		if !fi.validUntil.IsZero() && time.Now().Before(fi.validUntil) {
+		if fi.validUntil.IsZero() || time.Now().Before(fi.validUntil) {
 			m.rwMutex.RUnlock()
 			fileInfo.Hash = fi.hash
-			fileInfo.ValidUntil = fi.validUntil
+			fileInfo.Length = fi.length
 			return fileInfo
 		}
 	}
 	m.rwMutex.RUnlock()
-	hashVal, validUntil, err := pathMgr.generator.generate(machine, m.logger)
+	hashVal, length, validUntil, err := pathMgr.generator.generate(machine,
+		m.logger)
 	if err != nil {
 		return fileInfo
 	}
 	fileInfo.Hash = hashVal
-	fileInfo.ValidUntil = validUntil
+	fileInfo.Length = length
 	m.rwMutex.Lock()
 	defer m.rwMutex.Unlock()
-	pathMgr.machineHashes[machine.Hostname] = expiringHash{hashVal, validUntil}
+	pathMgr.machineHashes[machine.Hostname] = expiringHash{
+		hashVal, length, validUntil}
+	m.scheduleTimer(pathname, machine.Hostname, validUntil)
 	return fileInfo
 }
