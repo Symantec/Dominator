@@ -6,6 +6,7 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filegen"
 	"github.com/Symantec/Dominator/lib/filegen/httpd"
+	"github.com/Symantec/Dominator/lib/filegen/util"
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"log"
@@ -17,6 +18,8 @@ var (
 		"Name of file containing the root of trust")
 	certFile = flag.String("certFile", "/etc/ssl/filegen-server/cert.pem",
 		"Name of file containing the SSL certificate")
+	configFile = flag.String("configFile", "",
+		"Name of file containing the configuration")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
 	keyFile = flag.String("keyFile", "/etc/ssl/filegen-server/key.pem",
@@ -45,6 +48,10 @@ func main() {
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	manager := filegen.New(logger)
+	if err := util.LoadConfiguration(manager, *configFile); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	httpd.AddHtmlWriter(manager)
 	httpd.AddHtmlWriter(circularBuffer)
 	for _, pathname := range flag.Args() {
