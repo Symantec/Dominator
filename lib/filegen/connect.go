@@ -124,7 +124,7 @@ func (m *Manager) computeFile(machine mdb.Machine,
 		return fileInfo
 	}
 	if fi, ok := pathMgr.machineHashes[machine.Hostname]; ok {
-		if !fi.validUntil.IsZero() && time.Now().Before(fi.validUntil) {
+		if fi.validUntil.IsZero() || time.Now().Before(fi.validUntil) {
 			m.rwMutex.RUnlock()
 			fileInfo.Hash = fi.hash
 			fileInfo.ValidUntil = fi.validUntil
