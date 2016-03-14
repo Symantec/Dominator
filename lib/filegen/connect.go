@@ -127,7 +127,7 @@ func (m *Manager) computeFile(machine mdb.Machine,
 		if fi.validUntil.IsZero() || time.Now().Before(fi.validUntil) {
 			m.rwMutex.RUnlock()
 			fileInfo.Hash = fi.hash
-			fileInfo.ValidUntil = fi.validUntil
+			fileInfo.Length = fi.length
 			return fileInfo
 		}
 	}
@@ -139,10 +139,10 @@ func (m *Manager) computeFile(machine mdb.Machine,
 	}
 	fileInfo.Hash = hashVal
 	fileInfo.Length = length
-	fileInfo.ValidUntil = validUntil
 	m.rwMutex.Lock()
 	defer m.rwMutex.Unlock()
 	pathMgr.machineHashes[machine.Hostname] = expiringHash{
 		hashVal, length, validUntil}
+	m.scheduleTimer(pathname, machine.Hostname, validUntil)
 	return fileInfo
 }

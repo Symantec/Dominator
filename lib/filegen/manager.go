@@ -36,5 +36,6 @@ func (jsonType) Generate(machine mdb.Machine, logger *log.Logger) (
 	if err := json.WriteWithIndent(buffer, "    ", machine); err != nil {
 		return nil, time.Time{}, err
 	}
+	buffer.WriteString("\n")
 	return buffer.Bytes(), time.Time{}, nil
 }

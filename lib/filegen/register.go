@@ -59,12 +59,12 @@ func (m *Manager) processPathDataInvalidations(pathname string,
 				files[0].Pathname = pathname
 				files[0].Hash = hashVal
 				files[0].Length = length
-				files[0].ValidUntil = validUntil
 				yieldResponse := &proto.YieldResponse{mdbData.Hostname, files}
 				message := &proto.ServerMessage{YieldResponse: yieldResponse}
 				for _, clientChannel := range m.clients {
 					clientChannel <- message
 				}
+				m.scheduleTimer(pathname, mdbData.Hostname, validUntil)
 			}
 		} else {
 			hashVal, length, validUntil, err := pathMgr.generator.generate(
@@ -78,15 +78,48 @@ func (m *Manager) processPathDataInvalidations(pathname string,
 			files[0].Pathname = pathname
 			files[0].Hash = hashVal
 			files[0].Length = length
-			files[0].ValidUntil = validUntil
 			yieldResponse := &proto.YieldResponse{machineName, files}
 			message := &proto.ServerMessage{YieldResponse: yieldResponse}
 			for _, clientChannel := range m.clients {
 				clientChannel <- message
 			}
+			m.scheduleTimer(pathname, machineName, validUntil)
 		}
 		pathMgr.rwMutex.Unlock()
 	}
+}
+
+func (m *Manager) scheduleTimer(pathname string, hostname string,
+	validUntil time.Time) {
+	if validUntil.IsZero() || time.Now().After(validUntil) {
+		return // No expiration or already expired.
+	}
+	pathMgr := m.pathManagers[pathname]
+	time.AfterFunc(validUntil.Sub(time.Now()), func() {
+		pathMgr.rwMutex.Lock()
+		defer pathMgr.rwMutex.Unlock()
+		mdbData, ok := m.machineData[hostname]
+		if !ok {
+			return
+		}
+		hashVal, length, validUntil, err := pathMgr.generator.generate(
+			mdbData, m.logger)
+		if err != nil {
+			return
+		}
+		pathMgr.machineHashes[hostname] = expiringHash{
+			hashVal, length, validUntil}
+		files := make([]proto.FileInfo, 1)
+		files[0].Pathname = pathname
+		files[0].Hash = hashVal
+		files[0].Length = length
+		yieldResponse := &proto.YieldResponse{mdbData.Hostname, files}
+		message := &proto.ServerMessage{YieldResponse: yieldResponse}
+		for _, clientChannel := range m.clients {
+			clientChannel <- message
+		}
+		m.scheduleTimer(pathname, mdbData.Hostname, validUntil)
+	})
 }
 
 func (m *Manager) getRegisteredPaths() []string {
