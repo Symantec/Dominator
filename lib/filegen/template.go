@@ -32,7 +32,7 @@ func (m *Manager) registerTemplateFileForPath(pathname string,
 		readerChannel := fsutil.WatchFile(templateFile, m.logger)
 		go tgen.handleReaders(readerChannel)
 	} else {
-		file, err := os.Open(pathname)
+		file, err := os.Open(templateFile)
 		if err != nil {
 			return err
 		}
