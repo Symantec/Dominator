@@ -18,6 +18,7 @@ type configType struct {
 var configs = map[string]configType{
 	"DynamicTemplateFile": {1, 1, dynamicTemplateFileGenerator},
 	"File":                {1, 1, fileGenerator},
+	"MDB":                 {0, 0, mdbGenerator},
 	"StaticTemplateFile":  {1, 1, staticTemplateFileGenerator},
 }
 
@@ -58,6 +59,12 @@ func dynamicTemplateFileGenerator(manager *filegen.Manager, pathname string,
 func fileGenerator(manager *filegen.Manager, pathname string,
 	params []string) error {
 	manager.RegisterFileForPath(pathname, params[0])
+	return nil
+}
+
+func mdbGenerator(manager *filegen.Manager, pathname string,
+	params []string) error {
+	manager.RegisterMdbGeneratorForPath(pathname)
 	return nil
 }
 

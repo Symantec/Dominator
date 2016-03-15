@@ -87,6 +87,12 @@ func (m *Manager) RegisterGeneratorForPath(pathname string,
 	return m.registerDataGeneratorForPath(pathname, gen)
 }
 
+// RegisterMdbGeneratorForPath registers a generator for pathname which yields
+// the MDB data in JSON format for a machine.
+func (m *Manager) RegisterMdbGeneratorForPath(pathname string) {
+	m.registerMdbGeneratorForPath(pathname)
+}
+
 // RegisterTemplateFileForPath registers a template file for a specific
 // pathname.
 // The template file is used to generate the data, modified by the machine data.
