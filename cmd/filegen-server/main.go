@@ -7,10 +7,12 @@ import (
 	"github.com/Symantec/Dominator/lib/filegen"
 	"github.com/Symantec/Dominator/lib/filegen/httpd"
 	"github.com/Symantec/Dominator/lib/filegen/util"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"log"
 	"os"
+	"syscall"
 )
 
 var (
@@ -48,9 +50,20 @@ func main() {
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	manager := filegen.New(logger)
-	if err := util.LoadConfiguration(manager, *configFile); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	if *configFile != "" {
+		if err := util.LoadConfiguration(manager, *configFile); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		ch := fsutil.WatchFile(*configFile, nil)
+		<-ch // Drain the first event.
+		go func() {
+			<-ch
+			err := syscall.Exec(os.Args[0], os.Args, os.Environ())
+			if err != nil {
+				logger.Printf("Unable to Exec:%s\t%s\n", os.Args[0], err)
+			}
+		}()
 	}
 	httpd.AddHtmlWriter(manager)
 	httpd.AddHtmlWriter(circularBuffer)

@@ -22,9 +22,6 @@ var configs = map[string]configType{
 }
 
 func loadConfiguration(manager *filegen.Manager, filename string) error {
-	if filename == "" {
-		return nil
-	}
 	lines, err := fsutil.LoadLines(filename)
 	if err != nil {
 		return fmt.Errorf("error loading configuration file: %s", err)
