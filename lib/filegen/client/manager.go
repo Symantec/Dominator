@@ -97,13 +97,13 @@ func manageSource(sourceName string, sourceConnectChannel chan<- string,
 	clientRequestChannel <-chan *proto.ClientRequest,
 	serverMessageChannel chan<- *serverMessageType, logger *log.Logger) {
 	closeNotifyChannel := make(chan struct{})
-	initialTimeout := time.Second
-	timeout := initialTimeout
-	for ; ; time.Sleep(timeout) {
-		if timeout < time.Minute {
-			timeout *= 2
+	initialRetryTimeout := time.Millisecond * 100
+	retryTimeout := initialRetryTimeout
+	for ; ; time.Sleep(retryTimeout) {
+		if retryTimeout < time.Minute {
+			retryTimeout *= 2
 		}
-		client, err := srpc.DialHTTP("tcp", sourceName, timeout)
+		client, err := srpc.DialHTTP("tcp", sourceName, time.Second*15)
 		if err != nil {
 			logger.Printf("error connecting to: %s: %s\n", sourceName, err)
 			continue
@@ -114,7 +114,7 @@ func manageSource(sourceName string, sourceConnectChannel chan<- string,
 			logger.Println(err)
 			continue
 		}
-		timeout = initialTimeout
+		retryTimeout = initialRetryTimeout
 		// The server keeps the same encoder/decoder pair over the lifetime of
 		// the connection, so we must do the same.
 		go handleServerMessages(sourceName, gob.NewDecoder(conn),
