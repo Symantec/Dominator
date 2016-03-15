@@ -231,8 +231,6 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.lastFullPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
 		fullPollDistribution.Add(sub.lastFullPollDuration)
-		logger.Printf("Polled: %s, GenerationCount=%d\n",
-			sub, reply.GenerationCount)
 	}
 	sub.startTime = reply.StartTime
 	sub.pollTime = reply.PollTime
