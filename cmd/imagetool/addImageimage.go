@@ -44,6 +44,9 @@ func addImageimage(imageClient *rpc.Client, imageSClient *srpc.Client,
 	if err != nil {
 		return err
 	}
+	if err := spliceComputedFiles(fs); err != nil {
+		return err
+	}
 	if fs, err = applyDeleteFilter(fs); err != nil {
 		return err
 	}
