@@ -56,7 +56,7 @@ func (m *machineType) handleUpdates(objSrv *memory.ObjectServer) {
 			if _, reader, err := objSrv.GetObject(fileInfo.Hash); err != nil {
 				fmt.Println(err)
 			} else {
-				io.Copy(os.Stderr, reader)
+				io.Copy(os.Stdout, reader)
 				fmt.Println("\n-----------------------------------------------")
 			}
 		}
