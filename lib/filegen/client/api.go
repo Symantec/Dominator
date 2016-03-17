@@ -35,16 +35,16 @@ type serverMessageType struct {
 }
 
 type Manager struct {
-	sourceMap            map[string]*sourceType
-	objectServer         objectserver.ObjectServer
-	machineMap           map[string]*machineType
-	addMachineChannel    chan *machineType
-	removeMachineChannel chan string
-	updateMachineChannel chan *machineType
-	serverMessageChannel chan *serverMessageType
-	sourceConnectChannel chan<- string
-	objectWaiters        map[hash.Hash][]chan<- hash.Hash
-	logger               *log.Logger
+	sourceMap              map[string]*sourceType
+	objectServer           objectserver.ObjectServer
+	machineMap             map[string]*machineType
+	addMachineChannel      chan *machineType
+	removeMachineChannel   chan string
+	updateMachineChannel   chan *machineType
+	serverMessageChannel   chan *serverMessageType
+	sourceReconnectChannel chan<- string
+	objectWaiters          map[hash.Hash][]chan<- hash.Hash
+	logger                 *log.Logger
 }
 
 // New creates a new *Manager. Only one should be created per application.
