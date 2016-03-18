@@ -75,13 +75,13 @@ func (m *Manager) RegisterFileForPath(pathname string, sourceFile string) {
 
 // RegisterGeneratorForPath registers a FileGenerator for a specific pathname.
 // It returns a channel to which notification messages may be sent indicating
-// that the data should be regenerated, even if the machine data has not
+// that the data should be regenerated, even if the machine data have not
 // changed. If the empty string is sent to the channel, it indicates that data
 // should be regenerated for all machines, otherwise it indicates that data
 // should be regenerated for a specific machine.
 // An internal goroutine reads from the channel, which terminates if the channel
 // is closed. The channel should be closed if the data should only be
-// regenerated if the machine data changes.
+// regenerated if the machine data change.
 func (m *Manager) RegisterGeneratorForPath(pathname string,
 	gen FileGenerator) chan<- string {
 	return m.registerDataGeneratorForPath(pathname, gen)
