@@ -13,19 +13,19 @@ import (
 )
 
 func newManager(objSrv objectserver.ObjectServer, logger *log.Logger) *Manager {
-	sourceConnectChannel := make(chan string)
+	sourceReconnectChannel := make(chan string)
 	m := &Manager{
-		sourceMap:            make(map[string]*sourceType),
-		objectServer:         objSrv,
-		machineMap:           make(map[string]*machineType),
-		addMachineChannel:    make(chan *machineType),
-		removeMachineChannel: make(chan string),
-		updateMachineChannel: make(chan *machineType),
-		serverMessageChannel: make(chan *serverMessageType),
-		sourceConnectChannel: sourceConnectChannel,
-		objectWaiters:        make(map[hash.Hash][]chan<- hash.Hash),
-		logger:               logger}
-	go m.manage(sourceConnectChannel)
+		sourceMap:              make(map[string]*sourceType),
+		objectServer:           objSrv,
+		machineMap:             make(map[string]*machineType),
+		addMachineChannel:      make(chan *machineType),
+		removeMachineChannel:   make(chan string),
+		updateMachineChannel:   make(chan *machineType),
+		serverMessageChannel:   make(chan *serverMessageType),
+		sourceReconnectChannel: sourceReconnectChannel,
+		objectWaiters:          make(map[hash.Hash][]chan<- hash.Hash),
+		logger:                 logger}
+	go m.manage(sourceReconnectChannel)
 	return m
 }
 
@@ -78,32 +78,32 @@ func (m *Manager) processSourceConnect(sourceName string) {
 	}
 }
 
-// Returns true if the source was already set up.
-func (m *Manager) getSource(sourceName string) (*sourceType, bool) {
+func (m *Manager) getSource(sourceName string) *sourceType {
 	source, ok := m.sourceMap[sourceName]
 	if ok {
-		return source, true
+		return source
 	}
 	source = new(sourceType)
 	sendChannel := make(chan *proto.ClientRequest, 4096)
 	source.sendChannel = sendChannel
 	m.sourceMap[sourceName] = source
-	go manageSource(sourceName, m.sourceConnectChannel, sendChannel,
+	go manageSource(sourceName, m.sourceReconnectChannel, sendChannel,
 		m.serverMessageChannel, m.logger)
-	return source, false
+	return source
 }
 
-func manageSource(sourceName string, sourceConnectChannel chan<- string,
+func manageSource(sourceName string, sourceReconnectChannel chan<- string,
 	clientRequestChannel <-chan *proto.ClientRequest,
 	serverMessageChannel chan<- *serverMessageType, logger *log.Logger) {
 	closeNotifyChannel := make(chan struct{})
-	initialTimeout := time.Second
-	timeout := initialTimeout
-	for ; ; time.Sleep(timeout) {
-		if timeout < time.Minute {
-			timeout *= 2
+	initialRetryTimeout := time.Millisecond * 100
+	retryTimeout := initialRetryTimeout
+	reconnect := false
+	for ; ; time.Sleep(retryTimeout) {
+		if retryTimeout < time.Minute {
+			retryTimeout *= 2
 		}
-		client, err := srpc.DialHTTP("tcp", sourceName, timeout)
+		client, err := srpc.DialHTTP("tcp", sourceName, time.Second*15)
 		if err != nil {
 			logger.Printf("error connecting to: %s: %s\n", sourceName, err)
 			continue
@@ -114,12 +114,16 @@ func manageSource(sourceName string, sourceConnectChannel chan<- string,
 			logger.Println(err)
 			continue
 		}
-		timeout = initialTimeout
+		retryTimeout = initialRetryTimeout
 		// The server keeps the same encoder/decoder pair over the lifetime of
 		// the connection, so we must do the same.
 		go handleServerMessages(sourceName, gob.NewDecoder(conn),
 			serverMessageChannel, closeNotifyChannel, logger)
-		sourceConnectChannel <- sourceName
+		if reconnect {
+			sourceReconnectChannel <- sourceName
+		} else {
+			reconnect = true
+		}
 		sendClientRequests(conn, clientRequestChannel, closeNotifyChannel,
 			logger)
 		conn.Close()

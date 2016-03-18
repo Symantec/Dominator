@@ -66,11 +66,9 @@ func (m *Manager) updateMachine(machine *machineType) {
 
 func (m *Manager) sendYieldRequests(machine *machineType) {
 	for sourceName, pathnames := range machine.sourceToPaths {
-		if source, existing := m.getSource(sourceName); existing {
-			request := &proto.ClientRequest{
-				YieldRequest: &proto.YieldRequest{machine.machine, pathnames}}
-			source.sendChannel <- request
-		}
+		request := &proto.ClientRequest{
+			YieldRequest: &proto.YieldRequest{machine.machine, pathnames}}
+		m.getSource(sourceName).sendChannel <- request
 	}
 }
 

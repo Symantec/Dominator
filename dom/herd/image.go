@@ -68,6 +68,11 @@ func (herd *Herd) getImageHaveLock(name string) (*image.Image, error) {
 			return nil, err
 		}
 		delete(herd.missingImages, name)
+		// Build cache data now to avoid potential concurrent builds later.
+		reply.Image.FileSystem.InodeToFilenamesTable()
+		reply.Image.FileSystem.FilenameToInodeTable()
+		reply.Image.FileSystem.HashToInodesTable()
+		reply.Image.FileSystem.ComputeTotalDataBytes()
 		reply.Image.FileSystem.BuildEntryMap()
 		herd.imagesByName[name] = reply.Image
 		herd.logger.Printf("Got image: %s\n", name)
