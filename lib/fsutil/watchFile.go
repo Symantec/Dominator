@@ -8,16 +8,18 @@ import (
 	"time"
 )
 
-func watchFile(pathname string, logger *log.Logger) <-chan io.Reader {
-	channel := make(chan io.Reader, 1)
-	go watchFileForever(pathname, channel, logger)
+func watchFile(pathname string, logger *log.Logger) <-chan io.ReadCloser {
+	channel := make(chan io.ReadCloser, 1)
+	if !watchFileWithInotify(pathname, channel, logger) {
+		go watchFileForever(pathname, channel, logger)
+	}
 	return channel
 }
 
-func watchFileForever(pathname string, channel chan<- io.Reader,
+func watchFileForever(pathname string, channel chan<- io.ReadCloser,
 	logger *log.Logger) {
 	var lastStat syscall.Stat_t
-	var lastFile *os.File
+	lastFd := -1
 	for ; ; time.Sleep(time.Second) {
 		var stat syscall.Stat_t
 		if err := syscall.Stat(pathname, &stat); err != nil {
@@ -33,14 +35,14 @@ func watchFileForever(pathname string, channel chan<- io.Reader,
 				}
 				continue
 			} else {
-				channel <- file
 				// By holding onto the file, we guarantee that the inode number
 				// for the file we've opened cannot be reused until we've seen
 				// a new inode.
-				if lastFile != nil {
-					lastFile.Close()
+				if lastFd >= 0 {
+					syscall.Close(lastFd)
 				}
-				lastFile = file
+				lastFd, _ = syscall.Dup(int(file.Fd()))
+				channel <- file // Must happen after FD is duplicated.
 				lastStat = stat
 			}
 		}

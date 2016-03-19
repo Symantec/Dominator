@@ -56,7 +56,7 @@ func main() {
 			os.Exit(1)
 		}
 		ch := fsutil.WatchFile(*configFile, nil)
-		<-ch // Drain the first event.
+		(<-ch).Close() // Drain the first event.
 		go func() {
 			<-ch
 			err := syscall.Exec(os.Args[0], os.Args, os.Environ())

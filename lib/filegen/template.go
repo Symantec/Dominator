@@ -29,14 +29,14 @@ func (m *Manager) registerTemplateFileForPath(pathname string,
 		logger:       m.logger}
 	tgen.notifierChannel = m.registerHashGeneratorForPath(pathname, tgen)
 	if watchForUpdates {
-		readerChannel := fsutil.WatchFile(templateFile, m.logger)
-		go tgen.handleReaders(readerChannel)
+		readCloserChannel := fsutil.WatchFile(templateFile, m.logger)
+		go tgen.handleReadClosers(readCloserChannel)
 	} else {
 		file, err := os.Open(templateFile)
 		if err != nil {
 			return err
 		}
-		if err := tgen.handleReader(file); err != nil {
+		if err := tgen.handleReadCloser(file); err != nil {
 			return err
 		}
 	}
@@ -58,16 +58,19 @@ func (tgen *templateGenerator) generate(machine mdb.Machine,
 	return hashVal, length, time.Time{}, err
 }
 
-func (tgen *templateGenerator) handleReaders(readerChannel <-chan io.Reader) {
-	for reader := range readerChannel {
-		if err := tgen.handleReader(reader); err != nil {
+func (tgen *templateGenerator) handleReadClosers(
+	readCloserChannel <-chan io.ReadCloser) {
+	for readCloser := range readCloserChannel {
+		if err := tgen.handleReadCloser(readCloser); err != nil {
 			tgen.logger.Println(err)
 		}
 	}
 }
 
-func (tgen *templateGenerator) handleReader(reader io.Reader) error {
-	data, err := ioutil.ReadAll(reader)
+func (tgen *templateGenerator) handleReadCloser(
+	readCloser io.ReadCloser) error {
+	data, err := ioutil.ReadAll(readCloser)
+	readCloser.Close()
 	if err != nil {
 		return err
 	}

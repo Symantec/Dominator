@@ -20,12 +20,12 @@ type fileGenerator struct {
 }
 
 func (m *Manager) registerFileForPath(pathname string, sourceFile string) {
-	readerChannel := fsutil.WatchFile(sourceFile, m.logger)
+	readCloserChannel := fsutil.WatchFile(sourceFile, m.logger)
 	fgen := &fileGenerator{
 		objectServer: m.objectServer,
 		logger:       m.logger}
 	fgen.notifierChannel = m.registerHashGeneratorForPath(pathname, fgen)
-	go fgen.handleReaders(readerChannel)
+	go fgen.handleReaders(readCloserChannel)
 
 }
 
@@ -37,9 +37,11 @@ func (fgen *fileGenerator) generate(machine mdb.Machine, logger *log.Logger) (
 	return *fgen.hash, fgen.length, time.Time{}, nil
 }
 
-func (fgen *fileGenerator) handleReaders(readerChannel <-chan io.Reader) {
-	for reader := range readerChannel {
-		hashVal, _, err := fgen.objectServer.AddObject(reader, 0, nil)
+func (fgen *fileGenerator) handleReaders(
+	readCloserChannel <-chan io.ReadCloser) {
+	for readCloser := range readCloserChannel {
+		hashVal, _, err := fgen.objectServer.AddObject(readCloser, 0, nil)
+		readCloser.Close()
 		if err != nil {
 			fgen.logger.Println(err)
 			continue

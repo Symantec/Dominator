@@ -34,9 +34,9 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int, int) {
 	numChanged := 0
 	herd.subsByIndex = make([]*Sub, 0, len(mdb.Machines))
 	// Mark for delete all current subs, then later unmark ones in the new MDB.
-	subsToDelete := make(map[string]bool)
+	subsToDelete := make(map[string]struct{})
 	for _, sub := range herd.subsByName {
-		subsToDelete[sub.mdb.Hostname] = true
+		subsToDelete[sub.mdb.Hostname] = struct{}{}
 	}
 	for _, machine := range mdb.Machines { // Sorted by Hostname.
 		sub := herd.subsByName[machine.Hostname]
@@ -61,7 +61,7 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int, int) {
 				numChanged++
 			}
 		}
-		subsToDelete[machine.Hostname] = false
+		delete(subsToDelete, machine.Hostname)
 		herd.subsByIndex = append(herd.subsByIndex, sub)
 		if img, _ = herd.getImageHaveLock(machine.PlannedImage); img == nil {
 			sub.havePlannedImage = false
@@ -70,11 +70,10 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int, int) {
 		}
 	}
 	// Delete flagged subs (those not in the new MDB).
-	for subHostname, toDelete := range subsToDelete {
-		if toDelete {
-			delete(herd.subsByName, subHostname)
-			numDeleted++
-		}
+	for subHostname := range subsToDelete {
+		herd.computedFilesManager.Remove(subHostname)
+		delete(herd.subsByName, subHostname)
+		numDeleted++
 	}
 	imageUseMap := make(map[string]bool) // Unreferenced by default.
 	for _, sub := range herd.subsByName {
