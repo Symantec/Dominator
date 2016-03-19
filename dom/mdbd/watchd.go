@@ -25,8 +25,9 @@ type genericDecoder interface {
 func watchDaemon(mdbFileName string, mdbChannel chan<- *mdb.Mdb,
 	logger *log.Logger) {
 	var lastMdb *mdb.Mdb
-	for reader := range fsutil.WatchFile(mdbFileName, logger) {
-		mdb := loadFile(reader, mdbFileName, logger)
+	for readCloser := range fsutil.WatchFile(mdbFileName, logger) {
+		mdb := loadFile(readCloser, mdbFileName, logger)
+		readCloser.Close()
 		if mdb == nil {
 			continue
 		}

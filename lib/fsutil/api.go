@@ -60,10 +60,11 @@ func MakeMutable(pathname ...string) error {
 	return makeMutable(pathname...)
 }
 
-// WatchFile watches the file given by pathname and yields a new io.Reader when
-// a new inode is found and it is a regular file.
+// WatchFile watches the file given by pathname and yields a new io.ReadCloser
+// when a new inode is found and it is a regular file. The io.ReadCloser must
+// be closed after use.
 // Any errors are logged to the logger if it is not nil.
-func WatchFile(pathname string, logger *log.Logger) <-chan io.Reader {
+func WatchFile(pathname string, logger *log.Logger) <-chan io.ReadCloser {
 	return watchFile(pathname, logger)
 }
 
