@@ -10,7 +10,9 @@ import (
 
 func watchFile(pathname string, logger *log.Logger) <-chan io.ReadCloser {
 	channel := make(chan io.ReadCloser, 1)
-	go watchFileForever(pathname, channel, logger)
+	if !watchFileWithInotify(pathname, channel, logger) {
+		go watchFileForever(pathname, channel, logger)
+	}
 	return channel
 }
 
