@@ -54,7 +54,8 @@ func (t *rpcType) fetch(request sub.FetchRequest,
 	}
 	t.rwLock.Lock()
 	defer t.rwLock.Unlock()
-	t.logger.Printf("Fetch() %d objects\n", len(request.Hashes))
+	t.logger.Printf("Fetch(%s) %d objects\n",
+		request.ServerAddress, len(request.Hashes))
 	if t.fetchInProgress {
 		t.logger.Println("Error: fetch already in progress")
 		return errors.New("fetch already in progress")
