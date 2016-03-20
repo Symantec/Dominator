@@ -15,6 +15,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -78,7 +79,14 @@ func (t *rpcType) doFetch(request sub.FetchRequest) error {
 	defer t.clearFetchInProgress()
 	objectServer := objectclient.NewObjectClient(request.ServerAddress)
 	benchmark := false
-	if t.networkReaderContext.MaximumSpeed() < 1 {
+	localObjectServer := false
+	if fields := strings.Split(request.ServerAddress, ":"); len(fields) == 2 {
+		if fields[0] == "localhost" {
+			// We must be in testing mode. Go full throttle.
+			localObjectServer = true
+		}
+	}
+	if !localObjectServer && t.networkReaderContext.MaximumSpeed() < 1 {
 		benchmark = enoughBytesForBenchmark(objectServer, request)
 		if benchmark {
 			objectServer.SetExclusiveGetObjects(true)
@@ -100,8 +108,11 @@ func (t *rpcType) doFetch(request sub.FetchRequest) error {
 			t.logger.Println(err)
 			return err
 		}
-		err = readOne(t.objectsDir, hash, length,
-			t.networkReaderContext.NewReader(reader))
+		r := io.Reader(reader)
+		if !localObjectServer && !benchmark {
+			r = t.networkReaderContext.NewReader(reader)
+		}
+		err = readOne(t.objectsDir, hash, length, r)
 		reader.Close()
 		if err != nil {
 			t.logger.Println(err)
