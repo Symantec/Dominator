@@ -12,6 +12,7 @@ import (
 
 const (
 	procRouteFilename string = "/proc/net/route"
+	speedPathFormat          = "/sys/class/net/%s/speed"
 )
 
 var (
@@ -40,8 +41,21 @@ func getSpeedToHost(hostname string) (uint64, bool) {
 	if err != nil {
 		return 0, false
 	}
-	_ = interfaceName
-	return 0, false
+	file, err := os.Open(fmt.Sprintf(speedPathFormat, interfaceName))
+	if err != nil {
+		return 0, false
+	}
+	defer file.Close()
+	var value uint64
+	nScanned, err := fmt.Fscanf(file, "%d", &value)
+	if err != nil || nScanned < 1 {
+		return 0, false
+	}
+	speed = value * 1000000 / 8
+	lock.Lock()
+	hostToSpeed[hostname] = speed
+	lock.Unlock()
+	return speed, true
 }
 
 func findInterfaceForHost(hostname string) (string, error) {
