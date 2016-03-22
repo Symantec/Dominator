@@ -45,12 +45,18 @@ func getSpeedToHost(hostname string) (uint64, bool) {
 }
 
 func findInterfaceForHost(hostname string) (string, error) {
-	hostIPs, err := net.LookupIP(hostname)
-	if err != err {
-		return "", err
-	}
-	if len(hostIPs) < 1 {
-		return "", errors.New("not enough IPs")
+	var hostIP net.IP
+	if hostname == "" {
+		hostIP = make(net.IP, 4)
+	} else {
+		hostIPs, err := net.LookupIP(hostname)
+		if err != err {
+			return "", err
+		}
+		if len(hostIPs) < 1 {
+			return "", errors.New("not enough IPs")
+		}
+		hostIP = hostIPs[0]
 	}
 	file, err := os.Open(procRouteFilename)
 	if err != nil {
@@ -73,7 +79,7 @@ func findInterfaceForHost(hostname string) (string, error) {
 		}
 		maskIP := net.IPMask(intToIP(mask))
 		destIP := intToIP(destAddr)
-		if hostIPs[0].Mask(maskIP).Equal(destIP) {
+		if hostIP.Mask(maskIP).Equal(destIP) {
 			size, _ := maskIP.Size()
 			if size > mostSpecificNetmaskBits {
 				mostSpecificInterfaceName = interfaceName
