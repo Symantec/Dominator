@@ -8,8 +8,10 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/netspeed"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
+	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 	"io"
@@ -54,7 +56,8 @@ func (t *rpcType) fetch(request sub.FetchRequest,
 	}
 	t.rwLock.Lock()
 	defer t.rwLock.Unlock()
-	t.logger.Printf("Fetch() %d objects\n", len(request.Hashes))
+	t.logger.Printf("Fetch(%s) %d objects\n",
+		request.ServerAddress, len(request.Hashes))
 	if t.fetchInProgress {
 		t.logger.Println("Error: fetch already in progress")
 		return errors.New("fetch already in progress")
@@ -77,7 +80,9 @@ func (t *rpcType) doFetch(request sub.FetchRequest) error {
 	defer t.clearFetchInProgress()
 	objectServer := objectclient.NewObjectClient(request.ServerAddress)
 	benchmark := false
-	if t.networkReaderContext.MaximumSpeed() < 1 {
+	linkSpeed, haveLinkSpeed := netspeed.GetSpeedToAddress(
+		request.ServerAddress)
+	if !haveLinkSpeed && t.networkReaderContext.MaximumSpeed() < 1 {
 		benchmark = enoughBytesForBenchmark(objectServer, request)
 		if benchmark {
 			objectServer.SetExclusiveGetObjects(true)
@@ -99,8 +104,17 @@ func (t *rpcType) doFetch(request sub.FetchRequest) error {
 			t.logger.Println(err)
 			return err
 		}
-		err = readOne(t.objectsDir, hash, length,
-			t.networkReaderContext.NewReader(reader))
+		r := io.Reader(reader)
+		if haveLinkSpeed {
+			if linkSpeed > 0 {
+				r = rateio.NewReaderContext(linkSpeed,
+					uint64(t.networkReaderContext.SpeedPercent()),
+					&rateio.ReadMeasurer{}).NewReader(reader)
+			}
+		} else if !benchmark {
+			r = t.networkReaderContext.NewReader(reader)
+		}
+		err = readOne(t.objectsDir, hash, length, r)
 		reader.Close()
 		if err != nil {
 			t.logger.Println(err)
