@@ -8,14 +8,15 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/netspeed"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
+	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 	"io"
 	"os"
 	"path"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -79,14 +80,9 @@ func (t *rpcType) doFetch(request sub.FetchRequest) error {
 	defer t.clearFetchInProgress()
 	objectServer := objectclient.NewObjectClient(request.ServerAddress)
 	benchmark := false
-	localObjectServer := false
-	if fields := strings.Split(request.ServerAddress, ":"); len(fields) == 2 {
-		if fields[0] == "localhost" {
-			// We must be in testing mode. Go full throttle.
-			localObjectServer = true
-		}
-	}
-	if !localObjectServer && t.networkReaderContext.MaximumSpeed() < 1 {
+	linkSpeed, haveLinkSpeed := netspeed.GetSpeedToAddress(
+		request.ServerAddress)
+	if !haveLinkSpeed && t.networkReaderContext.MaximumSpeed() < 1 {
 		benchmark = enoughBytesForBenchmark(objectServer, request)
 		if benchmark {
 			objectServer.SetExclusiveGetObjects(true)
@@ -109,7 +105,13 @@ func (t *rpcType) doFetch(request sub.FetchRequest) error {
 			return err
 		}
 		r := io.Reader(reader)
-		if !localObjectServer && !benchmark {
+		if haveLinkSpeed {
+			if linkSpeed > 0 {
+				r = rateio.NewReaderContext(linkSpeed,
+					uint64(t.networkReaderContext.SpeedPercent()),
+					&rateio.ReadMeasurer{}).NewReader(reader)
+			}
+		} else if !benchmark {
 			r = t.networkReaderContext.NewReader(reader)
 		}
 		err = readOne(t.objectsDir, hash, length, r)

@@ -10,6 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/html"
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/Dominator/lib/memstats"
+	"github.com/Symantec/Dominator/lib/netspeed"
 	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/sub/httpd"
 	"github.com/Symantec/Dominator/sub/rpcd"
@@ -189,6 +190,9 @@ func getCachedFsSpeed(workingRootDir string, cacheDirname string) (bytesPerSecon
 }
 
 func getCachedNetworkSpeed(cacheFilename string) uint64 {
+	if speed, ok := netspeed.GetSpeedToHost(""); ok {
+		return speed
+	}
 	file, err := os.Open(cacheFilename)
 	if err != nil {
 		return 0
