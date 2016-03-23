@@ -78,9 +78,9 @@ func (rd *Reader) read(b []byte) (n int, err error) {
 		desiredDuration := time.Duration(uint64(time.Second) *
 			readSinceLastPause / desiredPerSecond)
 		targetTime := rd.ctx.timeOfLastPause.Add(desiredDuration)
+		rd.ctx.timeOfLastPause = time.Now()
 		time.Sleep(targetTime.Sub(time.Now()))
 		rd.ctx.bytesSinceLastPause = 0
-		rd.ctx.timeOfLastPause = time.Now()
 	}
 	n, err = rd.rd.Read(b)
 	if n < 1 || err != nil {
