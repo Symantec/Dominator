@@ -56,8 +56,6 @@ func (t *rpcType) fetch(request sub.FetchRequest,
 	}
 	t.rwLock.Lock()
 	defer t.rwLock.Unlock()
-	t.logger.Printf("Fetch(%s) %d objects\n",
-		request.ServerAddress, len(request.Hashes))
 	if t.fetchInProgress {
 		t.logger.Println("Error: fetch already in progress")
 		return errors.New("fetch already in progress")
@@ -82,11 +80,20 @@ func (t *rpcType) doFetch(request sub.FetchRequest) error {
 	benchmark := false
 	linkSpeed, haveLinkSpeed := netspeed.GetSpeedToAddress(
 		request.ServerAddress)
-	if !haveLinkSpeed && t.networkReaderContext.MaximumSpeed() < 1 {
-		benchmark = enoughBytesForBenchmark(objectServer, request)
-		if benchmark {
-			objectServer.SetExclusiveGetObjects(true)
-			t.logger.Println("Benchmarking network speed")
+	if haveLinkSpeed {
+		t.logFetch(request, linkSpeed)
+	} else {
+		if t.networkReaderContext.MaximumSpeed() < 1 {
+			benchmark = enoughBytesForBenchmark(objectServer, request)
+			if benchmark {
+				objectServer.SetExclusiveGetObjects(true)
+				t.logger.Printf("Fetch(%s) %d objects and benchmark speed\n",
+					request.ServerAddress, len(request.Hashes))
+			} else {
+				t.logFetch(request, 0)
+			}
+		} else {
+			t.logFetch(request, t.networkReaderContext.MaximumSpeed())
 		}
 	}
 	objectsReader, err := objectServer.GetObjects(request.Hashes)
@@ -133,8 +140,19 @@ func (t *rpcType) doFetch(request sub.FetchRequest) error {
 		t.networkReaderContext.InitialiseMaximumSpeed(speed)
 	}
 	t.logger.Printf("Fetch() complete. Read: %s in %s (%s/s)\n",
-		format.FormatBytes(totalLength), duration, format.FormatBytes(speed))
+		format.FormatBytes(totalLength), format.Duration(duration),
+		format.FormatBytes(speed))
 	return nil
+}
+
+func (t *rpcType) logFetch(request sub.FetchRequest, speed uint64) {
+	speedString := "unlimited speed"
+	if speed > 0 {
+		speedString = format.FormatBytes(
+			speed*uint64(t.networkReaderContext.SpeedPercent())/100) + "/s"
+	}
+	t.logger.Printf("Fetch(%s) %d objects at %s\n",
+		request.ServerAddress, len(request.Hashes), speedString)
 }
 
 func enoughBytesForBenchmark(objectServer *objectclient.ObjectClient,
