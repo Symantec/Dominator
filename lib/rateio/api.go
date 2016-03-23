@@ -26,6 +26,7 @@ type ReaderContext struct {
 	speedPercent        uint64
 	measurer            ReadIOMeasurer
 	bytesSinceLastPause uint64
+	chunklen            uint64
 	timeOfLastPause     time.Time
 }
 
