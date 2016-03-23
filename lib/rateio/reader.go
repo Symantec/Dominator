@@ -8,7 +8,6 @@ import (
 )
 
 const (
-	CHUNKLEN              = 1024 * 1024
 	DEFAULT_SPEED_PERCENT = 2
 )
 
@@ -20,6 +19,7 @@ func newReaderContext(maxIOPerSecond uint64, speedPercent uint64,
 		speedPercent = DEFAULT_SPEED_PERCENT
 	}
 	ctx.speedPercent = speedPercent
+	ctx.chunklen = ctx.maxIOPerSecond * ctx.speedPercent / 10000
 	ctx.measurer = measurer
 	ctx.timeOfLastPause = time.Now()
 	measurer.Reset()
@@ -31,6 +31,7 @@ func (ctx *ReaderContext) initialiseMaximumSpeed(maxSpeed uint64) {
 		fmt.Println("Maximum speed already set")
 	}
 	ctx.maxIOPerSecond = maxSpeed
+	ctx.chunklen = ctx.maxIOPerSecond * ctx.speedPercent / 10000
 }
 
 func (ctx *ReaderContext) setSpeedPercent(percent uint) {
@@ -38,6 +39,7 @@ func (ctx *ReaderContext) setSpeedPercent(percent uint) {
 		percent = 100
 	}
 	ctx.speedPercent = uint64(percent)
+	ctx.chunklen = ctx.maxIOPerSecond * ctx.speedPercent / 10000
 	ctx.timeOfLastPause = time.Now()
 	ctx.measurer.Reset()
 }
@@ -65,7 +67,7 @@ func (rd *Reader) read(b []byte) (n int, err error) {
 		// Operate at maximum speed: get out of the way.
 		return rd.rd.Read(b)
 	}
-	if rd.ctx.bytesSinceLastPause >= CHUNKLEN {
+	if rd.ctx.bytesSinceLastPause >= rd.ctx.chunklen {
 		// Need to slow down.
 		desiredPerSecond := rd.ctx.maxIOPerSecond * rd.ctx.speedPercent / 100
 		readSinceLastPause, err := rd.ctx.measurer.MeasureReadIO(
@@ -76,9 +78,9 @@ func (rd *Reader) read(b []byte) (n int, err error) {
 		desiredDuration := time.Duration(uint64(time.Second) *
 			readSinceLastPause / desiredPerSecond)
 		targetTime := rd.ctx.timeOfLastPause.Add(desiredDuration)
+		rd.ctx.timeOfLastPause = time.Now()
 		time.Sleep(targetTime.Sub(time.Now()))
 		rd.ctx.bytesSinceLastPause = 0
-		rd.ctx.timeOfLastPause = time.Now()
 	}
 	n, err = rd.rd.Read(b)
 	if n < 1 || err != nil {
