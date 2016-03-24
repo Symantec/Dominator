@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/Symantec/Dominator/dom/mdbd"
 	"github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Symantec/Dominator/lib/mdb/mdbd"
 	"github.com/Symantec/Dominator/lib/objectserver/memory"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"io"
