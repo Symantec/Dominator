@@ -28,18 +28,12 @@ func showDeviantSubsHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func showReachableSubsHandler(w http.ResponseWriter, req *http.Request) {
-	var duration rDuration
-	switch req.URL.RawQuery {
-	case "1m":
-		duration = rDuration(time.Second * 60)
-	case "10m":
-		duration = rDuration(time.Second * 600)
-	case "1h":
-		duration = rDuration(time.Second * 3600)
-	case "1d":
-		duration = rDuration(time.Second * 3600 * 24)
+	selector, err := httpdHerd.getReachableSelector(req.URL.RawQuery)
+	if err != nil {
+		fmt.Fprintln(w, err)
+		return
 	}
-	httpdHerd.showSubs(w, "reachable ", duration.selector)
+	httpdHerd.showSubs(w, "reachable ", selector)
 }
 
 func (herd *Herd) showSubs(w io.Writer, subType string,

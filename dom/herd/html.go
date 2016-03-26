@@ -38,18 +38,11 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 		"Number of alive subs: <a href=\"showAliveSubs\">%d</a><br>\n",
 		numSubs)
 	fmt.Fprint(writer, "Number of reachable subs in last: ")
-	numSubs = herd.countSelectedSubs(rDuration(time.Second * 60).selector)
-	fmt.Fprintf(writer, "<a href=\"showReachableSubs?1m\">1 min(%d)</a>, ",
-		numSubs)
-	numSubs = herd.countSelectedSubs(rDuration(time.Second * 600).selector)
-	fmt.Fprintf(writer, "<a href=\"showReachableSubs?10m\">10 min(%d)</a>, ",
-		numSubs)
-	numSubs = herd.countSelectedSubs(rDuration(time.Second * 3600).selector)
-	fmt.Fprintf(writer, "<a href=\"showReachableSubs?1h\">1 hour(%d)</a>, ",
-		numSubs)
-	numSubs = herd.countSelectedSubs(rDuration(time.Second * 3600 * 24).selector)
-	fmt.Fprintf(writer, "<a href=\"showReachableSubs?1d\">1 day(%d)</a><br>\n",
-		numSubs)
+	herd.writeReachableSubsLink(writer, time.Minute, "1 min")
+	herd.writeReachableSubsLink(writer, time.Minute*10, "10 min")
+	herd.writeReachableSubsLink(writer, time.Hour, "1 hour")
+	herd.writeReachableSubsLink(writer, time.Hour*24, "1 day")
+	fmt.Fprintln(writer, "<br>")
 	numSubs = herd.countSelectedSubs(selectDeviantSub)
 	fmt.Fprintf(writer,
 		"Number of deviant subs: <a href=\"showDeviantSubs\">%d</a><br>\n",
@@ -69,6 +62,16 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 		len(herd.connectionSemaphore), cap(herd.connectionSemaphore))
 	fmt.Fprintf(writer, "Poll slots: %d out of %d<br>\n",
 		len(herd.pollSemaphore), cap(herd.pollSemaphore))
+}
+
+func (herd *Herd) writeReachableSubsLink(writer io.Writer,
+	duration time.Duration, durationString string) {
+	numSubs := herd.countSelectedSubs(rDuration(duration).selector)
+	minutes := uint64(duration / time.Minute)
+	fmt.Fprintf(writer, "<a href=\"showReachableSubs?%dm\">%s</a>",
+		minutes, durationString)
+	fmt.Fprintf(writer, "(<a href=\"listReachableSubs?%dm\">%d</a>), ",
+		minutes, numSubs)
 }
 
 func selectAliveSub(sub *Sub) bool {

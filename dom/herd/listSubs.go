@@ -7,6 +7,19 @@ import (
 	"net/http"
 )
 
+func listReachableSubsHandler(w http.ResponseWriter, req *http.Request) {
+	writer := bufio.NewWriter(w)
+	defer writer.Flush()
+	selector, err := httpdHerd.getReachableSelector(req.URL.RawQuery)
+	if err != nil {
+		fmt.Fprintln(writer, err)
+		return
+	}
+	for _, sub := range httpdHerd.getSelectedSubs(selector) {
+		fmt.Fprintln(writer, sub.mdb.Hostname)
+	}
+}
+
 func listSubsHandler(w http.ResponseWriter, req *http.Request) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
