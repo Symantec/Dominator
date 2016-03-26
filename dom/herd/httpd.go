@@ -6,22 +6,19 @@ import (
 	"net/http"
 )
 
-var httpdHerd *Herd
-
 func (herd *Herd) startServer(portNum uint, daemon bool) error {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", portNum))
 	if err != nil {
 		return err
 	}
-	httpdHerd = herd
-	http.HandleFunc("/", statusHandler)
-	http.HandleFunc("/listReachableSubs", listReachableSubsHandler)
-	http.HandleFunc("/listSubs", listSubsHandler)
-	http.HandleFunc("/showAliveSubs", showAliveSubsHandler)
-	http.HandleFunc("/showAllSubs", showAllSubsHandler)
-	http.HandleFunc("/showCompliantSubs", showCompliantSubsHandler)
-	http.HandleFunc("/showDeviantSubs", showDeviantSubsHandler)
-	http.HandleFunc("/showReachableSubs", showReachableSubsHandler)
+	http.HandleFunc("/", herd.statusHandler)
+	http.HandleFunc("/listReachableSubs", herd.listReachableSubsHandler)
+	http.HandleFunc("/listSubs", herd.listSubsHandler)
+	http.HandleFunc("/showAliveSubs", herd.showAliveSubsHandler)
+	http.HandleFunc("/showAllSubs", herd.showAllSubsHandler)
+	http.HandleFunc("/showCompliantSubs", herd.showCompliantSubsHandler)
+	http.HandleFunc("/showDeviantSubs", herd.showDeviantSubsHandler)
+	http.HandleFunc("/showReachableSubs", herd.showReachableSubsHandler)
 	if daemon {
 		go http.Serve(listener, nil)
 	} else {

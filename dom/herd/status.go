@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func statusHandler(w http.ResponseWriter, req *http.Request) {
+func (herd *Herd) statusHandler(w http.ResponseWriter, req *http.Request) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
 	fmt.Fprintln(writer, "<title>Dominator status page</title>")
@@ -17,8 +17,8 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "</center>")
 	html.WriteHeaderWithRequest(writer, req)
 	fmt.Fprintln(writer, "<h3>")
-	httpdHerd.writeHtml(writer)
-	for _, htmlWriter := range httpdHerd.htmlWriters {
+	herd.writeHtml(writer)
+	for _, htmlWriter := range herd.htmlWriters {
 		htmlWriter.WriteHtml(writer)
 	}
 	fmt.Fprintln(writer, "</h3>")

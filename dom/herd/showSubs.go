@@ -11,29 +11,33 @@ import (
 	"time"
 )
 
-func showAliveSubsHandler(w http.ResponseWriter, req *http.Request) {
-	httpdHerd.showSubs(w, "alive ", selectAliveSub)
+func (herd *Herd) showAliveSubsHandler(w http.ResponseWriter,
+	req *http.Request) {
+	herd.showSubs(w, "alive ", selectAliveSub)
 }
 
-func showAllSubsHandler(w http.ResponseWriter, req *http.Request) {
-	httpdHerd.showSubs(w, "", nil)
+func (herd *Herd) showAllSubsHandler(w http.ResponseWriter, req *http.Request) {
+	herd.showSubs(w, "", nil)
 }
 
-func showCompliantSubsHandler(w http.ResponseWriter, req *http.Request) {
-	httpdHerd.showSubs(w, "compliant ", selectCompliantSub)
+func (herd *Herd) showCompliantSubsHandler(w http.ResponseWriter,
+	req *http.Request) {
+	herd.showSubs(w, "compliant ", selectCompliantSub)
 }
 
-func showDeviantSubsHandler(w http.ResponseWriter, req *http.Request) {
-	httpdHerd.showSubs(w, "deviant ", selectDeviantSub)
+func (herd *Herd) showDeviantSubsHandler(w http.ResponseWriter,
+	req *http.Request) {
+	herd.showSubs(w, "deviant ", selectDeviantSub)
 }
 
-func showReachableSubsHandler(w http.ResponseWriter, req *http.Request) {
-	selector, err := httpdHerd.getReachableSelector(req.URL.RawQuery)
+func (herd *Herd) showReachableSubsHandler(w http.ResponseWriter,
+	req *http.Request) {
+	selector, err := herd.getReachableSelector(req.URL.RawQuery)
 	if err != nil {
 		fmt.Fprintln(w, err)
 		return
 	}
-	httpdHerd.showSubs(w, "reachable ", selector)
+	herd.showSubs(w, "reachable ", selector)
 }
 
 func (herd *Herd) showSubs(w io.Writer, subType string,
