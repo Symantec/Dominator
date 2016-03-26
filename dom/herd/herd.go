@@ -109,6 +109,8 @@ func (herd *Herd) getReachableSelector(query string) (func(*Sub) bool, error) {
 		unit = rDuration(time.Second)
 	case 'm':
 		unit = rDuration(time.Minute)
+	case 'h':
+		unit = rDuration(time.Hour)
 	case 'd':
 		unit = rDuration(time.Hour * 24)
 	default:
