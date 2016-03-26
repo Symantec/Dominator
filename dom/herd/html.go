@@ -38,18 +38,10 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 		"Number of alive subs: <a href=\"showAliveSubs\">%d</a><br>\n",
 		numSubs)
 	fmt.Fprint(writer, "Number of reachable subs in last: ")
-	numSubs = herd.countSelectedSubs(rDuration(time.Second * 60).selector)
-	fmt.Fprintf(writer, "<a href=\"showReachableSubs?1m\">1 min(%d)</a>, ",
-		numSubs)
-	numSubs = herd.countSelectedSubs(rDuration(time.Second * 600).selector)
-	fmt.Fprintf(writer, "<a href=\"showReachableSubs?10m\">10 min(%d)</a>, ",
-		numSubs)
-	numSubs = herd.countSelectedSubs(rDuration(time.Second * 3600).selector)
-	fmt.Fprintf(writer, "<a href=\"showReachableSubs?1h\">1 hour(%d)</a>, ",
-		numSubs)
-	numSubs = herd.countSelectedSubs(rDuration(time.Second * 3600 * 24).selector)
-	fmt.Fprintf(writer, "<a href=\"showReachableSubs?1d\">1 day(%d)</a><br>\n",
-		numSubs)
+	herd.writeReachableSubsLink(writer, time.Minute, "1 min", "1m", true)
+	herd.writeReachableSubsLink(writer, time.Minute*10, "10 min", "10m", true)
+	herd.writeReachableSubsLink(writer, time.Hour, "1 hour", "1h", true)
+	herd.writeReachableSubsLink(writer, time.Hour*24, "1 day", "1d", false)
 	numSubs = herd.countSelectedSubs(selectDeviantSub)
 	fmt.Fprintf(writer,
 		"Number of deviant subs: <a href=\"showDeviantSubs\">%d</a><br>\n",
@@ -69,6 +61,21 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 		len(herd.connectionSemaphore), cap(herd.connectionSemaphore))
 	fmt.Fprintf(writer, "Poll slots: %d out of %d<br>\n",
 		len(herd.pollSemaphore), cap(herd.pollSemaphore))
+}
+
+func (herd *Herd) writeReachableSubsLink(writer io.Writer,
+	duration time.Duration, durationString string, query string,
+	moreToCome bool) {
+	numSubs := herd.countSelectedSubs(rDuration(duration).selector)
+	fmt.Fprintf(writer, "<a href=\"showReachableSubs?%s\">%s</a>",
+		query, durationString)
+	fmt.Fprintf(writer, "(<a href=\"listReachableSubs?%s\">%d</a>)",
+		query, numSubs)
+	if moreToCome {
+		fmt.Fprint(writer, ", ")
+	} else {
+		fmt.Fprintln(writer, "<br>")
+	}
 }
 
 func selectAliveSub(sub *Sub) bool {

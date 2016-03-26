@@ -3,23 +3,32 @@ package herd
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"net/http"
 )
 
-func listSubsHandler(w http.ResponseWriter, req *http.Request) {
+func (herd *Herd) listReachableSubsHandler(w http.ResponseWriter,
+	req *http.Request) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
-	listSubs(writer)
+	selector, err := herd.getReachableSelector(req.URL.RawQuery)
+	if err != nil {
+		fmt.Fprintln(writer, err)
+		return
+	}
+	for _, sub := range herd.getSelectedSubs(selector) {
+		fmt.Fprintln(writer, sub.mdb.Hostname)
+	}
 }
 
-func listSubs(writer io.Writer) {
-	httpdHerd.RLock()
-	subs := make([]string, 0, len(httpdHerd.subsByIndex))
-	for _, sub := range httpdHerd.subsByIndex {
+func (herd *Herd) listSubsHandler(w http.ResponseWriter, req *http.Request) {
+	writer := bufio.NewWriter(w)
+	defer writer.Flush()
+	herd.RLock()
+	subs := make([]string, 0, len(herd.subsByIndex))
+	for _, sub := range herd.subsByIndex {
 		subs = append(subs, sub.mdb.Hostname)
 	}
-	httpdHerd.RUnlock()
+	herd.RUnlock()
 	for _, name := range subs {
 		fmt.Fprintln(writer, name)
 	}

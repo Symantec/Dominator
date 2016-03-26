@@ -1,11 +1,13 @@
 package herd
 
 import (
+	"errors"
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"log"
 	"runtime"
+	"strconv"
 	"syscall"
 	"time"
 )
@@ -92,4 +94,32 @@ func (herd *Herd) getSelectedSubs(selectFunc func(*Sub) bool) []*Sub {
 		}
 	}
 	return subs
+}
+
+func (herd *Herd) getReachableSelector(query string) (func(*Sub) bool, error) {
+	length := len(query)
+	if length < 2 {
+		return nil, errors.New("bad query")
+	}
+	var unit rDuration
+	unitString := query[length-1]
+	query = query[:length-1]
+	switch unitString {
+	case 's':
+		unit = rDuration(time.Second)
+	case 'm':
+		unit = rDuration(time.Minute)
+	case 'h':
+		unit = rDuration(time.Hour)
+	case 'd':
+		unit = rDuration(time.Hour * 24)
+	default:
+		return nil, errors.New("unknown unit in query")
+	}
+	if val, err := strconv.ParseUint(query, 10, 64); err != nil {
+		return nil, err
+	} else {
+		duration := rDuration(val) * unit
+		return duration.selector, nil
+	}
 }
