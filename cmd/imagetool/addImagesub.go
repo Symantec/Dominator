@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	imclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
@@ -11,7 +10,6 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/imageserver"
 	subclient "github.com/Symantec/Dominator/sub/client"
 	"io"
 	"net/rpc"
@@ -32,8 +30,6 @@ func addImagesubSubcommand(args []string) {
 func addImagesub(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient,
 	name, subName, filterFilename, triggersFilename string) error {
-	var request imageserver.AddImageRequest
-	var reply imageserver.AddImageResponse
 	imageExists, err := checkImage(imageClient, name)
 	if err != nil {
 		return errors.New("error checking for image existance: " + err.Error())
@@ -41,8 +37,8 @@ func addImagesub(imageClient *rpc.Client, imageSClient *srpc.Client,
 	if imageExists {
 		return errors.New("image exists")
 	}
-	var newImage image.Image
-	if err := loadImageFiles(&newImage, objectClient, filterFilename,
+	newImage := new(image.Image)
+	if err := loadImageFiles(newImage, objectClient, filterFilename,
 		triggersFilename); err != nil {
 		return err
 	}
@@ -62,13 +58,7 @@ func addImagesub(imageClient *rpc.Client, imageSClient *srpc.Client,
 		return err
 	}
 	newImage.FileSystem = fs
-	request.ImageName = name
-	request.Image = &newImage
-	err = imclient.CallAddImage(imageSClient, request, &reply)
-	if err != nil {
-		return errors.New("remote error: " + err.Error())
-	}
-	return nil
+	return addImage(imageSClient, name, newImage)
 }
 
 func applyDeleteFilter(fs *filesystem.FileSystem) (
