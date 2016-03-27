@@ -19,3 +19,7 @@ type Image struct {
 	ReleaseNotes *Annotation
 	BuildLog     *Annotation
 }
+
+func (image *Image) Verify() error {
+	return image.verify()
+}

@@ -1,13 +1,12 @@
-package scanner
+package image
 
 import (
 	"errors"
 	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/image"
 	"path"
 )
 
-func verifyImage(image *image.Image) error {
+func (image *Image) verify() error {
 	computedInodes := make(map[uint64]struct{})
 	return verifyDirectory(&image.FileSystem.DirectoryInode, computedInodes, "")
 }
