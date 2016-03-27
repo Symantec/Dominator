@@ -26,3 +26,46 @@ func verifyDirectory(directoryInode *filesystem.DirectoryInode,
 	}
 	return nil
 }
+
+func (image *Image) verifyRequiredPaths(requiredPaths map[string]rune) error {
+	if image.Filter == nil {
+		return nil
+	}
+	fs := image.FileSystem
+	filenameToInodeTable := fs.FilenameToInodeTable()
+	for pathName, pathType := range requiredPaths {
+		inum, ok := filenameToInodeTable[pathName]
+		if !ok {
+			return errors.New(
+				"VerifyRequiredPaths(): missing path: " + pathName)
+		}
+		inode := fs.InodeTable[inum]
+		switch pathType {
+		case 'b', 'c', 'p':
+			if _, ok := inode.(*filesystem.SpecialInode); !ok {
+				return errors.New(
+					"VerifyRequiredPaths(): path is not a special inode: " +
+						pathName)
+			}
+		case 'd':
+			if _, ok := inode.(*filesystem.DirectoryInode); !ok {
+				return errors.New(
+					"VerifyRequiredPaths(): path is not a directory: " +
+						pathName)
+			}
+		case 'f':
+			if _, ok := inode.(*filesystem.RegularInode); !ok {
+				return errors.New(
+					"VerifyRequiredPaths(): path is not a regular file: " +
+						pathName)
+			}
+		case 'l':
+			if _, ok := inode.(*filesystem.SymlinkInode); !ok {
+				return errors.New(
+					"VerifyRequiredPaths(): path is not a symlink: " +
+						pathName)
+			}
+		}
+	}
+	return nil
+}
