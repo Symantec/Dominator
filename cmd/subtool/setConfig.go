@@ -7,7 +7,6 @@ import (
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
 	"os"
-	"strings"
 )
 
 func setConfigSubcommand(srpcClient *srpc.Client, args []string) {
@@ -22,7 +21,7 @@ func setConfig(srpcClient *srpc.Client) error {
 	var request sub.SetConfigurationRequest
 	request.ScanSpeedPercent = *scanSpeedPercent
 	request.NetworkSpeedPercent = *networkSpeedPercent
-	request.ScanExclusionList = strings.Split(*scanExcludeList, ",")
+	request.ScanExclusionList = scanExcludeList
 	var reply sub.SetConfigurationResponse
 	err := client.CallSetConfiguration(srpcClient, request, &reply)
 	if err != nil {
