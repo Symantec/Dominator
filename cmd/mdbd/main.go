@@ -9,7 +9,9 @@ import (
 	"log"
 	"log/syslog"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 )
 
 var (
@@ -25,6 +27,8 @@ var (
 	sourcesFile = flag.String("sourcesFile", "",
 		"Name of file list of driver url pairs")
 	useSyslog = flag.Bool("syslog", false, "If true, log to syslog")
+	pidFile   = flag.String(
+		"pidfile", "", "Name of file to write my PID to")
 )
 
 func printUsage() {
@@ -83,6 +87,38 @@ func getSource(driverName, url string) source {
 	return source{}
 }
 
+func gracefulCleanup() {
+	os.Remove(*pidFile)
+	os.Exit(1)
+}
+
+func writePidfile() {
+	file, err := os.Create(*pidFile)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+	defer file.Close()
+	fmt.Fprintln(file, os.Getpid())
+}
+
+func handleSignals(logger *log.Logger) {
+	if *pidFile == "" {
+		return
+	}
+	sigtermChannel := make(chan os.Signal)
+	signal.Notify(sigtermChannel, syscall.SIGTERM, syscall.SIGINT)
+	writePidfile()
+	go func() {
+		for {
+			select {
+			case <-sigtermChannel:
+				gracefulCleanup()
+			}
+		}
+	}()
+}
+
 func main() {
 	flag.Usage = printUsage
 	flag.Parse()
@@ -90,6 +126,8 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
+	logger := getLogger()
+	handleSignals(logger)
 	sources := make([]source, 0, flag.NArg()/2)
 	if *sourcesFile != "" {
 		file, err := os.Open(*sourcesFile)
@@ -116,5 +154,5 @@ func main() {
 		sources = append(sources, getSource(flag.Arg(index), flag.Arg(index+1)))
 	}
 	runDaemon(sources, *mdbFile, *hostnameRegex, *datacentre, *fetchInterval,
-		getLogger(), *debug)
+		logger, *debug)
 }
