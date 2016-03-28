@@ -27,7 +27,7 @@ var (
 	sourcesFile = flag.String("sourcesFile", "",
 		"Name of file list of driver url pairs")
 	useSyslog = flag.Bool("syslog", false, "If true, log to syslog")
-	pidFile   = flag.String(
+	pidfile   = flag.String(
 		"pidfile", "", "Name of file to write my PID to")
 )
 
@@ -88,22 +88,18 @@ func getSource(driverName, url string) source {
 }
 
 func gracefulCleanup() {
-	os.Remove(*pidFile)
+	os.Remove(*pidfile)
 	os.Exit(1)
 }
 
 func writePidfile() {
-	file, err := os.Create(*pidFile)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
+	file, _ := os.Create(*pidfile)
 	defer file.Close()
 	fmt.Fprintln(file, os.Getpid())
 }
 
 func handleSignals(logger *log.Logger) {
-	if *pidFile == "" {
+	if *pidfile == "" {
 		return
 	}
 	sigtermChannel := make(chan os.Signal)
