@@ -35,8 +35,6 @@ func addImagefileSubcommand(args []string) {
 func addImagefile(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient,
 	name, imageFilename, filterFilename, triggersFilename string) error {
-	var request imageserver.AddImageRequest
-	var reply imageserver.AddImageResponse
 	imageExists, err := checkImage(imageClient, name)
 	if err != nil {
 		return errors.New("error checking for image existance: " + err.Error())
@@ -44,14 +42,12 @@ func addImagefile(imageClient *rpc.Client, imageSClient *srpc.Client,
 	if imageExists {
 		return errors.New("image exists")
 	}
-	var newImage image.Image
-	if err := loadImageFiles(&newImage, objectClient, filterFilename,
+	newImage := new(image.Image)
+	if err := loadImageFiles(newImage, objectClient, filterFilename,
 		triggersFilename); err != nil {
 		return err
 	}
-	request.ImageName = name
-	request.Image = &newImage
-	request.Image.FileSystem, err = buildImage(imageSClient, newImage.Filter,
+	newImage.FileSystem, err = buildImage(imageSClient, newImage.Filter,
 		imageFilename)
 	if err != nil {
 		return errors.New("error building image: " + err.Error())
@@ -59,8 +55,22 @@ func addImagefile(imageClient *rpc.Client, imageSClient *srpc.Client,
 	if err := spliceComputedFiles(newImage.FileSystem); err != nil {
 		return err
 	}
-	err = client.CallAddImage(imageSClient, request, &reply)
-	if err != nil {
+	return addImage(imageSClient, name, newImage)
+}
+
+func addImage(imageSClient *srpc.Client, name string,
+	image *image.Image) error {
+	var request imageserver.AddImageRequest
+	var reply imageserver.AddImageResponse
+	request.ImageName = name
+	request.Image = image
+	if err := image.Verify(); err != nil {
+		return err
+	}
+	if err := image.VerifyRequiredPaths(requiredPaths); err != nil {
+		return err
+	}
+	if err := client.CallAddImage(imageSClient, request, &reply); err != nil {
 		return errors.New("remote error: " + err.Error())
 	}
 	return nil

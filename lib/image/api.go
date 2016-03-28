@@ -19,3 +19,19 @@ type Image struct {
 	ReleaseNotes *Annotation
 	BuildLog     *Annotation
 }
+
+// Verify will perform some self-consistency checks on the image. If a problem
+// is found, an error is returned.
+func (image *Image) Verify() error {
+	return image.verify()
+}
+
+// VerifyRequiredPaths will verify if required paths are present in the image.
+// The table of required paths is given by requiredPaths. If the image is a
+// sparse image (has no filter), then this check is skipped. If a problem is
+// found, an error is returned.
+// This function will create cache data associated with the image, consuming
+// more memory.
+func (image *Image) VerifyRequiredPaths(requiredPaths map[string]rune) error {
+	return image.verifyRequiredPaths(requiredPaths)
+}

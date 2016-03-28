@@ -6,6 +6,7 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Symantec/Dominator/lib/flagutil"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"net/rpc"
@@ -37,9 +38,15 @@ var (
 		"Name of file containing the user SSL key")
 	releaseNotes = flag.String("releaseNotes", "",
 		"Filename or URL containing release notes")
-	skipFields = flag.String("skipFields", "",
+	requiredPaths = flagutil.StringToRuneMap(constants.RequiredPaths)
+	skipFields    = flag.String("skipFields", "",
 		"Fields to skip when showing or diffing images")
 )
+
+func init() {
+	flag.Var(&requiredPaths, "requiredPaths",
+		"Comma separated list of required path:type entries")
+}
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr,

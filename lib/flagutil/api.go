@@ -9,3 +9,6 @@ package flagutil
 // A StringList is a slice of strings that satisfies the standard library
 // flag.Value interface.
 type StringList []string
+
+// A StringToRuneMap satisfies the standard library flag.Value interface.
+type StringToRuneMap map[string]rune

@@ -9,6 +9,13 @@ const (
 	DefaultNetworkSpeedPercent = 10
 )
 
+var RequiredPaths = map[string]rune{
+	"/etc":        'd',
+	"/etc/passwd": 'f',
+	"/usr":        'd',
+	"/usr/bin":    'd',
+}
+
 var ScanExcludeList = []string{
 	"/home/.*",
 	"/tmp/.*",

@@ -116,7 +116,7 @@ func (imdb *ImageDataBase) loadFile(filename string, logger *log.Logger) error {
 		}
 	}
 	image.FileSystem.RebuildInodePointers()
-	if err := verifyImage(&image); err != nil {
+	if err := image.Verify(); err != nil {
 		return err
 	}
 	imdb.Lock()

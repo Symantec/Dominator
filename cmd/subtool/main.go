@@ -4,10 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"os"
 	"path"
-	"strings"
 )
 
 var (
@@ -33,16 +33,19 @@ var (
 	objectServerPortNum = flag.Uint("objectServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
-	scanExcludeList = flag.String("scanExcludeList",
-		strings.Join(constants.ScanExcludeList, ","),
-		"Comma separated list of patterns to exclude from scanning")
-	scanSpeedPercent = flag.Uint("scanSpeedPercent", 2,
+	scanExcludeList  flagutil.StringList = constants.ScanExcludeList
+	scanSpeedPercent                     = flag.Uint("scanSpeedPercent", 2,
 		"Scan speed as percentage of capacity")
 	subHostname = flag.String("subHostname", "localhost", "Hostname of sub")
 	subPortNum  = flag.Uint("subPortNum", constants.SubPortNumber,
 		"Port number of sub")
 	wait = flag.Uint("wait", 0, "Seconds to sleep after last Poll")
 )
+
+func init() {
+	flag.Var(&scanExcludeList, "scanExcludeList",
+		"Comma separated list of patterns to exclude from scanning")
+}
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr,

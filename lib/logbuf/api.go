@@ -8,21 +8,30 @@
 package logbuf
 
 import (
+	"bufio"
 	"container/ring"
 	"io"
+	"os"
 	"sync"
 )
 
 // LogBuffer is a circular buffer suitable for holding logs. It satisfies the
 // io.Writer interface. It is usually passed to the log.New function.
 type LogBuffer struct {
-	rwMutex sync.RWMutex
-	buffer  *ring.Ring // Always points to next insert position.
+	rwMutex       sync.RWMutex
+	buffer        *ring.Ring // Always points to next insert position.
+	logDir        string
+	file          *os.File
+	writer        *bufio.Writer
+	usage         uint64
+	quota         uint64
+	writeNotifier chan<- struct{}
 }
 
 // New returns a *LogBuffer with the specified number of lines of buffer.
+// Only one should be created per application.
 func New(length uint) *LogBuffer {
-	return &LogBuffer{buffer: ring.New(int(length))}
+	return newLogBuffer(length, *logDir, uint64(*logQuota)<<20)
 }
 
 // Write will write len(p) bytes from p to the log buffer. It always returns
