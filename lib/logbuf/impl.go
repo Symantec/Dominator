@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	dirPerms  = syscall.S_IRWXU
+	dirPerms  = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP
 	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
 )
 
