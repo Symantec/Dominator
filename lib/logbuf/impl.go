@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"container/ring"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -17,15 +16,6 @@ import (
 const (
 	dirPerms  = syscall.S_IRWXU
 	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
-)
-
-var (
-	alsoLogToStderr = flag.Bool("alsoLogToStderr", false,
-		"If true, also write logs to stderr")
-	logDir = flag.String("logDir", path.Join("/var/log", path.Base(os.Args[0])),
-		"Directory to write log data to")
-	logQuota = flag.Uint("logQuota", 10,
-		"Log quota in MiB. If exceeded, old logs are deleted")
 )
 
 func newLogBuffer(length uint, dirname string, quota uint64) *LogBuffer {
@@ -119,6 +109,9 @@ func (lb *LogBuffer) enforceQuota() error {
 		}
 		if fi.Mode().IsRegular() {
 			size := uint64(fi.Size())
+			if size < lb.quota>>10 {
+				size = lb.quota >> 10 // Limit number of files to 1024.
+			}
 			if size+usage > lb.quota || deleteRemainingFiles {
 				os.Remove(filename)
 				deleteRemainingFiles = true

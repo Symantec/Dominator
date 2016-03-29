@@ -10,9 +10,20 @@ package logbuf
 import (
 	"bufio"
 	"container/ring"
+	"flag"
 	"io"
 	"os"
+	"path"
 	"sync"
+)
+
+var (
+	alsoLogToStderr = flag.Bool("alsoLogToStderr", false,
+		"If true, also write logs to stderr")
+	logDir = flag.String("logDir", path.Join("/var/log", path.Base(os.Args[0])),
+		"Directory to write log data to. If empty, no logs are written")
+	logQuota = flag.Uint("logQuota", 10,
+		"Log quota in MiB. If exceeded, old logs are deleted")
 )
 
 // LogBuffer is a circular buffer suitable for holding logs. It satisfies the
@@ -30,8 +41,18 @@ type LogBuffer struct {
 
 // New returns a *LogBuffer with the specified number of lines of buffer.
 // Only one should be created per application.
+// The behaviour of the LogBuffer is controlled by the following command-line
+// flags (registered with the standard flag pacakge):
+//  -alsoLogToStderr: If true, also write logs to stderr
+//  -logDir:          Directory to write log data to. If empty, no logs are written
+//  -logQuota:        Log quota in MiB. If exceeded, old logs are deleted.
+//                    If zero, the quota will be 16 KiB
 func New(length uint) *LogBuffer {
-	return newLogBuffer(length, *logDir, uint64(*logQuota)<<20)
+	quota := uint64(*logQuota) << 20
+	if quota < 16384 {
+		quota = 16384
+	}
+	return newLogBuffer(length, *logDir, quota)
 }
 
 // Write will write len(p) bytes from p to the log buffer. It always returns
@@ -40,8 +61,8 @@ func (lb *LogBuffer) Write(p []byte) (n int, err error) {
 	return lb.write(p)
 }
 
-// Dump will write the contents of the log buffer to w, with a prefix and postfix
-// string written before and after each line.
+// Dump will write the contents of the log buffer to w, with a prefix and
+// postfix string written before and after each line.
 func (lb *LogBuffer) Dump(writer io.Writer, prefix, postfix string) error {
 	return lb.dump(writer, prefix, postfix)
 }
