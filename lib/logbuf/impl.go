@@ -26,6 +26,7 @@ func newLogBuffer(length uint, dirname string, quota uint64) *LogBuffer {
 	if err := logBuffer.setupFileLogging(); err != nil {
 		fmt.Fprintln(logBuffer, err)
 	}
+	logBuffer.addHttpHandlers()
 	return logBuffer
 }
 
@@ -173,11 +174,4 @@ func (lb *LogBuffer) dump(writer io.Writer, prefix, postfix string) error {
 		}
 	})
 	return nil
-}
-
-func (lb *LogBuffer) writeHtml(writer io.Writer) {
-	fmt.Fprintln(writer, "Logs:<br>")
-	fmt.Fprintln(writer, "<pre>")
-	lb.Dump(writer, "", "")
-	fmt.Fprintln(writer, "</pre>")
 }
