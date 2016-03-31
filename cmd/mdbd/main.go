@@ -27,8 +27,7 @@ var (
 	sourcesFile = flag.String("sourcesFile", "",
 		"Name of file list of driver url pairs")
 	useSyslog = flag.Bool("syslog", false, "If true, log to syslog")
-	pidfile   = flag.String(
-		"pidfile", "", "Name of file to write my PID to")
+	pidfile   = flag.String("pidfile", "", "Name of file to write my PID to")
 )
 
 func printUsage() {
