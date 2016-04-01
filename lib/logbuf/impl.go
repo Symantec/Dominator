@@ -163,15 +163,44 @@ func (lb *LogBuffer) flushWhenIdle(writeNotifier <-chan struct{}) {
 	}
 }
 
-func (lb *LogBuffer) dump(writer io.Writer, prefix, postfix string) error {
+func (lb *LogBuffer) getEntries() [][]byte {
 	lb.rwMutex.RLock()
 	defer lb.rwMutex.RUnlock()
+	entries := make([][]byte, 0, lb.buffer.Len())
 	lb.buffer.Do(func(p interface{}) {
 		if p != nil {
-			writer.Write([]byte(prefix))
-			writer.Write(p.([]byte))
-			writer.Write([]byte(postfix))
+			entries = append(entries, p.([]byte))
 		}
 	})
+	return entries
+}
+
+func (lb *LogBuffer) dump(writer io.Writer, prefix, postfix string,
+	recentFirst bool) error {
+	entries := lb.getEntries()
+	if recentFirst {
+		reverseEntries(entries)
+	}
+	for _, entry := range entries {
+		writer.Write([]byte(prefix))
+		writer.Write(entry)
+		writer.Write([]byte(postfix))
+	}
 	return nil
+}
+
+func reverseEntries(entries [][]byte) {
+	length := len(entries)
+	for index := 0; index < length/2; index++ {
+		entries[index], entries[length-1-index] =
+			entries[length-1-index], entries[index]
+	}
+}
+
+func reverseStrings(strings []string) {
+	length := len(strings)
+	for index := 0; index < length/2; index++ {
+		strings[index], strings[length-1-index] =
+			strings[length-1-index], strings[index]
+	}
 }

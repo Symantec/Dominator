@@ -62,9 +62,11 @@ func (lb *LogBuffer) Write(p []byte) (n int, err error) {
 }
 
 // Dump will write the contents of the log buffer to w, with a prefix and
-// postfix string written before and after each line.
-func (lb *LogBuffer) Dump(writer io.Writer, prefix, postfix string) error {
-	return lb.dump(writer, prefix, postfix)
+// postfix string written before and after each line. If recentFirst is true,
+// the most recently written contents are dumped first.
+func (lb *LogBuffer) Dump(writer io.Writer, prefix, postfix string,
+	recentFirst bool) error {
+	return lb.dump(writer, prefix, postfix, recentFirst)
 }
 
 // WriteHtml will write the contents of the log buffer to w, with appropriate
