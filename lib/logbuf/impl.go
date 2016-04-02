@@ -145,8 +145,10 @@ func (lb *LogBuffer) enforceQuota() error {
 		lb.file = file
 		lb.writer = bufio.NewWriter(file)
 		symlink := path.Join(lb.logDir, "latest")
-		os.Symlink(filename, symlink+"~")
-		os.Rename(symlink+"~", symlink)
+		tmpSymlink := symlink + "~"
+		os.Remove(tmpSymlink)
+		os.Symlink(filename, tmpSymlink)
+		os.Rename(tmpSymlink, symlink)
 	}
 	return nil
 }

@@ -33,11 +33,20 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintln(writer, err)
 		return
 	}
+	tmpNames := make([]string, 0, len(names))
+	for _, name := range names {
+		if strings.Index(name, ":") >= 0 {
+			tmpNames = append(tmpNames, name)
+
+		}
+	}
+	names = tmpNames
 	sort.Strings(names)
 	flags, _ := parseQuery(req.URL.RawQuery)
-	recentFirst := ""
-	if _, ok := flags["recentFirst"]; ok {
-		recentFirst = "&recentFirst"
+	recentFirstString := ""
+	_, recentFirst := flags["recentFirst"]
+	if recentFirst {
+		recentFirstString = "&recentFirst"
 		reverseStrings(names)
 	}
 	if _, ok := flags["text"]; ok {
@@ -47,12 +56,30 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	fmt.Fprintln(writer, "<body>")
-	fmt.Fprintln(writer, `Logs: <a href="logs">recent last</a>`)
-	fmt.Fprintln(writer, `      <a href="logs?recentFirst">recent first</a>`)
+	fmt.Fprint(writer, "Logs: ")
+	if recentFirst {
+		fmt.Fprintf(writer, "showing recent first ")
+		fmt.Fprintln(writer, `<a href="logs">show recent last</a>`)
+	} else {
+		fmt.Fprintf(writer, "showing recent last ")
+		fmt.Fprintln(writer, `<a href="logs?recentFirst">show recent first</a>`)
+	}
 	fmt.Fprintln(writer, "<p>")
+	currentName := ""
+	lb.rwMutex.Lock()
+	if lb.file != nil {
+		currentName = path.Base(lb.file.Name())
+	}
+	lb.rwMutex.Unlock()
 	for _, name := range names {
-		fmt.Fprintf(writer, "<a href=\"logs/dump?name=%s%s\">%s</a><br>\n",
-			name, recentFirst, name)
+		if name == currentName {
+			fmt.Fprintf(writer,
+				"<a href=\"logs/dump?name=latest%s\">%s</a> (current)<br>\n",
+				recentFirstString, name)
+		} else {
+			fmt.Fprintf(writer, "<a href=\"logs/dump?name=%s%s\">%s</a><br>\n",
+				name, recentFirstString, name)
+		}
 	}
 	fmt.Fprintln(writer, "</body>")
 }
