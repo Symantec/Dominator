@@ -59,10 +59,11 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprint(writer, "Logs: ")
 	if recentFirst {
 		fmt.Fprintf(writer, "showing recent first ")
-		fmt.Fprintln(writer, `<a href="logs">show recent last</a>`)
+		fmt.Fprintln(writer, `<a href="logs">show recent last</a><br>`)
 	} else {
 		fmt.Fprintf(writer, "showing recent last ")
-		fmt.Fprintln(writer, `<a href="logs?recentFirst">show recent first</a>`)
+		fmt.Fprintln(writer,
+			`<a href="logs?recentFirst">show recent first</a><br>`)
 	}
 	fmt.Fprintln(writer, "<p>")
 	currentName := ""
@@ -82,6 +83,17 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	fmt.Fprintln(writer, "</body>")
+}
+
+func showRecentLinks(writer io.Writer, recentFirstString string) {
+	fmt.Fprintln(writer, `Show last: <a href="logs/showLast?1m%s">min</a>`,
+		recentFirstString)
+	fmt.Fprintln(writer, `           <a href="logs/showLast?10m%s">10 min</a>`,
+		recentFirstString)
+	fmt.Fprintln(writer, `           <a href="logs/showLast?1h%s">hour</a>`,
+		recentFirstString)
+	fmt.Fprintln(writer, `           <a href="logs/showLast?1d%s">day</a>`,
+		recentFirstString)
 }
 
 func (lb *LogBuffer) httpDumpHandler(w http.ResponseWriter, req *http.Request) {
