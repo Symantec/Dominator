@@ -159,6 +159,9 @@ func (lb *LogBuffer) httpShowLastHandler(w http.ResponseWriter,
 	_, recentFirst := flags["recentFirst"]
 	for flag := range flags {
 		length := len(flag)
+		if length < 2 {
+			continue
+		}
 		unitChar := flag[length-1]
 		var unit time.Duration
 		switch unitChar {
@@ -179,6 +182,7 @@ func (lb *LogBuffer) httpShowLastHandler(w http.ResponseWriter,
 			return
 		} else {
 			lb.showRecent(w, time.Duration(val)*unit, recentFirst)
+			return
 		}
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
