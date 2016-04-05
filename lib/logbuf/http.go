@@ -8,12 +8,15 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 )
 
 func (lb *LogBuffer) addHttpHandlers() {
 	http.HandleFunc("/logs", lb.httpListHandler)
 	http.HandleFunc("/logs/dump", lb.httpDumpHandler)
+	http.HandleFunc("/logs/showLast", lb.httpShowLastHandler)
 }
 
 func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
@@ -65,6 +68,8 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintln(writer,
 			`<a href="logs?recentFirst">show recent first</a><br>`)
 	}
+	// TODO(rgooch): Enable when ready.
+	// showRecentLinks(writer, recentFirstString)
 	fmt.Fprintln(writer, "<p>")
 	currentName := ""
 	lb.rwMutex.Lock()
@@ -146,6 +151,42 @@ func (lb *LogBuffer) httpDumpHandler(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintln(writer, err)
 	}
 	return
+}
+
+func (lb *LogBuffer) httpShowLastHandler(w http.ResponseWriter,
+	req *http.Request) {
+	flags, _ := parseQuery(req.URL.RawQuery)
+	_, recentFirst := flags["recentFirst"]
+	for flag := range flags {
+		length := len(flag)
+		unitChar := flag[length-1]
+		var unit time.Duration
+		switch unitChar {
+		case 's':
+			unit = time.Second
+		case 'm':
+			unit = time.Minute
+		case 'h':
+			unit = time.Hour
+		case 'd':
+			unit = time.Hour * 24
+		default:
+			continue
+		}
+		if val, err := strconv.ParseUint(flag[:length-1], 10, 64); err != nil {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		} else {
+			lb.showRecent(w, time.Duration(val)*unit, recentFirst)
+		}
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusBadRequest)
+}
+
+func (lb *LogBuffer) showRecent(w io.Writer, duration time.Duration,
+	recentFirst bool) {
 }
 
 func (lb *LogBuffer) writeHtml(writer io.Writer) {
