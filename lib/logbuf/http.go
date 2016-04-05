@@ -90,14 +90,14 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "</body>")
 }
 
-func showRecentLinks(writer io.Writer, recentFirstString string) {
-	fmt.Fprintln(writer, `Show last: <a href="logs/showLast?1m%s">min</a>`,
+func showRecentLinks(w io.Writer, recentFirstString string) {
+	fmt.Fprintf(w, "Show last: <a href=\"logs/showLast?1m%s\">minute</a>\n",
 		recentFirstString)
-	fmt.Fprintln(writer, `           <a href="logs/showLast?10m%s">10 min</a>`,
+	fmt.Fprintf(w, "           <a href=\"logs/showLast?10m%s\">10 min</a>\n",
 		recentFirstString)
-	fmt.Fprintln(writer, `           <a href="logs/showLast?1h%s">hour</a>`,
+	fmt.Fprintf(w, "           <a href=\"logs/showLast?1h%s\">hour</a>\n",
 		recentFirstString)
-	fmt.Fprintln(writer, `           <a href="logs/showLast?1d%s">day</a>`,
+	fmt.Fprintf(w, "           <a href=\"logs/showLast?1d%s\">day</a>\n",
 		recentFirstString)
 }
 
