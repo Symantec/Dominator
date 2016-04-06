@@ -13,6 +13,24 @@ import (
 	"time"
 )
 
+type countingWriter struct {
+	count      uint64
+	writer     io.Writer
+	prefixLine string
+}
+
+func (w *countingWriter) Write(p []byte) (n int, err error) {
+	if w.prefixLine != "" {
+		w.writer.Write([]byte(w.prefixLine))
+		w.prefixLine = ""
+	}
+	n, err = w.writer.Write(p)
+	if n > 0 {
+		w.count += uint64(n)
+	}
+	return
+}
+
 func (lb *LogBuffer) addHttpHandlers() {
 	http.HandleFunc("/logs", lb.httpListHandler)
 	http.HandleFunc("/logs/dump", lb.httpDumpHandler)
@@ -25,32 +43,16 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
-	file, err := os.Open(lb.logDir)
-	if err != nil {
-		fmt.Fprintln(writer, err)
-		return
-	}
-	names, err := file.Readdirnames(-1)
-	file.Close()
-	if err != nil {
-		fmt.Fprintln(writer, err)
-		return
-	}
-	tmpNames := make([]string, 0, len(names))
-	for _, name := range names {
-		if strings.Index(name, ":") >= 0 {
-			tmpNames = append(tmpNames, name)
-
-		}
-	}
-	names = tmpNames
-	sort.Strings(names)
 	flags, _ := parseQuery(req.URL.RawQuery)
-	recentFirstString := ""
 	_, recentFirst := flags["recentFirst"]
+	names, err := lb.list(recentFirst)
+	if err != nil {
+		fmt.Fprintln(writer, err)
+		return
+	}
+	recentFirstString := ""
 	if recentFirst {
 		recentFirstString = "&recentFirst"
-		reverseStrings(names)
 	}
 	if _, ok := flags["text"]; ok {
 		for _, name := range names {
@@ -68,8 +70,7 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintln(writer,
 			`<a href="logs?recentFirst">show recent first</a><br>`)
 	}
-	// TODO(rgooch): Enable when ready.
-	// showRecentLinks(writer, recentFirstString)
+	showRecentLinks(writer, recentFirstString)
 	fmt.Fprintln(writer, "<p>")
 	currentName := ""
 	lb.rwMutex.Lock()
@@ -191,6 +192,64 @@ func (lb *LogBuffer) httpShowLastHandler(w http.ResponseWriter,
 
 func (lb *LogBuffer) showRecent(w io.Writer, duration time.Duration,
 	recentFirst bool) {
+	writer := bufio.NewWriter(w)
+	defer writer.Flush()
+	names, err := lb.list(true)
+	if err != nil {
+		fmt.Fprintln(writer, err)
+		return
+	}
+	earliestTime := time.Now().Add(-duration)
+	// Get a list of names which may be recent enough.
+	tmpNames := make([]string, 0, len(names))
+	for _, name := range names {
+		startTime, err := time.ParseInLocation(timeLayout, name, time.Local)
+		if err != nil {
+			continue
+		}
+		tmpNames = append(tmpNames, name)
+		if startTime.Before(earliestTime) {
+			break
+		}
+	}
+	names = tmpNames
+	if !recentFirst {
+		reverseStrings(names)
+	}
+	fmt.Fprintln(writer, "<body>")
+	cWriter := &countingWriter{writer: writer}
+	for _, name := range names {
+		cWriter.count = 0
+		lb.dumpSince(cWriter, name, earliestTime, "", "<br>\n", recentFirst)
+		if cWriter.count > 0 {
+			cWriter.prefixLine = "<hr>\n"
+		}
+	}
+	fmt.Fprintln(writer, "</body>")
+}
+
+func (lb *LogBuffer) list(recentFirst bool) ([]string, error) {
+	file, err := os.Open(lb.logDir)
+	if err != nil {
+		return nil, err
+	}
+	names, err := file.Readdirnames(-1)
+	file.Close()
+	if err != nil {
+		return nil, err
+	}
+	tmpNames := make([]string, 0, len(names))
+	for _, name := range names {
+		if strings.Index(name, ":") >= 0 {
+			tmpNames = append(tmpNames, name)
+		}
+	}
+	names = tmpNames
+	sort.Strings(names)
+	if recentFirst {
+		reverseStrings(names)
+	}
+	return names, nil
 }
 
 func (lb *LogBuffer) writeHtml(writer io.Writer) {
