@@ -100,6 +100,8 @@ func showRecentLinks(w io.Writer, recentFirstString string) {
 		recentFirstString)
 	fmt.Fprintf(w, "           <a href=\"logs/showLast?1d%s\">day</a>\n",
 		recentFirstString)
+	fmt.Fprintf(w, "           <a href=\"logs/showLast?1w%s\">week</a>\n",
+		recentFirstString)
 }
 
 func (lb *LogBuffer) httpDumpHandler(w http.ResponseWriter, req *http.Request) {
@@ -174,6 +176,8 @@ func (lb *LogBuffer) httpShowLastHandler(w http.ResponseWriter,
 			unit = time.Hour
 		case 'd':
 			unit = time.Hour * 24
+		case 'w':
+			unit = time.Hour * 24 * 7
 		default:
 			continue
 		}
