@@ -244,7 +244,7 @@ func (lb *LogBuffer) list(recentFirst bool) ([]string, error) {
 	}
 	tmpNames := make([]string, 0, len(names))
 	for _, name := range names {
-		if strings.Index(name, ":") >= 0 {
+		if strings.Count(name, ":") == 3 {
 			tmpNames = append(tmpNames, name)
 		}
 	}

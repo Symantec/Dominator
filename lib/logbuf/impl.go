@@ -17,7 +17,7 @@ const (
 	dirPerms  = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP
 	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
 
-	timeLayout = "20060102:150405.999"
+	timeLayout = "2006-01-02:15:04:05.999"
 )
 
 func newLogBuffer(length uint, dirname string, quota uint64) *LogBuffer {
