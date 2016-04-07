@@ -24,7 +24,7 @@ func callUpdate(client *srpc.Client, request sub.UpdateRequest,
 		return err
 	}
 	if str != "\n" {
-		return errors.New(str)
+		return errors.New(str[:len(str)-1])
 	}
 	return gob.NewDecoder(conn).Decode(reply)
 }

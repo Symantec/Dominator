@@ -26,7 +26,7 @@ func callPoll(client *srpc.Client, request sub.PollRequest,
 		return err
 	}
 	if str != "\n" {
-		return errors.New(str)
+		return errors.New(str[:len(str)-1])
 	}
 	if err := gob.NewDecoder(conn).Decode(reply); err != nil {
 		return err

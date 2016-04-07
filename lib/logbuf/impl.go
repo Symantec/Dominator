@@ -16,6 +16,8 @@ import (
 const (
 	dirPerms  = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP
 	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
+
+	timeLayout = "2006-01-02:15:04:05.999"
 )
 
 func newLogBuffer(length uint, dirname string, quota uint64) *LogBuffer {
@@ -133,10 +135,7 @@ func (lb *LogBuffer) enforceQuota() error {
 		lb.file = nil
 	}
 	if lb.file == nil {
-		now := time.Now()
-		filename := fmt.Sprintf("%d%02d%02d:%02d%02d%02d.%03d",
-			now.Year(), now.Month(), now.Day(),
-			now.Hour(), now.Minute(), now.Second(), now.Nanosecond()/1000000)
+		filename := time.Now().Format(timeLayout)
 		file, err := os.OpenFile(path.Join(lb.logDir, filename),
 			os.O_CREATE|os.O_WRONLY, filePerms)
 		if err != nil {
@@ -145,8 +144,10 @@ func (lb *LogBuffer) enforceQuota() error {
 		lb.file = file
 		lb.writer = bufio.NewWriter(file)
 		symlink := path.Join(lb.logDir, "latest")
-		os.Symlink(filename, symlink+"~")
-		os.Rename(symlink+"~", symlink)
+		tmpSymlink := symlink + "~"
+		os.Remove(tmpSymlink)
+		os.Symlink(filename, tmpSymlink)
+		os.Rename(tmpSymlink, symlink)
 	}
 	return nil
 }
@@ -185,6 +186,53 @@ func (lb *LogBuffer) dump(writer io.Writer, prefix, postfix string,
 		writer.Write([]byte(prefix))
 		writer.Write(entry)
 		writer.Write([]byte(postfix))
+	}
+	return nil
+}
+
+func (lb *LogBuffer) dumpSince(writer io.Writer, name string,
+	earliestTime time.Time, prefix, postfix string, recentFirst bool) error {
+	file, err := os.Open(path.Join(lb.logDir, path.Base(path.Clean(name))))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	lines := make([]string, 0)
+	timeFormat := "2006/01/02 15:04:05"
+	minLength := len(timeFormat) + 2
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) < minLength {
+			continue
+		}
+		timeString := line[:minLength-2]
+		timeStamp, err := time.ParseInLocation(timeFormat, timeString,
+			time.Local)
+		if err != nil {
+			continue
+		}
+		if timeStamp.Before(earliestTime) {
+			continue
+		}
+		if recentFirst {
+			lines = append(lines, line)
+		} else {
+			writer.Write([]byte(prefix))
+			writer.Write([]byte(line))
+			writer.Write([]byte(postfix))
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	if recentFirst {
+		reverseStrings(lines)
+		for _, line := range lines {
+			writer.Write([]byte(prefix))
+			writer.Write([]byte(line))
+			writer.Write([]byte(postfix))
+		}
 	}
 	return nil
 }
