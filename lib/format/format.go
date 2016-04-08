@@ -28,6 +28,12 @@ func Duration(duration time.Duration) string {
 		return fmt.Sprintf("%.3gs", s)
 	} else {
 		duration -= duration % time.Second
-		return duration.String()
+		day := time.Hour * 24
+		if duration < day {
+			return duration.String()
+		}
+		days := duration / day
+		duration %= day
+		return fmt.Sprintf("%dd%s", days, duration)
 	}
 }
