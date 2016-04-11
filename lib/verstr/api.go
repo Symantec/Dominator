@@ -2,7 +2,7 @@
 	Package verstr supports comparing and sorting of version strings.
 
 	Version strings contain substrings (separated by '.') which should be sorted
-	numerically than lexographically. For example, "file.10.ext" and
+	numerically rather than lexographically. For example, "file.10.ext" and
 	"file.1.ext" sort lexographically such that "file.10.ext" comes first which
 	is generally not the desired result. When treated as version strings,
 	"file.1.ext" should come first.
