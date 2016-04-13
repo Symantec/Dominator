@@ -6,15 +6,15 @@ import (
 )
 
 func less(left, right string) bool {
-	rightFields := strings.Split(right, ".")
-	for index, leftField := range strings.Split(left, ".") {
-		if index >= len(rightFields) {
-			return false
+	leftFields := strings.Split(left, ".")
+	for index, rightField := range strings.Split(right, ".") {
+		if index >= len(leftFields) {
+			return true
 		}
-		rightField := rightFields[index]
-		if leftVal, err := strconv.ParseUint(leftField, 10, 64); err == nil {
-			if rightVal, err := strconv.ParseUint(
-				rightField, 10, 64); err == nil {
+		leftField := leftFields[index]
+		if rightVal, err := strconv.ParseUint(rightField, 10, 64); err == nil {
+			if leftVal, err := strconv.ParseUint(
+				leftField, 10, 64); err == nil {
 				if leftVal < rightVal {
 					return true
 				} else if leftVal > rightVal {
