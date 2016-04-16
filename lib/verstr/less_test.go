@@ -13,6 +13,8 @@ func TestLess(t *testing.T) {
 		{"file.1.ext", "file.0.ext", false},
 		{"file.1.ext", "file.10.ext", true},
 		{"file.10.ext", "file.1.ext", false},
+		{"file.9.ext", "file.10.ext", true},
+		{"file.10.ext", "file.9.ext", false},
 		{"sparse", "sparse.0", true},
 		{"sparse.0", "sparse", false},
 	}
