@@ -9,6 +9,8 @@ func TestLess(t *testing.T) {
 		left, right string
 		want        bool
 	}{
+		{"file.0.ext", "file.1.ext", true},
+		{"file.1.ext", "file.0.ext", false},
 		{"file.1.ext", "file.10.ext", true},
 		{"file.10.ext", "file.1.ext", false},
 		{"sparse", "sparse.0", true},
