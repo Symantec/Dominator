@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/verstr"
 	"io"
 	"net/http"
-	"sort"
 )
 
 func (s state) listImagesHandler(w http.ResponseWriter, req *http.Request) {
@@ -22,7 +22,7 @@ func (s state) listImagesHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<h3>")
 	imageNames := s.imageDataBase.ListImages()
-	sort.Strings(imageNames)
+	verstr.Sort(imageNames)
 	fmt.Fprintln(writer, `<table border="1" style="width:100%">`)
 	fmt.Fprintln(writer, "  <tr>")
 	fmt.Fprintln(writer, "    <th>Name</th>")

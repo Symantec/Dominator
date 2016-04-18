@@ -35,7 +35,7 @@ func writeHeader(writer io.Writer, req *http.Request) {
 	fmt.Fprintf(writer, "Start time: %s<br>\n", startTime.Format(timeFormat))
 	uptime := time.Since(startTime) + time.Millisecond*50
 	uptime = (uptime / time.Millisecond / 100) * time.Millisecond * 100
-	fmt.Fprintf(writer, "Uptime: %s<br>\n", uptime)
+	fmt.Fprintf(writer, "Uptime: %s<br>\n", format.Duration(uptime))
 	uTime, sTime := getRusage()
 	userCpuTime := uTime.Sub(startUtime)
 	sysCpuTime := sTime.Sub(startStime)
