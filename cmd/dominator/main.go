@@ -72,6 +72,9 @@ func getFdLimit() uint64 {
 }
 
 func setUser(username string) error {
+	// Lock to OS thread so that UID change sticks to this goroutine and the
+	// re-exec at the end. syscall.Setresuid() only affects one thread on Linux.
+	runtime.LockOSThread()
 	if username == "" {
 		return errors.New("-username argument missing")
 	}
@@ -94,7 +97,10 @@ func setUser(username string) error {
 	if err := syscall.Setresgid(gid, gid, gid); err != nil {
 		return err
 	}
-	return syscall.Setresuid(uid, uid, uid)
+	if err := syscall.Setresuid(uid, uid, uid); err != nil {
+		return err
+	}
+	return syscall.Exec(os.Args[0], os.Args, os.Environ())
 }
 
 func pathJoin(first, second string) string {
