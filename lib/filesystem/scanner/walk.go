@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/wsyscall"
 	"io"
 	"os"
 	"path"
@@ -28,7 +29,7 @@ func myGC() {
 
 type defaultHasher bool
 
-func makeRegularInode(stat *syscall.Stat_t) *filesystem.RegularInode {
+func makeRegularInode(stat *wsyscall.Stat_t) *filesystem.RegularInode {
 	var inode filesystem.RegularInode
 	inode.Mode = filesystem.FileMode(stat.Mode)
 	inode.Uid = stat.Uid
@@ -39,14 +40,14 @@ func makeRegularInode(stat *syscall.Stat_t) *filesystem.RegularInode {
 	return &inode
 }
 
-func makeSymlinkInode(stat *syscall.Stat_t) *filesystem.SymlinkInode {
+func makeSymlinkInode(stat *wsyscall.Stat_t) *filesystem.SymlinkInode {
 	var inode filesystem.SymlinkInode
 	inode.Uid = stat.Uid
 	inode.Gid = stat.Gid
 	return &inode
 }
 
-func makeSpecialInode(stat *syscall.Stat_t) *filesystem.SpecialInode {
+func makeSpecialInode(stat *wsyscall.Stat_t) *filesystem.SpecialInode {
 	var inode filesystem.SpecialInode
 	inode.Mode = filesystem.FileMode(stat.Mode)
 	inode.Uid = stat.Uid
@@ -71,8 +72,8 @@ func scanFileSystem(rootDirectoryName string,
 	} else {
 		fileSystem.hasher = hasher
 	}
-	var stat syscall.Stat_t
-	if err := syscall.Lstat(rootDirectoryName, &stat); err != nil {
+	var stat wsyscall.Stat_t
+	if err := wsyscall.Lstat(rootDirectoryName, &stat); err != nil {
 		return nil, err
 	}
 	fileSystem.InodeTable = make(filesystem.InodeTable)
@@ -127,8 +128,8 @@ func scanDirectory(directory, oldDirectory *filesystem.DirectoryInode,
 			fileSystem.scanFilter.Match(filename) {
 			continue
 		}
-		var stat syscall.Stat_t
-		err := syscall.Lstat(path.Join(fileSystem.rootDirectoryName, filename),
+		var stat wsyscall.Stat_t
+		err := wsyscall.Lstat(path.Join(fileSystem.rootDirectoryName, filename),
 			&stat)
 		if err != nil {
 			if err == syscall.ENOENT {
@@ -191,7 +192,7 @@ func scanDirectory(directory, oldDirectory *filesystem.DirectoryInode,
 
 func addDirectory(dirent, oldDirent *filesystem.DirectoryEntry,
 	fileSystem, oldFS *FileSystem,
-	directoryPathName string, stat *syscall.Stat_t) error {
+	directoryPathName string, stat *wsyscall.Stat_t) error {
 	myPathName := path.Join(directoryPathName, dirent.Name)
 	if stat.Ino == fileSystem.inodeNumber {
 		return errors.New("recursive directory: " + myPathName)
@@ -225,7 +226,7 @@ func addDirectory(dirent, oldDirent *filesystem.DirectoryEntry,
 
 func addRegularFile(dirent *filesystem.DirectoryEntry,
 	fileSystem, oldFS *FileSystem,
-	directoryPathName string, stat *syscall.Stat_t) error {
+	directoryPathName string, stat *wsyscall.Stat_t) error {
 	if inode, ok := fileSystem.InodeTable[stat.Ino]; ok {
 		if inode, ok := inode.(*filesystem.RegularInode); ok {
 			dirent.SetInode(inode)
@@ -257,7 +258,7 @@ func addRegularFile(dirent *filesystem.DirectoryEntry,
 
 func addSymlink(dirent *filesystem.DirectoryEntry,
 	fileSystem, oldFS *FileSystem,
-	directoryPathName string, stat *syscall.Stat_t) error {
+	directoryPathName string, stat *wsyscall.Stat_t) error {
 	if inode, ok := fileSystem.InodeTable[stat.Ino]; ok {
 		if inode, ok := inode.(*filesystem.SymlinkInode); ok {
 			dirent.SetInode(inode)
@@ -286,7 +287,7 @@ func addSymlink(dirent *filesystem.DirectoryEntry,
 }
 
 func addSpecialFile(dirent *filesystem.DirectoryEntry,
-	fileSystem, oldFS *FileSystem, stat *syscall.Stat_t) error {
+	fileSystem, oldFS *FileSystem, stat *wsyscall.Stat_t) error {
 	if inode, ok := fileSystem.InodeTable[stat.Ino]; ok {
 		if inode, ok := inode.(*filesystem.SpecialInode); ok {
 			dirent.SetInode(inode)

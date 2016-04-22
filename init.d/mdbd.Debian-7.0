@@ -1,0 +1,89 @@
+#! /bin/bash --posix
+
+### BEGIN INIT INFO
+# Provides:		mdbd
+# Required-Start:	$local_fs $network $syslog
+# Required-Stop:	$local_fs $network $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 6
+# Short-Description:	MDB query daemon
+### END INIT INFO
+
+# /etc/init.d/mdbd: start and stop the MDB query daemon
+
+. /lib/lsb/init-functions
+
+umask 022
+
+DAEMON='/usr/local/sbin/mdbd'
+LOOP_PIDFILE='/var/run/mdbd.loop.pid'
+MDB_FILE='/var/lib/Dominator/mdb'
+PIDFILE='/var/run/mdbd.pid'
+SOURCES_FILE='/var/lib/Dominator/mdb.sources.list'
+USERNAME='mdbd'
+MDBD_ARGS=
+
+[ -f /etc/default/mdbd ] && . /etc/default/mdbd
+
+test -x "$DAEMON" || exit 0
+
+export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
+
+if [ -n "$DATACENTRE" ]; then
+    MDBD_ARGS="$MDBD_ARGS -datacentre=$DATACENTRE"
+fi
+
+if [ -n "$FETCH_INTERVAL" ]; then
+    MDBD_ARGS="$MDBD_ARGS -fetchInterval=$FETCH_INTERVAL"
+fi
+
+if [ -n "$HOSTNAME_REGEX" ]; then
+    MDBD_ARGS="$MDBD_ARGS -hostnameRegex=$HOSTNAME_REGEX"
+fi
+
+do_start ()
+{
+    start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
+		      --exec "$DAEMON" --chuid "$USERNAME" --make-pidfile -- \
+		      -mdbFile="$MDB_FILE" -sourcesFile="$SOURCES_FILE" \
+		      -syslog $MDBD_ARGS
+}
+
+start_loop ()
+{
+    echo "$BASHPID" > "$LOOP_PIDFILE"
+    while true; do
+	do_start
+	rm -f "$PIDFILE"
+	sleep 1
+    done
+}
+
+case "$1" in
+  start)
+	log_daemon_msg "Starting MDB query daemon" "mdbd" || true
+	(start_loop < /dev/null &> /dev/null &)
+	;;
+  stop)
+	log_daemon_msg "Stopping MDB query daemon" "mdbd" || true
+	[ -s "$LOOP_PIDFILE" ] && kill -KILL $(cat "$LOOP_PIDFILE")
+	[ -s "$PIDFILE" ]      && kill -TERM $(cat "$PIDFILE")
+	rm -f "$LOOP_PIDFILE" "$PIDFILE"
+	;;
+
+  reload|force-reload)
+	$0 stop
+	$0 start
+	;;
+
+  restart)
+	$0 stop
+	$0 start
+	;;
+
+  *)
+	log_action_msg "Usage: /etc/init.d/mdbd {start|stop|reload|force-reload|restart}" || true
+	exit 1
+esac
+
+exit 0
