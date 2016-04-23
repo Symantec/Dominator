@@ -18,10 +18,10 @@ func convertStat(dest *Stat_t, source *syscall.Stat_t) {
 	dest.Ctim = source.Ctim
 }
 
-func setAllUid(uid int) error {
-	return syscall.Setresuid(uid, uid, uid)
-}
-
 func setAllGid(gid int) error {
 	return syscall.Setresgid(gid, gid, gid)
+}
+
+func setAllUid(uid int) error {
+	return syscall.Setresuid(uid, uid, uid)
 }
