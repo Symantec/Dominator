@@ -18,18 +18,26 @@ type Stat_t struct {
 	Ctim    syscall.Timespec
 }
 
-func Stat(path string, statbuf *Stat_t) error {
+func Lstat(path string, statbuf *Stat_t) error {
 	var rawStatbuf syscall.Stat_t
-	if err := syscall.Stat(path, &rawStatbuf); err != nil {
+	if err := syscall.Lstat(path, &rawStatbuf); err != nil {
 		return err
 	}
 	convertStat(statbuf, &rawStatbuf)
 	return nil
 }
 
-func Lstat(path string, statbuf *Stat_t) error {
+func SetAllGid(gid int) error {
+	return setAllGid(gid)
+}
+
+func SetAllUid(uid int) error {
+	return setAllUid(uid)
+}
+
+func Stat(path string, statbuf *Stat_t) error {
 	var rawStatbuf syscall.Stat_t
-	if err := syscall.Lstat(path, &rawStatbuf); err != nil {
+	if err := syscall.Stat(path, &rawStatbuf); err != nil {
 		return err
 	}
 	convertStat(statbuf, &rawStatbuf)

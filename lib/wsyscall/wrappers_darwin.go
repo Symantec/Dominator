@@ -17,3 +17,11 @@ func convertStat(dest *Stat_t, source *syscall.Stat_t) {
 	dest.Mtim = source.Mtimespec
 	dest.Ctim = source.Ctimespec
 }
+
+func setAllGid(gid int) error {
+	return syscall.Setregid(gid, gid)
+}
+
+func setAllUid(uid int) error {
+	return syscall.Setreuid(uid, uid)
+}

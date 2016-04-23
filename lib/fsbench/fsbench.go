@@ -1,6 +1,7 @@
 package fsbench
 
 import (
+	"github.com/Symantec/Dominator/lib/wsyscall"
 	"io/ioutil"
 	"os"
 	"path"
@@ -20,16 +21,16 @@ func openDirect(name string, flag int, perm os.FileMode) (file *os.File,
 }
 
 func GetDevnumForFile(name string) (devnum uint64, err error) {
-	var stat syscall.Stat_t
-	if err = syscall.Stat(name, &stat); err != nil {
+	var stat wsyscall.Stat_t
+	if err = wsyscall.Stat(name, &stat); err != nil {
 		return 0, err
 	}
 	return stat.Dev, nil
 }
 
 func getDevnumForDevice(name string) (devnum uint64, err error) {
-	var stat syscall.Stat_t
-	if err = syscall.Stat(name, &stat); err != nil {
+	var stat wsyscall.Stat_t
+	if err = wsyscall.Stat(name, &stat); err != nil {
 		return 0, err
 	}
 	return stat.Rdev, nil
