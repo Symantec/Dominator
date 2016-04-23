@@ -11,6 +11,12 @@ func (fsh *FileSystemHistory) update(newFS *FileSystem) {
 		fsh.timeOfLastScan = now
 		return
 	}
+	same := false
+	if fsh.fileSystem != nil {
+		same = CompareFileSystems(fsh.fileSystem, newFS, nil)
+	}
+	fsh.rwMutex.Lock()
+	defer fsh.rwMutex.Unlock()
 	fsh.durationOfLastScan = now.Sub(fsh.timeOfLastScan)
 	scanTimeDistribution.Add(fsh.durationOfLastScan)
 	fsh.scanCount++
@@ -20,7 +26,7 @@ func (fsh *FileSystemHistory) update(newFS *FileSystem) {
 		fsh.generationCount = 1
 		fsh.timeOfLastChange = fsh.timeOfLastScan
 	} else {
-		if !CompareFileSystems(fsh.fileSystem, newFS, nil) {
+		if !same {
 			fsh.generationCount++
 			fsh.fileSystem = newFS
 			fsh.timeOfLastChange = fsh.timeOfLastScan
@@ -36,9 +42,12 @@ func (fsh *FileSystemHistory) updateObjectCacheOnly() error {
 	if err := fsh.fileSystem.ScanObjectCache(); err != nil {
 		return err
 	}
+	same := objectcache.CompareObjects(oldObjectCache,
+		fsh.fileSystem.ObjectCache, nil)
+	fsh.rwMutex.Lock()
+	defer fsh.rwMutex.Unlock()
 	fsh.scanCount++
-	if !objectcache.CompareObjects(oldObjectCache, fsh.fileSystem.ObjectCache,
-		nil) {
+	if !same {
 		fsh.generationCount++
 	}
 	return nil
