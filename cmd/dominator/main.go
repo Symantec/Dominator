@@ -10,6 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/mdb/mdbd"
 	objectserver "github.com/Symantec/Dominator/lib/objectserver/filesystem"
+	"github.com/Symantec/Dominator/lib/wsyscall"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"log"
 	"os"
@@ -73,7 +74,8 @@ func getFdLimit() uint64 {
 
 func setUser(username string) error {
 	// Lock to OS thread so that UID change sticks to this goroutine and the
-	// re-exec at the end. syscall.Setresuid() only affects one thread on Linux.
+	// re-exec at the end. wsyscall.SetAllUid() only affects one thread on
+	// Linux.
 	runtime.LockOSThread()
 	if username == "" {
 		return errors.New("-username argument missing")
@@ -94,10 +96,10 @@ func setUser(username string) error {
 		return errors.New("Do not run the Dominator as root")
 		os.Exit(1)
 	}
-	if err := syscall.Setresgid(gid, gid, gid); err != nil {
+	if err := wsyscall.SetAllGid(gid); err != nil {
 		return err
 	}
-	if err := syscall.Setresuid(uid, uid, uid); err != nil {
+	if err := wsyscall.SetAllUid(uid); err != nil {
 		return err
 	}
 	return syscall.Exec(os.Args[0], os.Args, os.Environ())
