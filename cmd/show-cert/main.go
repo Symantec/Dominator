@@ -14,41 +14,48 @@ func printUsage() {
 		"Usage: show-cert certfile")
 }
 
-func main() {
-	if len(os.Args) != 2 {
-		printUsage()
-		os.Exit(2)
-	}
-	data, err := ioutil.ReadFile(os.Args[1])
+func showCert(filename string) {
+	fmt.Println("Certificate:", filename+":")
+	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to read certfile: %s\n", err)
-		os.Exit(1)
+		return
 	}
 	block, rest := pem.Decode(data)
 	if block == nil {
 		fmt.Fprintf(os.Stderr, "Failed to parse certificate PEM")
-		os.Exit(1)
+		return
 	}
 	if len(rest) > 0 {
 		fmt.Fprintf(os.Stderr, "%d extra bytes in certfile\n", len(rest))
-		os.Exit(1)
+		return
 	}
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to parse certificate: %s\n", err)
-		os.Exit(1)
+		return
 	}
 	permittedMethods, err := x509util.GetPermittedMethods(cert)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to get methods: %s\n", err)
-		os.Exit(1)
+		return
 	}
 	if len(permittedMethods) > 0 {
-		fmt.Println("Permitted methods:")
+		fmt.Println("  Permitted methods:")
 		for method := range permittedMethods {
-			fmt.Println(" ", method)
+			fmt.Println("   ", method)
 		}
 	} else {
-		fmt.Println("No methods are permitted")
+		fmt.Println("  No methods are permitted")
+	}
+}
+
+func main() {
+	if len(os.Args) < 2 {
+		printUsage()
+		os.Exit(2)
+	}
+	for _, filename := range os.Args[1:] {
+		showCert(filename)
 	}
 }
