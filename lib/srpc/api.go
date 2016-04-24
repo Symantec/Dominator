@@ -104,7 +104,7 @@ func (client *Client) Ping() error {
 type Conn struct {
 	parent *Client
 	*bufio.ReadWriter
-	permittedMethods map[string]bool
+	permittedMethods map[string]struct{} // nil: all, empty: none permitted.
 }
 
 // Close will close the connection to the Sevice.Method function, releasing the

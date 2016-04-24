@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"errors"
+	"github.com/Symantec/Dominator/lib/x509util"
 	"io"
 	"log"
 	"net"
@@ -113,7 +114,12 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 			log.Println(err)
 			return
 		}
-		myConn.setPermittedMethods(tlsConn.ConnectionState())
+		myConn.permittedMethods, err = getPermittedMethods(
+			tlsConn.ConnectionState())
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		myConn.ReadWriter = bufio.NewReadWriter(bufio.NewReader(tlsConn),
 			bufio.NewWriter(tlsConn))
 	} else {
@@ -123,17 +129,20 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 	handleConnection(myConn)
 }
 
-func (conn *Conn) setPermittedMethods(state tls.ConnectionState) {
-	conn.permittedMethods = make(map[string]bool)
+func getPermittedMethods(state tls.ConnectionState) (
+	map[string]struct{}, error) {
 	for _, certChain := range state.VerifiedChains {
 		for _, cert := range certChain {
-			for _, sm := range strings.Split(cert.Subject.CommonName, ",") {
-				if strings.Count(sm, ".") == 1 {
-					conn.permittedMethods[sm] = true
-				}
+			permittedMethods, err := x509util.GetPermittedMethods(cert)
+			if err != nil {
+				return nil, err
+			}
+			if len(permittedMethods) > 0 {
+				return permittedMethods, nil
 			}
 		}
 	}
+	return make(map[string]struct{}), nil // Nothing is permitted.
 }
 
 func handleConnection(conn *Conn) {
@@ -195,6 +204,7 @@ func handleConnection(conn *Conn) {
 	}
 }
 
+// Returns true if the method is permitted, else false if denied.
 func (conn *Conn) checkPermitted(serviceMethod string) bool {
 	if conn.permittedMethods == nil {
 		return true
