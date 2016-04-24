@@ -11,6 +11,7 @@ import (
 	"github.com/Symantec/tricorder/go/tricorder"
 	"io"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -30,6 +31,7 @@ func (configuration *Configuration) RegisterMetrics(
 }
 
 type FileSystemHistory struct {
+	rwMutex            sync.RWMutex
 	fileSystem         *FileSystem
 	scanCount          uint64
 	generationCount    uint64
@@ -47,22 +49,32 @@ func (fsh *FileSystemHistory) UpdateObjectCacheOnly() error {
 }
 
 func (fsh *FileSystemHistory) FileSystem() *FileSystem {
+	fsh.rwMutex.RLock()
+	defer fsh.rwMutex.RUnlock()
 	return fsh.fileSystem
 }
 
 func (fsh *FileSystemHistory) ScanCount() uint64 {
+	fsh.rwMutex.RLock()
+	defer fsh.rwMutex.RUnlock()
 	return fsh.scanCount
 }
 
 func (fsh *FileSystemHistory) GenerationCount() uint64 {
+	fsh.rwMutex.RLock()
+	defer fsh.rwMutex.RUnlock()
 	return fsh.generationCount
 }
 
 func (fsh FileSystemHistory) String() string {
+	fsh.rwMutex.RLock()
+	defer fsh.rwMutex.RUnlock()
 	return fmt.Sprintf("GenerationCount=%d\n", fsh.generationCount)
 }
 
 func (fsh *FileSystemHistory) WriteHtml(writer io.Writer) {
+	fsh.rwMutex.RLock()
+	defer fsh.rwMutex.RUnlock()
 	fsh.writeHtml(writer)
 }
 

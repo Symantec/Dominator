@@ -159,7 +159,9 @@ func (lb *LogBuffer) flushWhenIdle(writeNotifier <-chan struct{}) {
 		case <-writeNotifier:
 			timer.Reset(time.Second)
 		case <-timer.C:
+			lb.rwMutex.Lock()
 			lb.writer.Flush()
+			lb.rwMutex.Unlock()
 		}
 	}
 }

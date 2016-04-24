@@ -66,10 +66,13 @@ func (t *rpcType) fetch(request sub.FetchRequest,
 	}
 	t.fetchInProgress = true
 	go func() {
-		t.lastFetchError = t.doFetch(request)
-		if t.lastFetchError != nil && *exitOnFetchFailure {
+		err := t.doFetch(request)
+		if err != nil && *exitOnFetchFailure {
 			os.Exit(1)
 		}
+		t.rwLock.Lock()
+		defer t.rwLock.Unlock()
+		t.lastFetchError = err
 	}()
 	return nil
 }

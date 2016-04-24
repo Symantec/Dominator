@@ -25,14 +25,16 @@ func (t *rpcType) Poll(conn *srpc.Conn) error {
 	t.rwLock.RLock()
 	response.FetchInProgress = t.fetchInProgress
 	response.UpdateInProgress = t.updateInProgress
-	response.LastUpdateHadTriggerFailures = t.lastUpdateHadTriggerFailures
-	t.rwLock.RUnlock()
 	if t.lastFetchError != nil {
 		response.LastFetchError = t.lastFetchError.Error()
 	}
-	if t.lastUpdateError != nil {
-		response.LastUpdateError = t.lastUpdateError.Error()
+	if !t.updateInProgress {
+		if t.lastUpdateError != nil {
+			response.LastUpdateError = t.lastUpdateError.Error()
+		}
+		response.LastUpdateHadTriggerFailures = t.lastUpdateHadTriggerFailures
 	}
+	t.rwLock.RUnlock()
 	response.StartTime = startTime
 	response.PollTime = time.Now()
 	response.ScanCount = t.fileSystemHistory.ScanCount()
