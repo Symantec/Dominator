@@ -8,8 +8,8 @@ const (
 
 	DefaultNetworkSpeedPercent = 10
 
-	AssignedOIDBase = "1.3.6.1.4.1.9586.100.7"
-	MethodListOID   = AssignedOIDBase + ".1"
+	AssignedOIDBase        = "1.3.6.1.4.1.9586.100.7"
+	PermittedMethodListOID = AssignedOIDBase + ".1"
 )
 
 var RequiredPaths = map[string]rune{
