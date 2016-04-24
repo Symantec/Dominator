@@ -101,7 +101,7 @@ var subcommands = []subcommand{
 	{"diff", 3, 3, diffSubcommand},
 	{"get", 2, 2, getImageSubcommand},
 	{"list", 0, 0, listImagesSubcommand},
-	{"show", 1, 0, showImageSubcommand},
+	{"show", 1, 1, showImageSubcommand},
 }
 
 var imageRpcClient *rpc.Client
