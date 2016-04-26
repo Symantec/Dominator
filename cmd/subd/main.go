@@ -334,6 +334,7 @@ func main() {
 				logger.Printf("Unable to Exec:%s\t%s\n", os.Args[0], err)
 			}
 		case <-sigtermChannel:
+			circularBuffer.Flush()
 			gracefulCleanup()
 		case fs := <-fsChannel:
 			if *showStats {
