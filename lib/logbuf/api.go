@@ -63,7 +63,9 @@ func (lb *LogBuffer) Dump(writer io.Writer, prefix, postfix string,
 	return lb.dump(writer, prefix, postfix, recentFirst)
 }
 
-// Flush flushes the open log file (if one is open).
+// Flush flushes the open log file (if one is open). This should only be called
+// just prior to process termination. The log file is automatically flushed
+// after short periods of inactivity.
 func (lb *LogBuffer) Flush() error {
 	return lb.flush()
 }
