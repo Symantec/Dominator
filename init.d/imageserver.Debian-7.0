@@ -1,0 +1,104 @@
+#! /bin/bash --posix
+
+### BEGIN INIT INFO
+# Provides:		imageserver
+# Required-Start:	$local_fs $network $syslog
+# Required-Stop:	$local_fs $network $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 6
+# Short-Description:	Dominator imageserver
+### END INIT INFO
+
+# /etc/init.d/imageserver: start and stop the Dominator imageserver
+
+. /lib/lsb/init-functions
+
+umask 022
+
+DAEMON='/usr/local/sbin/imageserver'
+IMAGE_DIR=
+IMAGE_SERVER_HOSTNAME=
+LOG_DIR='/var/log/imageserver'
+LOG_QUOTA=
+LOGBUF_LINES=
+LOOP_PIDFILE='/var/run/imageserver.loop.pid'
+OBJECT_DIR=
+PIDFILE='/var/run/imageserver.pid'
+USERNAME='imageserver'
+
+IMAGESERVER_ARGS=
+
+[ -f /etc/default/imageserver ] && . /etc/default/imageserver
+
+test -x "$DAEMON" || exit 0
+
+export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
+
+mkdir -m 0750 -p "$LOG_DIR"
+chown "$USERNAME" "$LOG_DIR"
+
+if [ -n "$IMAGE_DIR" ]; then
+    IMAGESERVER_ARGS="$IMAGESERVER_ARGS -imageDir=$IMAGE_DIR"
+fi
+
+if [ -n "$IMAGE_SERVER_HOSTNAME" ]; then
+    IMAGESERVER_ARGS="$IMAGESERVER_ARGS -imageServerHostname=$IMAGE_SERVER_HOSTNAME"
+fi
+
+if [ -n "$LOG_QUOTA" ]; then
+    IMAGESERVER_ARGS="$IMAGESERVER_ARGS -logQuota=$LOG_QUOTA"
+fi
+
+if [ -n "$LOGBUF_LINES" ]; then
+    IMAGESERVER_ARGS="$IMAGESERVER_ARGS -logbufLines=$LOGBUF_LINES"
+fi
+
+if [ -n "$OBJECT_DIR" ]; then
+    IMAGESERVER_ARGS="$IMAGESERVER_ARGS -objectDir=$OBJECT_DIR"
+fi
+
+do_start ()
+{
+    start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
+		      --exec "$DAEMON" --chuid "$USERNAME" --make-pidfile -- \
+		      -logDir="$LOG_DIR" $IMAGESERVER_ARGS
+}
+
+start_loop ()
+{
+    echo "$BASHPID" > "$LOOP_PIDFILE"
+    while true; do
+	do_start
+	rm -f "$PIDFILE"
+	sleep 1
+    done
+}
+
+case "$1" in
+  start)
+	log_daemon_msg "Starting imageserver daemon" "imageserver" || true
+	(start_loop < /dev/null &> /dev/null &)
+	;;
+  stop)
+	log_daemon_msg "Stopping imageserver daemon" "imageserver" || true
+	[ -s "$LOOP_PIDFILE" ] && kill -KILL $(cat "$LOOP_PIDFILE")
+	[ -s "$PIDFILE" ]      && kill -TERM $(cat "$PIDFILE")
+	rm -f "$LOOP_PIDFILE" "$PIDFILE"
+	;;
+
+  reload|force-reload)
+	$0 stop
+	$0 start
+	;;
+
+  restart)
+	$0 stop
+	$0 start
+	;;
+
+  *)
+	log_action_msg "Usage: /etc/init.d/imageserver {start|stop|reload|force-reload|restart}" || true
+	exit 1
+esac
+
+exit 0
