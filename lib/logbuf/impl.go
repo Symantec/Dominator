@@ -57,6 +57,29 @@ func (lb *LogBuffer) createLogDirectory() error {
 	return lb.enforceQuota()
 }
 
+func (lb *LogBuffer) dump(writer io.Writer, prefix, postfix string,
+	recentFirst bool) error {
+	entries := lb.getEntries()
+	if recentFirst {
+		reverseEntries(entries)
+	}
+	for _, entry := range entries {
+		writer.Write([]byte(prefix))
+		writer.Write(entry)
+		writer.Write([]byte(postfix))
+	}
+	return nil
+}
+
+func (lb *LogBuffer) flush() error {
+	lb.rwMutex.Lock()
+	defer lb.rwMutex.Unlock()
+	if lb.writer != nil {
+		return lb.writer.Flush()
+	}
+	return nil
+}
+
 func (lb *LogBuffer) write(p []byte) (n int, err error) {
 	if *alsoLogToStderr {
 		os.Stderr.Write(p)
@@ -159,9 +182,7 @@ func (lb *LogBuffer) flushWhenIdle(writeNotifier <-chan struct{}) {
 		case <-writeNotifier:
 			timer.Reset(time.Second)
 		case <-timer.C:
-			lb.rwMutex.Lock()
-			lb.writer.Flush()
-			lb.rwMutex.Unlock()
+			lb.flush()
 		}
 	}
 }
@@ -176,20 +197,6 @@ func (lb *LogBuffer) getEntries() [][]byte {
 		}
 	})
 	return entries
-}
-
-func (lb *LogBuffer) dump(writer io.Writer, prefix, postfix string,
-	recentFirst bool) error {
-	entries := lb.getEntries()
-	if recentFirst {
-		reverseEntries(entries)
-	}
-	for _, entry := range entries {
-		writer.Write([]byte(prefix))
-		writer.Write(entry)
-		writer.Write([]byte(postfix))
-	}
-	return nil
 }
 
 func (lb *LogBuffer) dumpSince(writer io.Writer, name string,
