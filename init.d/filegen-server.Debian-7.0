@@ -1,0 +1,94 @@
+#! /bin/bash --posix
+
+### BEGIN INIT INFO
+# Provides:		filegen-server
+# Required-Start:	$local_fs $network $syslog
+# Required-Stop:	$local_fs $network $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 6
+# Short-Description:	Dominator filegen-server
+### END INIT INFO
+
+# /etc/init.d/filegen-server: start and stop the Dominator filegen-server
+
+. /lib/lsb/init-functions
+
+umask 022
+
+CONFIG_FILE=
+DAEMON='/usr/local/sbin/filegen-server'
+LOG_DIR='/var/log/filegen-server'
+LOG_QUOTA=
+LOGBUF_LINES=
+LOOP_PIDFILE='/var/run/filegen-server.loop.pid'
+PIDFILE='/var/run/filegen-server.pid'
+USERNAME='filegen-server'
+
+PROG_ARGS=
+
+[ -f /etc/default/filegen-server ] && . /etc/default/filegen-server
+
+test -x "$DAEMON" || exit 0
+
+export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
+
+mkdir -m 0750 -p "$LOG_DIR"
+chown "$USERNAME" "$LOG_DIR"
+
+if [ -n "$CONFIG_FILE" ]; then
+    PROG_ARGS="$PROG_ARGS -configFile=$CONFIG_FILE"
+fi
+
+if [ -n "$LOG_QUOTA" ]; then
+    PROG_ARGS="$PROG_ARGS -logQuota=$LOG_QUOTA"
+fi
+
+if [ -n "$LOGBUF_LINES" ]; then
+    PROG_ARGS="$PROG_ARGS -logbufLines=$LOGBUF_LINES"
+fi
+
+do_start ()
+{
+    start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
+		      --exec "$DAEMON" --chuid "$USERNAME" --make-pidfile -- \
+		      -logDir="$LOG_DIR" $PROG_ARGS
+}
+
+start_loop ()
+{
+    echo "$BASHPID" > "$LOOP_PIDFILE"
+    while true; do
+	do_start
+	rm -f "$PIDFILE"
+	sleep 1
+    done
+}
+
+case "$1" in
+  start)
+	log_daemon_msg "Starting filegen-server daemon" "filegen-server" || true
+	(start_loop < /dev/null &> /dev/null &)
+	;;
+  stop)
+	log_daemon_msg "Stopping filegen-server daemon" "filegen-server" || true
+	[ -s "$LOOP_PIDFILE" ] && kill -KILL $(cat "$LOOP_PIDFILE")
+	[ -s "$PIDFILE" ]      && kill -TERM $(cat "$PIDFILE")
+	rm -f "$LOOP_PIDFILE" "$PIDFILE"
+	;;
+
+  reload|force-reload)
+	$0 stop
+	$0 start
+	;;
+
+  restart)
+	$0 stop
+	$0 start
+	;;
+
+  *)
+	log_action_msg "Usage: /etc/init.d/filegen-server {start|stop|reload|force-reload|restart}" || true
+	exit 1
+esac
+
+exit 0
