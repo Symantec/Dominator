@@ -11,14 +11,16 @@ import (
 	"net/http"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 )
 
 const (
-	connectString = "200 Connected to Go SRPC"
-	rpcPath       = "/_goSRPC_/"
-	tlsRpcPath    = "/_go_TLS_SRPC_/"
+	connectString   = "200 Connected to Go SRPC"
+	rpcPath         = "/_goSRPC_/"
+	tlsRpcPath      = "/_go_TLS_SRPC_/"
+	listMethodsPath = rpcPath + "listMethods"
 )
 
 type receiverType struct {
@@ -35,6 +37,7 @@ var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
 func init() {
 	http.HandleFunc(rpcPath, unsecuredHttpHandler)
 	http.HandleFunc(tlsRpcPath, tlsHttpHandler)
+	http.HandleFunc(listMethodsPath, listMethodsHttpHandler)
 }
 
 func registerName(name string, rcvr interface{}) error {
@@ -233,4 +236,19 @@ func findMethod(serviceMethod string) (*reflect.Value, error) {
 		return nil, errors.New(serviceName + ": unknown method: " + methodName)
 	}
 	return &method, nil
+}
+
+func listMethodsHttpHandler(w http.ResponseWriter, req *http.Request) {
+	writer := bufio.NewWriter(w)
+	defer writer.Flush()
+	methods := make([]string, len(receivers))
+	for receiverName, receiver := range receivers {
+		for method := range receiver.methods {
+			methods = append(methods, receiverName+"."+method+"\n")
+		}
+	}
+	sort.Strings(methods)
+	for _, method := range methods {
+		writer.WriteString(method)
+	}
 }
