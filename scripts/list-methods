@@ -1,0 +1,8 @@
+#! /bin/bash --posix
+
+set -o nounset
+
+wget -q -O - "http://$1/_goSRPC_/listMethods" && exit
+rc="$?"
+echo "Error getting list of methods"
+exit "$rc"
