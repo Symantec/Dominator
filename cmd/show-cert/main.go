@@ -7,6 +7,7 @@ import (
 	"github.com/Symantec/Dominator/lib/x509util"
 	"io/ioutil"
 	"os"
+	"sort"
 )
 
 func printUsage() {
@@ -42,7 +43,12 @@ func showCert(filename string) {
 	}
 	if len(permittedMethods) > 0 {
 		fmt.Println("  Permitted methods:")
+		sortedList := make([]string, 0, len(permittedMethods))
 		for method := range permittedMethods {
+			sortedList = append(sortedList, method)
+		}
+		sort.Strings(sortedList)
+		for _, method := range sortedList {
 			fmt.Println("   ", method)
 		}
 	} else {
