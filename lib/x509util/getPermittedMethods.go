@@ -32,11 +32,5 @@ func getPermittedMethods(cert *x509.Certificate) (map[string]struct{}, error) {
 		}
 		return methodList, nil
 	}
-	// Fallback to deprecated location.
-	for _, sm := range strings.Split(cert.Subject.CommonName, ",") {
-		if strings.Count(sm, ".") == 1 {
-			methodList[sm] = struct{}{}
-		}
-	}
 	return methodList, nil
 }
