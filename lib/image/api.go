@@ -13,6 +13,7 @@ type Annotation struct {
 }
 
 type Image struct {
+	CreatedBy    string // Username. Set by imageserver. Empty: unauthenticated.
 	Filter       *filter.Filter
 	FileSystem   *filesystem.FileSystem
 	Triggers     *triggers.Triggers
