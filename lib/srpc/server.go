@@ -117,7 +117,7 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 			log.Println(err)
 			return
 		}
-		myConn.permittedMethods, err = getPermittedMethods(
+		myConn.username, myConn.permittedMethods, err = getAuth(
 			tlsConn.ConnectionState())
 		if err != nil {
 			log.Println(err)
@@ -132,20 +132,28 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 	handleConnection(myConn)
 }
 
-func getPermittedMethods(state tls.ConnectionState) (
-	map[string]struct{}, error) {
+func getAuth(state tls.ConnectionState) (string, map[string]struct{}, error) {
+	var username string
+	permittedMethods := make(map[string]struct{})
 	for _, certChain := range state.VerifiedChains {
 		for _, cert := range certChain {
-			permittedMethods, err := x509util.GetPermittedMethods(cert)
-			if err != nil {
-				return nil, err
+			var err error
+			if username == "" {
+				username, err = x509util.GetUsername(cert)
+				if err != nil {
+					return "", nil, err
+				}
 			}
-			if len(permittedMethods) > 0 {
-				return permittedMethods, nil
+			pms, err := x509util.GetPermittedMethods(cert)
+			if err != nil {
+				return "", nil, err
+			}
+			for method := range pms {
+				permittedMethods[method] = struct{}{}
 			}
 		}
 	}
-	return make(map[string]struct{}), nil // Nothing is permitted.
+	return username, permittedMethods, nil
 }
 
 func handleConnection(conn *Conn) {
