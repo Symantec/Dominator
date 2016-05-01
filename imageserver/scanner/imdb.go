@@ -9,7 +9,11 @@ import (
 	"log"
 	"os"
 	"path"
+	"syscall"
 )
+
+const filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP |
+	syscall.S_IROTH
 
 func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
 	if err := image.Verify(); err != nil {
@@ -24,8 +28,12 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
 		if err := os.MkdirAll(path.Dir(filename), 0755); err != nil {
 			return err
 		}
-		file, err := os.Create(filename)
+		file, err := os.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_RDWR,
+			filePerms)
 		if err != nil {
+			if os.IsExist(err) {
+				return errors.New("cannot add a previously deleted image")
+			}
 			return err
 		}
 		defer file.Close()
@@ -53,7 +61,7 @@ func (imdb *ImageDataBase) deleteImage(name string) error {
 	defer imdb.Unlock()
 	if _, ok := imdb.imageMap[name]; ok {
 		filename := path.Join(imdb.baseDir, name)
-		if err := os.Remove(filename); err != nil {
+		if err := os.Truncate(filename, 0); err != nil {
 			return err
 		}
 		delete(imdb.imageMap, name)
