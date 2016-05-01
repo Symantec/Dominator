@@ -36,6 +36,12 @@ func showCert(filename string) {
 		fmt.Fprintf(os.Stderr, "Unable to parse certificate: %s\n", err)
 		return
 	}
+	username, err := x509util.GetUsername(cert)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to get username: %s\n", err)
+		return
+	}
+	fmt.Printf("  Issued to: %s\n", username)
 	permittedMethods, err := x509util.GetPermittedMethods(cert)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to get methods: %s\n", err)
