@@ -16,7 +16,8 @@ func (t *srpcType) DeleteImage(conn *srpc.Conn) error {
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
 	}
-	if err := t.deleteImage(request, &response); err != nil {
+	if err := t.deleteImage(request, &response,
+		conn.GetUsername()); err != nil {
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
 	}
@@ -27,7 +28,7 @@ func (t *srpcType) DeleteImage(conn *srpc.Conn) error {
 }
 
 func (t *srpcType) deleteImage(request imageserver.DeleteImageRequest,
-	reply *imageserver.DeleteImageResponse) error {
+	reply *imageserver.DeleteImageResponse, username string) error {
 	var response imageserver.DeleteImageResponse
 	if t.replicationMaster != "" {
 		return errors.New(replicationMessage + t.replicationMaster)
@@ -35,7 +36,11 @@ func (t *srpcType) deleteImage(request imageserver.DeleteImageRequest,
 	if !t.imageDataBase.CheckImage(request.ImageName) {
 		return errors.New("image does not exist")
 	}
-	t.logger.Printf("DeleteImage(%s)\n", request.ImageName)
+	if username == "" {
+		t.logger.Printf("DeleteImage(%s)\n", request.ImageName)
+	} else {
+		t.logger.Printf("DeleteImage(%s) by %s\n", request.ImageName, username)
+	}
 	err := t.imageDataBase.DeleteImage(request.ImageName)
 	if err == nil {
 		response.Success = true

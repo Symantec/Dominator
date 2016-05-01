@@ -55,18 +55,25 @@ func New(length uint) *LogBuffer {
 	return newLogBuffer(length, *logDir, quota)
 }
 
-// Write will write len(p) bytes from p to the log buffer. It always returns
-// len(p), nil.
-func (lb *LogBuffer) Write(p []byte) (n int, err error) {
-	return lb.write(p)
-}
-
 // Dump will write the contents of the log buffer to w, with a prefix and
 // postfix string written before and after each line. If recentFirst is true,
 // the most recently written contents are dumped first.
 func (lb *LogBuffer) Dump(writer io.Writer, prefix, postfix string,
 	recentFirst bool) error {
 	return lb.dump(writer, prefix, postfix, recentFirst)
+}
+
+// Flush flushes the open log file (if one is open). This should only be called
+// just prior to process termination. The log file is automatically flushed
+// after short periods of inactivity.
+func (lb *LogBuffer) Flush() error {
+	return lb.flush()
+}
+
+// Write will write len(p) bytes from p to the log buffer. It always returns
+// len(p), nil.
+func (lb *LogBuffer) Write(p []byte) (n int, err error) {
+	return lb.write(p)
 }
 
 // WriteHtml will write the contents of the log buffer to w, with appropriate

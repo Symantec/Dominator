@@ -20,7 +20,7 @@ var (
 		"Name of file containing the root of trust")
 	certFile = flag.String("certFile", "/etc/ssl/filegen-server/cert.pem",
 		"Name of file containing the SSL certificate")
-	configFile = flag.String("configFile", "",
+	configFile = flag.String("configFile", "/var/lib/filegen-server/config",
 		"Name of file containing the configuration")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")

@@ -19,7 +19,7 @@ func (t *srpcType) AddImage(conn *srpc.Conn) error {
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
 	}
-	if err := t.addImage(request, &response); err != nil {
+	if err := t.addImage(request, &response, conn.GetUsername()); err != nil {
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
 	}
@@ -30,7 +30,7 @@ func (t *srpcType) AddImage(conn *srpc.Conn) error {
 }
 
 func (t *srpcType) addImage(request imageserver.AddImageRequest,
-	reply *imageserver.AddImageResponse) error {
+	reply *imageserver.AddImageResponse, username string) error {
 	if t.replicationMaster != "" {
 		return errors.New(replicationMessage + t.replicationMaster)
 	}
@@ -63,6 +63,10 @@ func (t *srpcType) addImage(request imageserver.AddImageRequest,
 		}
 	}
 	request.Image.FileSystem.RebuildInodePointers()
-	t.logger.Printf("AddImage(%s)\n", request.ImageName)
+	if username == "" {
+		t.logger.Printf("AddImage(%s)\n", request.ImageName)
+	} else {
+		t.logger.Printf("AddImage(%s) by %s\n", request.ImageName, username)
+	}
 	return t.imageDataBase.AddImage(request.Image, request.ImageName)
 }

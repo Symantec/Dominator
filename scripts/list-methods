@@ -1,0 +1,13 @@
+#! /bin/bash --posix
+
+set -o nounset
+
+WGET='wget -q -O -'
+
+if [ -z "$(which wget)" ]; then
+    WGET='curl'
+fi
+$WGET "http://$1/_goSRPC_/listMethods" && exit
+rc="$?"
+echo "Error getting list of methods"
+exit "$rc"

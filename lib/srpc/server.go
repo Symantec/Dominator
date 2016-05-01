@@ -4,20 +4,23 @@ import (
 	"bufio"
 	"crypto/tls"
 	"errors"
+	"github.com/Symantec/Dominator/lib/x509util"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 )
 
 const (
-	connectString = "200 Connected to Go SRPC"
-	rpcPath       = "/_goSRPC_/"
-	tlsRpcPath    = "/_go_TLS_SRPC_/"
+	connectString   = "200 Connected to Go SRPC"
+	rpcPath         = "/_goSRPC_/"
+	tlsRpcPath      = "/_go_TLS_SRPC_/"
+	listMethodsPath = rpcPath + "listMethods"
 )
 
 type receiverType struct {
@@ -34,6 +37,7 @@ var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
 func init() {
 	http.HandleFunc(rpcPath, unsecuredHttpHandler)
 	http.HandleFunc(tlsRpcPath, tlsHttpHandler)
+	http.HandleFunc(listMethodsPath, listMethodsHttpHandler)
 }
 
 func registerName(name string, rcvr interface{}) error {
@@ -113,7 +117,12 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 			log.Println(err)
 			return
 		}
-		myConn.setPermittedMethods(tlsConn.ConnectionState())
+		myConn.username, myConn.permittedMethods, err = getAuth(
+			tlsConn.ConnectionState())
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		myConn.ReadWriter = bufio.NewReadWriter(bufio.NewReader(tlsConn),
 			bufio.NewWriter(tlsConn))
 	} else {
@@ -123,17 +132,28 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 	handleConnection(myConn)
 }
 
-func (conn *Conn) setPermittedMethods(state tls.ConnectionState) {
-	conn.permittedMethods = make(map[string]bool)
+func getAuth(state tls.ConnectionState) (string, map[string]struct{}, error) {
+	var username string
+	permittedMethods := make(map[string]struct{})
 	for _, certChain := range state.VerifiedChains {
 		for _, cert := range certChain {
-			for _, sm := range strings.Split(cert.Subject.CommonName, ",") {
-				if strings.Count(sm, ".") == 1 {
-					conn.permittedMethods[sm] = true
+			var err error
+			if username == "" {
+				username, err = x509util.GetUsername(cert)
+				if err != nil {
+					return "", nil, err
 				}
+			}
+			pms, err := x509util.GetPermittedMethods(cert)
+			if err != nil {
+				return "", nil, err
+			}
+			for method := range pms {
+				permittedMethods[method] = struct{}{}
 			}
 		}
 	}
+	return username, permittedMethods, nil
 }
 
 func handleConnection(conn *Conn) {
@@ -195,6 +215,7 @@ func handleConnection(conn *Conn) {
 	}
 }
 
+// Returns true if the method is permitted, else false if denied.
 func (conn *Conn) checkPermitted(serviceMethod string) bool {
 	if conn.permittedMethods == nil {
 		return true
@@ -223,4 +244,19 @@ func findMethod(serviceMethod string) (*reflect.Value, error) {
 		return nil, errors.New(serviceName + ": unknown method: " + methodName)
 	}
 	return &method, nil
+}
+
+func listMethodsHttpHandler(w http.ResponseWriter, req *http.Request) {
+	writer := bufio.NewWriter(w)
+	defer writer.Flush()
+	methods := make([]string, len(receivers))
+	for receiverName, receiver := range receivers {
+		for method := range receiver.methods {
+			methods = append(methods, receiverName+"."+method+"\n")
+		}
+	}
+	sort.Strings(methods)
+	for _, method := range methods {
+		writer.WriteString(method)
+	}
 }

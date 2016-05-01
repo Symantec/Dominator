@@ -102,13 +102,22 @@ func (client *Client) Ping() error {
 }
 
 type Conn struct {
-	parent *Client
+	parent *Client // nil: server-side connection.
 	*bufio.ReadWriter
-	permittedMethods map[string]bool
+	username         string              // Empty string for unauthenticated.
+	permittedMethods map[string]struct{} // nil: all, empty: none permitted.
 }
 
 // Close will close the connection to the Sevice.Method function, releasing the
 // Client for a subsequent Call.
 func (conn *Conn) Close() error {
 	return conn.close()
+}
+
+// GetUsername will return the username of the client who holds the certificate
+// used to authenticate the connection to the server. If the connection was not
+// authenticated the emtpy string is returned. If the connection is a client
+// connection, the GetUsername will panic.
+func (conn *Conn) GetUsername() string {
+	return conn.getUsername()
 }

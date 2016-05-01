@@ -329,11 +329,15 @@ func main() {
 	for iter := 0; true; {
 		select {
 		case <-sighupChannel:
+			logger.Printf("Caught SIGHUP: re-execing with: %v\n", os.Args)
+			circularBuffer.Flush()
 			err = syscall.Exec(os.Args[0], os.Args, os.Environ())
 			if err != nil {
 				logger.Printf("Unable to Exec:%s\t%s\n", os.Args[0], err)
 			}
 		case <-sigtermChannel:
+			logger.Printf("Caught SIGTERM: performing graceful cleanup\n")
+			circularBuffer.Flush()
 			gracefulCleanup()
 		case fs := <-fsChannel:
 			if *showStats {

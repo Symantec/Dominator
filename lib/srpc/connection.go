@@ -7,3 +7,10 @@ func (conn *Conn) close() error {
 	}
 	return err
 }
+
+func (conn *Conn) getUsername() string {
+	if conn.parent != nil {
+		panic("cannot call GetUsername() for client connection")
+	}
+	return conn.username
+}
