@@ -18,6 +18,8 @@ import (
 )
 
 var (
+	archiveMode = flag.Bool("archiveMode", false,
+		"If true, disable delete operations and require update server")
 	caFile = flag.String("CAfile", "/etc/ssl/CA.pem",
 		"Name of file containing the root of trust")
 	certFile = flag.String("certFile", "/etc/ssl/imageserver/cert.pem",
@@ -47,6 +49,10 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Do not run the Image Server as root")
 		os.Exit(1)
 	}
+	if *archiveMode && *imageServerHostname == "" {
+		fmt.Fprintln(os.Stderr, "-imageServerHostname required in archive mode")
+		os.Exit(1)
+	}
 	setupTls(*caFile, *certFile, *keyFile)
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
@@ -73,7 +79,7 @@ func main() {
 	httpd.AddHtmlWriter(circularBuffer)
 	if *imageServerHostname != "" {
 		go replicator(fmt.Sprintf("%s:%d", *imageServerHostname,
-			*imageServerPortNum), imdb, objSrv, logger)
+			*imageServerPortNum), imdb, objSrv, *archiveMode, logger)
 	}
 	if err = httpd.StartServer(*portNum, imdb, objSrv, false); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
