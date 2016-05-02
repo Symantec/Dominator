@@ -85,6 +85,9 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 				return err
 			}
 		case imageserver.OperationDeleteImage:
+			if archiveMode {
+				continue
+			}
 			logger.Printf("Replicator(%s): delete image\n", imageUpdate.Name)
 			if err := imdb.DeleteImage(imageUpdate.Name); err != nil {
 				return err
