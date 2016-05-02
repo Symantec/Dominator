@@ -15,6 +15,7 @@
 
 umask 022
 
+ARCHIVE_MODE=false
 DAEMON='/usr/local/sbin/imageserver'
 IMAGE_DIR=
 IMAGE_SERVER_HOSTNAME=
@@ -36,6 +37,10 @@ export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
 
 mkdir -m 0750 -p "$LOG_DIR"
 chown "$USERNAME" "$LOG_DIR"
+
+if [ "$ARCHIVE_MODE" = "true" ] || [ "$ARCHIVE_MODE" = "1" ]; then
+    IMAGESERVER_ARGS="$IMAGESERVER_ARGS -archiveMode=true"
+fi
 
 if [ -n "$IMAGE_DIR" ]; then
     IMAGESERVER_ARGS="$IMAGESERVER_ARGS -imageDir=$IMAGE_DIR"
