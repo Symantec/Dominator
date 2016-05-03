@@ -79,7 +79,7 @@ func (imdb *ImageDataBase) scanDirectory(dirname string,
 		}
 		if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
 			err = imdb.scanDirectory(filename, state, logger)
-		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
+		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFREG && stat.Size > 0 {
 			err = state.GoRun(func() error {
 				return imdb.loadFile(filename, logger)
 			})

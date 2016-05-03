@@ -17,7 +17,7 @@ import (
 )
 
 func replicator(address string, imdb *scanner.ImageDataBase,
-	objSrv *fsdriver.ObjectServer, logger *log.Logger) {
+	objSrv *fsdriver.ObjectServer, archiveMode bool, logger *log.Logger) {
 	initialTimeout := time.Second * 15
 	timeout := initialTimeout
 	var nextSleepStopTime time.Time
@@ -30,7 +30,7 @@ func replicator(address string, imdb *scanner.ImageDataBase,
 				"ImageServer.GetImageUpdates"); err != nil {
 				logger.Println(err)
 			} else {
-				if err := getUpdates(address, conn, imdb, objSrv,
+				if err := getUpdates(address, conn, imdb, objSrv, archiveMode,
 					logger); err != nil {
 					if err == io.EOF {
 						logger.Println("Connection to image replicator closed")
@@ -53,10 +53,13 @@ func replicator(address string, imdb *scanner.ImageDataBase,
 }
 
 func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
-	objSrv *fsdriver.ObjectServer, logger *log.Logger) error {
+	objSrv *fsdriver.ObjectServer, archiveMode bool, logger *log.Logger) error {
 	logger.Printf("Image replicator: connected to: %s\n", address)
 	decoder := gob.NewDecoder(conn)
 	initialImages := make(map[string]struct{})
+	if archiveMode {
+		initialImages = nil
+	}
 	for {
 		var imageUpdate imageserver.ImageUpdate
 		if err := decoder.Decode(&imageUpdate); err != nil {
@@ -82,6 +85,9 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 				return err
 			}
 		case imageserver.OperationDeleteImage:
+			if archiveMode {
+				continue
+			}
 			logger.Printf("Replicator(%s): delete image\n", imageUpdate.Name)
 			if err := imdb.DeleteImage(imageUpdate.Name); err != nil {
 				return err

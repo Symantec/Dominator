@@ -46,6 +46,9 @@ func (s state) showImageHandler(w http.ResponseWriter, req *http.Request) {
 		"listReleaseNotes")
 	showAnnotation(writer, image.BuildLog, imageName, "Build log",
 		"listBuildLog")
+	if image.CreatedBy != "" {
+		fmt.Fprintf(writer, "Created by: %s\n<br>", image.CreatedBy)
+	}
 	fmt.Fprintln(writer, "</body>")
 }
 
