@@ -42,6 +42,11 @@ var (
 		"Port number to allocate and listen on for HTTP/RPC")
 )
 
+type imageObjectServersType struct {
+	imdb   *scanner.ImageDataBase
+	objSrv *filesystem.ObjectServer
+}
+
 func main() {
 	flag.Parse()
 	tricorder.RegisterFlags()
@@ -74,6 +79,7 @@ func main() {
 	objSrvRpcHtmlWriter := objectserverRpcd.Setup(objSrv, logger)
 	rpc.HandleHTTP()
 	httpd.AddHtmlWriter(imdb)
+	httpd.AddHtmlWriter(&imageObjectServersType{imdb, objSrv})
 	httpd.AddHtmlWriter(imgSrvRpcHtmlWriter)
 	httpd.AddHtmlWriter(objSrvRpcHtmlWriter)
 	httpd.AddHtmlWriter(circularBuffer)
