@@ -4,6 +4,16 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 )
 
+func (objSrv *ObjectServer) listObjectSizes() map[hash.Hash]uint64 {
+	objSrv.rwLock.RLock()
+	defer objSrv.rwLock.RUnlock()
+	sizesMap := make(map[hash.Hash]uint64, len(objSrv.sizesMap))
+	for hashVal, size := range objSrv.sizesMap {
+		sizesMap[hashVal] = uint64(size)
+	}
+	return sizesMap
+}
+
 func (objSrv *ObjectServer) listObjects() []hash.Hash {
 	objSrv.rwLock.RLock()
 	defer objSrv.rwLock.RUnlock()
