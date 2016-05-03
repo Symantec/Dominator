@@ -47,7 +47,7 @@ func loadFile(reader io.Reader, filename string, logger *log.Logger) *mdb.Mdb {
 	var mdb mdb.Mdb
 	decodeStartTime := time.Now()
 	if err := decoder.Decode(&mdb.Machines); err != nil {
-		logger.Printf("Error decoding\t%s\n", err)
+		logger.Printf("Error decoding MDB data: %s\n", err)
 		return nil
 	}
 	sortStartTime := time.Now()
