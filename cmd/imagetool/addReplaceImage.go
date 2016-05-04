@@ -62,7 +62,7 @@ func addReplaceImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 
 func bulkAddReplaceImages(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, layerImageNames []string) error {
-	imageNames, err := getImages(imageClient)
+	imageNames, err := client.CallListImages(imageSClient)
 	if err != nil {
 		return err
 	}
