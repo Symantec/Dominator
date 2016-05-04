@@ -35,6 +35,10 @@ func (objSrv *ObjectServer) GetObjects(hashes []hash.Hash) (
 	return objSrv.getObjects(hashes)
 }
 
+func (objSrv *ObjectServer) ListObjectSizes() map[hash.Hash]uint64 {
+	return objSrv.listObjectSizes()
+}
+
 func (objSrv *ObjectServer) ListObjects() []hash.Hash {
 	return objSrv.listObjects()
 }

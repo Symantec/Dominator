@@ -13,6 +13,14 @@ import (
 func (s state) listImagesHandler(w http.ResponseWriter, req *http.Request) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
+	imageNames := s.imageDataBase.ListImages()
+	verstr.Sort(imageNames)
+	if req.URL.RawQuery == "output=text" {
+		for _, name := range imageNames {
+			fmt.Fprintln(writer, name)
+		}
+		return
+	}
 	fmt.Fprintln(writer, "<title>imageserver images</title>")
 	fmt.Fprintln(writer, `<style>
                           table, th, td {
@@ -21,8 +29,6 @@ func (s state) listImagesHandler(w http.ResponseWriter, req *http.Request) {
                           </style>`)
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<h3>")
-	imageNames := s.imageDataBase.ListImages()
-	verstr.Sort(imageNames)
 	fmt.Fprintln(writer, `<table border="1" style="width:100%">`)
 	fmt.Fprintln(writer, "  <tr>")
 	fmt.Fprintln(writer, "    <th>Name</th>")

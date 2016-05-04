@@ -164,7 +164,6 @@ func writeMdb(mdb *mdb.Mdb, mdbFileName string) error {
 	defer os.Remove(tmpFileName)
 	defer file.Close()
 	writer := bufio.NewWriter(file)
-	defer writer.Flush()
 	switch path.Ext(mdbFileName) {
 	case ".gob":
 		if err := gob.NewEncoder(writer).Encode(mdb.Machines); err != nil {
@@ -176,6 +175,9 @@ func writeMdb(mdb *mdb.Mdb, mdbFileName string) error {
 			return err
 		}
 		writer.Write([]byte("\n"))
+	}
+	if err := writer.Flush(); err != nil {
+		return err
 	}
 	return os.Rename(tmpFileName, mdbFileName)
 }
