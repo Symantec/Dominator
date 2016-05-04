@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
@@ -30,7 +31,7 @@ func addImagesubSubcommand(args []string) {
 func addImagesub(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient,
 	name, subName, filterFilename, triggersFilename string) error {
-	imageExists, err := checkImage(imageClient, name)
+	imageExists, err := client.CallCheckImage(imageSClient, name)
 	if err != nil {
 		return errors.New("error checking for image existance: " + err.Error())
 	}

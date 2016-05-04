@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -36,7 +37,7 @@ func bulkAddReplaceImagesSubcommand(args []string) {
 func addReplaceImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient,
 	name, baseImageName string, layerImageNames []string) error {
-	imageExists, err := checkImage(imageClient, name)
+	imageExists, err := client.CallCheckImage(imageSClient, name)
 	if err != nil {
 		return errors.New("error checking for image existance: " + err.Error())
 	}
