@@ -49,6 +49,12 @@ type ImageUpdate struct {
 	Operation uint
 }
 
+// The ListImages() RPC is fully streamed.
+// The client sends no information to the server.
+// The server sends a stream of strings (image names) with an empty string
+// signifying the end of the list.
+
+// Deprecated. Going away soon. This is for the net/rpc interface.
 type ListImagesRequest struct {
 }
 
