@@ -24,3 +24,7 @@ func CallGetImage(client *srpc.Client, request imageserver.GetImageRequest,
 	reply *imageserver.GetImageResponse) error {
 	return callGetImage(client, request, reply)
 }
+
+func CallListImages(client *srpc.Client) ([]string, error) {
+	return callListImages(client)
+}
