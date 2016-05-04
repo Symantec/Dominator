@@ -53,11 +53,3 @@ type ImageUpdate struct {
 // The client sends no information to the server.
 // The server sends a stream of strings (image names) with an empty string
 // signifying the end of the list.
-
-// Deprecated. Going away soon. This is for the net/rpc interface.
-type ListImagesRequest struct {
-}
-
-type ListImagesResponse struct {
-	ImageNames []string
-}
