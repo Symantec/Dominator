@@ -7,8 +7,8 @@ import (
 )
 
 func checkImageSubcommand(args []string) {
-	_, imageClient, _ := getClients()
-	imageExists, err := client.CallCheckImage(imageClient, args[0])
+	imageSClient, _ := getClients()
+	imageExists, err := client.CallCheckImage(imageSClient, args[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error checking image\t%s\n", err)
 		os.Exit(1)

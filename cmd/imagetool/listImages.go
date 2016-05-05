@@ -9,7 +9,7 @@ import (
 )
 
 func listImagesSubcommand(args []string) {
-	_, imageClient, _ := getClients()
+	imageClient, _ := getClients()
 	if err := listImages(imageClient); err != nil {
 		fmt.Fprintf(os.Stderr, "Error listing images\t%s\n", err)
 		os.Exit(1)

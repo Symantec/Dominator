@@ -13,14 +13,13 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	subclient "github.com/Symantec/Dominator/sub/client"
 	"io"
-	"net/rpc"
 	"os"
 )
 
 func addImagesubSubcommand(args []string) {
-	imageClient, imageSClient, objectClient := getClients()
-	err := addImagesub(imageClient, imageSClient, objectClient, args[0],
-		args[1], args[2], args[3])
+	imageSClient, objectClient := getClients()
+	err := addImagesub(imageSClient, objectClient, args[0], args[1], args[2],
+		args[3])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error adding image: \"%s\"\t%s\n", args[0], err)
 		os.Exit(1)
@@ -28,7 +27,7 @@ func addImagesubSubcommand(args []string) {
 	os.Exit(0)
 }
 
-func addImagesub(imageClient *rpc.Client, imageSClient *srpc.Client,
+func addImagesub(imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient,
 	name, subName, filterFilename, triggersFilename string) error {
 	imageExists, err := client.CallCheckImage(imageSClient, name)

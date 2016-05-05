@@ -20,7 +20,7 @@ const (
 )
 
 func getImageSubcommand(args []string) {
-	_, imageSClient, objectClient := getClients()
+	imageSClient, objectClient := getClients()
 	err := getImageAndWrite(imageSClient, objectClient, args[0], args[1])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting image\t%s\n", err)
