@@ -117,6 +117,7 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 			log.Println(err)
 			return
 		}
+		myConn.isEncrypted = true
 		myConn.username, myConn.permittedMethods, err = getAuth(
 			tlsConn.ConnectionState())
 		if err != nil {

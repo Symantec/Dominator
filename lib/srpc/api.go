@@ -74,9 +74,10 @@ func DialTlsHTTP(network, address string, tlsConfig *tls.Config,
 }
 
 type Client struct {
-	conn     net.Conn
-	bufrw    *bufio.ReadWriter
-	callLock sync.Mutex
+	conn        net.Conn
+	isEncrypted bool
+	bufrw       *bufio.ReadWriter
+	callLock    sync.Mutex
 }
 
 func (client *Client) Close() error {
@@ -102,7 +103,8 @@ func (client *Client) Ping() error {
 }
 
 type Conn struct {
-	parent *Client // nil: server-side connection.
+	parent      *Client // nil: server-side connection.
+	isEncrypted bool
 	*bufio.ReadWriter
 	username         string              // Empty string for unauthenticated.
 	permittedMethods map[string]struct{} // nil: all, empty: none permitted.
@@ -120,4 +122,9 @@ func (conn *Conn) Close() error {
 // connection, the GetUsername will panic.
 func (conn *Conn) GetUsername() string {
 	return conn.getUsername()
+}
+
+// IsEncrypted will return true if the underlying connection is TLS-encrypted.
+func (conn *Conn) IsEncrypted() bool {
+	return conn.isEncrypted
 }

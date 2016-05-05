@@ -55,7 +55,7 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 		return nil, errors.New("unexpected HTTP response: " + resp.Status)
 	}
 	if tlsConfig == nil {
-		return newClient(unsecuredConn), nil
+		return newClient(unsecuredConn, false), nil
 	}
 	tlsConn := tls.Client(unsecuredConn, tlsConfig)
 	if err := tlsConn.Handshake(); err != nil {
@@ -64,12 +64,13 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 		}
 		return nil, err
 	}
-	return newClient(tlsConn), nil
+	return newClient(tlsConn, true), nil
 }
 
-func newClient(conn net.Conn) *Client {
+func newClient(conn net.Conn, isEncrypted bool) *Client {
 	return &Client{
-		conn: conn,
+		conn:        conn,
+		isEncrypted: isEncrypted,
 		bufrw: bufio.NewReadWriter(bufio.NewReader(conn),
 			bufio.NewWriter(conn))}
 }
@@ -102,9 +103,11 @@ func (client *Client) callWithLock(serviceMethod string) (*Conn, error) {
 		}
 		return nil, errors.New(resp)
 	}
-	conn := new(Conn)
-	conn.parent = client
-	conn.ReadWriter = client.bufrw
+	conn := &Conn{
+		parent:      client,
+		isEncrypted: client.isEncrypted,
+		ReadWriter:  client.bufrw,
+	}
 	return conn, nil
 }
 
