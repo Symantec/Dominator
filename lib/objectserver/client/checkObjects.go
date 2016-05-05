@@ -1,11 +1,12 @@
 package client
 
 import (
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
-	"net/rpc"
 )
 
 func (objClient *ObjectClient) checkObjects(hashes []hash.Hash) (
@@ -13,13 +14,30 @@ func (objClient *ObjectClient) checkObjects(hashes []hash.Hash) (
 	var request objectserver.CheckObjectsRequest
 	request.Hashes = hashes
 	var reply objectserver.CheckObjectsResponse
-	client, err := rpc.DialHTTP("tcp", objClient.address)
+	client, err := srpc.DialHTTP("tcp", objClient.address, 0)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error dialing\t%s\n", err.Error()))
+		return nil, fmt.Errorf("error dialing: %s\n", err)
 	}
 	defer client.Close()
-	err = client.Call("ObjectServer.CheckObjects", request, &reply)
+	conn, err := client.Call("ObjectServer.CheckObjects")
 	if err != nil {
+		return nil, err
+	}
+	encoder := gob.NewEncoder(conn)
+	if err := encoder.Encode(request); err != nil {
+		return nil, err
+	}
+	if err := conn.Flush(); err != nil {
+		return nil, err
+	}
+	str, err := conn.ReadString('\n')
+	if err != nil {
+		return nil, err
+	}
+	if str != "\n" {
+		return nil, errors.New(str[:len(str)-1])
+	}
+	if err := gob.NewDecoder(conn).Decode(&reply); err != nil {
 		return nil, err
 	}
 	return reply.ObjectSizes, nil
