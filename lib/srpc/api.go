@@ -94,6 +94,11 @@ func (client *Client) Call(serviceMethod string) (*Conn, error) {
 	return client.call(serviceMethod)
 }
 
+// IsEncrypted will return true if the underlying connection is TLS-encrypted.
+func (client *Client) IsEncrypted() bool {
+	return client.isEncrypted
+}
+
 // Ping sends a short "are you alive?" request and waits for a response. No
 // method permissions are required for this operation. The Ping method is a
 // wrapper around the Call method and hence will block if a Call is already in
