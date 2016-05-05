@@ -79,6 +79,7 @@ func (sub *Sub) connectAndPoll() {
 		time.Second*time.Duration(*subConnectTimeout))
 	dialReturnedTime := time.Now()
 	if err != nil {
+		sub.isInsecure = false
 		sub.pollTime = time.Time{}
 		if err, ok := err.(*net.OpError); ok {
 			if _, ok := err.Err.(*net.DNSError); ok {
@@ -116,6 +117,11 @@ func (sub *Sub) connectAndPoll() {
 	}
 	defer srpcClient.Close()
 	sub.status = statusWaitingToPoll
+	if srpcClient.IsEncrypted() {
+		sub.isInsecure = false
+	} else {
+		sub.isInsecure = true
+	}
 	sub.lastReachableTime = dialReturnedTime
 	sub.lastConnectionSucceededTime = dialReturnedTime
 	sub.lastConnectDuration =

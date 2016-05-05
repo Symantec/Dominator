@@ -77,7 +77,11 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
 }
 
 func showSub(writer io.Writer, sub *Sub) {
-	fmt.Fprintf(writer, "  <tr>\n")
+	if sub.isInsecure {
+		fmt.Fprintln(writer, "  <tr style=\"background-color:yellow\">")
+	} else {
+		fmt.Fprintf(writer, "  <tr>\n")
+	}
 	subURL := fmt.Sprintf("http://%s:%d/",
 		strings.SplitN(sub.String(), "*", 2)[0], constants.SubPortNumber)
 	fmt.Fprintf(writer, "    <td><a href=\"%s\">%s</a></td>\n", subURL, sub)

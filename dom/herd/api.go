@@ -74,6 +74,7 @@ type Sub struct {
 	generationCount              uint64
 	computedFilesChangeTime      time.Time
 	scanCountAtLastUpdateEnd     uint64
+	isInsecure                   bool
 	status                       subStatus
 	lastConnectionStartTime      time.Time
 	lastReachableTime            time.Time
