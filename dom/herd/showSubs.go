@@ -80,7 +80,7 @@ func showSub(writer io.Writer, sub *Sub) {
 	if sub.isInsecure {
 		fmt.Fprintln(writer, "  <tr style=\"background-color:yellow\">")
 	} else {
-		fmt.Fprintf(writer, "  <tr>\n")
+		fmt.Fprintln(writer, "  <tr>")
 	}
 	subURL := fmt.Sprintf("http://%s:%d/",
 		strings.SplitN(sub.String(), "*", 2)[0], constants.SubPortNumber)
@@ -98,7 +98,7 @@ func showSub(writer io.Writer, sub *Sub) {
 	showDuration(writer, sub.lastShortPollDuration)
 	showDuration(writer, sub.lastFullPollDuration)
 	showDuration(writer, sub.lastComputeUpdateCpuDuration)
-	fmt.Fprintf(writer, "  </tr>\n")
+	fmt.Fprintln(writer, "  </tr>")
 }
 
 func (herd *Herd) showImage(writer io.Writer, name string) {
@@ -136,7 +136,7 @@ func (sub *Sub) showBusy(writer io.Writer) {
 
 func showSince(writer io.Writer, now time.Time, since time.Time) {
 	if now.IsZero() || since.IsZero() {
-		fmt.Fprintf(writer, "    <td></td>\n")
+		fmt.Fprintln(writer, "    <td></td>")
 	} else {
 		showDuration(writer, now.Sub(since))
 	}
