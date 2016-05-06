@@ -7,12 +7,7 @@ import (
 	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
 	"log"
-	"net/rpc"
 )
-
-type rpcType struct {
-	objectServer objectserver.ObjectServer
-}
 
 type srpcType struct {
 	objectServer objectserver.ObjectServer
@@ -30,9 +25,7 @@ func (hw *htmlWriter) WriteHtml(writer io.Writer) {
 
 func Setup(objSrv objectserver.ObjectServer, logger *log.Logger) *htmlWriter {
 	getSemaphore := make(chan bool, 100)
-	rpcObj := &rpcType{objSrv}
 	srpcObj := &srpcType{objSrv, getSemaphore, logger}
-	rpc.RegisterName("ObjectServer", rpcObj)
 	srpc.RegisterName("ObjectServer", srpcObj)
 	tricorder.RegisterMetric("/get-requests",
 		func() uint { return uint(len(getSemaphore)) },

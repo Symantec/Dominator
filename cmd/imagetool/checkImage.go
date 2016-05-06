@@ -2,14 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/proto/imageserver"
-	"net/rpc"
+	"github.com/Symantec/Dominator/imageserver/client"
 	"os"
 )
 
 func checkImageSubcommand(args []string) {
-	imageClient, _, _ := getClients()
-	imageExists, err := checkImage(imageClient, args[0])
+	imageSClient, _ := getClients()
+	imageExists, err := client.CallCheckImage(imageSClient, args[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error checking image\t%s\n", err)
 		os.Exit(1)
@@ -18,15 +17,4 @@ func checkImageSubcommand(args []string) {
 		os.Exit(0)
 	}
 	os.Exit(1)
-}
-
-func checkImage(client *rpc.Client, name string) (bool, error) {
-	var request imageserver.CheckImageRequest
-	request.ImageName = name
-	var reply imageserver.CheckImageResponse
-	err := client.Call("ImageServer.CheckImage", request, &reply)
-	if err != nil {
-		return false, err
-	}
-	return reply.ImageExists, nil
 }

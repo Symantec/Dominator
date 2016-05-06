@@ -9,7 +9,6 @@ import (
 	"github.com/Symantec/Dominator/lib/flagutil"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"net/rpc"
 	"os"
 	"path"
 )
@@ -104,22 +103,16 @@ var subcommands = []subcommand{
 	{"show", 1, 1, showImageSubcommand},
 }
 
-var imageRpcClient *rpc.Client
 var imageSrpcClient *srpc.Client
 var theObjectClient *objectclient.ObjectClient
 
 var listSelector filesystem.ListSelector
 
-func getClients() (*rpc.Client, *srpc.Client, *objectclient.ObjectClient) {
-	if imageRpcClient == nil {
+func getClients() (*srpc.Client, *objectclient.ObjectClient) {
+	if imageSrpcClient == nil {
 		var err error
 		clientName := fmt.Sprintf("%s:%d",
 			*imageServerHostname, *imageServerPortNum)
-		imageRpcClient, err = rpc.DialHTTP("tcp", clientName)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
-			os.Exit(1)
-		}
 		imageSrpcClient, err = srpc.DialHTTP("tcp", clientName, 0)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
@@ -127,7 +120,7 @@ func getClients() (*rpc.Client, *srpc.Client, *objectclient.ObjectClient) {
 		}
 		theObjectClient = objectclient.NewObjectClient(clientName)
 	}
-	return imageRpcClient, imageSrpcClient, theObjectClient
+	return imageSrpcClient, theObjectClient
 }
 
 func makeListSelector(arg string) filesystem.ListSelector {

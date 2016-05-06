@@ -49,9 +49,7 @@ type ImageUpdate struct {
 	Operation uint
 }
 
-type ListImagesRequest struct {
-}
-
-type ListImagesResponse struct {
-	ImageNames []string
-}
+// The ListImages() RPC is fully streamed.
+// The client sends no information to the server.
+// The server sends a stream of strings (image names) with an empty string
+// signifying the end of the list.

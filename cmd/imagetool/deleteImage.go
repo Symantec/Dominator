@@ -10,7 +10,7 @@ import (
 )
 
 func deleteImageSubcommand(args []string) {
-	_, imageSClient, _ := getClients()
+	imageSClient, _ := getClients()
 	if err := deleteImage(imageSClient, args[0]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error deleting image\t%s\n", err)
 		os.Exit(1)

@@ -53,7 +53,7 @@ func getTypedImage(typedName string) (*filesystem.FileSystem, error) {
 	case 'f':
 		return readImage(name)
 	case 'i':
-		_, imageSClient, _ := getClients()
+		imageSClient, _ := getClients()
 		return getFsOfImage(imageSClient, name)
 	case 's':
 		return pollImage(name)

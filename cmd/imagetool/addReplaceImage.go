@@ -3,19 +3,19 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"net/rpc"
 	"os"
 	"strconv"
 	"strings"
 )
 
 func addReplaceImageSubcommand(args []string) {
-	imageClient, imageSClient, objectClient := getClients()
-	err := addReplaceImage(imageClient, imageSClient, objectClient, args[0],
-		args[1], args[2:])
+	imageSClient, objectClient := getClients()
+	err := addReplaceImage(imageSClient, objectClient, args[0], args[1],
+		args[2:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error adding image: \"%s\"\t%s\n", args[0], err)
 		os.Exit(1)
@@ -24,8 +24,8 @@ func addReplaceImageSubcommand(args []string) {
 }
 
 func bulkAddReplaceImagesSubcommand(args []string) {
-	imageClient, imageSClient, objectClient := getClients()
-	err := bulkAddReplaceImages(imageClient, imageSClient, objectClient, args)
+	imageSClient, objectClient := getClients()
+	err := bulkAddReplaceImages(imageSClient, objectClient, args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error adding image: \"%s\"\t%s\n", args[0], err)
 		os.Exit(1)
@@ -33,10 +33,10 @@ func bulkAddReplaceImagesSubcommand(args []string) {
 	os.Exit(0)
 }
 
-func addReplaceImage(imageClient *rpc.Client, imageSClient *srpc.Client,
+func addReplaceImage(imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient,
 	name, baseImageName string, layerImageNames []string) error {
-	imageExists, err := checkImage(imageClient, name)
+	imageExists, err := client.CallCheckImage(imageSClient, name)
 	if err != nil {
 		return errors.New("error checking for image existance: " + err.Error())
 	}
@@ -59,9 +59,9 @@ func addReplaceImage(imageClient *rpc.Client, imageSClient *srpc.Client,
 	return addImage(imageSClient, name, newImage)
 }
 
-func bulkAddReplaceImages(imageClient *rpc.Client, imageSClient *srpc.Client,
+func bulkAddReplaceImages(imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, layerImageNames []string) error {
-	imageNames, err := getImages(imageClient)
+	imageNames, err := client.CallListImages(imageSClient)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func bulkAddReplaceImages(imageClient *rpc.Client, imageSClient *srpc.Client,
 	for baseName, version := range baseNames {
 		oldName := fmt.Sprintf("%s.%d", baseName, version)
 		newName := fmt.Sprintf("%s.%d", baseName, version+1)
-		if err := addReplaceImage(imageClient, imageSClient, objectClient,
+		if err := addReplaceImage(imageSClient, objectClient,
 			newName, oldName, layerImageNames); err != nil {
 			return err
 		}

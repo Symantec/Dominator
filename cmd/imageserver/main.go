@@ -13,7 +13,6 @@ import (
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 	"log"
-	"net/rpc"
 	"os"
 )
 
@@ -77,7 +76,6 @@ func main() {
 	imgSrvRpcHtmlWriter := imageserverRpcd.Setup(imdb, *imageServerHostname,
 		logger)
 	objSrvRpcHtmlWriter := objectserverRpcd.Setup(objSrv, logger)
-	rpc.HandleHTTP()
 	httpd.AddHtmlWriter(imdb)
 	httpd.AddHtmlWriter(&imageObjectServersType{imdb, objSrv})
 	httpd.AddHtmlWriter(imgSrvRpcHtmlWriter)

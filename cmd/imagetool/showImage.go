@@ -7,7 +7,7 @@ import (
 )
 
 func showImageSubcommand(args []string) {
-	_, imageSClient, _ := getClients()
+	imageSClient, _ := getClients()
 	if err := showImage(imageSClient, args[0]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error showing image\t%s\n", err)
 		os.Exit(1)

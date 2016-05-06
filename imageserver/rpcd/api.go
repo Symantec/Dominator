@@ -5,14 +5,8 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	"io"
 	"log"
-	"net/rpc"
 	"sync"
 )
-
-type rpcType struct {
-	imageDataBase *scanner.ImageDataBase
-	logger        *log.Logger
-}
 
 type srpcType struct {
 	imageDataBase             *scanner.ImageDataBase
@@ -33,10 +27,6 @@ var replicationMessage = "cannot make changes while under replication control" +
 
 func Setup(imdb *scanner.ImageDataBase, replicationMaster string,
 	lg *log.Logger) *htmlWriter {
-	rpcObj := rpcType{
-		imageDataBase: imdb,
-		logger:        lg}
-	rpc.RegisterName("ImageServer", &rpcObj)
 	srpcObj := srpcType{
 		imageDataBase:     imdb,
 		replicationMaster: replicationMaster,
