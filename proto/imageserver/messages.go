@@ -10,8 +10,14 @@ type AddImageRequest struct {
 	Image     *image.Image
 }
 
-type AddImageResponse struct {
+type AddImageResponse struct{}
+
+type ChangeOwnerRequest struct {
+	DirectoryName string
+	OwnerGroup    string
 }
+
+type ChangeOwnerResponse struct{}
 
 type CheckImageRequest struct {
 	ImageName string
@@ -38,6 +44,7 @@ type GetImageResponse struct {
 const (
 	OperationAddImage = iota
 	OperationDeleteImage
+	OperationMakeDirectory
 )
 
 // The GetImageUpdates() RPC is fully streamed.
@@ -48,6 +55,12 @@ type ImageUpdate struct {
 	Name      string // "" signifies initial list is sent, changes to follow.
 	Operation uint
 }
+
+type MakeDirectoryRequest struct {
+	DirectoryName string
+}
+
+type MakeDirectoryResponse struct{}
 
 // The ListImages() RPC is fully streamed.
 // The client sends no information to the server.
