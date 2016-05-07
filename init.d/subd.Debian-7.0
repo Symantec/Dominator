@@ -9,41 +9,78 @@
 # Short-Description:	Dominator subject daemon
 ### END INIT INFO
 
-set -e
-
 # /etc/init.d/subd: start and stop the Dominator subject daemon
-
-test -x /usr/local/sbin/subd || exit 0
-
-umask 022
 
 . /lib/lsb/init-functions
 
+umask 022
+
+readonly default_log_dir='/var/log/subd'
+readonly LOOP_PIDFILE='/var/run/subd.loop.pid'
+readonly PIDFILE='/var/run/subd.pid'
+
+DAEMON='/usr/local/sbin/subd'
+LOG_DIR="$default_log_dir"
+LOG_QUOTA=
+LOGBUF_LINES=
+
+PROG_ARGS=
+
+[ -f /etc/default/subd ] && . /etc/default/subd
+
+test -x "$DAEMON" || exit 0
+
 export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
-readonly pidfile="/var/run/subd.pid"
+
+mkdir -m 0750 -p "$LOG_DIR"
+
+if [ -n "$LOG_DIR" ] && [ "$LOG_DIR" != "$default_log_dir" ]; then
+    PROG_ARGS="$PROG_ARGS -logDir=$LOG_DIR"
+fi
+
+if [ -n "$LOG_QUOTA" ]; then
+    PROG_ARGS="$PROG_ARGS -logQuota=$LOG_QUOTA"
+fi
+
+if [ -n "$LOGBUF_LINES" ]; then
+    PROG_ARGS="$PROG_ARGS -logbufLines=$LOGBUF_LINES"
+fi
+
+start_loop ()
+{
+    echo "$BASHPID" > "$LOOP_PIDFILE"
+    while true; do
+	"$DAEMON" $PROG_ARGS
+	rm -f "$PIDFILE"
+	sleep 1
+    done
+}
 
 case "$1" in
   start)
 	log_daemon_msg "Starting Dominator subject daemon" "subd" || true
-	/usr/local/sbin/subd < /dev/null &> /dev/null &
+	(start_loop < /dev/null &> /dev/null &)
 	;;
   stop)
 	log_daemon_msg "Stopping Dominator subject daemon" "subd" || true
-	kill -TERM $(cat "$pidfile")
+	[ -s "$LOOP_PIDFILE" ] && kill -KILL $(cat "$LOOP_PIDFILE")
+	[ -s "$PIDFILE" ]      && kill -TERM $(cat "$PIDFILE")
+	rm -f "$LOOP_PIDFILE" "$PIDFILE"
 	;;
 
   reload|force-reload)
-	kill -HUP $(cat "$pidfile")
+	kill -HUP $(cat "$PIDFILE")
 	;;
 
   restart)
-	kill -HUP $(cat "$pidfile")
+	kill -HUP $(cat "$PIDFILE")
 	;;
 
   start-if-down)
-	[ -s "$pidfile" ] && kill -0 $(cat "$pidfile") &> /dev/null && exit
+	[ -s "$LOOP_PIDFILE" ] && kill -0 $(cat "$LOOP_PIDFILE") &> /dev/null && exit
+	[ -s "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") &> /dev/null && exit
 	log_daemon_msg "Starting Dominator subject daemon" "subd" || true
-	/usr/local/sbin/subd < /dev/null &> /dev/null &
+	(start_loop < /dev/null &> /dev/null &)
 	;;
 
   *)
