@@ -12,8 +12,12 @@ import (
 	"syscall"
 )
 
-const filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP |
-	syscall.S_IROTH
+const (
+	dirPerms = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP |
+		syscall.S_IROTH | syscall.S_IXOTH
+	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP |
+		syscall.S_IROTH
+)
 
 func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
 	if err := image.Verify(); err != nil {
@@ -25,9 +29,6 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
 		return errors.New("image: " + name + " already exists")
 	} else {
 		filename := path.Join(imdb.baseDir, name)
-		if err := os.MkdirAll(path.Dir(filename), 0755); err != nil {
-			return err
-		}
 		file, err := os.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_RDWR,
 			filePerms)
 		if err != nil {
@@ -44,7 +45,7 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
 		encoder := gob.NewEncoder(writer)
 		encoder.Encode(image)
 		imdb.imageMap[name] = image
-		imdb.addNotifiers.send(name, "add", imdb.logger)
+		imdb.addNotifiers.sendPlain(name, "add", imdb.logger)
 		return nil
 	}
 }
@@ -56,6 +57,12 @@ func (imdb *ImageDataBase) checkImage(name string) bool {
 	return ok
 }
 
+func (imdb *ImageDataBase) countImages() uint {
+	imdb.RLock()
+	defer imdb.RUnlock()
+	return uint(len(imdb.imageMap))
+}
+
 func (imdb *ImageDataBase) deleteImage(name string) error {
 	imdb.Lock()
 	defer imdb.Unlock()
@@ -65,7 +72,7 @@ func (imdb *ImageDataBase) deleteImage(name string) error {
 			return err
 		}
 		delete(imdb.imageMap, name)
-		imdb.deleteNotifiers.send(name, "delete", imdb.logger)
+		imdb.deleteNotifiers.sendPlain(name, "delete", imdb.logger)
 		return nil
 	} else {
 		return errors.New("image: " + name + " does not exist")
@@ -78,6 +85,16 @@ func (imdb *ImageDataBase) getImage(name string) *image.Image {
 	return imdb.imageMap[name]
 }
 
+func (imdb *ImageDataBase) listDirectories() []image.Directory {
+	imdb.RLock()
+	defer imdb.RUnlock()
+	directories := make([]image.Directory, 0, len(imdb.directoryList))
+	for _, directory := range imdb.directoryList {
+		directories = append(directories, directory)
+	}
+	return directories
+}
+
 func (imdb *ImageDataBase) listImages() []string {
 	imdb.RLock()
 	defer imdb.RUnlock()
@@ -88,10 +105,16 @@ func (imdb *ImageDataBase) listImages() []string {
 	return names
 }
 
-func (imdb *ImageDataBase) countImages() uint {
-	imdb.RLock()
-	defer imdb.RUnlock()
-	return uint(len(imdb.imageMap))
+func (imdb *ImageDataBase) makeDirectory(dirname, username string) error {
+	pathname := path.Join(imdb.baseDir, dirname)
+	if err := os.Mkdir(pathname, dirPerms); err != nil {
+		return err
+	}
+	directory := image.Directory{Name: dirname}
+	imdb.Lock()
+	defer imdb.Unlock()
+	imdb.mkdirNotifiers.sendMakeDirectory(directory, imdb.logger)
+	return nil
 }
 
 func (imdb *ImageDataBase) registerAddNotifier() <-chan string {
@@ -102,12 +125,6 @@ func (imdb *ImageDataBase) registerAddNotifier() <-chan string {
 	return channel
 }
 
-func (imdb *ImageDataBase) unregisterAddNotifier(channel <-chan string) {
-	imdb.Lock()
-	defer imdb.Unlock()
-	delete(imdb.addNotifiers, channel)
-}
-
 func (imdb *ImageDataBase) registerDeleteNotifier() <-chan string {
 	channel := make(chan string, 1)
 	imdb.Lock()
@@ -116,13 +133,35 @@ func (imdb *ImageDataBase) registerDeleteNotifier() <-chan string {
 	return channel
 }
 
+func (imdb *ImageDataBase) registerMakeDirectoryNotifier() <-chan image.Directory {
+	channel := make(chan image.Directory, 1)
+	imdb.Lock()
+	defer imdb.Unlock()
+	imdb.mkdirNotifiers[channel] = channel
+	return channel
+}
+
+func (imdb *ImageDataBase) unregisterAddNotifier(channel <-chan string) {
+	imdb.Lock()
+	defer imdb.Unlock()
+	delete(imdb.addNotifiers, channel)
+}
+
 func (imdb *ImageDataBase) unregisterDeleteNotifier(channel <-chan string) {
 	imdb.Lock()
 	defer imdb.Unlock()
 	delete(imdb.deleteNotifiers, channel)
 }
 
-func (n notifiers) send(name string, operation string, logger *log.Logger) {
+func (imdb *ImageDataBase) unregisterMakeDirectoryNotifier(
+	channel <-chan image.Directory) {
+	imdb.Lock()
+	defer imdb.Unlock()
+	delete(imdb.mkdirNotifiers, channel)
+}
+
+func (n notifiers) sendPlain(name string, operation string,
+	logger *log.Logger) {
 	if len(n) < 1 {
 		return
 	} else {
@@ -136,6 +175,25 @@ func (n notifiers) send(name string, operation string, logger *log.Logger) {
 	for _, sendChannel := range n {
 		go func(channel chan<- string) {
 			channel <- name
+		}(sendChannel)
+	}
+}
+
+func (n makeDirectoryNotifiers) sendMakeDirectory(dir image.Directory,
+	logger *log.Logger) {
+	if len(n) < 1 {
+		return
+	} else {
+		plural := "s"
+		if len(n) < 2 {
+			plural = ""
+		}
+		logger.Printf("Sending mkdir notification to: %d listener%s\n",
+			len(n), plural)
+	}
+	for _, sendChannel := range n {
+		go func(channel chan<- image.Directory) {
+			channel <- dir
 		}(sendChannel)
 	}
 }

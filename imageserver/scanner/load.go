@@ -28,6 +28,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 	}
 	imdb := new(ImageDataBase)
 	imdb.baseDir = baseDir
+	imdb.directoryList = make([]image.Directory, 0)
 	imdb.imageMap = make(map[string]*image.Image)
 	imdb.addNotifiers = make(notifiers)
 	imdb.deleteNotifiers = make(notifiers)
@@ -61,6 +62,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 
 func (imdb *ImageDataBase) scanDirectory(dirname string,
 	state *concurrent.State, logger *log.Logger) error {
+	imdb.directoryList = append(imdb.directoryList, image.Directory{dirname})
 	file, err := os.Open(path.Join(imdb.baseDir, dirname))
 	if err != nil {
 		return err
