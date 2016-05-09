@@ -12,6 +12,10 @@ type Annotation struct {
 	URL    string
 }
 
+type Directory struct {
+	Name string
+}
+
 type Image struct {
 	CreatedBy    string // Username. Set by imageserver. Empty: unauthenticated.
 	Filter       *filter.Filter

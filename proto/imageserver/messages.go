@@ -53,6 +53,7 @@ const (
 
 type ImageUpdate struct {
 	Name      string // "" signifies initial list is sent, changes to follow.
+	Directory *image.Directory
 	Operation uint
 }
 
