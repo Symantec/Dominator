@@ -28,3 +28,7 @@ func CallGetImage(client *srpc.Client, request imageserver.GetImageRequest,
 func CallListImages(client *srpc.Client) ([]string, error) {
 	return callListImages(client)
 }
+
+func CallMakeDirectory(client *srpc.Client, dirname string) error {
+	return callMakeDirectory(client, dirname)
+}
