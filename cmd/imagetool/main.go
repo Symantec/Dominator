@@ -68,6 +68,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "           s: name of sub to poll")
 	fmt.Fprintln(os.Stderr, "  get    name directory")
 	fmt.Fprintln(os.Stderr, "  list")
+	fmt.Fprintln(os.Stderr, "  mkdir  name")
 	fmt.Fprintln(os.Stderr, "  show   name")
 	fmt.Fprintln(os.Stderr, "Fields:")
 	fmt.Fprintln(os.Stderr, "  m: mode")
@@ -100,6 +101,7 @@ var subcommands = []subcommand{
 	{"diff", 3, 3, diffSubcommand},
 	{"get", 2, 2, getImageSubcommand},
 	{"list", 0, 0, listImagesSubcommand},
+	{"mkdir", 1, 1, makeDirectorySubcommand},
 	{"show", 1, 1, showImageSubcommand},
 }
 
