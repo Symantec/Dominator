@@ -30,8 +30,8 @@ func (t *srpcType) DeleteImage(conn *srpc.Conn) error {
 func (t *srpcType) deleteImage(request imageserver.DeleteImageRequest,
 	reply *imageserver.DeleteImageResponse, username string) error {
 	var response imageserver.DeleteImageResponse
-	if t.replicationMaster != "" {
-		return errors.New(replicationMessage + t.replicationMaster)
+	if err := t.checkMutability(); err != nil {
+		return err
 	}
 	if !t.imageDataBase.CheckImage(request.ImageName) {
 		return errors.New("image does not exist")
