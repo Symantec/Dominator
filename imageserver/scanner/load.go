@@ -32,6 +32,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 	imdb.imageMap = make(map[string]*image.Image)
 	imdb.addNotifiers = make(notifiers)
 	imdb.deleteNotifiers = make(notifiers)
+	imdb.mkdirNotifiers = make(makeDirectoryNotifiers)
 	imdb.objectServer = objSrv
 	imdb.logger = logger
 	state := concurrent.NewState(0)
