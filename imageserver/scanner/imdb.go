@@ -105,9 +105,13 @@ func (imdb *ImageDataBase) listImages() []string {
 	return names
 }
 
-func (imdb *ImageDataBase) makeDirectory(dirname, username string) error {
+func (imdb *ImageDataBase) makeDirectory(dirname, username string,
+	errorIfExists bool) error {
 	pathname := path.Join(imdb.baseDir, dirname)
 	if err := os.Mkdir(pathname, dirPerms); err != nil {
+		if os.IsExist(err) && !errorIfExists {
+			return nil
+		}
 		return err
 	}
 	directory := image.Directory{Name: dirname}

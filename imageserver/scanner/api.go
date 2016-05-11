@@ -65,8 +65,9 @@ func (imdb *ImageDataBase) ListImages() []string {
 	return imdb.listImages()
 }
 
-func (imdb *ImageDataBase) MakeDirectory(dirname, username string) error {
-	return imdb.makeDirectory(dirname, username)
+func (imdb *ImageDataBase) MakeDirectory(dirname, username string,
+	errorIfExists bool) error {
+	return imdb.makeDirectory(dirname, username, errorIfExists)
 }
 
 func (imdb *ImageDataBase) ObjectServer() objectserver.ObjectServer {
