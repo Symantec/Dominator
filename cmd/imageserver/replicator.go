@@ -68,16 +68,14 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 			}
 			return errors.New("decode err: " + err.Error())
 		}
-		if imageUpdate.Name == "" {
-			if initialImages != nil {
-				deleteMissingImages(imdb, initialImages, logger)
-				initialImages = nil
-			}
-			continue
-		}
 		switch imageUpdate.Operation {
 		case imageserver.OperationAddImage:
 			if initialImages != nil {
+				if imageUpdate.Name == "" {
+					deleteMissingImages(imdb, initialImages, logger)
+					initialImages = nil
+					continue
+				}
 				initialImages[imageUpdate.Name] = struct{}{}
 			}
 			if err := addImage(address, imdb, objSrv, imageUpdate.Name,
@@ -90,6 +88,15 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 			}
 			logger.Printf("Replicator(%s): delete image\n", imageUpdate.Name)
 			if err := imdb.DeleteImage(imageUpdate.Name); err != nil {
+				return err
+			}
+		case imageserver.OperationMakeDirectory:
+			directory := imageUpdate.Directory
+			if directory == nil {
+				return errors.New("nil imageUpdate.Directory")
+			}
+			if err := imdb.MakeDirectory(directory.Name, "",
+				false); err != nil {
 				return err
 			}
 		}
