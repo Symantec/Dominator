@@ -70,12 +70,14 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 		}
 		switch imageUpdate.Operation {
 		case imageserver.OperationAddImage:
-			if initialImages != nil {
-				if imageUpdate.Name == "" {
+			if imageUpdate.Name == "" {
+				if initialImages != nil {
 					deleteMissingImages(imdb, initialImages, logger)
 					initialImages = nil
-					continue
 				}
+				continue
+			}
+			if initialImages != nil {
 				initialImages[imageUpdate.Name] = struct{}{}
 			}
 			if err := addImage(address, imdb, objSrv, imageUpdate.Name,
