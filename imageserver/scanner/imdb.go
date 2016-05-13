@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"encoding/gob"
 	"errors"
+	"fmt"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/image"
 	"log"
 	"os"
+	"os/user"
 	"path"
 	"syscall"
 )
@@ -57,6 +59,28 @@ func (imdb *ImageDataBase) checkImage(name string) bool {
 	return ok
 }
 
+func (imdb *ImageDataBase) chownDirectory(dirname, ownerGroup string,
+	username string) error {
+	if username == "" {
+		return errors.New("no username: unauthenticated connection")
+	}
+	directoryMetadata, ok := imdb.directoryMap[dirname]
+	if !ok {
+		return fmt.Errorf("no metadata for: \"%s\"", dirname)
+	}
+	if ownerGroup == directoryMetadata.OwnerGroup {
+		return nil
+	}
+	userData, err := user.Lookup(username)
+	if err != nil {
+		return fmt.Errorf("error looking up user: \"%s\": %s", username, err)
+	}
+	// TODO(rgooch): Implement.
+	_ = userData
+	return errors.New("not implemented")
+	return nil
+}
+
 func (imdb *ImageDataBase) countImages() uint {
 	imdb.RLock()
 	defer imdb.RUnlock()
@@ -88,9 +112,10 @@ func (imdb *ImageDataBase) getImage(name string) *image.Image {
 func (imdb *ImageDataBase) listDirectories() []image.Directory {
 	imdb.RLock()
 	defer imdb.RUnlock()
-	directories := make([]image.Directory, 0, len(imdb.directoryList))
-	for _, directory := range imdb.directoryList {
-		directories = append(directories, directory)
+	directories := make([]image.Directory, 0, len(imdb.directoryMap))
+	for name, metadata := range imdb.directoryMap {
+		directories = append(directories,
+			image.Directory{Name: name, Metadata: metadata})
 	}
 	return directories
 }

@@ -22,7 +22,7 @@ type ImageDataBase struct {
 	sync.RWMutex
 	// Protected by lock.
 	baseDir         string
-	directoryList   []image.Directory
+	directoryMap    map[string]image.DirectoryMetadata
 	imageMap        map[string]*image.Image
 	addNotifiers    notifiers
 	deleteNotifiers notifiers
@@ -43,6 +43,11 @@ func (imdb *ImageDataBase) AddImage(image *image.Image, name string) error {
 
 func (imdb *ImageDataBase) CheckImage(name string) bool {
 	return imdb.checkImage(name)
+}
+
+func (imdb *ImageDataBase) ChownDirectory(dirname string, ownerGroup string,
+	username string) error {
+	return imdb.chownDirectory(dirname, ownerGroup, username)
 }
 
 func (imdb *ImageDataBase) CountImages() uint {

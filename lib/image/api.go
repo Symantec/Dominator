@@ -12,8 +12,13 @@ type Annotation struct {
 	URL    string
 }
 
+type DirectoryMetadata struct {
+	OwnerGroup string
+}
+
 type Directory struct {
-	Name string
+	Name     string
+	Metadata DirectoryMetadata
 }
 
 type Image struct {
