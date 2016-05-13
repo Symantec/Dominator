@@ -16,8 +16,7 @@ func (t *srpcType) DeleteImage(conn *srpc.Conn) error {
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
 	}
-	if err := t.deleteImage(request, &response,
-		conn.GetUsername()); err != nil {
+	if err := t.deleteImage(request, &response, conn.Username()); err != nil {
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
 	}

@@ -19,7 +19,7 @@ func (t *srpcType) AddImage(conn *srpc.Conn) error {
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
 	}
-	request.Image.CreatedBy = conn.GetUsername() // Must always set this field.
+	request.Image.CreatedBy = conn.Username() // Must always set this field.
 	if err := t.addImage(request, &response); err != nil {
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
