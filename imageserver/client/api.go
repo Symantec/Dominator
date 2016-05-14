@@ -14,6 +14,10 @@ func CallCheckImage(client *srpc.Client, name string) (bool, error) {
 	return callCheckImage(client, name)
 }
 
+func CallChownDirectory(client *srpc.Client, dirname, ownerGroup string) error {
+	return callChownDirectory(client, dirname, ownerGroup)
+}
+
 func CallDeleteImage(client *srpc.Client,
 	request imageserver.DeleteImageRequest,
 	reply *imageserver.DeleteImageResponse) error {
