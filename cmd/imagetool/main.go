@@ -59,6 +59,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  addrep name baseimage layerimage...")
 	fmt.Fprintln(os.Stderr, "  bulk-addrep layerimage...")
 	fmt.Fprintln(os.Stderr, "  check  name")
+	fmt.Fprintln(os.Stderr, "  chown  dirname ownerGroup")
 	fmt.Fprintln(os.Stderr, "  delete name")
 	fmt.Fprintln(os.Stderr, "  diff   tool left right")
 	fmt.Fprintln(os.Stderr, "         left & right are image sources. Format:")
@@ -97,6 +98,7 @@ var subcommands = []subcommand{
 	{"addrep", 3, -1, addReplaceImageSubcommand},
 	{"bulk-addrep", 1, -1, bulkAddReplaceImagesSubcommand},
 	{"check", 1, 1, checkImageSubcommand},
+	{"chown", 2, 2, chownDirectorySubcommand},
 	{"delete", 1, 1, deleteImageSubcommand},
 	{"diff", 3, 3, diffSubcommand},
 	{"get", 2, 2, getImageSubcommand},
