@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/proxypoke/group.go"
 	"io"
 	"log"
 	"os"
+	"os/user"
 	"path"
 	"syscall"
 )
@@ -30,6 +32,7 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
 	if _, ok := imdb.imageMap[name]; ok {
 		return errors.New("image: " + name + " already exists")
 	} else {
+		// TODO(rgooch): Add check for user in owner group.
 		filename := path.Join(imdb.baseDir, name)
 		file, err := os.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_RDWR,
 			filePerms)
@@ -172,16 +175,41 @@ func (imdb *ImageDataBase) makeDirectory(directory image.Directory,
 	imdb.Lock()
 	defer imdb.Unlock()
 	directoryMetadata := imdb.directoryMap[directory.Name]
+	if userRpc {
+		directory.Metadata = directoryMetadata
+		parentMetadata := imdb.directoryMap[path.Dir(directory.Name)]
+		if parentMetadata.OwnerGroup != "" {
+			if err := checkUserInGroup(username,
+				parentMetadata.OwnerGroup); err != nil {
+				return err
+			}
+		}
+		directory.Metadata.OwnerGroup = parentMetadata.OwnerGroup
+	}
 	if err := os.Mkdir(pathname, dirPerms); err != nil && !os.IsExist(err) {
 		return err
 	}
-	if userRpc {
-		directory.Metadata = directoryMetadata
-		if directory.Metadata.OwnerGroup != "" {
-			// TODO(rgooch): Check if username is part of owner group.
+	return imdb.updateDirectoryMetadata(directory)
+}
+
+func checkUserInGroup(username, ownerGroup string) error {
+	userData, err := user.Lookup(username)
+	if err != nil {
+		return err
+	}
+	groupData, err := group.Lookup(ownerGroup)
+	if err != nil {
+		return err
+	}
+	if userData.Gid == groupData.Gid {
+		return nil
+	}
+	for _, member := range groupData.Members {
+		if username == member {
+			return nil
 		}
 	}
-	return imdb.updateDirectoryMetadata(directory)
+	return fmt.Errorf("user: %s not a member of: %s", username, ownerGroup)
 }
 
 func (imdb *ImageDataBase) registerAddNotifier() <-chan string {
