@@ -50,6 +50,10 @@ var (
 	unshare = flag.Bool("unshare", true, "Internal use only.")
 )
 
+func init() {
+	runtime.LockOSThread()
+}
+
 func sanityCheck() bool {
 	r_devnum, err := fsbench.GetDevnumForFile(*rootDir)
 	if err != nil {
@@ -289,84 +293,88 @@ func main() {
 		fmt.Println(configuration.FsScanContext)
 	}
 	var fsh scanner.FileSystemHistory
-	fsChannel, disableScanner := scanner.StartScannerDaemon(workingRootDir,
-		objectsDir, &configuration, logger)
-	networkReaderContext := rateio.NewReaderContext(
-		getCachedNetworkSpeed(netbenchFilename),
-		constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
-	configuration.NetworkReaderContext = networkReaderContext
-	rescanObjectCacheChannel := rpcd.Setup(&configuration, &fsh, objectsDir,
-		workingRootDir, networkReaderContext, netbenchFilename,
-		oldTriggersFilename, disableScanner, logger)
-	configMetricsDir, err := tricorder.RegisterDirectory("/config")
-	if err != nil {
-		fmt.Fprintf(os.Stderr,
-			"Unable to create /config metrics directory\t%s\n",
-			err)
-		os.Exit(1)
-	}
-	configuration.RegisterMetrics(configMetricsDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to create config metrics\t%s\n", err)
-		os.Exit(1)
-	}
-	httpd.AddHtmlWriter(&fsh)
-	httpd.AddHtmlWriter(&configuration)
-	httpd.AddHtmlWriter(circularBuffer)
-	html.RegisterHtmlWriterForPattern("/dumpFileSystem", "Scanned File System",
-		&DumpableFileSystemHistory{&fsh})
-	if err = httpd.StartServer(*portNum); err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
-		os.Exit(1)
-	}
-	fsh.Update(nil)
-	invalidateNextScanObjectCache := false
-	sighupChannel := make(chan os.Signal)
-	signal.Notify(sighupChannel, syscall.SIGHUP)
-	sigtermChannel := make(chan os.Signal)
-	signal.Notify(sigtermChannel, syscall.SIGTERM, syscall.SIGINT)
-	writePidfile()
-	for iter := 0; true; {
-		select {
-		case <-sighupChannel:
-			logger.Printf("Caught SIGHUP: re-execing with: %v\n", os.Args)
-			circularBuffer.Flush()
-			err = syscall.Exec(os.Args[0], os.Args, os.Environ())
-			if err != nil {
-				logger.Printf("Unable to Exec:%s\t%s\n", os.Args[0], err)
-			}
-		case <-sigtermChannel:
-			logger.Printf("Caught SIGTERM: performing graceful cleanup\n")
-			circularBuffer.Flush()
-			gracefulCleanup()
-		case fs := <-fsChannel:
-			if *showStats {
-				fmt.Printf("Completed cycle: %d\n", iter)
-			}
-			if invalidateNextScanObjectCache {
-				fs.ScanObjectCache()
-				invalidateNextScanObjectCache = false
-			}
-			fsh.Update(fs)
-			iter++
-			runtime.GC() // An opportune time to take out the garbage.
-			if *showStats {
-				fmt.Print(fsh)
-				fmt.Print(fsh.FileSystem())
-				memstats.WriteMemoryStats(os.Stdout)
-				fmt.Println()
-			}
-			if firstScan {
-				configuration.FsScanContext.GetContext().SetSpeedPercent(
-					defaultSpeed)
-				firstScan = false
-				if *showStats {
-					fmt.Println(configuration.FsScanContext)
+	mainFunc := func(fsChannel <-chan *scanner.FileSystem,
+		disableScanner func(disableScanner bool)) {
+		networkReaderContext := rateio.NewReaderContext(
+			getCachedNetworkSpeed(netbenchFilename),
+			constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
+		configuration.NetworkReaderContext = networkReaderContext
+		rescanObjectCacheChannel := rpcd.Setup(&configuration, &fsh, objectsDir,
+			workingRootDir, networkReaderContext, netbenchFilename,
+			oldTriggersFilename, disableScanner, logger)
+		configMetricsDir, err := tricorder.RegisterDirectory("/config")
+		if err != nil {
+			fmt.Fprintf(os.Stderr,
+				"Unable to create /config metrics directory\t%s\n",
+				err)
+			os.Exit(1)
+		}
+		configuration.RegisterMetrics(configMetricsDir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to create config metrics\t%s\n", err)
+			os.Exit(1)
+		}
+		httpd.AddHtmlWriter(&fsh)
+		httpd.AddHtmlWriter(&configuration)
+		httpd.AddHtmlWriter(circularBuffer)
+		html.RegisterHtmlWriterForPattern("/dumpFileSystem",
+			"Scanned File System",
+			&DumpableFileSystemHistory{&fsh})
+		if err = httpd.StartServer(*portNum); err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
+			os.Exit(1)
+		}
+		fsh.Update(nil)
+		invalidateNextScanObjectCache := false
+		sighupChannel := make(chan os.Signal)
+		signal.Notify(sighupChannel, syscall.SIGHUP)
+		sigtermChannel := make(chan os.Signal)
+		signal.Notify(sigtermChannel, syscall.SIGTERM, syscall.SIGINT)
+		writePidfile()
+		for iter := 0; true; {
+			select {
+			case <-sighupChannel:
+				logger.Printf("Caught SIGHUP: re-execing with: %v\n", os.Args)
+				circularBuffer.Flush()
+				err = syscall.Exec(os.Args[0], os.Args, os.Environ())
+				if err != nil {
+					logger.Printf("Unable to Exec:%s\t%s\n", os.Args[0], err)
 				}
+			case <-sigtermChannel:
+				logger.Printf("Caught SIGTERM: performing graceful cleanup\n")
+				circularBuffer.Flush()
+				gracefulCleanup()
+			case fs := <-fsChannel:
+				if *showStats {
+					fmt.Printf("Completed cycle: %d\n", iter)
+				}
+				if invalidateNextScanObjectCache {
+					fs.ScanObjectCache()
+					invalidateNextScanObjectCache = false
+				}
+				fsh.Update(fs)
+				iter++
+				runtime.GC() // An opportune time to take out the garbage.
+				if *showStats {
+					fmt.Print(fsh)
+					fmt.Print(fsh.FileSystem())
+					memstats.WriteMemoryStats(os.Stdout)
+					fmt.Println()
+				}
+				if firstScan {
+					configuration.FsScanContext.GetContext().SetSpeedPercent(
+						defaultSpeed)
+					firstScan = false
+					if *showStats {
+						fmt.Println(configuration.FsScanContext)
+					}
+				}
+			case <-rescanObjectCacheChannel:
+				invalidateNextScanObjectCache = true
+				fsh.UpdateObjectCacheOnly()
 			}
-		case <-rescanObjectCacheChannel:
-			invalidateNextScanObjectCache = true
-			fsh.UpdateObjectCacheOnly()
 		}
 	}
+	scanner.StartScanning(workingRootDir, objectsDir, &configuration, logger,
+		mainFunc)
 }
