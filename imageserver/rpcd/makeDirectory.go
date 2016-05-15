@@ -36,5 +36,5 @@ func (t *srpcType) makeDirectory(request imageserver.MakeDirectoryRequest,
 		t.logger.Printf("MakeDirectory(%s) by %s\n",
 			request.DirectoryName, username)
 	}
-	return t.imageDataBase.MakeDirectory(request.DirectoryName, username, true)
+	return t.imageDataBase.MakeDirectory(request.DirectoryName, username)
 }

@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/image"
+	"io"
 	"log"
 	"os"
-	"os/user"
 	"path"
 	"syscall"
 )
@@ -59,26 +59,62 @@ func (imdb *ImageDataBase) checkImage(name string) bool {
 	return ok
 }
 
-func (imdb *ImageDataBase) chownDirectory(dirname, ownerGroup string,
-	username string) error {
-	if username == "" {
-		return errors.New("no username: unauthenticated connection")
-	}
+func (imdb *ImageDataBase) chownDirectory(dirname, ownerGroup string) error {
+	imdb.RLock()
 	directoryMetadata, ok := imdb.directoryMap[dirname]
+	imdb.RUnlock()
 	if !ok {
 		return fmt.Errorf("no metadata for: \"%s\"", dirname)
 	}
-	if ownerGroup == directoryMetadata.OwnerGroup {
+	directoryMetadata.OwnerGroup = ownerGroup
+	imdb.Lock()
+	defer imdb.Unlock()
+	return imdb.updateDirectoryMetadata(
+		image.Directory{Name: dirname, Metadata: directoryMetadata})
+}
+
+// This must be called with the lock held.
+func (imdb *ImageDataBase) updateDirectoryMetadata(
+	directory image.Directory) error {
+	if directory.Metadata == imdb.directoryMap[directory.Name] {
 		return nil
 	}
-	userData, err := user.Lookup(username)
-	if err != nil {
-		return fmt.Errorf("error looking up user: \"%s\": %s", username, err)
+	if err := imdb.updateDirectoryMetadataFile(directory); err != nil {
+		return err
 	}
-	// TODO(rgooch): Implement.
-	_ = userData
-	return errors.New("not implemented")
+	imdb.directoryMap[directory.Name] = directory.Metadata
+	imdb.mkdirNotifiers.sendMakeDirectory(directory, imdb.logger)
 	return nil
+}
+
+func (imdb *ImageDataBase) updateDirectoryMetadataFile(
+	directory image.Directory) error {
+	filename := path.Join(imdb.baseDir, directory.Name, metadataFile)
+	if directory.Metadata == (image.DirectoryMetadata{}) {
+		return os.Remove(filename)
+	}
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, filePerms)
+	if err != nil {
+		return err
+	}
+	if err := writeDirectoryMetadata(file, directory.Metadata); err != nil {
+		file.Close()
+		return err
+	}
+	return file.Close()
+}
+
+func writeDirectoryMetadata(file io.Writer,
+	directoryMetadata image.DirectoryMetadata) error {
+	w := bufio.NewWriter(file)
+	writer := fsutil.NewChecksumWriter(w)
+	if err := gob.NewEncoder(writer).Encode(directoryMetadata); err != nil {
+		return err
+	}
+	if err := writer.WriteChecksum(); err != nil {
+		return err
+	}
+	return w.Flush()
 }
 
 func (imdb *ImageDataBase) countImages() uint {
@@ -130,20 +166,22 @@ func (imdb *ImageDataBase) listImages() []string {
 	return names
 }
 
-func (imdb *ImageDataBase) makeDirectory(dirname, username string,
-	errorIfExists bool) error {
-	pathname := path.Join(imdb.baseDir, dirname)
-	if err := os.Mkdir(pathname, dirPerms); err != nil {
-		if os.IsExist(err) && !errorIfExists {
-			return nil
-		}
-		return err
-	}
-	directory := image.Directory{Name: dirname}
+func (imdb *ImageDataBase) makeDirectory(directory image.Directory,
+	username string, userRpc bool) error {
+	pathname := path.Join(imdb.baseDir, directory.Name)
 	imdb.Lock()
 	defer imdb.Unlock()
-	imdb.mkdirNotifiers.sendMakeDirectory(directory, imdb.logger)
-	return nil
+	directoryMetadata := imdb.directoryMap[directory.Name]
+	if err := os.Mkdir(pathname, dirPerms); err != nil && !os.IsExist(err) {
+		return err
+	}
+	if userRpc {
+		directory.Metadata = directoryMetadata
+		if directory.Metadata.OwnerGroup != "" {
+			// TODO(rgooch): Check if username is part of owner group.
+		}
+	}
+	return imdb.updateDirectoryMetadata(directory)
 }
 
 func (imdb *ImageDataBase) registerAddNotifier() <-chan string {

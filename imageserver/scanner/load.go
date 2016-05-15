@@ -16,8 +16,6 @@ import (
 	"time"
 )
 
-const metadataFile = ".metadata"
-
 func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 	logger *log.Logger) (*ImageDataBase, error) {
 	fi, err := os.Stat(baseDir)
@@ -77,6 +75,9 @@ func (imdb *ImageDataBase) scanDirectory(dirname string,
 	names, err := file.Readdirnames(-1)
 	file.Close()
 	for _, name := range names {
+		if len(name) > 0 && name[0] == '.' {
+			continue // Skip hidden paths.
+		}
 		filename := path.Join(dirname, name)
 		var stat syscall.Stat_t
 		err := syscall.Lstat(path.Join(imdb.baseDir, filename), &stat)

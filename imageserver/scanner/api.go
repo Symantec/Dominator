@@ -11,6 +11,8 @@ import (
 // TODO: the types should probably be moved into a separate package, leaving
 //       behind the scanner code.
 
+const metadataFile = ".metadata"
+
 type Object struct {
 	length uint64
 }
@@ -45,9 +47,8 @@ func (imdb *ImageDataBase) CheckImage(name string) bool {
 	return imdb.checkImage(name)
 }
 
-func (imdb *ImageDataBase) ChownDirectory(dirname string, ownerGroup string,
-	username string) error {
-	return imdb.chownDirectory(dirname, ownerGroup, username)
+func (imdb *ImageDataBase) ChownDirectory(dirname, ownerGroup string) error {
+	return imdb.chownDirectory(dirname, ownerGroup)
 }
 
 func (imdb *ImageDataBase) CountImages() uint {
@@ -70,9 +71,8 @@ func (imdb *ImageDataBase) ListImages() []string {
 	return imdb.listImages()
 }
 
-func (imdb *ImageDataBase) MakeDirectory(dirname, username string,
-	errorIfExists bool) error {
-	return imdb.makeDirectory(dirname, username, errorIfExists)
+func (imdb *ImageDataBase) MakeDirectory(dirname, username string) error {
+	return imdb.makeDirectory(image.Directory{Name: dirname}, username, true)
 }
 
 func (imdb *ImageDataBase) ObjectServer() objectserver.ObjectServer {
@@ -102,6 +102,10 @@ func (imdb *ImageDataBase) UnregisterDeleteNotifier(channel <-chan string) {
 func (imdb *ImageDataBase) UnregisterMakeDirectoryNotifier(
 	channel <-chan image.Directory) {
 	imdb.unregisterMakeDirectoryNotifier(channel)
+}
+
+func (imdb *ImageDataBase) UpdateDirectory(directory image.Directory) error {
+	return imdb.makeDirectory(directory, "", false)
 }
 
 func (imdb *ImageDataBase) WriteHtml(writer io.Writer) {

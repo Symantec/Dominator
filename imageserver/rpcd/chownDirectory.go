@@ -2,6 +2,7 @@ package rpcd
 
 import (
 	"encoding/gob"
+	"errors"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
@@ -26,6 +27,12 @@ func (t *srpcType) ChownDirectory(conn *srpc.Conn) error {
 
 func (t *srpcType) changeOwner(request imageserver.ChangeOwnerRequest,
 	reply *imageserver.ChangeOwnerResponse, username string) error {
+	if username == "" {
+		return errors.New("no username: unauthenticated connection")
+	}
+	// TODO(rgooch): Check if ownerGroup is valid.
+	t.logger.Printf("ChownDirectory(%s) to: %s by %s\n",
+		request.DirectoryName, request.OwnerGroup, username)
 	return t.imageDataBase.ChownDirectory(request.DirectoryName,
-		request.OwnerGroup, username)
+		request.OwnerGroup)
 }

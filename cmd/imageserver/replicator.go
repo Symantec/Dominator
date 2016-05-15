@@ -97,8 +97,7 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 			if directory == nil {
 				return errors.New("nil imageUpdate.Directory")
 			}
-			if err := imdb.MakeDirectory(directory.Name, "",
-				false); err != nil {
+			if err := imdb.UpdateDirectory(*directory); err != nil {
 				return err
 			}
 		}
