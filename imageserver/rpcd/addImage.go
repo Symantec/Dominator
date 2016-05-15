@@ -70,5 +70,5 @@ func (t *srpcType) addImage(request imageserver.AddImageRequest,
 	} else {
 		t.logger.Printf("AddImage(%s) by %s\n", request.ImageName, username)
 	}
-	return t.imageDataBase.AddImage(request.Image, request.ImageName)
+	return t.imageDataBase.AddImage(request.Image, request.ImageName, &username)
 }

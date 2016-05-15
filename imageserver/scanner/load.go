@@ -39,7 +39,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 	startTime := time.Now()
 	var rusageStart, rusageStop syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
-	if err := imdb.scanDirectory("", state, logger); err != nil {
+	if err := imdb.scanDirectory(".", state, logger); err != nil {
 		return nil, err
 	}
 	if err := state.Reap(); err != nil {

@@ -23,7 +23,8 @@ const (
 		syscall.S_IROTH
 )
 
-func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
+func (imdb *ImageDataBase) addImage(image *image.Image, name string,
+	username *string) error {
 	if err := image.Verify(); err != nil {
 		return err
 	}
@@ -32,7 +33,10 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
 	if _, ok := imdb.imageMap[name]; ok {
 		return errors.New("image: " + name + " already exists")
 	} else {
-		// TODO(rgooch): Add check for user in owner group.
+		err := imdb.checkDirectoryPermissions(path.Dir(name), username)
+		if err != nil {
+			return err
+		}
 		filename := path.Join(imdb.baseDir, name)
 		file, err := os.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_RDWR,
 			filePerms)
@@ -55,6 +59,25 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string) error {
 	}
 }
 
+// This must be called with the lock held.
+func (imdb *ImageDataBase) checkDirectoryPermissions(dirname string,
+	username *string) error {
+	if username == nil {
+		return nil
+	}
+	directoryMetadata, ok := imdb.directoryMap[dirname]
+	if !ok {
+		return fmt.Errorf("no metadata for: \"%s\"", dirname)
+	}
+	if directoryMetadata.OwnerGroup == "" {
+		return nil
+	}
+	if *username == "" {
+		return errors.New("no username: unauthenticated connection")
+	}
+	return checkUserInGroup(*username, directoryMetadata.OwnerGroup)
+}
+
 func (imdb *ImageDataBase) checkImage(name string) bool {
 	imdb.RLock()
 	defer imdb.RUnlock()
@@ -63,6 +86,7 @@ func (imdb *ImageDataBase) checkImage(name string) bool {
 }
 
 func (imdb *ImageDataBase) chownDirectory(dirname, ownerGroup string) error {
+	dirname = path.Clean(dirname)
 	imdb.RLock()
 	directoryMetadata, ok := imdb.directoryMap[dirname]
 	imdb.RUnlock()
@@ -126,10 +150,14 @@ func (imdb *ImageDataBase) countImages() uint {
 	return uint(len(imdb.imageMap))
 }
 
-func (imdb *ImageDataBase) deleteImage(name string) error {
+func (imdb *ImageDataBase) deleteImage(name string, username *string) error {
 	imdb.Lock()
 	defer imdb.Unlock()
 	if _, ok := imdb.imageMap[name]; ok {
+		err := imdb.checkDirectoryPermissions(path.Dir(name), username)
+		if err != nil {
+			return err
+		}
 		filename := path.Join(imdb.baseDir, name)
 		if err := os.Truncate(filename, 0); err != nil {
 			return err
@@ -171,13 +199,17 @@ func (imdb *ImageDataBase) listImages() []string {
 
 func (imdb *ImageDataBase) makeDirectory(directory image.Directory,
 	username string, userRpc bool) error {
+	directory.Name = path.Clean(directory.Name)
 	pathname := path.Join(imdb.baseDir, directory.Name)
 	imdb.Lock()
 	defer imdb.Unlock()
-	directoryMetadata := imdb.directoryMap[directory.Name]
+	oldDirectoryMetadata := imdb.directoryMap[directory.Name]
 	if userRpc {
-		directory.Metadata = directoryMetadata
-		parentMetadata := imdb.directoryMap[path.Dir(directory.Name)]
+		directory.Metadata = oldDirectoryMetadata
+		parentMetadata, ok := imdb.directoryMap[path.Dir(directory.Name)]
+		if !ok {
+			return fmt.Errorf("no metadata for: %s", path.Dir(directory.Name))
+		}
 		if parentMetadata.OwnerGroup != "" {
 			if err := checkUserInGroup(username,
 				parentMetadata.OwnerGroup); err != nil {

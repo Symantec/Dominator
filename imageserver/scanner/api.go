@@ -39,8 +39,9 @@ func LoadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 	return loadImageDataBase(baseDir, objSrv, logger)
 }
 
-func (imdb *ImageDataBase) AddImage(image *image.Image, name string) error {
-	return imdb.addImage(image, name)
+func (imdb *ImageDataBase) AddImage(image *image.Image, name string,
+	username *string) error {
+	return imdb.addImage(image, name, username)
 }
 
 func (imdb *ImageDataBase) CheckImage(name string) bool {
@@ -55,8 +56,8 @@ func (imdb *ImageDataBase) CountImages() uint {
 	return imdb.countImages()
 }
 
-func (imdb *ImageDataBase) DeleteImage(name string) error {
-	return imdb.deleteImage(name)
+func (imdb *ImageDataBase) DeleteImage(name string, username *string) error {
+	return imdb.deleteImage(name, username)
 }
 
 func (imdb *ImageDataBase) GetImage(name string) *image.Image {

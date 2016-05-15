@@ -40,7 +40,7 @@ func (t *srpcType) deleteImage(request imageserver.DeleteImageRequest,
 	} else {
 		t.logger.Printf("DeleteImage(%s) by %s\n", request.ImageName, username)
 	}
-	err := t.imageDataBase.DeleteImage(request.ImageName)
+	err := t.imageDataBase.DeleteImage(request.ImageName, &username)
 	if err == nil {
 		response.Success = true
 	} else {
