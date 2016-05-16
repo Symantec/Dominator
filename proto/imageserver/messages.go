@@ -57,13 +57,18 @@ type ImageUpdate struct {
 	Operation uint
 }
 
-type MakeDirectoryRequest struct {
-	DirectoryName string
-}
-
-type MakeDirectoryResponse struct{}
+// The ListDirectories() RPC is fully streamed.
+// The client sends no information to the server.
+// The server sends a stream of image.Directory values with an empty string
+// for the Name field signifying the end of the list.
 
 // The ListImages() RPC is fully streamed.
 // The client sends no information to the server.
 // The server sends a stream of strings (image names) with an empty string
 // signifying the end of the list.
+
+type MakeDirectoryRequest struct {
+	DirectoryName string
+}
+
+type MakeDirectoryResponse struct{}
