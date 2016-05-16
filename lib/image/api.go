@@ -45,3 +45,7 @@ func (image *Image) Verify() error {
 func (image *Image) VerifyRequiredPaths(requiredPaths map[string]rune) error {
 	return image.verifyRequiredPaths(requiredPaths)
 }
+
+func SortDirectories(directories []Directory) {
+	sortDirectories(directories)
+}
