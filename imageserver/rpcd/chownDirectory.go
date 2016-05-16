@@ -31,10 +31,12 @@ func (t *srpcType) changeOwner(request imageserver.ChangeOwnerRequest,
 	if username == "" {
 		return errors.New("no username: unauthenticated connection")
 	}
-	if _, err := group.Lookup(request.OwnerGroup); err != nil {
-		return err
+	if request.OwnerGroup != "" {
+		if _, err := group.Lookup(request.OwnerGroup); err != nil {
+			return err
+		}
 	}
-	t.logger.Printf("ChownDirectory(%s) to: %s by %s\n",
+	t.logger.Printf("ChownDirectory(%s) to: \"%s\" by %s\n",
 		request.DirectoryName, request.OwnerGroup, username)
 	return t.imageDataBase.ChownDirectory(request.DirectoryName,
 		request.OwnerGroup)
