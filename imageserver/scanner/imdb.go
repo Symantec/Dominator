@@ -144,6 +144,12 @@ func writeDirectoryMetadata(file io.Writer,
 	return w.Flush()
 }
 
+func (imdb *ImageDataBase) countDirectories() uint {
+	imdb.RLock()
+	defer imdb.RUnlock()
+	return uint(len(imdb.directoryMap))
+}
+
 func (imdb *ImageDataBase) countImages() uint {
 	imdb.RLock()
 	defer imdb.RUnlock()

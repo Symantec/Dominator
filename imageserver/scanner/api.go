@@ -52,6 +52,10 @@ func (imdb *ImageDataBase) ChownDirectory(dirname, ownerGroup string) error {
 	return imdb.chownDirectory(dirname, ownerGroup)
 }
 
+func (imdb *ImageDataBase) CountDirectories() uint {
+	return imdb.countDirectories()
+}
+
 func (imdb *ImageDataBase) CountImages() uint {
 	return imdb.countImages()
 }
