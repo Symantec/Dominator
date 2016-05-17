@@ -6,9 +6,8 @@ import (
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
 
-func CallAddImage(client *srpc.Client, request imageserver.AddImageRequest,
-	reply *imageserver.AddImageResponse) error {
-	return callAddImage(client, request, reply)
+func CallAddImage(client *srpc.Client, name string, img *image.Image) error {
+	return callAddImage(client, name, img)
 }
 
 func CallCheckImage(client *srpc.Client, name string) (bool, error) {

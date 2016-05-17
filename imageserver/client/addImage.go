@@ -1,30 +1,13 @@
 package client
 
 import (
-	"encoding/gob"
-	"errors"
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
 
-func callAddImage(client *srpc.Client, request imageserver.AddImageRequest,
-	reply *imageserver.AddImageResponse) error {
-	conn, err := client.Call("ImageServer.AddImage")
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	if err := encoder.Encode(request); err != nil {
-		return err
-	}
-	conn.Flush()
-	str, err := conn.ReadString('\n')
-	if err != nil {
-		return err
-	}
-	if str != "\n" {
-		return errors.New(str[:len(str)-1])
-	}
-	return gob.NewDecoder(conn).Decode(reply)
+func callAddImage(client *srpc.Client, name string, img *image.Image) error {
+	request := imageserver.AddImageRequest{name, img}
+	var reply imageserver.AddImageResponse
+	return client.RequestReply("ImageServer.AddImage", request, &reply)
 }

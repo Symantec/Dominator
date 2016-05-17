@@ -14,7 +14,6 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/imageserver"
 	"io"
 	"os"
 	"strings"
@@ -57,19 +56,14 @@ func addImagefile(imageSClient *srpc.Client,
 	return addImage(imageSClient, name, newImage)
 }
 
-func addImage(imageSClient *srpc.Client, name string,
-	image *image.Image) error {
-	var request imageserver.AddImageRequest
-	var reply imageserver.AddImageResponse
-	request.ImageName = name
-	request.Image = image
-	if err := image.Verify(); err != nil {
+func addImage(imageSClient *srpc.Client, name string, img *image.Image) error {
+	if err := img.Verify(); err != nil {
 		return err
 	}
-	if err := image.VerifyRequiredPaths(requiredPaths); err != nil {
+	if err := img.VerifyRequiredPaths(requiredPaths); err != nil {
 		return err
 	}
-	if err := client.CallAddImage(imageSClient, request, &reply); err != nil {
+	if err := client.CallAddImage(imageSClient, name, img); err != nil {
 		return errors.New("remote error: " + err.Error())
 	}
 	return nil
