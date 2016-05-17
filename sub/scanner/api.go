@@ -126,3 +126,10 @@ func StartScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 	return startScannerDaemon(rootDirectoryName, cacheDirectoryName,
 		configuration, logger)
 }
+
+func StartScanning(rootDirectoryName string, cacheDirectoryName string,
+	configuration *Configuration, logger *log.Logger,
+	mainFunc func(<-chan *FileSystem, func(disableScanner bool))) {
+	startScanning(rootDirectoryName, cacheDirectoryName, configuration, logger,
+		mainFunc)
+}

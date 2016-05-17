@@ -68,15 +68,15 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 			}
 			return errors.New("decode err: " + err.Error())
 		}
-		if imageUpdate.Name == "" {
-			if initialImages != nil {
-				deleteMissingImages(imdb, initialImages, logger)
-				initialImages = nil
-			}
-			continue
-		}
 		switch imageUpdate.Operation {
 		case imageserver.OperationAddImage:
+			if imageUpdate.Name == "" {
+				if initialImages != nil {
+					deleteMissingImages(imdb, initialImages, logger)
+					initialImages = nil
+				}
+				continue
+			}
 			if initialImages != nil {
 				initialImages[imageUpdate.Name] = struct{}{}
 			}
@@ -89,7 +89,15 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 				continue
 			}
 			logger.Printf("Replicator(%s): delete image\n", imageUpdate.Name)
-			if err := imdb.DeleteImage(imageUpdate.Name); err != nil {
+			if err := imdb.DeleteImage(imageUpdate.Name, nil); err != nil {
+				return err
+			}
+		case imageserver.OperationMakeDirectory:
+			directory := imageUpdate.Directory
+			if directory == nil {
+				return errors.New("nil imageUpdate.Directory")
+			}
+			if err := imdb.UpdateDirectory(*directory); err != nil {
 				return err
 			}
 		}
@@ -106,7 +114,7 @@ func deleteMissingImages(imdb *scanner.ImageDataBase,
 	}
 	for _, imageName := range missingImages {
 		logger.Printf("Replicator(%s): delete missing image\n", imageName)
-		if err := imdb.DeleteImage(imageName); err != nil {
+		if err := imdb.DeleteImage(imageName, nil); err != nil {
 			logger.Println(err)
 		}
 	}
@@ -139,7 +147,7 @@ func addImage(address string, imdb *scanner.ImageDataBase,
 		logger); err != nil {
 		return err
 	}
-	if err := imdb.AddImage(reply.Image, name); err != nil {
+	if err := imdb.AddImage(reply.Image, name, nil); err != nil {
 		return err
 	}
 	logger.Printf("Replicator(%s): added image\n", name)

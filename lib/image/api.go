@@ -12,6 +12,15 @@ type Annotation struct {
 	URL    string
 }
 
+type DirectoryMetadata struct {
+	OwnerGroup string
+}
+
+type Directory struct {
+	Name     string
+	Metadata DirectoryMetadata
+}
+
 type Image struct {
 	CreatedBy    string // Username. Set by imageserver. Empty: unauthenticated.
 	Filter       *filter.Filter
@@ -35,4 +44,8 @@ func (image *Image) Verify() error {
 // more memory.
 func (image *Image) VerifyRequiredPaths(requiredPaths map[string]rune) error {
 	return image.verifyRequiredPaths(requiredPaths)
+}
+
+func SortDirectories(directories []Directory) {
+	sortDirectories(directories)
 }

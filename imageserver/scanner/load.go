@@ -28,16 +28,18 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 	}
 	imdb := new(ImageDataBase)
 	imdb.baseDir = baseDir
+	imdb.directoryMap = make(map[string]image.DirectoryMetadata)
 	imdb.imageMap = make(map[string]*image.Image)
 	imdb.addNotifiers = make(notifiers)
 	imdb.deleteNotifiers = make(notifiers)
+	imdb.mkdirNotifiers = make(makeDirectoryNotifiers)
 	imdb.objectServer = objSrv
 	imdb.logger = logger
 	state := concurrent.NewState(0)
 	startTime := time.Now()
 	var rusageStart, rusageStop syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
-	if err := imdb.scanDirectory("", state, logger); err != nil {
+	if err := imdb.scanDirectory(".", state, logger); err != nil {
 		return nil, err
 	}
 	if err := state.Reap(); err != nil {
@@ -61,6 +63,11 @@ func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
 
 func (imdb *ImageDataBase) scanDirectory(dirname string,
 	state *concurrent.State, logger *log.Logger) error {
+	directoryMetadata, err := imdb.readDirectoryMetadata(dirname)
+	if err != nil {
+		return err
+	}
+	imdb.directoryMap[dirname] = directoryMetadata
 	file, err := os.Open(path.Join(imdb.baseDir, dirname))
 	if err != nil {
 		return err
@@ -68,6 +75,9 @@ func (imdb *ImageDataBase) scanDirectory(dirname string,
 	names, err := file.Readdirnames(-1)
 	file.Close()
 	for _, name := range names {
+		if len(name) > 0 && name[0] == '.' {
+			continue // Skip hidden paths.
+		}
 		filename := path.Join(dirname, name)
 		var stat syscall.Stat_t
 		err := syscall.Lstat(path.Join(imdb.baseDir, filename), &stat)
@@ -92,6 +102,26 @@ func (imdb *ImageDataBase) scanDirectory(dirname string,
 		}
 	}
 	return nil
+}
+
+func (imdb *ImageDataBase) readDirectoryMetadata(dirname string) (
+	image.DirectoryMetadata, error) {
+	file, err := os.Open(path.Join(imdb.baseDir, dirname, metadataFile))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return image.DirectoryMetadata{}, nil
+		}
+		return image.DirectoryMetadata{}, err
+	}
+	defer file.Close()
+	reader := fsutil.NewChecksumReader(file)
+	decoder := gob.NewDecoder(reader)
+	metadata := image.DirectoryMetadata{}
+	if err := decoder.Decode(&metadata); err != nil {
+		return image.DirectoryMetadata{}, fmt.Errorf(
+			"unable to read directory metadata for \"%s\": %s", dirname, err)
+	}
+	return metadata, reader.VerifyChecksum()
 }
 
 func (imdb *ImageDataBase) loadFile(filename string, logger *log.Logger) error {

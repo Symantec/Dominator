@@ -20,6 +20,17 @@ func startScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 	return fsChannel, doDisableScanner
 }
 
+func startScanning(rootDirectoryName string, cacheDirectoryName string,
+	configuration *Configuration, logger *log.Logger,
+	mainFunc func(<-chan *FileSystem, func(disableScanner bool))) {
+	fsChannel := make(chan *FileSystem)
+	disableScanRequest = make(chan bool, 1)
+	disableScanAcknowledge = make(chan bool)
+	go mainFunc(fsChannel, doDisableScanner)
+	scannerDaemon(rootDirectoryName, cacheDirectoryName, configuration,
+		fsChannel, logger)
+}
+
 func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 	configuration *Configuration, fsChannel chan<- *FileSystem,
 	logger *log.Logger) {

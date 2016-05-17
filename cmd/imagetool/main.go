@@ -59,6 +59,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  addrep name baseimage layerimage...")
 	fmt.Fprintln(os.Stderr, "  bulk-addrep layerimage...")
 	fmt.Fprintln(os.Stderr, "  check  name")
+	fmt.Fprintln(os.Stderr, "  chown  dirname ownerGroup")
 	fmt.Fprintln(os.Stderr, "  delete name")
 	fmt.Fprintln(os.Stderr, "  diff   tool left right")
 	fmt.Fprintln(os.Stderr, "         left & right are image sources. Format:")
@@ -68,6 +69,8 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "           s: name of sub to poll")
 	fmt.Fprintln(os.Stderr, "  get    name directory")
 	fmt.Fprintln(os.Stderr, "  list")
+	fmt.Fprintln(os.Stderr, "  listdirs")
+	fmt.Fprintln(os.Stderr, "  mkdir  name")
 	fmt.Fprintln(os.Stderr, "  show   name")
 	fmt.Fprintln(os.Stderr, "Fields:")
 	fmt.Fprintln(os.Stderr, "  m: mode")
@@ -96,10 +99,13 @@ var subcommands = []subcommand{
 	{"addrep", 3, -1, addReplaceImageSubcommand},
 	{"bulk-addrep", 1, -1, bulkAddReplaceImagesSubcommand},
 	{"check", 1, 1, checkImageSubcommand},
+	{"chown", 2, 2, chownDirectorySubcommand},
 	{"delete", 1, 1, deleteImageSubcommand},
 	{"diff", 3, 3, diffSubcommand},
 	{"get", 2, 2, getImageSubcommand},
 	{"list", 0, 0, listImagesSubcommand},
+	{"listdirs", 0, 0, listDirectoriesSubcommand},
+	{"mkdir", 1, 1, makeDirectorySubcommand},
 	{"show", 1, 1, showImageSubcommand},
 }
 

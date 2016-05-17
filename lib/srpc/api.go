@@ -121,11 +121,11 @@ func (conn *Conn) Close() error {
 	return conn.close()
 }
 
-// GetUsername will return the username of the client who holds the certificate
+// Username will return the username of the client who holds the certificate
 // used to authenticate the connection to the server. If the connection was not
 // authenticated the emtpy string is returned. If the connection is a client
-// connection, the GetUsername will panic.
-func (conn *Conn) GetUsername() string {
+// connection, then Username will panic.
+func (conn *Conn) Username() string {
 	return conn.getUsername()
 }
 
