@@ -103,7 +103,8 @@ func (imdb *ImageDataBase) chownDirectory(dirname, ownerGroup string) error {
 // This must be called with the lock held.
 func (imdb *ImageDataBase) updateDirectoryMetadata(
 	directory image.Directory) error {
-	if directory.Metadata == imdb.directoryMap[directory.Name] {
+	oldDirectoryMetadata, ok := imdb.directoryMap[directory.Name]
+	if ok && directory.Metadata == oldDirectoryMetadata {
 		return nil
 	}
 	if err := imdb.updateDirectoryMetadataFile(directory); err != nil {
@@ -117,7 +118,11 @@ func (imdb *ImageDataBase) updateDirectoryMetadata(
 func (imdb *ImageDataBase) updateDirectoryMetadataFile(
 	directory image.Directory) error {
 	filename := path.Join(imdb.baseDir, directory.Name, metadataFile)
-	if directory.Metadata == (image.DirectoryMetadata{}) {
+	oldDirectoryMetadata, ok := imdb.directoryMap[directory.Name]
+	if oldDirectoryMetadata == (image.DirectoryMetadata{}) {
+		if !ok {
+			return nil
+		}
 		return os.Remove(filename)
 	}
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, filePerms)
@@ -209,8 +214,11 @@ func (imdb *ImageDataBase) makeDirectory(directory image.Directory,
 	pathname := path.Join(imdb.baseDir, directory.Name)
 	imdb.Lock()
 	defer imdb.Unlock()
-	oldDirectoryMetadata := imdb.directoryMap[directory.Name]
+	oldDirectoryMetadata, ok := imdb.directoryMap[directory.Name]
 	if userRpc {
+		if ok {
+			return fmt.Errorf("directory: %s already exists", directory.Name)
+		}
 		directory.Metadata = oldDirectoryMetadata
 		parentMetadata, ok := imdb.directoryMap[path.Dir(directory.Name)]
 		if !ok {
