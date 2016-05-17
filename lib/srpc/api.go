@@ -107,6 +107,15 @@ func (client *Client) Ping() error {
 	return client.ping()
 }
 
+// RequestReply sends a request message to the named Service.Method function,
+// and waits for a reply. The request and reply messages are GOB encoded and
+// decoded, respectively. This method is a convenience wrapper around the Call
+// method.
+func (client *Client) RequestReply(serviceMethod string, request interface{},
+	reply interface{}) error {
+	return client.requestReply(serviceMethod, request, reply)
+}
+
 type Conn struct {
 	parent      *Client // nil: server-side connection.
 	isEncrypted bool

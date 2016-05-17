@@ -3,6 +3,7 @@ package srpc
 import (
 	"bufio"
 	"crypto/tls"
+	"encoding/gob"
 	"errors"
 	"io"
 	"net"
@@ -123,4 +124,26 @@ func (client *Client) ping() error {
 	}
 	conn.Close()
 	return nil
+}
+
+func (client *Client) requestReply(serviceMethod string, request interface{},
+	reply interface{}) error {
+	conn, err := client.Call(serviceMethod)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	encoder := gob.NewEncoder(conn)
+	if err := encoder.Encode(request); err != nil {
+		return err
+	}
+	conn.Flush()
+	str, err := conn.ReadString('\n')
+	if err != nil {
+		return err
+	}
+	if str != "\n" {
+		return errors.New(str[:len(str)-1])
+	}
+	return gob.NewDecoder(conn).Decode(reply)
 }
