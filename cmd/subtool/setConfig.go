@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
@@ -18,17 +17,9 @@ func setConfigSubcommand(srpcClient *srpc.Client, args []string) {
 }
 
 func setConfig(srpcClient *srpc.Client) error {
-	var request sub.SetConfigurationRequest
-	request.ScanSpeedPercent = *scanSpeedPercent
-	request.NetworkSpeedPercent = *networkSpeedPercent
-	request.ScanExclusionList = scanExcludeList
-	var reply sub.SetConfigurationResponse
-	err := client.CallSetConfiguration(srpcClient, request, &reply)
-	if err != nil {
-		return err
-	}
-	if reply.Success {
-		return nil
-	}
-	return errors.New("Error setting configuration: " + reply.ErrorString)
+	var config sub.Configuration
+	config.ScanSpeedPercent = *scanSpeedPercent
+	config.NetworkSpeedPercent = *networkSpeedPercent
+	config.ScanExclusionList = scanExcludeList
+	return client.SetConfiguration(srpcClient, config)
 }

@@ -28,7 +28,6 @@ func (t *rpcType) SetConfiguration(conn *srpc.Conn) error {
 
 func (t *rpcType) setConfiguration(request sub.SetConfigurationRequest,
 	reply *sub.SetConfigurationResponse) error {
-	var response sub.SetConfigurationResponse
 	t.scannerConfiguration.FsScanContext.GetContext().SetSpeedPercent(
 		request.ScanSpeedPercent)
 	t.scannerConfiguration.NetworkReaderContext.SetSpeedPercent(
@@ -38,7 +37,5 @@ func (t *rpcType) setConfiguration(request sub.SetConfigurationRequest,
 		return err
 	}
 	t.scannerConfiguration.ScanFilter = newFilter
-	response.Success = true
-	*reply = response
 	return nil
 }

@@ -25,10 +25,8 @@ func CallPoll(client *srpc.Client, request sub.PollRequest,
 	return callPoll(client, request, reply)
 }
 
-func CallSetConfiguration(client *srpc.Client,
-	request sub.SetConfigurationRequest,
-	reply *sub.SetConfigurationResponse) error {
-	return callSetConfiguration(client, request, reply)
+func SetConfiguration(client *srpc.Client, config sub.Configuration) error {
+	return setConfiguration(client, config)
 }
 
 func CallUpdate(client *srpc.Client, request sub.UpdateRequest,
