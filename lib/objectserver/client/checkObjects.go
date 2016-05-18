@@ -1,8 +1,6 @@
 package client
 
 import (
-	"encoding/gob"
-	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -19,25 +17,8 @@ func (objClient *ObjectClient) checkObjects(hashes []hash.Hash) (
 		return nil, fmt.Errorf("error dialing: %s\n", err)
 	}
 	defer client.Close()
-	conn, err := client.Call("ObjectServer.CheckObjects")
+	err = client.RequestReply("ObjectServer.CheckObjects", request, &reply)
 	if err != nil {
-		return nil, err
-	}
-	encoder := gob.NewEncoder(conn)
-	if err := encoder.Encode(request); err != nil {
-		return nil, err
-	}
-	if err := conn.Flush(); err != nil {
-		return nil, err
-	}
-	str, err := conn.ReadString('\n')
-	if err != nil {
-		return nil, err
-	}
-	if str != "\n" {
-		return nil, errors.New(str[:len(str)-1])
-	}
-	if err := gob.NewDecoder(conn).Decode(&reply); err != nil {
 		return nil, err
 	}
 	return reply.ObjectSizes, nil
