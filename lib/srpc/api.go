@@ -33,8 +33,11 @@ var clientTlsConfig *tls.Config
 var tlsRequired bool
 
 // RegisterName publishes in the server the set of methods of the receiver
-// value that satisfy the following interface:
+// value that satisfy one of the following interfaces:
 //   func Method(*Conn) error
+//   func Method(*Conn, request, *response) error
+// The request/response method must not perform I/O on the Conn type. This is
+// passed only to provide access to connection metadata.
 // The name of the receiver (service) is given by name.
 func RegisterName(name string, rcvr interface{}) error {
 	return registerName(name, rcvr)

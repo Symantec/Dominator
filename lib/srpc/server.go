@@ -3,6 +3,7 @@ package srpc
 import (
 	"bufio"
 	"crypto/tls"
+	"encoding/gob"
 	"errors"
 	"github.com/Symantec/Dominator/lib/x509util"
 	"io"
@@ -23,8 +24,15 @@ const (
 	listMethodsPath = rpcPath + "listMethods"
 )
 
+type methodWrapper struct {
+	plain        bool
+	fn           reflect.Value
+	requestType  reflect.Type
+	responseType reflect.Type
+}
+
 type receiverType struct {
-	methods map[string]reflect.Value
+	methods map[string]methodWrapper
 }
 
 var receivers map[string]receiverType = make(map[string]receiverType)
@@ -42,7 +50,7 @@ func init() {
 
 func registerName(name string, rcvr interface{}) error {
 	var receiver receiverType
-	receiver.methods = make(map[string]reflect.Value)
+	receiver.methods = make(map[string]methodWrapper)
 	typeOfReceiver := reflect.TypeOf(rcvr)
 	valueOfReceiver := reflect.ValueOf(rcvr)
 	for index := 0; index < typeOfReceiver.NumMethod(); index++ {
@@ -51,22 +59,41 @@ func registerName(name string, rcvr interface{}) error {
 			continue
 		}
 		methodType := method.Type
-		// Method needs two ins: receiver, *Conn.
-		if methodType.NumIn() != 2 {
+		mVal := getMethod(methodType, valueOfReceiver.Method(index))
+		if mVal == nil {
 			continue
 		}
-		if methodType.In(1) != typeOfConn {
-			continue
-		}
-		if methodType.NumOut() != 1 {
-			continue
-		}
-		if methodType.Out(0) != typeOfError {
-			continue
-		}
-		receiver.methods[method.Name] = valueOfReceiver.Method(index)
+		receiver.methods[method.Name] = *mVal
 	}
 	receivers[name] = receiver
+	return nil
+}
+
+func getMethod(methodType reflect.Type, fn reflect.Value) *methodWrapper {
+	if methodType.NumOut() != 1 {
+		return nil
+	}
+	if methodType.Out(0) != typeOfError {
+		return nil
+	}
+	if methodType.NumIn() == 2 {
+		// Method needs two ins: receiver, *Conn.
+		if methodType.In(1) != typeOfConn {
+			return nil
+		}
+		return &methodWrapper{plain: true, fn: fn}
+	}
+	if methodType.NumIn() == 4 {
+		// Method needs four ins: receiver, *Conn, request, *reply.
+		if methodType.In(1) != typeOfConn {
+			return nil
+		}
+		if methodType.In(3).Kind() != reflect.Ptr {
+			return nil
+		}
+		return &methodWrapper{false, fn, methodType.In(2),
+			methodType.In(3).Elem()}
+	}
 	return nil
 }
 
@@ -206,10 +233,7 @@ func handleConnection(conn *Conn) {
 			log.Println(err)
 			return
 		}
-		returnValues := method.Call([]reflect.Value{reflect.ValueOf(conn)})
-		errInter := returnValues[0].Interface()
-		if errInter != nil {
-			err = errInter.(error)
+		if err := method.call(conn); err != nil {
 			log.Println(err)
 			return
 		}
@@ -229,7 +253,7 @@ func (conn *Conn) checkPermitted(serviceMethod string) bool {
 	return false
 }
 
-func findMethod(serviceMethod string) (*reflect.Value, error) {
+func findMethod(serviceMethod string) (*methodWrapper, error) {
 	splitServiceMethod := strings.Split(serviceMethod, ".")
 	if len(splitServiceMethod) != 2 {
 		return nil, errors.New("malformed Service.Method: " + serviceMethod)
@@ -260,4 +284,36 @@ func listMethodsHttpHandler(w http.ResponseWriter, req *http.Request) {
 	for _, method := range methods {
 		writer.WriteString(method)
 	}
+}
+
+func (m methodWrapper) call(conn *Conn) error {
+	connValue := reflect.ValueOf(conn)
+	if m.plain {
+		returnValues := m.fn.Call([]reflect.Value{connValue})
+		errInter := returnValues[0].Interface()
+		if errInter != nil {
+			return errInter.(error)
+		}
+		return nil
+	}
+	defer conn.Flush()
+	request := reflect.New(m.requestType)
+	response := reflect.New(m.responseType)
+	decoder := gob.NewDecoder(conn)
+	if err := decoder.Decode(request.Interface()); err != nil {
+		_, err = conn.WriteString(err.Error() + "\n")
+		return err
+	}
+	returnValues := m.fn.Call([]reflect.Value{connValue, request.Elem(),
+		response})
+	errInter := returnValues[0].Interface()
+	if errInter != nil {
+		err := errInter.(error)
+		_, err = conn.WriteString(err.Error() + "\n")
+		return err
+	}
+	if _, err := conn.WriteString("\n"); err != nil {
+		return err
+	}
+	return gob.NewEncoder(conn).Encode(response.Interface())
 }
