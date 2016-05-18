@@ -5,8 +5,9 @@ import (
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
-func callGetConfiguration(client *srpc.Client,
-	request sub.GetConfigurationRequest,
-	reply *sub.GetConfigurationResponse) error {
-	return client.RequestReply("Subd.GetConfiguration", request, reply)
+func getConfiguration(client *srpc.Client) (sub.Configuration, error) {
+	var request sub.GetConfigurationRequest
+	var reply sub.GetConfigurationResponse
+	err := client.RequestReply("Subd.GetConfiguration", request, &reply)
+	return sub.Configuration(reply), err
 }

@@ -16,10 +16,8 @@ func Fetch(client *srpc.Client, serverAddress string,
 	return fetch(client, serverAddress, hashes)
 }
 
-func CallGetConfiguration(client *srpc.Client,
-	request sub.GetConfigurationRequest,
-	reply *sub.GetConfigurationResponse) error {
-	return callGetConfiguration(client, request, reply)
+func GetConfiguration(client *srpc.Client) (sub.Configuration, error) {
+	return getConfiguration(client)
 }
 
 func CallPoll(client *srpc.Client, request sub.PollRequest,
