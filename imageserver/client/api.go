@@ -3,7 +3,6 @@ package client
 import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/imageserver"
 )
 
 func CallAddImage(client *srpc.Client, name string, img *image.Image) error {
@@ -22,9 +21,8 @@ func CallDeleteImage(client *srpc.Client, name string) error {
 	return callDeleteImage(client, name)
 }
 
-func CallGetImage(client *srpc.Client, request imageserver.GetImageRequest,
-	reply *imageserver.GetImageResponse) error {
-	return callGetImage(client, request, reply)
+func CallGetImage(client *srpc.Client, name string) (*image.Image, error) {
+	return callGetImage(client, name)
 }
 
 func CallListDirectories(client *srpc.Client) ([]image.Directory, error) {
