@@ -11,9 +11,9 @@ func Cleanup(client *srpc.Client, hashes []hash.Hash) error {
 	return cleanup(client, hashes)
 }
 
-func CallFetch(client *srpc.Client, request sub.FetchRequest,
-	reply *sub.FetchResponse) error {
-	return callFetch(client, request, reply)
+func Fetch(client *srpc.Client, serverAddress string,
+	hashes []hash.Hash) error {
+	return fetch(client, serverAddress, hashes)
 }
 
 func CallGetConfiguration(client *srpc.Client,

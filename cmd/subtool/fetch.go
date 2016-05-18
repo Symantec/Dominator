@@ -3,9 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
 	"os"
 )
@@ -25,19 +25,18 @@ func fetch(srpcClient *srpc.Client, hashesFilename string) error {
 	}
 	defer hashesFile.Close()
 	scanner := bufio.NewScanner(hashesFile)
-	var request sub.FetchRequest
-	var reply sub.FetchResponse
-	request.ServerAddress = fmt.Sprintf("%s:%d",
+	serverAddress := fmt.Sprintf("%s:%d",
 		*objectServerHostname, *objectServerPortNum)
+	hashes := make([]hash.Hash, 0)
 	for scanner.Scan() {
 		hashval, err := objectcache.FilenameToHash(scanner.Text())
 		if err != nil {
 			return err
 		}
-		request.Hashes = append(request.Hashes, hashval)
+		hashes = append(hashes, hashval)
 	}
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	return client.CallFetch(srpcClient, request, &reply)
+	return client.Fetch(srpcClient, serverAddress, hashes)
 }
