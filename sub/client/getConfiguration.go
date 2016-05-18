@@ -1,8 +1,6 @@
 package client
 
 import (
-	"encoding/gob"
-	"errors"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 )
@@ -10,22 +8,5 @@ import (
 func callGetConfiguration(client *srpc.Client,
 	request sub.GetConfigurationRequest,
 	reply *sub.GetConfigurationResponse) error {
-	conn, err := client.Call("Subd.GetConfiguration")
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	if err := encoder.Encode(request); err != nil {
-		return err
-	}
-	conn.Flush()
-	str, err := conn.ReadString('\n')
-	if err != nil {
-		return err
-	}
-	if str != "\n" {
-		return errors.New(str[:len(str)-1])
-	}
-	return gob.NewDecoder(conn).Decode(reply)
+	return client.RequestReply("Subd.GetConfiguration", request, reply)
 }
