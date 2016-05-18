@@ -18,10 +18,8 @@ func CallChownDirectory(client *srpc.Client, dirname, ownerGroup string) error {
 	return callChownDirectory(client, dirname, ownerGroup)
 }
 
-func CallDeleteImage(client *srpc.Client,
-	request imageserver.DeleteImageRequest,
-	reply *imageserver.DeleteImageResponse) error {
-	return callDeleteImage(client, request, reply)
+func CallDeleteImage(client *srpc.Client, name string) error {
+	return callDeleteImage(client, name)
 }
 
 func CallGetImage(client *srpc.Client, request imageserver.GetImageRequest,

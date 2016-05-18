@@ -28,7 +28,6 @@ func (t *srpcType) DeleteImage(conn *srpc.Conn) error {
 
 func (t *srpcType) deleteImage(request imageserver.DeleteImageRequest,
 	reply *imageserver.DeleteImageResponse, username string) error {
-	var response imageserver.DeleteImageResponse
 	if err := t.checkMutability(); err != nil {
 		return err
 	}
@@ -40,13 +39,6 @@ func (t *srpcType) deleteImage(request imageserver.DeleteImageRequest,
 	} else {
 		t.logger.Printf("DeleteImage(%s) by %s\n", request.ImageName, username)
 	}
-	err := t.imageDataBase.DeleteImage(request.ImageName, &username)
-	if err == nil {
-		response.Success = true
-	} else {
-		response.Success = false
-		response.ErrorString = err.Error()
-	}
-	*reply = response
+	return t.imageDataBase.DeleteImage(request.ImageName, &username)
 	return nil
 }
