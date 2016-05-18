@@ -30,7 +30,7 @@ func addImagesubSubcommand(args []string) {
 func addImagesub(imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient,
 	name, subName, filterFilename, triggersFilename string) error {
-	imageExists, err := client.CallCheckImage(imageSClient, name)
+	imageExists, err := client.CheckImage(imageSClient, name)
 	if err != nil {
 		return errors.New("error checking for image existance: " + err.Error())
 	}

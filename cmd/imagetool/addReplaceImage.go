@@ -36,7 +36,7 @@ func bulkAddReplaceImagesSubcommand(args []string) {
 func addReplaceImage(imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient,
 	name, baseImageName string, layerImageNames []string) error {
-	imageExists, err := client.CallCheckImage(imageSClient, name)
+	imageExists, err := client.CheckImage(imageSClient, name)
 	if err != nil {
 		return errors.New("error checking for image existance: " + err.Error())
 	}
@@ -61,7 +61,7 @@ func addReplaceImage(imageSClient *srpc.Client,
 
 func bulkAddReplaceImages(imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, layerImageNames []string) error {
-	imageNames, err := client.CallListImages(imageSClient)
+	imageNames, err := client.ListImages(imageSClient)
 	if err != nil {
 		return err
 	}

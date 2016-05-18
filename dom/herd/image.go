@@ -49,7 +49,7 @@ func (herd *Herd) getImageHaveLock(name string) (*image.Image, error) {
 		return nil, err
 	}
 	defer imageClient.Close()
-	img, err := client.CallGetImage(imageClient, name)
+	img, err := client.GetImage(imageClient, name)
 	if err != nil {
 		herd.missingImages[name] = missingImage{time.Now(), err}
 		herd.logger.Printf("Error calling\t%s\n", err)

@@ -6,7 +6,7 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 )
 
-func callListDirectories(client *srpc.Client) ([]image.Directory, error) {
+func listDirectories(client *srpc.Client) ([]image.Directory, error) {
 	conn, err := client.Call("ImageServer.ListDirectories")
 	if err != nil {
 		return nil, err

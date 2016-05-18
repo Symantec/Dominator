@@ -132,7 +132,7 @@ func addImage(address string, imdb *scanner.ImageDataBase,
 		return err
 	}
 	defer client.Close()
-	img, err := imgclient.CallGetImage(client, name)
+	img, err := imgclient.GetImage(client, name)
 	if err != nil {
 		return err
 	}

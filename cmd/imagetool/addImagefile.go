@@ -33,7 +33,7 @@ func addImagefileSubcommand(args []string) {
 func addImagefile(imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient,
 	name, imageFilename, filterFilename, triggersFilename string) error {
-	imageExists, err := client.CallCheckImage(imageSClient, name)
+	imageExists, err := client.CheckImage(imageSClient, name)
 	if err != nil {
 		return errors.New("error checking for image existance: " + err.Error())
 	}
@@ -63,7 +63,7 @@ func addImage(imageSClient *srpc.Client, name string, img *image.Image) error {
 	if err := img.VerifyRequiredPaths(requiredPaths); err != nil {
 		return err
 	}
-	if err := client.CallAddImage(imageSClient, name, img); err != nil {
+	if err := client.AddImage(imageSClient, name, img); err != nil {
 		return errors.New("remote error: " + err.Error())
 	}
 	return nil

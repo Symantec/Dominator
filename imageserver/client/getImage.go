@@ -6,7 +6,7 @@ import (
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
 
-func callGetImage(client *srpc.Client, name string) (*image.Image, error) {
+func getImage(client *srpc.Client, name string) (*image.Image, error) {
 	request := imageserver.GetImageRequest{name}
 	var reply imageserver.GetImageResponse
 	err := client.RequestReply("ImageServer.GetImage", request, &reply)

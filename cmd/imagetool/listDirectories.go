@@ -18,7 +18,7 @@ func listDirectoriesSubcommand(args []string) {
 }
 
 func listDirectories(imageSClient *srpc.Client) error {
-	directories, err := client.CallListDirectories(imageSClient)
+	directories, err := client.ListDirectories(imageSClient)
 	if err != nil {
 		return err
 	}

@@ -5,34 +5,34 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 )
 
-func CallAddImage(client *srpc.Client, name string, img *image.Image) error {
-	return callAddImage(client, name, img)
+func AddImage(client *srpc.Client, name string, img *image.Image) error {
+	return addImage(client, name, img)
 }
 
-func CallCheckImage(client *srpc.Client, name string) (bool, error) {
-	return callCheckImage(client, name)
+func CheckImage(client *srpc.Client, name string) (bool, error) {
+	return checkImage(client, name)
 }
 
-func CallChownDirectory(client *srpc.Client, dirname, ownerGroup string) error {
-	return callChownDirectory(client, dirname, ownerGroup)
+func ChownDirectory(client *srpc.Client, dirname, ownerGroup string) error {
+	return chownDirectory(client, dirname, ownerGroup)
 }
 
-func CallDeleteImage(client *srpc.Client, name string) error {
-	return callDeleteImage(client, name)
+func DeleteImage(client *srpc.Client, name string) error {
+	return deleteImage(client, name)
 }
 
-func CallGetImage(client *srpc.Client, name string) (*image.Image, error) {
-	return callGetImage(client, name)
+func GetImage(client *srpc.Client, name string) (*image.Image, error) {
+	return getImage(client, name)
 }
 
-func CallListDirectories(client *srpc.Client) ([]image.Directory, error) {
-	return callListDirectories(client)
+func ListDirectories(client *srpc.Client) ([]image.Directory, error) {
+	return listDirectories(client)
 }
 
-func CallListImages(client *srpc.Client) ([]string, error) {
-	return callListImages(client)
+func ListImages(client *srpc.Client) ([]string, error) {
+	return listImages(client)
 }
 
-func CallMakeDirectory(client *srpc.Client, dirname string) error {
-	return callMakeDirectory(client, dirname)
+func MakeDirectory(client *srpc.Client, dirname string) error {
+	return makeDirectory(client, dirname)
 }
