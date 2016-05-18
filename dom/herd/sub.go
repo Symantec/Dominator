@@ -493,13 +493,11 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 	if len(unusedObjects) < 1 {
 		return
 	}
-	var request subproto.CleanupRequest
-	var reply subproto.CleanupResponse
-	request.Hashes = make([]hash.Hash, 0, len(unusedObjects))
+	hashes := make([]hash.Hash, 0, len(unusedObjects))
 	for hash := range unusedObjects {
-		request.Hashes = append(request.Hashes, hash)
+		hashes = append(hashes, hash)
 	}
-	if err := client.CallCleanup(srpcClient, request, &reply); err != nil {
+	if err := client.Cleanup(srpcClient, hashes); err != nil {
 		logger.Printf("Error calling %s:Subd.Cleanup()\t%s\n", sub, err)
 	}
 }

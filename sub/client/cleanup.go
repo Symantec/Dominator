@@ -1,11 +1,13 @@
 package client
 
 import (
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
-func callCleanup(client *srpc.Client, request sub.CleanupRequest,
-	reply *sub.CleanupResponse) error {
-	return client.RequestReply("Subd.Cleanup", request, reply)
+func cleanup(client *srpc.Client, hashes []hash.Hash) error {
+	request := sub.CleanupRequest{hashes}
+	var reply sub.CleanupResponse
+	return client.RequestReply("Subd.Cleanup", request, &reply)
 }
