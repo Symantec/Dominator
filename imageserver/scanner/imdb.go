@@ -118,8 +118,8 @@ func (imdb *ImageDataBase) updateDirectoryMetadata(
 func (imdb *ImageDataBase) updateDirectoryMetadataFile(
 	directory image.Directory) error {
 	filename := path.Join(imdb.baseDir, directory.Name, metadataFile)
-	oldDirectoryMetadata, ok := imdb.directoryMap[directory.Name]
-	if oldDirectoryMetadata == (image.DirectoryMetadata{}) {
+	_, ok := imdb.directoryMap[directory.Name]
+	if directory.Metadata == (image.DirectoryMetadata{}) {
 		if !ok {
 			return nil
 		}
