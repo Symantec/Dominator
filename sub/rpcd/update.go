@@ -2,7 +2,6 @@ package rpcd
 
 import (
 	"bufio"
-	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -34,25 +33,7 @@ var (
 		"If true, do not run any triggers. For debugging only")
 )
 
-func (t *rpcType) Update(conn *srpc.Conn) error {
-	var request sub.UpdateRequest
-	var response sub.UpdateResponse
-	decoder := gob.NewDecoder(conn)
-	if err := decoder.Decode(&request); err != nil {
-		_, err = conn.WriteString(err.Error() + "\n")
-		return err
-	}
-	if err := t.update(request, &response); err != nil {
-		_, err = conn.WriteString(err.Error() + "\n")
-		return err
-	}
-	if _, err := conn.WriteString("\n"); err != nil {
-		return err
-	}
-	return gob.NewEncoder(conn).Encode(response)
-}
-
-func (t *rpcType) update(request sub.UpdateRequest,
+func (t *rpcType) Update(conn *srpc.Conn, request sub.UpdateRequest,
 	reply *sub.UpdateResponse) error {
 	if *readOnly || *disableUpdates {
 		txt := "Update() rejected due to read-only mode"

@@ -132,22 +132,20 @@ func addImage(address string, imdb *scanner.ImageDataBase,
 		return err
 	}
 	defer client.Close()
-	var request imageserver.GetImageRequest
-	request.ImageName = name
-	var reply imageserver.GetImageResponse
-	if err := imgclient.CallGetImage(client, request, &reply); err != nil {
+	img, err := imgclient.GetImage(client, name)
+	if err != nil {
 		return err
 	}
-	if reply.Image == nil {
+	if img == nil {
 		return errors.New(name + ": not found")
 	}
 	logger.Printf("Replicator(%s): downloaded image\n", name)
-	reply.Image.FileSystem.RebuildInodePointers()
-	if err := getMissingObjects(address, objSrv, reply.Image.FileSystem,
+	img.FileSystem.RebuildInodePointers()
+	if err := getMissingObjects(address, objSrv, img.FileSystem,
 		logger); err != nil {
 		return err
 	}
-	if err := imdb.AddImage(reply.Image, name, nil); err != nil {
+	if err := imdb.AddImage(img, name, nil); err != nil {
 		return err
 	}
 	logger.Printf("Replicator(%s): added image\n", name)

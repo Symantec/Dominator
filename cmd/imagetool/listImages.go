@@ -18,7 +18,7 @@ func listImagesSubcommand(args []string) {
 }
 
 func listImages(imageSClient *srpc.Client) error {
-	imageNames, err := client.CallListImages(imageSClient)
+	imageNames, err := client.ListImages(imageSClient)
 	if err != nil {
 		return err
 	}

@@ -36,7 +36,7 @@ func bulkAddReplaceImagesSubcommand(args []string) {
 func addReplaceImage(imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient,
 	name, baseImageName string, layerImageNames []string) error {
-	imageExists, err := client.CallCheckImage(imageSClient, name)
+	imageExists, err := client.CheckImage(imageSClient, name)
 	if err != nil {
 		return errors.New("error checking for image existance: " + err.Error())
 	}
@@ -61,13 +61,25 @@ func addReplaceImage(imageSClient *srpc.Client,
 
 func bulkAddReplaceImages(imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, layerImageNames []string) error {
-	imageNames, err := client.CallListImages(imageSClient)
+	imageNames, err := client.ListImages(imageSClient)
 	if err != nil {
 		return err
 	}
+	err = bulkAddReplaceImagesSep(imageSClient, objectClient, layerImageNames,
+		imageNames, "/")
+	if err != nil {
+		return err
+	}
+	return bulkAddReplaceImagesSep(imageSClient, objectClient, layerImageNames,
+		imageNames, ".")
+}
+
+func bulkAddReplaceImagesSep(imageSClient *srpc.Client,
+	objectClient *objectclient.ObjectClient, layerImageNames []string,
+	imageNames []string, separator string) error {
 	baseNames := make(map[string]uint64)
 	for _, name := range imageNames {
-		fields := strings.Split(name, ".")
+		fields := strings.Split(name, separator)
 		nFields := len(fields)
 		if nFields < 2 {
 			continue
@@ -76,15 +88,15 @@ func bulkAddReplaceImages(imageSClient *srpc.Client,
 		if version, err := strconv.ParseUint(lastField, 10, 64); err != nil {
 			continue
 		} else {
-			name := strings.Join(fields[:nFields-1], ".")
+			name := strings.Join(fields[:nFields-1], separator)
 			if oldVersion := baseNames[name]; version >= oldVersion {
 				baseNames[name] = version
 			}
 		}
 	}
 	for baseName, version := range baseNames {
-		oldName := fmt.Sprintf("%s.%d", baseName, version)
-		newName := fmt.Sprintf("%s.%d", baseName, version+1)
+		oldName := fmt.Sprintf("%s%s%d", baseName, separator, version)
+		newName := fmt.Sprintf("%s%s%d", baseName, separator, version+1)
 		if err := addReplaceImage(imageSClient, objectClient,
 			newName, oldName, layerImageNames); err != nil {
 			return err

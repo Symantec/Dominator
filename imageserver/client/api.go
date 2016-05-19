@@ -3,41 +3,36 @@ package client
 import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/imageserver"
 )
 
-func CallAddImage(client *srpc.Client, request imageserver.AddImageRequest,
-	reply *imageserver.AddImageResponse) error {
-	return callAddImage(client, request, reply)
+func AddImage(client *srpc.Client, name string, img *image.Image) error {
+	return addImage(client, name, img)
 }
 
-func CallCheckImage(client *srpc.Client, name string) (bool, error) {
-	return callCheckImage(client, name)
+func CheckImage(client *srpc.Client, name string) (bool, error) {
+	return checkImage(client, name)
 }
 
-func CallChownDirectory(client *srpc.Client, dirname, ownerGroup string) error {
-	return callChownDirectory(client, dirname, ownerGroup)
+func ChownDirectory(client *srpc.Client, dirname, ownerGroup string) error {
+	return chownDirectory(client, dirname, ownerGroup)
 }
 
-func CallDeleteImage(client *srpc.Client,
-	request imageserver.DeleteImageRequest,
-	reply *imageserver.DeleteImageResponse) error {
-	return callDeleteImage(client, request, reply)
+func DeleteImage(client *srpc.Client, name string) error {
+	return deleteImage(client, name)
 }
 
-func CallGetImage(client *srpc.Client, request imageserver.GetImageRequest,
-	reply *imageserver.GetImageResponse) error {
-	return callGetImage(client, request, reply)
+func GetImage(client *srpc.Client, name string) (*image.Image, error) {
+	return getImage(client, name)
 }
 
-func CallListDirectories(client *srpc.Client) ([]image.Directory, error) {
-	return callListDirectories(client)
+func ListDirectories(client *srpc.Client) ([]image.Directory, error) {
+	return listDirectories(client)
 }
 
-func CallListImages(client *srpc.Client) ([]string, error) {
-	return callListImages(client)
+func ListImages(client *srpc.Client) ([]string, error) {
+	return listImages(client)
 }
 
-func CallMakeDirectory(client *srpc.Client, dirname string) error {
-	return callMakeDirectory(client, dirname)
+func MakeDirectory(client *srpc.Client, dirname string) error {
+	return makeDirectory(client, dirname)
 }

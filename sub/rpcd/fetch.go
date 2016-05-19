@@ -1,7 +1,6 @@
 package rpcd
 
 import (
-	"encoding/gob"
 	"errors"
 	"flag"
 	"fmt"
@@ -28,26 +27,7 @@ var (
 		"If true, exit if there are fetch failures. For debugging only")
 )
 
-func (t *rpcType) Fetch(conn *srpc.Conn) error {
-	defer conn.Flush()
-	var request sub.FetchRequest
-	var response sub.FetchResponse
-	decoder := gob.NewDecoder(conn)
-	if err := decoder.Decode(&request); err != nil {
-		_, err = conn.WriteString(err.Error() + "\n")
-		return err
-	}
-	if err := t.fetch(request, &response); err != nil {
-		_, err = conn.WriteString(err.Error() + "\n")
-		return err
-	}
-	if _, err := conn.WriteString("\n"); err != nil {
-		return err
-	}
-	return gob.NewEncoder(conn).Encode(response)
-}
-
-func (t *rpcType) fetch(request sub.FetchRequest,
+func (t *rpcType) Fetch(conn *srpc.Conn, request sub.FetchRequest,
 	reply *sub.FetchResponse) error {
 	if *readOnly {
 		txt := "Fetch() rejected due to read-only mode"

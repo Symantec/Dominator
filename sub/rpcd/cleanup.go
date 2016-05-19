@@ -1,7 +1,6 @@
 package rpcd
 
 import (
-	"encoding/gob"
 	"errors"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/objectcache"
@@ -10,26 +9,7 @@ import (
 	"path"
 )
 
-func (t *rpcType) Cleanup(conn *srpc.Conn) error {
-	defer conn.Flush()
-	var request sub.CleanupRequest
-	var response sub.CleanupResponse
-	decoder := gob.NewDecoder(conn)
-	if err := decoder.Decode(&request); err != nil {
-		_, err = conn.WriteString(err.Error() + "\n")
-		return err
-	}
-	if err := t.cleanup(request, &response); err != nil {
-		_, err = conn.WriteString(err.Error() + "\n")
-		return err
-	}
-	if _, err := conn.WriteString("\n"); err != nil {
-		return err
-	}
-	return gob.NewEncoder(conn).Encode(response)
-}
-
-func (t *rpcType) cleanup(request sub.CleanupRequest,
+func (t *rpcType) Cleanup(conn *srpc.Conn, request sub.CleanupRequest,
 	reply *sub.CleanupResponse) error {
 	t.disableScannerFunc(true)
 	defer t.disableScannerFunc(false)

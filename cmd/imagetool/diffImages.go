@@ -10,7 +10,6 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/imageserver"
 	"github.com/Symantec/Dominator/proto/sub"
 	subclient "github.com/Symantec/Dominator/sub/client"
 	"io/ioutil"
@@ -77,17 +76,15 @@ func readImage(name string) (*filesystem.FileSystem, error) {
 }
 
 func getImage(client *srpc.Client, name string) (*image.Image, error) {
-	var request imageserver.GetImageRequest
-	request.ImageName = name
-	var reply imageserver.GetImageResponse
-	if err := imgclient.CallGetImage(client, request, &reply); err != nil {
+	img, err := imgclient.GetImage(client, name)
+	if err != nil {
 		return nil, err
 	}
-	if reply.Image == nil {
+	if img == nil {
 		return nil, errors.New(name + ": not found")
 	}
-	reply.Image.FileSystem.RebuildInodePointers()
-	return reply.Image, nil
+	img.FileSystem.RebuildInodePointers()
+	return img, nil
 }
 
 func getFsOfImage(client *srpc.Client, name string) (

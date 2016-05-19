@@ -381,13 +381,12 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
 	if len(objectsToFetch) > 0 {
 		logger.Printf("Calling %s.Fetch() for: %d objects\n",
 			sub, len(objectsToFetch))
-		var request subproto.FetchRequest
-		var reply subproto.FetchResponse
-		request.ServerAddress = sub.herd.imageServerAddress
+		hashes := make([]hash.Hash, 0)
 		for hash := range objectsToFetch {
-			request.Hashes = append(request.Hashes, hash)
+			hashes = append(hashes, hash)
 		}
-		if err := client.CallFetch(srpcClient, request, &reply); err != nil {
+		err := client.Fetch(srpcClient, sub.herd.imageServerAddress, hashes)
+		if err != nil {
 			logger.Printf("Error calling %s.Fetch()\t%s\n", sub, err)
 			if err == srpc.ErrorAccessToMethodDenied {
 				return false, statusFetchDenied
@@ -493,13 +492,11 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 	if len(unusedObjects) < 1 {
 		return
 	}
-	var request subproto.CleanupRequest
-	var reply subproto.CleanupResponse
-	request.Hashes = make([]hash.Hash, 0, len(unusedObjects))
+	hashes := make([]hash.Hash, 0, len(unusedObjects))
 	for hash := range unusedObjects {
-		request.Hashes = append(request.Hashes, hash)
+		hashes = append(hashes, hash)
 	}
-	if err := client.CallCleanup(srpcClient, request, &reply); err != nil {
+	if err := client.Cleanup(srpcClient, hashes); err != nil {
 		logger.Printf("Error calling %s:Subd.Cleanup()\t%s\n", sub, err)
 	}
 }

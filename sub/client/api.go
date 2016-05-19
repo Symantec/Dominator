@@ -1,25 +1,23 @@
 package client
 
 import (
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 	"io"
 )
 
-func CallCleanup(client *srpc.Client, request sub.CleanupRequest,
-	reply *sub.CleanupResponse) error {
-	return callCleanup(client, request, reply)
+func Cleanup(client *srpc.Client, hashes []hash.Hash) error {
+	return cleanup(client, hashes)
 }
 
-func CallFetch(client *srpc.Client, request sub.FetchRequest,
-	reply *sub.FetchResponse) error {
-	return callFetch(client, request, reply)
+func Fetch(client *srpc.Client, serverAddress string,
+	hashes []hash.Hash) error {
+	return fetch(client, serverAddress, hashes)
 }
 
-func CallGetConfiguration(client *srpc.Client,
-	request sub.GetConfigurationRequest,
-	reply *sub.GetConfigurationResponse) error {
-	return callGetConfiguration(client, request, reply)
+func GetConfiguration(client *srpc.Client) (sub.Configuration, error) {
+	return getConfiguration(client)
 }
 
 func CallPoll(client *srpc.Client, request sub.PollRequest,
@@ -27,10 +25,8 @@ func CallPoll(client *srpc.Client, request sub.PollRequest,
 	return callPoll(client, request, reply)
 }
 
-func CallSetConfiguration(client *srpc.Client,
-	request sub.SetConfigurationRequest,
-	reply *sub.SetConfigurationResponse) error {
-	return callSetConfiguration(client, request, reply)
+func SetConfiguration(client *srpc.Client, config sub.Configuration) error {
+	return setConfiguration(client, config)
 }
 
 func CallUpdate(client *srpc.Client, request sub.UpdateRequest,

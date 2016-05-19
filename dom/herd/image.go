@@ -4,7 +4,6 @@ import (
 	"github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/imageserver"
 	"time"
 )
 
@@ -50,32 +49,29 @@ func (herd *Herd) getImageHaveLock(name string) (*image.Image, error) {
 		return nil, err
 	}
 	defer imageClient.Close()
-	var request imageserver.GetImageRequest
-	request.ImageName = name
-	var reply imageserver.GetImageResponse
-	err = client.CallGetImage(imageClient, request, &reply)
+	img, err := client.GetImage(imageClient, name)
 	if err != nil {
 		herd.missingImages[name] = missingImage{time.Now(), err}
 		herd.logger.Printf("Error calling\t%s\n", err)
 		return nil, err
 	}
-	if reply.Image == nil {
+	if img == nil {
 		herd.missingImages[name] = missingImage{time.Now(), nil}
 	} else {
-		if err := reply.Image.FileSystem.RebuildInodePointers(); err != nil {
+		if err := img.FileSystem.RebuildInodePointers(); err != nil {
 			herd.logger.Printf("Error building inode pointers for image: %s %s",
 				name, err)
 			return nil, err
 		}
 		delete(herd.missingImages, name)
 		// Build cache data now to avoid potential concurrent builds later.
-		reply.Image.FileSystem.InodeToFilenamesTable()
-		reply.Image.FileSystem.FilenameToInodeTable()
-		reply.Image.FileSystem.HashToInodesTable()
-		reply.Image.FileSystem.ComputeTotalDataBytes()
-		reply.Image.FileSystem.BuildEntryMap()
-		herd.imagesByName[name] = reply.Image
+		img.FileSystem.InodeToFilenamesTable()
+		img.FileSystem.FilenameToInodeTable()
+		img.FileSystem.HashToInodesTable()
+		img.FileSystem.ComputeTotalDataBytes()
+		img.FileSystem.BuildEntryMap()
+		herd.imagesByName[name] = img
 		herd.logger.Printf("Got image: %s\n", name)
 	}
-	return reply.Image, nil
+	return img, nil
 }

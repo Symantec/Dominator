@@ -1,7 +1,6 @@
 package rpcd
 
 import (
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
@@ -10,28 +9,10 @@ import (
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
 
-func (t *srpcType) AddImage(conn *srpc.Conn) error {
-	defer conn.Flush()
-	var request imageserver.AddImageRequest
-	var response imageserver.AddImageResponse
-	decoder := gob.NewDecoder(conn)
-	if err := decoder.Decode(&request); err != nil {
-		_, err = conn.WriteString(err.Error() + "\n")
-		return err
-	}
-	request.Image.CreatedBy = conn.Username() // Must always set this field.
-	if err := t.addImage(request, &response); err != nil {
-		_, err = conn.WriteString(err.Error() + "\n")
-		return err
-	}
-	if _, err := conn.WriteString("\n"); err != nil {
-		return err
-	}
-	return gob.NewEncoder(conn).Encode(response)
-}
-
-func (t *srpcType) addImage(request imageserver.AddImageRequest,
+func (t *srpcType) AddImage(conn *srpc.Conn,
+	request imageserver.AddImageRequest,
 	reply *imageserver.AddImageResponse) error {
+	request.Image.CreatedBy = conn.Username() // Must always set this field.
 	if err := t.checkMutability(); err != nil {
 		return err
 	}

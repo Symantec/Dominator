@@ -5,7 +5,6 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/triggers"
-	"github.com/Symantec/Dominator/proto/common"
 	"time"
 )
 
@@ -20,10 +19,9 @@ type FetchRequest struct {
 	Hashes        []hash.Hash
 }
 
-type FetchResponse common.StatusResponse
+type FetchResponse struct{}
 
-type GetConfigurationRequest struct {
-}
+type GetConfigurationRequest struct{}
 
 type GetConfigurationResponse Configuration
 
@@ -61,7 +59,7 @@ type PollResponse struct {
 
 type SetConfigurationRequest Configuration
 
-type SetConfigurationResponse common.StatusResponse
+type SetConfigurationResponse struct{}
 
 type FileToCopyToCache struct {
 	Name string

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
 	"os"
 )
@@ -17,12 +16,10 @@ func getConfigSubcommand(srpcClient *srpc.Client, args []string) {
 }
 
 func getConfig(srpcClient *srpc.Client) error {
-	var request sub.GetConfigurationRequest
-	var reply sub.GetConfigurationResponse
-	err := client.CallGetConfiguration(srpcClient, request, &reply)
+	config, err := client.GetConfiguration(srpcClient)
 	if err != nil {
 		return err
 	}
-	fmt.Println(reply)
+	fmt.Println(config)
 	return nil
 }

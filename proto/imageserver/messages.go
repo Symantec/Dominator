@@ -2,7 +2,6 @@ package imageserver
 
 import (
 	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/proto/common"
 )
 
 type AddImageRequest struct {
@@ -31,7 +30,7 @@ type DeleteImageRequest struct {
 	ImageName string
 }
 
-type DeleteImageResponse common.StatusResponse
+type DeleteImageResponse struct{}
 
 type GetImageRequest struct {
 	ImageName string
