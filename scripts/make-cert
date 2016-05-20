@@ -1,0 +1,64 @@
+#! /bin/bash --posix
+
+# make-cert: Make a signed certificate for a user/service that may be used to
+#            authenticate the user and grant access to methods.
+#
+# Usage: make-cert signing-key newkey serial username [methods]
+
+umask 077
+set -o noglob
+set -o nounset
+
+if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
+    echo "Usage: make-cert signing-key newkey serial username [methods]"
+    echo "  methods: an optional comma-separated list of method names"
+    exit 1
+fi
+
+readonly signing_key="$1"
+readonly newkey="$2"
+readonly serial="$3"
+readonly username="$4"
+
+if [ "$#" -lt 5 ]; then
+    readonly methods=
+else
+    readonly methods="$5"
+fi
+
+if [ ! -r "$signing_key.pem" ]; then
+    echo "Unable to read: $signing_key.pem"
+    exit 1
+fi
+if [ ! -r "$signing_key.key.pem" ]; then
+    echo "Unable to read: $signing_key.key.pem"
+    exit 1
+fi
+
+# First create methods extension file if appropriate.
+tmpfile="$(mktemp)"
+if [ -z "$methods" ]; then
+    readonly methods_args=
+else
+    readonly methods_args="-extensions methods_extension"
+    counter=1
+    echo '[methods_extension]'                                  > "$tmpfile"
+    echo '1.3.6.1.4.1.9586.100.7.1=ASN1:SEQUENCE:methods_sect' >> "$tmpfile"
+    echo '[methods_sect]'                                      >> "$tmpfile"
+    for method in $(tr , '\n' <<< "$methods"); do
+	echo "field$counter=UTF8:\"$method\"" >> "$tmpfile"
+	counter=$(($counter + 1))
+    done
+fi
+
+# Now generate the signed certificate.
+openssl genpkey -algorithm RSA -out "$newkey.key.pem" \
+		-pkeyopt rsa_keygen_bits:2048
+openssl req -new -key "$newkey.key.pem" -days 1096 -extensions v3_ca \
+	    -batch -out "$newkey.csr" -utf8 -subj "/CN=$username"
+openssl x509 -req -sha256 -days 1096 -in "$newkey.csr" \
+	     -extfile "$tmpfile" $methods_args \
+	     -CAkey root.key.pem -CA root.pem -set_serial "$serial" \
+	     -out "$newkey.pem"
+rm -f "$tmpfile"
+chmod a+r "$newkey.pem"
