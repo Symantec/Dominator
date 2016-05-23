@@ -1,0 +1,16 @@
+#! /bin/bash --posix
+
+set -o nounset
+
+cd "${0%/*}"
+
+. ./scripts/install.lib
+
+echo=
+
+$echo mkdir -p /etc/ssl/subd
+$echo cp -p ssl/CA.pem /etc/ssl
+$echo cp -p ssl/subd/*.pem /etc/ssl/subd
+$echo mkdir -p /usr/local/sbin
+$echo cp -p bin/* /usr/local/sbin
+install_service subd
