@@ -1,0 +1,70 @@
+# This file should be sourced by installer scripts.
+
+echo=
+
+if [ -d /usr/lib/systemd/system ]; then
+    readonly init='systemd'
+    readonly destdir='/usr/lib/systemd/system'
+elif [ -x /usr/sbin/update-rc.d ]; then
+    readonly init='update-rc.d'
+    if [ -d /etc/init.d ]; then
+	readonly destdir='/etc/init.d'
+    elif [ -d /etcrc.d/init.d ]; then
+	readonly destdir='/etc/rc.d/init.d'
+    fi
+elif [ -x /sbin/chkconfig ]; then
+    readonly init='chkconfig'
+    if [ -d /etc/init.d ]; then
+	readonly destdir='/etc/init.d'
+    elif [ -d /etc/rc.d/init.d ]; then
+	readonly destdir='/etc/rc.d/init.d'
+    fi
+else
+    echo 'Unknown init system' 2>&1
+    exit 1
+fi
+
+get_os ()
+{
+    if [ -r /etc/lsb-release ]; then
+	DISTRIB_ID=
+	DISTRIB_RELEASE=
+	. /etc/lsb-release
+	if [ -n "$DISTRIB_ID" ] && [ -n "$DISTRIB_RELEASE" ]; then
+	    echo "$DISTRIB_ID-$DISTRIB_RELEASE"
+	    return
+	fi
+    fi
+    if [ -r /etc/redhat-release ]; then
+	if fgrep -q 'CentOS release 6.' /etc/redhat-release; then
+	    echo 'CentOS-6'
+	    return
+	fi
+    fi
+    if [ -r /etc/debian_version ]; then
+	echo "Debian-$(cut -d . -f 1 /etc/debian_version)"
+	return
+    fi
+    echo 'Unknown OS' 2>&1
+    exit 1
+}
+
+install_service ()
+{
+    local -r service="$1"
+
+    if [ "$init" == 'systemd' ]; then
+	$echo cp -p "init.d/${service}.service" "$destdir" || return
+	$echo systemctl enable subd || return
+    elif [ "$init" == 'update-rc.d' ]; then
+	$echo cp -p "init.d/${service}.$(get_os)" "$destdir/subd" || return
+	$echo update-rc.d "$service" defaults || return
+    elif [ "$init" == 'chkconfig' ]; then
+	$echo cp -p "init.d/${service}.$(get_os)" "$destdir/subd" || return
+	$echo chkconfig --add "$service" || return
+	$echo chkconfig "$service" on || return
+    else
+	echo 'Unknown init system' 2>&1
+	exit 1
+    fi
+}
