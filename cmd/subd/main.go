@@ -16,6 +16,7 @@ import (
 	"github.com/Symantec/Dominator/sub/rpcd"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
 	"log"
 	"os"
@@ -193,6 +194,13 @@ func getCachedFsSpeed(workingRootDir string, cacheDirname string) (bytesPerSecon
 	return bytesPerSecond, blocksPerSecond, true, true
 }
 
+func publishFsSpeed(bytesPerSecond, blocksPerSecond uint64) {
+	tricorder.RegisterMetric("/root-read-speed", &bytesPerSecond,
+		units.BytePerSecond, "read speed of root file-system media")
+	tricorder.RegisterMetric("/root-block-read-speed", &blocksPerSecond,
+		units.None, "read speed of root file-system media in blocks/second")
+}
+
 func getCachedNetworkSpeed(cacheFilename string) uint64 {
 	if speed, ok := netspeed.GetSpeedToHost(""); ok {
 		return speed
@@ -273,6 +281,7 @@ func main() {
 	if !ok {
 		os.Exit(1)
 	}
+	publishFsSpeed(bytesPerSecond, blocksPerSecond)
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	var configuration scanner.Configuration
