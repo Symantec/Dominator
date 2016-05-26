@@ -10,11 +10,13 @@ type HtmlWriter interface {
 }
 
 func WriteHeaderWithRequest(writer io.Writer, req *http.Request) {
-	writeHeader(writer, req)
+	header := Header{Request: req}
+	header.WriteHtml(writer)
 }
 
 func WriteHeader(writer io.Writer) {
-	writeHeader(writer, nil)
+	var header Header
+	header.WriteHtml(writer)
 }
 
 func WriteFooter(writer io.Writer) {
@@ -24,4 +26,13 @@ func WriteFooter(writer io.Writer) {
 func RegisterHtmlWriterForPattern(pattern, title string,
 	htmlWriter HtmlWriter) {
 	registerHtmlWriterForPattern(pattern, title, htmlWriter)
+}
+
+type Header struct {
+	NoGC    bool
+	Request *http.Request
+}
+
+func (h *Header) WriteHtml(writer io.Writer) {
+	h.writeHtml(writer)
 }

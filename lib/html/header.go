@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/format"
 	"io"
-	"net/http"
 	"runtime"
 	"strings"
 	"syscall"
@@ -31,7 +30,7 @@ func getRusage() (time.Time, time.Time) {
 		time.Unix(int64(rusage.Stime.Sec), int64(rusage.Stime.Usec)*1000)
 }
 
-func writeHeader(writer io.Writer, req *http.Request) {
+func (h *Header) writeHtml(writer io.Writer) {
 	fmt.Fprintf(writer, "Start time: %s<br>\n", startTime.Format(timeFormat))
 	uptime := time.Since(startTime) + time.Millisecond*50
 	uptime = (uptime / time.Millisecond / 100) * time.Millisecond * 100
@@ -42,23 +41,31 @@ func writeHeader(writer io.Writer, req *http.Request) {
 	cpuTime := userCpuTime + sysCpuTime
 	fmt.Fprintf(writer, "CPU Time: %.1f%% (User: %s Sys: %s)<br>\n",
 		float64(cpuTime*100)/float64(uptime), userCpuTime, sysCpuTime)
-	var memStatsBeforeGC, memStatsAfterGC runtime.MemStats
+	var memStatsBeforeGC runtime.MemStats
 	runtime.ReadMemStats(&memStatsBeforeGC)
-	runtime.GC()
-	runtime.ReadMemStats(&memStatsAfterGC)
-	fmt.Fprintf(writer, "Allocated memory: %s (%s after GC)<br>\n",
-		format.FormatBytes(memStatsBeforeGC.Alloc),
-		format.FormatBytes(memStatsAfterGC.Alloc))
-	fmt.Fprintf(writer, "System memory: %s (%s after GC)<br>\n",
-		format.FormatBytes(memStatsBeforeGC.Sys),
-		format.FormatBytes(memStatsAfterGC.Sys))
+	if h.NoGC {
+		fmt.Fprintf(writer, "Allocated memory: %s<br>\n",
+			format.FormatBytes(memStatsBeforeGC.Alloc))
+		fmt.Fprintf(writer, "System memory: %s<br>\n",
+			format.FormatBytes(memStatsBeforeGC.Sys))
+	} else {
+		var memStatsAfterGC runtime.MemStats
+		runtime.GC()
+		runtime.ReadMemStats(&memStatsAfterGC)
+		fmt.Fprintf(writer, "Allocated memory: %s (%s after GC)<br>\n",
+			format.FormatBytes(memStatsBeforeGC.Alloc),
+			format.FormatBytes(memStatsAfterGC.Alloc))
+		fmt.Fprintf(writer, "System memory: %s (%s after GC)<br>\n",
+			format.FormatBytes(memStatsBeforeGC.Sys),
+			format.FormatBytes(memStatsAfterGC.Sys))
+	}
 	fmt.Fprintln(writer, "Raw <a href=\"metrics\">metrics</a><br>")
-	if req != nil {
+	if h.Request != nil {
 		protocol := "http"
-		if req.TLS != nil {
+		if h.Request.TLS != nil {
 			protocol = "https"
 		}
-		host := strings.Split(req.Host, ":")[0]
+		host := strings.Split(h.Request.Host, ":")[0]
 		fmt.Fprintf(writer,
 			"Local <a href=\"%s://%s:6910/\">system health agent</a>",
 			protocol, host)
