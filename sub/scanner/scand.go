@@ -53,7 +53,7 @@ func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 			fsChannel <- fs
 			runtime.GC()
 			if !loweredPriority {
-				syscall.Setpriority(syscall.PRIO_PROCESS, 0, 10)
+				syscall.Setpriority(syscall.PRIO_PROCESS, 0, 15)
 				loweredPriority = true
 			}
 		}
