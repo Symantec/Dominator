@@ -10,11 +10,15 @@ type HtmlWriter interface {
 }
 
 func WriteHeaderWithRequest(writer io.Writer, req *http.Request) {
-	writeHeader(writer, req)
+	writeHeader(writer, req, false)
 }
 
 func WriteHeader(writer io.Writer) {
-	writeHeader(writer, nil)
+	writeHeader(writer, nil, false)
+}
+
+func WriteHeaderNoGC(writer io.Writer) {
+	writeHeader(writer, nil, true)
 }
 
 func WriteFooter(writer io.Writer) {
