@@ -38,6 +38,8 @@ var (
 		"Number of lines to store in the log buffer")
 	maxThreads = flag.Uint("maxThreads", 1,
 		"Maximum number of parallel OS threads to use")
+	permitInsecureMode = flag.Bool("permitInsecureMode", false,
+		"If true, run in insecure mode. This gives remote root access to all")
 	pidfile = flag.String("pidfile", "/var/run/subd.pid",
 		"Name of file to write my PID to")
 	portNum = flag.Uint("portNum", constants.SubPortNumber,
@@ -250,7 +252,6 @@ func writePidfile() {
 func main() {
 	flag.Parse()
 	tricorder.RegisterFlags()
-	setupTls(*caFile, *certFile, *keyFile)
 	subdDirPathname := path.Join(*rootDir, *subdDir)
 	workingRootDir := path.Join(subdDirPathname, "root")
 	objectsDir := path.Join(workingRootDir, *subdDir, "objects")
@@ -276,14 +277,21 @@ func main() {
 		os.Exit(1)
 	}
 	runtime.GOMAXPROCS(int(*maxThreads))
+	circularBuffer := logbuf.New(*logbufLines)
+	logger := log.New(circularBuffer, "", log.LstdFlags)
+	if err := setupTls(*caFile, *certFile, *keyFile); err != nil {
+		logger.Println(err)
+		circularBuffer.Flush()
+		if !*permitInsecureMode {
+			os.Exit(1)
+		}
+	}
 	bytesPerSecond, blocksPerSecond, firstScan, ok := getCachedFsSpeed(
 		workingRootDir, tmpDir)
 	if !ok {
 		os.Exit(1)
 	}
 	publishFsSpeed(bytesPerSecond, blocksPerSecond)
-	circularBuffer := logbuf.New(*logbufLines)
-	logger := log.New(circularBuffer, "", log.LstdFlags)
 	var configuration scanner.Configuration
 	var err error
 	configuration.ScanFilter, err = filter.NewFilter(constants.ScanExcludeList)
