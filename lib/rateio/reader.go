@@ -70,6 +70,12 @@ func (rd *Reader) read(b []byte) (n int, err error) {
 	if rd.ctx.bytesSinceLastPause >= rd.ctx.chunklen {
 		// Need to slow down.
 		desiredPerSecond := rd.ctx.maxIOPerSecond * rd.ctx.speedPercent / 100
+		if desiredPerSecond < 1 {
+			desiredPerSecond = rd.ctx.maxIOPerSecond / 1000
+		}
+		if desiredPerSecond < 1 {
+			desiredPerSecond = 1
+		}
 		readSinceLastPause, err := rd.ctx.measurer.MeasureReadIO(
 			rd.ctx.bytesSinceLastPause)
 		if err != nil {

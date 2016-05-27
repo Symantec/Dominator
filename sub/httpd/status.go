@@ -14,6 +14,10 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<center>")
 	fmt.Fprintln(writer, "<h1>subd status page</h1>")
+	if insecureMode {
+		fmt.Fprintln(writer,
+			`<h1><font color="red">Running in insecure mode. You can get pwned!!!</font></h1>`)
+	}
 	fmt.Fprintln(writer, "</center>")
 	html.WriteHeaderWithRequest(writer, req)
 	fmt.Fprintln(writer, "<h3>")
