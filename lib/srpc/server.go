@@ -6,6 +6,8 @@ import (
 	"encoding/gob"
 	"errors"
 	"github.com/Symantec/Dominator/lib/x509util"
+	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
 	"log"
 	"net"
@@ -25,17 +27,29 @@ const (
 )
 
 type methodWrapper struct {
-	plain        bool
-	fn           reflect.Value
-	requestType  reflect.Type
-	responseType reflect.Type
+	plain                         bool
+	fn                            reflect.Value
+	requestType                   reflect.Type
+	responseType                  reflect.Type
+	failedCallsDistribution       *tricorder.CumulativeDistribution
+	failedRRCallsDistribution     *tricorder.CumulativeDistribution
+	numDeniedCalls                uint64
+	numPermittedCalls             uint64
+	successfulCallsDistribution   *tricorder.CumulativeDistribution
+	successfulRRCallsDistribution *tricorder.CumulativeDistribution
 }
 
 type receiverType struct {
-	methods map[string]methodWrapper
+	methods map[string]*methodWrapper
 }
 
-var receivers map[string]receiverType = make(map[string]receiverType)
+var (
+	receivers              map[string]receiverType = make(map[string]receiverType)
+	serverMetricsDir       *tricorder.DirectorySpec
+	bucketer               *tricorder.Bucketer
+	numConnections         uint64
+	numRejectedConnections uint64
+)
 
 // Precompute some reflect types. Can't use the types directly because Typeof
 // takes an empty interface value. This is annoying.
@@ -46,13 +60,33 @@ func init() {
 	http.HandleFunc(rpcPath, unsecuredHttpHandler)
 	http.HandleFunc(tlsRpcPath, tlsHttpHandler)
 	http.HandleFunc(listMethodsPath, listMethodsHttpHandler)
+	var err error
+	serverMetricsDir, err = tricorder.RegisterDirectory("srpc/server")
+	if err != nil {
+		panic(err)
+	}
+	err = serverMetricsDir.RegisterMetric("num-connections", &numConnections,
+		units.None, "number of connections")
+	if err != nil {
+		panic(err)
+	}
+	err = serverMetricsDir.RegisterMetric("num-rejected-connections",
+		&numRejectedConnections, units.None, "number of rejected connections")
+	if err != nil {
+		panic(err)
+	}
+	bucketer = tricorder.NewGeometricBucketer(0.1, 1e5)
 }
 
 func registerName(name string, rcvr interface{}) error {
 	var receiver receiverType
-	receiver.methods = make(map[string]methodWrapper)
+	receiver.methods = make(map[string]*methodWrapper)
 	typeOfReceiver := reflect.TypeOf(rcvr)
 	valueOfReceiver := reflect.ValueOf(rcvr)
+	receiverMetricsDir, err := serverMetricsDir.RegisterDirectory(name)
+	if err != nil {
+		return err
+	}
 	for index := 0; index < typeOfReceiver.NumMethod(); index++ {
 		method := typeOfReceiver.Method(index)
 		if method.PkgPath != "" { // Method must be exported.
@@ -63,7 +97,14 @@ func registerName(name string, rcvr interface{}) error {
 		if mVal == nil {
 			continue
 		}
-		receiver.methods[method.Name] = *mVal
+		receiver.methods[method.Name] = mVal
+		dir, err := receiverMetricsDir.RegisterDirectory(method.Name)
+		if err != nil {
+			return err
+		}
+		if err := mVal.registerMetrics(dir); err != nil {
+			return err
+		}
 	}
 	receivers[name] = receiver
 	return nil
@@ -91,8 +132,56 @@ func getMethod(methodType reflect.Type, fn reflect.Value) *methodWrapper {
 		if methodType.In(3).Kind() != reflect.Ptr {
 			return nil
 		}
-		return &methodWrapper{false, fn, methodType.In(2),
-			methodType.In(3).Elem()}
+		return &methodWrapper{
+			plain:        false,
+			fn:           fn,
+			requestType:  methodType.In(2),
+			responseType: methodType.In(3).Elem()}
+	}
+	return nil
+}
+
+func (m *methodWrapper) registerMetrics(dir *tricorder.DirectorySpec) error {
+	m.failedCallsDistribution = bucketer.NewCumulativeDistribution()
+	err := dir.RegisterMetric("failed-call-durations",
+		m.failedCallsDistribution, units.Millisecond,
+		"duration of failed calls")
+	if err != nil {
+		return err
+	}
+	err = dir.RegisterMetric("num-denied-calls", &m.numDeniedCalls,
+		units.None, "number of denied calls to method")
+	if err != nil {
+		return err
+	}
+	err = dir.RegisterMetric("num-permitted-calls", &m.numPermittedCalls,
+		units.None, "number of permitted calls to method")
+	if err != nil {
+		return err
+	}
+	m.successfulCallsDistribution = bucketer.NewCumulativeDistribution()
+	err = dir.RegisterMetric("successful-call-durations",
+		m.successfulCallsDistribution, units.Millisecond,
+		"duration of successful calls")
+	if err != nil {
+		return err
+	}
+	if m.plain {
+		return nil
+	}
+	m.failedRRCallsDistribution = bucketer.NewCumulativeDistribution()
+	err = dir.RegisterMetric("failed-request-reply-call-durations",
+		m.failedRRCallsDistribution, units.Millisecond,
+		"duration of failed request-reply calls")
+	if err != nil {
+		return err
+	}
+	m.successfulRRCallsDistribution = bucketer.NewCumulativeDistribution()
+	err = dir.RegisterMetric("successful-request-reply-call-durations",
+		m.successfulRRCallsDistribution, units.Millisecond,
+		"duration of successful request-reply calls")
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -106,12 +195,14 @@ func tlsHttpHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
+	numConnections++
 	if doTls && serverTlsConfig == nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	if (tlsRequired && !doTls) || req.Method != "CONNECT" {
+		numRejectedConnections++
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -141,6 +232,7 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		tlsConn := tls.Server(unsecuredConn, serverTlsConfig)
 		defer tlsConn.Close()
 		if err := tlsConn.Handshake(); err != nil {
+			numRejectedConnections++
 			log.Println(err)
 			return
 		}
@@ -217,6 +309,7 @@ func handleConnection(conn *Conn) {
 			continue
 		}
 		if !conn.checkPermitted(serviceMethod) {
+			method.numDeniedCalls++
 			if _, e := conn.WriteString(
 				ErrorAccessToMethodDenied.Error() + "\n"); e != nil {
 				log.Println(e)
@@ -268,7 +361,7 @@ func findMethod(serviceMethod string) (*methodWrapper, error) {
 	if !ok {
 		return nil, errors.New(serviceName + ": unknown method: " + methodName)
 	}
-	return &method, nil
+	return method, nil
 }
 
 func listMethodsHttpHandler(w http.ResponseWriter, req *http.Request) {
@@ -286,7 +379,20 @@ func listMethodsHttpHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (m methodWrapper) call(conn *Conn) error {
+func (m *methodWrapper) call(conn *Conn) error {
+	m.numPermittedCalls++
+	startTime := time.Now()
+	err := m._call(conn)
+	timeTaken := time.Since(startTime)
+	if err == nil {
+		m.successfulCallsDistribution.Add(timeTaken)
+	} else {
+		m.failedCallsDistribution.Add(timeTaken)
+	}
+	return err
+}
+
+func (m *methodWrapper) _call(conn *Conn) error {
 	connValue := reflect.ValueOf(conn)
 	if m.plain {
 		returnValues := m.fn.Call([]reflect.Value{connValue})
@@ -296,7 +402,6 @@ func (m methodWrapper) call(conn *Conn) error {
 		}
 		return nil
 	}
-	defer conn.Flush()
 	request := reflect.New(m.requestType)
 	response := reflect.New(m.responseType)
 	decoder := gob.NewDecoder(conn)
@@ -304,14 +409,18 @@ func (m methodWrapper) call(conn *Conn) error {
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
 	}
+	startTime := time.Now()
 	returnValues := m.fn.Call([]reflect.Value{connValue, request.Elem(),
 		response})
+	timeTaken := time.Since(startTime)
 	errInter := returnValues[0].Interface()
 	if errInter != nil {
+		m.failedRRCallsDistribution.Add(timeTaken)
 		err := errInter.(error)
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
 	}
+	m.successfulRRCallsDistribution.Add(timeTaken)
 	if _, err := conn.WriteString("\n"); err != nil {
 		return err
 	}
