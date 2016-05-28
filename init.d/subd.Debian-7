@@ -1,4 +1,9 @@
 #! /bin/bash --posix
+#
+# subd		Start up the Dominator subject daemon
+#
+# chkconfig: 2345 95 25
+# description: subd is the Dominator subject daemon.
 
 ### BEGIN INIT INFO
 # Provides:		subd
@@ -10,6 +15,12 @@
 ### END INIT INFO
 
 # /etc/init.d/subd: start and stop the Dominator subject daemon
+
+# CentOS-6 doesn't provide this, so provide a default.
+log_daemon_msg ()
+{
+    echo "$@"
+}
 
 . /lib/lsb/init-functions
 
