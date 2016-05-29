@@ -34,7 +34,7 @@ type GetConfigurationResponse Configuration
 type GetFileResponse struct {
 	Error error
 	Size  uint64
-}
+} // File data is streamed afterwards.
 
 type PollRequest struct {
 	HaveGeneration uint64
