@@ -7,7 +7,9 @@ perform RPC requests.
 
 ## Usage
 *Subtool* supports several sub-commands. There are many command-line flags which
-provide parameters for these sub-commands. The basic usage pattern is:
+provide parameters for these sub-commands. The most commonly used parameter is
+`-subHostname` which specifies which host the *subd* to control is running on.
+The basic usage pattern is:
 
 ```
 subtool [flags...] command [args...]
@@ -25,10 +27,12 @@ Some of the sub-commands available are:
 - **get-config**: get the current configuration from *subd*
 - **get-file**: get a file from *subd*
 - **poll**: get the checksumed file-system representation
-- **set-config**: set the current configuration of *subd*
+- **set-config**: set the current configuration of *subd* (such as rate limits
+                  for scanning the file-system and **fetching** objects)
 
 Note that sub-commands which change the configuration of *subd* may be reverted
-by the *dominator*.
+by the *dominator*. Thus, it may be more appropriate to use the *dominator* to
+change the configuration of all the *subd* instances in the fleet.
 
 ## Security
 *Subd* restricts RPC access using TLS client authentication. *Subtool* expects
