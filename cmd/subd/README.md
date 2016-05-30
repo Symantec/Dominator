@@ -8,7 +8,7 @@ In order to have a neglibible impact on system workload, it lowers its priority
 its I/O to be 2% of the media speed.
 
 ## Status page
-*Subd* provide a web interface on port `6969` which provides a status page,
+*Subd* provides a web interface on port `6969` which provides a status page,
 access to performance metrics and logs. If *subd* is running on host `myhost`
 then the URL of the main status page is `http://myhost:6969/`. An RPC over HTTP
 interface is also provided over the same port.
@@ -46,5 +46,5 @@ If any of these files are missing, *subd* will refuse to start. This prevents
 accidental deployments without access control.
 
 ## Control and debugging
-The [subtool](../subtool/) utility may be used to manipulate various operating
-parameters of a running *subd* and perform RPC requests.
+The [subtool](../subtool/README.md) utility may be used to manipulate various
+operating parameters of a running *subd* and perform RPC requests.
