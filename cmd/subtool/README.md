@@ -1,9 +1,10 @@
 # subtool
 A utility to control the *subd* daemon that runs on every dominated system.
 
-The *subtool* utility may be used to debug and control a running *subd*. It can
-be used to manipulate various operating parameters of a running *subd* and
-perform RPC requests.
+The *subtool* utility may be used to debug and control a running *subd*.
+*Subtool* may be run on any machine and can be used to manipulate various
+operating parameters of a running *subd* and perform RPC requests. It is
+typically run on a desktop or bastion machine.
 
 ## Usage
 *Subtool* supports several sub-commands. There are many command-line flags which
