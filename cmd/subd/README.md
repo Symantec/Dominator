@@ -50,5 +50,5 @@ If any of these files are missing, *subd* will refuse to start. This prevents
 accidental deployments without access control.
 
 ## Control and debugging
-The [subtool](../subtool/README.md) utility may be used to manipulate various
+The *[subtool](../subtool/README.md)* utility may be used to manipulate various
 operating parameters of a running *subd* and perform RPC requests.
