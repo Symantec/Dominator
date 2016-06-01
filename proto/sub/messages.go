@@ -42,7 +42,8 @@ type PollRequest struct {
 }
 
 type PollResponse struct {
-	NetworkSpeed                 uint64
+	NetworkSpeed                 uint64 // Capacity of the network interface.
+	CurrentConfiguration         Configuration
 	FetchInProgress              bool // Fetch() and Update() mutually exclusive
 	UpdateInProgress             bool
 	LastFetchError               string
