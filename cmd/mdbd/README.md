@@ -45,3 +45,14 @@ Since *mdbd* does not need root privileges, the init script runs
 *Mdbd* requires "upstream" data sources. A configuration file
 (`/var/lib/Dominator/mdb.sources.list` by default) specifies the data sources
 to be collected from.
+
+An example configuration file which specifies to collect MDB data from CIS
+(Cloud Intelligence Service, being developed at Symantec) for the `us-east-1`
+cluster is:
+
+```
+cis http://cis.us-east-1.aws.net:9200/aws/aws_nodes/_search?size=10000
+```
+
+Since CIS is built on top of Elastic Search, the configuration is primarily an
+Elastic Search query.
