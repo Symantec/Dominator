@@ -5,6 +5,8 @@ The *dominator* daemon is the heart of the **Dominator** system. It continuously
 ## Status page
 The *dominator* provides a web interface on port `6970` which provides a status
 page, links to built-in dashboards and access to performance metrics and logs.
+If *dominator* is running on host `myhost` then the URL of the main status page
+is `http://myhost:6970/`.
 
 ## Startup
 *Dominator* is started at boot time, usually by one of the provided
