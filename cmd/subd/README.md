@@ -2,7 +2,8 @@
 The daemon that runs on every dominated system.
 
 This daemon continuously checksum scans the root file-system and responds to
-**poll**, **fetch files** and **update** RPC requests from the *dominator*.
+**poll**, **fetch files** and **update** RPC requests from the
+*[dominator](../dominator/README.md)*.
 In order to have a neglibible impact on system workload, it lowers its priority
 (nice 15 by default), restricts itself to one CPU and automatically rate limits
 its I/O to be 2% of the media speed.
@@ -42,7 +43,7 @@ subd -h
 RPC access is restricted using TLS client authentication. *Subd* expects a root
 certificate in the file `/etc/ssl/CA.pem` which it trusts to sign certificates
 which grant access. It also requires a certificate and key which grant it the
-ability to *fetch* files from the objectserver. These should be in the files
+ability to **fetch** files from the objectserver. These should be in the files
 `/etc/ssl/subd/cert.pem` and `/etc/ssl/subd/key.pem`, respectively.
 
 If any of these files are missing, *subd* will refuse to start. This prevents
