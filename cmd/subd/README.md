@@ -15,13 +15,16 @@ interface is also provided over the same port.
 
 ## Startup
 *Subd* is started at boot time, usually by one of the provided
-[init scripts](../../init.d/). It may be stopped with the command:
+[init scripts](../../init.d/). The *subd* process is baby-sat by the init
+script; if the process dies the init script will re-start *subd*. It may be
+stopped with the command:
 
 ```
 service subd stop
 ```
 
-and started with the comand:
+which also kills the baby-sitting init script. It may be started with the
+comand:
 
 ```
 service subd start
