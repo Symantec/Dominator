@@ -20,7 +20,7 @@ subtool [flags...] command [args...]
 Built-in help is available with the command:
 
 ```
-subd -h
+subtool -h
 ```
 
 Some of the sub-commands available are:
