@@ -2,6 +2,10 @@
 The *dominator* daemon is the heart of the **Dominator** system. It continuously
 **polls** all the known *subs* and directs them to make corrections if needed.
 
+The list of known *subs* is read from a local file (`/var/lib/Dominator/mdb` by
+default). This file is updated by the *[mdbd](../mdbd/README.md)* companion
+daemon.
+
 ## Status page
 The *dominator* provides a web interface on port `6970` which provides a status
 page, links to built-in dashboards and access to performance metrics and logs.
