@@ -12,7 +12,7 @@ import (
 type AddObjectRequest struct {
 	Length       uint64
 	ExpectedHash *hash.Hash
-} // Object data is streamed afterwards.
+} // Object data are streamed afterwards.
 
 type AddObjectResponse struct {
 	Error error
