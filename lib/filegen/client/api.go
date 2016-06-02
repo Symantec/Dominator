@@ -57,7 +57,7 @@ func New(objSrv objectserver.ObjectServer, logger *log.Logger) *Manager {
 // Add will add a machine to the Manager. Re-adding a machine will result in a
 // panic. The length of the returned channel buffer is determined by size.
 // A channel is returned from which file information may be read. It is
-// guaranteed that corresponding object data is in the object server before
+// guaranteed that corresponding object data are in the object server before
 // file information is available.
 func (m *Manager) Add(machine Machine, size uint) <-chan []proto.FileInfo {
 	updateChannel := make(chan []proto.FileInfo, size)

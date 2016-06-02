@@ -22,6 +22,7 @@ func (t *rpcType) Poll(conn *srpc.Conn) error {
 		return err
 	}
 	response.NetworkSpeed = t.networkReaderContext.MaximumSpeed()
+	response.CurrentConfiguration = t.getConfiguration()
 	t.rwLock.RLock()
 	response.FetchInProgress = t.fetchInProgress
 	response.UpdateInProgress = t.updateInProgress
