@@ -16,6 +16,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -47,6 +48,7 @@ var (
 	receivers              map[string]receiverType = make(map[string]receiverType)
 	serverMetricsDir       *tricorder.DirectorySpec
 	bucketer               *tricorder.Bucketer
+	mutex                  sync.Mutex
 	numConnections         uint64
 	numRejectedConnections uint64
 )
@@ -195,14 +197,18 @@ func tlsHttpHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
+	mutex.Lock()
 	numConnections++
+	mutex.Unlock()
 	if doTls && serverTlsConfig == nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	if (tlsRequired && !doTls) || req.Method != "CONNECT" {
+		mutex.Lock()
 		numRejectedConnections++
+		mutex.Unlock()
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -232,7 +238,9 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		tlsConn := tls.Server(unsecuredConn, serverTlsConfig)
 		defer tlsConn.Close()
 		if err := tlsConn.Handshake(); err != nil {
+			mutex.Lock()
 			numRejectedConnections++
+			mutex.Unlock()
 			log.Println(err)
 			return
 		}
