@@ -2,7 +2,12 @@
 The *filegen-server* daemon serves computed files for the **Dominator** system.
 
 The *[dominator](../dominator/README.md)* queries zero or more *filegen-server*
-instances when it needs to distribute *computed files*.
+instances when it needs to distribute *computed files*. This *filegen-server* is
+a reference implementation and serves some simple computed files. For more
+custom types of computed files, see the documentation for the
+[lib/filegen](https://godoc.org/github.com/Symantec/Dominator/lib/filegen)
+package. This reference implementation may be used as a template for writing
+your own file generator.
 
 ## Status page
 The *filegen-server* provides a web interface on port `6972` which provides a
