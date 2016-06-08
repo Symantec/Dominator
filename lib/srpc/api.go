@@ -32,6 +32,13 @@ var serverTlsConfig *tls.Config
 var clientTlsConfig *tls.Config
 var tlsRequired bool
 
+// CheckTlsRequired returns true if the server requires TLS connections with
+// trusted certificates. It returns false if unencrypted or unauthenticated
+// connections are permitted (i.e. insecure mode).
+func CheckTlsRequired() bool {
+	return tlsRequired
+}
+
 // RegisterName publishes in the server the set of methods of the receiver
 // value that satisfy one of the following interfaces:
 //   func Method(*Conn) error
