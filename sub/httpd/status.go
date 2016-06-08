@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/html"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"net/http"
 )
 
@@ -14,7 +15,7 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<center>")
 	fmt.Fprintln(writer, "<h1>subd status page</h1>")
-	if insecureMode {
+	if !srpc.CheckTlsRequired() {
 		fmt.Fprintln(writer,
 			`<h1><font color="red">Running in insecure mode. You can get pwned!!!</font></h1>`)
 	}
