@@ -12,14 +12,12 @@ type HtmlWriter interface {
 }
 
 var htmlWriters []HtmlWriter
-var insecureMode bool
 
-func StartServer(portNum uint, isInsecure bool) error {
+func StartServer(portNum uint) error {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", portNum))
 	if err != nil {
 		return err
 	}
-	insecureMode = isInsecure
 	http.HandleFunc("/", statusHandler)
 	go http.Serve(listener, nil)
 	return nil

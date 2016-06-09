@@ -26,6 +26,8 @@ var (
 		"Number of lines to store in the log buffer")
 	keyFile = flag.String("keyFile", "/etc/ssl/filegen-server/key.pem",
 		"Name of file containing the SSL key")
+	permitInsecureMode = flag.Bool("permitInsecureMode", false,
+		"If true, run in insecure mode. This gives remote access to all")
 	portNum = flag.Uint("portNum", constants.BasicFileGenServerPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
 )
@@ -46,9 +48,15 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Do not run the filegen server as root")
 		os.Exit(1)
 	}
-	setupTls(*caFile, *certFile, *keyFile)
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
+	if err := setupTls(*caFile, *certFile, *keyFile); err != nil {
+		logger.Println(err)
+		circularBuffer.Flush()
+		if !*permitInsecureMode {
+			os.Exit(1)
+		}
+	}
 	manager := filegen.New(logger)
 	if *configFile != "" {
 		if err := util.LoadConfiguration(manager, *configFile); err != nil {

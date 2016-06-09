@@ -279,9 +279,7 @@ func main() {
 	runtime.GOMAXPROCS(int(*maxThreads))
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
-	insecureMode := false
 	if err := setupTls(*caFile, *certFile, *keyFile); err != nil {
-		insecureMode = true
 		logger.Println(err)
 		circularBuffer.Flush()
 		if !*permitInsecureMode {
@@ -339,7 +337,7 @@ func main() {
 		html.RegisterHtmlWriterForPattern("/dumpFileSystem",
 			"Scanned File System",
 			&DumpableFileSystemHistory{&fsh})
-		if err = httpd.StartServer(*portNum, insecureMode); err != nil {
+		if err = httpd.StartServer(*portNum); err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
 			os.Exit(1)
 		}

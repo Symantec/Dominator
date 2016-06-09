@@ -31,12 +31,14 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
-	logbufLines = flag.Uint("logbufLines", 1024,
-		"Number of lines to store in the log buffer")
 	keyFile = flag.String("keyFile", "/etc/ssl/imageserver/key.pem",
 		"Name of file containing the SSL key")
+	logbufLines = flag.Uint("logbufLines", 1024,
+		"Number of lines to store in the log buffer")
 	objectDir = flag.String("objectDir", "/var/lib/objectserver",
 		"Name of image server data directory.")
+	permitInsecureMode = flag.Bool("permitInsecureMode", false,
+		"If true, run in insecure mode. This gives remote access to all")
 	portNum = flag.Uint("portNum", constants.ImageServerPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
 )
@@ -57,9 +59,15 @@ func main() {
 		fmt.Fprintln(os.Stderr, "-imageServerHostname required in archive mode")
 		os.Exit(1)
 	}
-	setupTls(*caFile, *certFile, *keyFile)
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
+	if err := setupTls(*caFile, *certFile, *keyFile); err != nil {
+		logger.Println(err)
+		circularBuffer.Flush()
+		if !*permitInsecureMode {
+			os.Exit(1)
+		}
+	}
 	objSrv, err := filesystem.NewObjectServer(*objectDir, logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot create ObjectServer\t%s\n", err)

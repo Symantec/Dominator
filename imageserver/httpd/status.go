@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/html"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"net/http"
 )
 
@@ -14,6 +15,10 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<center>")
 	fmt.Fprintln(writer, "<h1>imageserver status page</h1>")
+	if !srpc.CheckTlsRequired() {
+		fmt.Fprintln(writer,
+			`<h1><font color="red">Running in insecure mode. Your images can be pwned!!!</font></h1>`)
+	}
 	fmt.Fprintln(writer, "</center>")
 	html.WriteHeaderWithRequest(writer, req)
 	fmt.Fprintln(writer, "<h3>")

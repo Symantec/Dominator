@@ -3,6 +3,7 @@ package logbuf
 import (
 	"bufio"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/url"
 	"io"
 	"net/http"
 	"os"
@@ -43,8 +44,8 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
-	flags, _ := parseQuery(req.URL.RawQuery)
-	_, recentFirst := flags["recentFirst"]
+	parsedQuery := url.ParseQuery(req.URL)
+	_, recentFirst := parsedQuery.Flags["recentFirst"]
 	names, err := lb.list(recentFirst)
 	if err != nil {
 		fmt.Fprintln(writer, err)
@@ -54,7 +55,7 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 	if recentFirst {
 		recentFirstString = "&recentFirst"
 	}
-	if _, ok := flags["text"]; ok {
+	if _, ok := parsedQuery.Flags["text"]; ok {
 		for _, name := range names {
 			fmt.Fprintln(writer, name)
 		}
@@ -105,17 +106,14 @@ func showRecentLinks(w io.Writer, recentFirstString string) {
 }
 
 func (lb *LogBuffer) httpDumpHandler(w http.ResponseWriter, req *http.Request) {
-	flags, pairs := parseQuery(req.URL.RawQuery)
-	name, ok := pairs["name"]
+	parsedQuery := url.ParseQuery(req.URL)
+	name, ok := parsedQuery.Table["name"]
 	if !ok {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	recentFirst := false
-	if _, ok := flags["recentFirst"]; ok {
-		recentFirst = true
-	}
+	_, recentFirst := parsedQuery.Flags["recentFirst"]
 	if name == "latest" {
 		writer := bufio.NewWriter(w)
 		defer writer.Flush()
@@ -158,9 +156,9 @@ func (lb *LogBuffer) httpDumpHandler(w http.ResponseWriter, req *http.Request) {
 
 func (lb *LogBuffer) httpShowLastHandler(w http.ResponseWriter,
 	req *http.Request) {
-	flags, _ := parseQuery(req.URL.RawQuery)
-	_, recentFirst := flags["recentFirst"]
-	for flag := range flags {
+	parsedQuery := url.ParseQuery(req.URL)
+	_, recentFirst := parsedQuery.Flags["recentFirst"]
+	for flag := range parsedQuery.Flags {
 		length := len(flag)
 		if length < 2 {
 			continue
@@ -264,19 +262,4 @@ func (lb *LogBuffer) writeHtml(writer io.Writer) {
 	fmt.Fprintln(writer, "<pre>")
 	lb.Dump(writer, "", "", false)
 	fmt.Fprintln(writer, "</pre>")
-}
-
-func parseQuery(rawQuery string) (map[string]struct{}, map[string]string) {
-	flags := make(map[string]struct{})
-	table := make(map[string]string)
-	for _, pair := range strings.Split(rawQuery, "&") {
-		splitPair := strings.Split(pair, "=")
-		if len(splitPair) == 1 {
-			flags[splitPair[0]] = struct{}{}
-		}
-		if len(splitPair) == 2 {
-			table[splitPair[0]] = splitPair[1]
-		}
-	}
-	return flags, table
 }
