@@ -6,19 +6,13 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
+	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"os"
-	"path"
 )
 
 var (
-	certFile = flag.String("certFile",
-		path.Join(os.Getenv("HOME"), ".ssl/cert.pem"),
-		"Name of file containing the user SSL certificate")
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
-	keyFile = flag.String("keyFile",
-		path.Join(os.Getenv("HOME"), ".ssl/key.pem"),
-		"Name of file containing the user SSL key")
 	objectServerHostname = flag.String("objectServerHostname", "localhost",
 		"Hostname of image server")
 	objectServerPortNum = flag.Uint("objectServerPortNum",
@@ -61,7 +55,10 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
-	setupTls(*certFile, *keyFile)
+	if err := setupclient.SetupTls(true); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	objectServer := objectclient.NewObjectClient(fmt.Sprintf("%s:%d",
 		*objectServerHostname, *objectServerPortNum))
 	numSubcommandArgs := flag.NArg() - 1
