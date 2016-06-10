@@ -7,25 +7,19 @@ import (
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/mdb/mdbd"
 	"github.com/Symantec/Dominator/lib/objectserver/memory"
+	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"io"
 	"log"
 	"os"
-	"path"
 	"time"
 )
 
 var (
 	benchmark = flag.Bool("benchmark", false,
 		"If true, perform benchmark timing")
-	certFile = flag.String("certFile",
-		path.Join(os.Getenv("HOME"), ".ssl/cert.pem"),
-		"Name of file containing the user SSL certificate")
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
-	keyFile = flag.String("keyFile",
-		path.Join(os.Getenv("HOME"), ".ssl/key.pem"),
-		"Name of file containing the user SSL key")
 	mdbFile = flag.String("mdbFile", "/var/lib/Dominator/mdb",
 		"File to read MDB data from (default format is JSON)")
 
@@ -93,7 +87,10 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
-	setupTls(*certFile, *keyFile)
+	if err := setupclient.SetupTls(true); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	objectServer := memory.NewObjectServer()
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	manager := client.New(objectServer, logger)
