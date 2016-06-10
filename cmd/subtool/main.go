@@ -6,22 +6,16 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"os"
-	"path"
 )
 
 var (
-	certFile = flag.String("certFile",
-		path.Join(os.Getenv("HOME"), ".ssl/cert.pem"),
-		"Name of file containing the user SSL certificate")
 	debug = flag.Bool("debug", false, "Enable debug mode")
 	file  = flag.String("file", "",
 		"Name of file to write encoded data to")
 	interval = flag.Uint("interval", 1,
 		"Seconds to sleep between Polls")
-	keyFile = flag.String("keyFile",
-		path.Join(os.Getenv("HOME"), ".ssl/key.pem"),
-		"Name of file containing the user SSL key")
 	networkSpeedPercent = flag.Uint("networkSpeedPercent", 10,
 		"Network speed as percentage of capacity")
 	newConnection = flag.Bool("newConnection", false,
@@ -83,7 +77,10 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
-	setupTls(*certFile, *keyFile)
+	if err := setupclient.SetupTls(true); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
 	client, err := srpc.DialHTTP("tcp", clientName, 0)
 	if err != nil {
