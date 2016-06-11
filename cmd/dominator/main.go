@@ -27,7 +27,7 @@ const dirPerms = syscall.S_IRWXU
 var (
 	caFile = flag.String("CAfile", "/etc/ssl/CA.pem",
 		"Name of file containing the root of trust")
-	certDir = flag.String("certDir", "/etc/ssl/Dominator",
+	certDir = flag.String("certDir", "/etc/ssl/dominator",
 		"Name of file (relative to certDir) containing the SSL certificate")
 	certFile = flag.String("certFile", "cert.pem",
 		"Name of file (relative to certDir) containing the SSL certificate")
