@@ -26,28 +26,29 @@ func getDirname() string {
 	return path.Base(os.Args[0])
 }
 
-func setupTls() error {
+func setupTls(setupServer bool) error {
 	// Load certificates and key.
-	caData, err := ioutil.ReadFile(*caFile)
-	if err != nil {
-		return fmt.Errorf("unable to load CA file: \"%s\": %s",
-			*caFile, err)
-	}
-	caCertPool := x509.NewCertPool()
-	if !caCertPool.AppendCertsFromPEM(caData) {
-		return fmt.Errorf("unable to parse CA file")
-	}
 	cert, err := tls.LoadX509KeyPair(*certFile, *keyFile)
 	if err != nil {
 		return fmt.Errorf("unable to load keypair: %s", err)
 	}
-	// Setup server.
-	serverConfig := new(tls.Config)
-	serverConfig.ClientAuth = tls.RequireAndVerifyClientCert
-	serverConfig.MinVersion = tls.VersionTLS12
-	serverConfig.ClientCAs = caCertPool
-	serverConfig.Certificates = append(serverConfig.Certificates, cert)
-	srpc.RegisterServerTlsConfig(serverConfig, true)
+	if setupServer {
+		caData, err := ioutil.ReadFile(*caFile)
+		if err != nil {
+			return fmt.Errorf("unable to load CA file: \"%s\": %s",
+				*caFile, err)
+		}
+		caCertPool := x509.NewCertPool()
+		if !caCertPool.AppendCertsFromPEM(caData) {
+			return fmt.Errorf("unable to parse CA file")
+		}
+		serverConfig := new(tls.Config)
+		serverConfig.ClientAuth = tls.RequireAndVerifyClientCert
+		serverConfig.MinVersion = tls.VersionTLS12
+		serverConfig.ClientCAs = caCertPool
+		serverConfig.Certificates = append(serverConfig.Certificates, cert)
+		srpc.RegisterServerTlsConfig(serverConfig, true)
+	}
 	// Setup client.
 	clientConfig := new(tls.Config)
 	clientConfig.InsecureSkipVerify = true
