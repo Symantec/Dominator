@@ -20,7 +20,9 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 	defer t.imageDataBase.UnregisterDeleteNotifier(deleteChannel)
 	defer t.imageDataBase.UnregisterMakeDirectoryNotifier(mkdirChannel)
 	encoder := gob.NewEncoder(conn)
-	for _, directory := range t.imageDataBase.ListDirectories() {
+	directories := t.imageDataBase.ListDirectories()
+	image.SortDirectories(directories)
+	for _, directory := range directories {
 		imageUpdate := imageserver.ImageUpdate{
 			Directory: &directory,
 			Operation: imageserver.OperationMakeDirectory,
