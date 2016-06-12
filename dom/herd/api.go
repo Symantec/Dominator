@@ -87,6 +87,7 @@ type Sub struct {
 	lastComputeUpdateCpuDuration time.Duration
 	lastUpdateTime               time.Time
 	lastSyncTime                 time.Time
+	lastSuccessfulImageName      string
 }
 
 func (sub *Sub) String() string {
