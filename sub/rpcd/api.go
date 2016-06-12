@@ -28,6 +28,7 @@ type rpcType struct {
 	lastFetchError               error
 	lastUpdateError              error
 	lastUpdateHadTriggerFailures bool
+	lastSuccessfulImageName      string
 }
 
 type addObjectsHandlerType struct {
