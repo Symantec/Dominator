@@ -4,6 +4,8 @@ import (
 	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/sub/scanner"
+	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
 	"log"
 	"sync"
 )
@@ -59,5 +61,7 @@ func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 		objectsDir: objectsDirname,
 		logger:     logger}
 	srpc.RegisterName("ObjectServer", addObjectsHandler)
+	tricorder.RegisterMetric("/image-name", &rpcObj.lastSuccessfulImageName,
+		units.None, "name of the image for the last successful update")
 	return rescanObjectCacheChannel
 }
