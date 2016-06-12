@@ -311,9 +311,10 @@ func main() {
 			getCachedNetworkSpeed(netbenchFilename),
 			constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 		configuration.NetworkReaderContext = networkReaderContext
-		rescanObjectCacheChannel := rpcd.Setup(&configuration, &fsh, objectsDir,
-			workingRootDir, networkReaderContext, netbenchFilename,
-			oldTriggersFilename, disableScanner, logger)
+		rescanObjectCacheChannel, rpcdHtmlWriter :=
+			rpcd.Setup(&configuration, &fsh, objectsDir,
+				workingRootDir, networkReaderContext, netbenchFilename,
+				oldTriggersFilename, disableScanner, logger)
 		configMetricsDir, err := tricorder.RegisterDirectory("/config")
 		if err != nil {
 			fmt.Fprintf(os.Stderr,
@@ -326,6 +327,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Unable to create config metrics\t%s\n", err)
 			os.Exit(1)
 		}
+		httpd.AddHtmlWriter(rpcdHtmlWriter)
 		httpd.AddHtmlWriter(&fsh)
 		httpd.AddHtmlWriter(&configuration)
 		httpd.AddHtmlWriter(circularBuffer)

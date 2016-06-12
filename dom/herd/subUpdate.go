@@ -20,7 +20,7 @@ type state struct {
 	subObjectCacheUsage     map[hash.Hash]uint64
 }
 
-// Returns true if no update needs to be performed.
+// Returns (idle, missing), idle=true if no update needs to be performed.
 func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 	bool, bool) {
 	sub.herd.computeSemaphore <- struct{}{}
@@ -28,6 +28,7 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 	var state state
 	state.sub = sub
 	state.subFS = sub.fileSystem
+	request.ImageName = sub.mdb.RequiredImage
 	requiredImage := sub.herd.getImageNoError(sub.mdb.RequiredImage)
 	state.requiredFS = requiredImage.FileSystem
 	filter := requiredImage.Filter
@@ -72,7 +73,8 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 		len(request.HardlinksToMake) > 0 ||
 		len(request.PathsToDelete) > 0 ||
 		len(request.DirectoriesToMake) > 0 ||
-		len(request.InodesToChange) > 0 {
+		len(request.InodesToChange) > 0 ||
+		sub.lastSuccessfulImageName != sub.mdb.RequiredImage {
 		sub.herd.logger.Printf(
 			"buildUpdateRequest(%s) took: %s user CPU time\n",
 			sub, sub.lastComputeUpdateCpuDuration)

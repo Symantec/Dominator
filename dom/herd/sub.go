@@ -213,6 +213,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	sub.lastPollSucceededTime = time.Now()
+	sub.lastSuccessfulImageName = reply.LastSuccessfulImageName
 	if reply.GenerationCount == 0 {
 		sub.reclaim()
 		sub.generationCount = 0

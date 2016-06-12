@@ -128,6 +128,10 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 	timeTaken := time.Since(startTime)
 	if t.lastUpdateError != nil {
 		t.logger.Printf("Update(): last error: %s\n", t.lastUpdateError)
+	} else {
+		t.rwLock.Lock()
+		t.lastSuccessfulImageName = request.ImageName
+		t.rwLock.Unlock()
 	}
 	t.logger.Printf("Update() completed in %s (change window: %s)\n",
 		timeTaken, fsChangeDuration)

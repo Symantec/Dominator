@@ -4,6 +4,9 @@ import (
 	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/sub/scanner"
+	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
+	"io"
 	"log"
 	"sync"
 )
@@ -28,6 +31,7 @@ type rpcType struct {
 	lastFetchError               error
 	lastUpdateError              error
 	lastUpdateHadTriggerFailures bool
+	lastSuccessfulImageName      string
 }
 
 type addObjectsHandlerType struct {
@@ -35,12 +39,16 @@ type addObjectsHandlerType struct {
 	logger     *log.Logger
 }
 
+type HtmlWriter struct {
+	lastSuccessfulImageName *string
+}
+
 func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 	objectsDirname string, rootDirname string,
 	netReaderContext *rateio.ReaderContext,
 	netbenchFname string, oldTriggersFname string,
 	disableScannerFunction func(disableScanner bool),
-	logger *log.Logger) <-chan bool {
+	logger *log.Logger) (<-chan bool, *HtmlWriter) {
 	rescanObjectCacheChannel := make(chan bool)
 	rpcObj := &rpcType{
 		scannerConfiguration:     configuration,
@@ -58,5 +66,12 @@ func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 		objectsDir: objectsDirname,
 		logger:     logger}
 	srpc.RegisterName("ObjectServer", addObjectsHandler)
-	return rescanObjectCacheChannel
+	tricorder.RegisterMetric("/image-name", &rpcObj.lastSuccessfulImageName,
+		units.None, "name of the image for the last successful update")
+	return rescanObjectCacheChannel,
+		&HtmlWriter{&rpcObj.lastSuccessfulImageName}
+}
+
+func (hw *HtmlWriter) WriteHtml(writer io.Writer) {
+	hw.writeHtml(writer)
 }

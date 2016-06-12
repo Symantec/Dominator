@@ -49,6 +49,7 @@ type PollResponse struct {
 	LastFetchError               string
 	LastUpdateError              string
 	LastUpdateHadTriggerFailures bool
+	LastSuccessfulImageName      string
 	StartTime                    time.Time
 	PollTime                     time.Time
 	ScanCount                    uint64
@@ -78,6 +79,7 @@ type Inode struct {
 }
 
 type UpdateRequest struct {
+	ImageName string
 	// The ordering here reflects the ordering that the sub is expected to use.
 	FilesToCopyToCache  []FileToCopyToCache
 	DirectoriesToMake   []Inode

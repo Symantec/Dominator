@@ -30,6 +30,8 @@ var (
 	scanExcludeList  flagutil.StringList = constants.ScanExcludeList
 	scanSpeedPercent                     = flag.Uint("scanSpeedPercent", 2,
 		"Scan speed as percentage of capacity")
+	shortPoll = flag.Bool("shortPoll", false,
+		"If true, perform a short poll which does not request image or object data")
 	subHostname = flag.String("subHostname", "localhost", "Hostname of sub")
 	subPortNum  = flag.Uint("subPortNum", constants.SubPortNumber,
 		"Port number of sub")
