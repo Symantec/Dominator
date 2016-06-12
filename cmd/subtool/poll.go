@@ -26,6 +26,7 @@ func pollSubcommand(srpcClient *srpc.Client, args []string) {
 		}
 		var request sub.PollRequest
 		var reply sub.PollResponse
+		request.ShortPollOnly = *shortPoll
 		pollStartTime := time.Now()
 		err = client.CallPoll(srpcClient, request, &reply)
 		fmt.Printf("Poll duration: %s\n", time.Since(pollStartTime))
@@ -39,7 +40,9 @@ func pollSubcommand(srpcClient *srpc.Client, args []string) {
 		}
 		fs := reply.FileSystem
 		if fs == nil {
-			fmt.Println("No FileSystem pointer")
+			if !*shortPoll {
+				fmt.Println("No FileSystem pointer")
+			}
 		} else {
 			fs.RebuildInodePointers()
 			if *debug {
@@ -59,6 +62,10 @@ func pollSubcommand(srpcClient *srpc.Client, args []string) {
 				encoder.Encode(fs)
 				f.Close()
 			}
+		}
+		if reply.LastSuccessfulImageName != "" {
+			fmt.Printf("Last successful image: \"%s\"\n",
+				reply.LastSuccessfulImageName)
 		}
 	}
 	time.Sleep(time.Duration(*wait) * time.Second)
