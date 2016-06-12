@@ -9,16 +9,13 @@ import (
 	"github.com/Symantec/Dominator/lib/flagutil"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"os"
-	"path"
 )
 
 var (
 	buildLog = flag.String("buildLog", "",
 		"Filename or URL containing build log")
-	certFile = flag.String("certFile",
-		path.Join(os.Getenv("HOME"), ".ssl/cert.pem"),
-		"Name of file containing the user SSL certificate")
 	computedFiles = flag.String("computedFiles", "",
 		"Name of file containing computed files list")
 	debug = flag.Bool("debug", false,
@@ -32,9 +29,6 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
-	keyFile = flag.String("keyFile",
-		path.Join(os.Getenv("HOME"), ".ssl/key.pem"),
-		"Name of file containing the user SSL key")
 	releaseNotes = flag.String("releaseNotes", "",
 		"Filename or URL containing release notes")
 	requiredPaths = flagutil.StringToRuneMap(constants.RequiredPaths)
@@ -172,7 +166,10 @@ func main() {
 			os.Exit(2)
 		}
 	}
-	setupTls(*certFile, *keyFile)
+	if err := setupclient.SetupTls(true); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	numSubcommandArgs := flag.NArg() - 1
 	for _, subcommand := range subcommands {
 		if flag.Arg(0) == subcommand.command {

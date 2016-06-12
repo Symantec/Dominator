@@ -9,6 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/Dominator/lib/objectserver/filesystem"
+	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	objectserverRpcd "github.com/Symantec/Dominator/objectserver/rpcd"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
@@ -19,10 +20,6 @@ import (
 var (
 	archiveMode = flag.Bool("archiveMode", false,
 		"If true, disable delete operations and require update server")
-	caFile = flag.String("CAfile", "/etc/ssl/CA.pem",
-		"Name of file containing the root of trust")
-	certFile = flag.String("certFile", "/etc/ssl/imageserver/cert.pem",
-		"Name of file containing the SSL certificate")
 	debug    = flag.Bool("debug", false, "If true, show debugging output")
 	imageDir = flag.String("imageDir", "/var/lib/imageserver",
 		"Name of image server data directory.")
@@ -31,8 +28,6 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
-	keyFile = flag.String("keyFile", "/etc/ssl/imageserver/key.pem",
-		"Name of file containing the SSL key")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
 	objectDir = flag.String("objectDir", "/var/lib/objectserver",
@@ -61,7 +56,7 @@ func main() {
 	}
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
-	if err := setupTls(*caFile, *certFile, *keyFile); err != nil {
+	if err := setupserver.SetupTls(); err != nil {
 		logger.Println(err)
 		circularBuffer.Flush()
 		if !*permitInsecureMode {

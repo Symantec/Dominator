@@ -9,6 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filegen/util"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/logbuf"
+	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"log"
 	"os"
@@ -16,16 +17,10 @@ import (
 )
 
 var (
-	caFile = flag.String("CAfile", "/etc/ssl/CA.pem",
-		"Name of file containing the root of trust")
-	certFile = flag.String("certFile", "/etc/ssl/filegen-server/cert.pem",
-		"Name of file containing the SSL certificate")
 	configFile = flag.String("configFile", "/var/lib/filegen-server/config",
 		"Name of file containing the configuration")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
-	keyFile = flag.String("keyFile", "/etc/ssl/filegen-server/key.pem",
-		"Name of file containing the SSL key")
 	permitInsecureMode = flag.Bool("permitInsecureMode", false,
 		"If true, run in insecure mode. This gives remote access to all")
 	portNum = flag.Uint("portNum", constants.BasicFileGenServerPortNumber,
@@ -50,7 +45,7 @@ func main() {
 	}
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
-	if err := setupTls(*caFile, *certFile, *keyFile); err != nil {
+	if err := setupserver.SetupTls(); err != nil {
 		logger.Println(err)
 		circularBuffer.Flush()
 		if !*permitInsecureMode {

@@ -12,6 +12,7 @@ import (
 	"github.com/Symantec/Dominator/lib/memstats"
 	"github.com/Symantec/Dominator/lib/netspeed"
 	"github.com/Symantec/Dominator/lib/rateio"
+	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/Dominator/sub/httpd"
 	"github.com/Symantec/Dominator/sub/rpcd"
 	"github.com/Symantec/Dominator/sub/scanner"
@@ -28,12 +29,6 @@ import (
 )
 
 var (
-	caFile = flag.String("CAfile", "/etc/ssl/CA.pem",
-		"Name of file containing the root of trust")
-	certFile = flag.String("certFile", "/etc/ssl/subd/cert.pem",
-		"Name of file containing the SSL certificate")
-	keyFile = flag.String("keyFile", "/etc/ssl/subd/key.pem",
-		"Name of file containing the SSL key")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
 	maxThreads = flag.Uint("maxThreads", 1,
@@ -279,7 +274,7 @@ func main() {
 	runtime.GOMAXPROCS(int(*maxThreads))
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
-	if err := setupTls(*caFile, *certFile, *keyFile); err != nil {
+	if err := setupserver.SetupTls(); err != nil {
 		logger.Println(err)
 		circularBuffer.Flush()
 		if !*permitInsecureMode {

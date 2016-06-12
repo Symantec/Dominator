@@ -10,6 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/mdb/mdbd"
 	objectserver "github.com/Symantec/Dominator/lib/objectserver/filesystem"
+	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/Dominator/lib/wsyscall"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"log"
@@ -25,12 +26,6 @@ import (
 const dirPerms = syscall.S_IRWXU
 
 var (
-	caFile = flag.String("CAfile", "/etc/ssl/CA.pem",
-		"Name of file containing the root of trust")
-	certDir = flag.String("certDir", "/etc/ssl/Dominator",
-		"Name of file (relative to certDir) containing the SSL certificate")
-	certFile = flag.String("certFile", "cert.pem",
-		"Name of file (relative to certDir) containing the SSL certificate")
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
 	fdLimit = flag.Uint64("fdLimit", getFdLimit(),
@@ -40,8 +35,6 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
-	keyFile = flag.String("keyFile", "key.pem",
-		"Name of file (relative to certDir) containing the SSL certificate")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
 	mdbFile = flag.String("mdbFile", "mdb",
@@ -128,8 +121,12 @@ func newObjectServer(objectsDir string, logger *log.Logger) (
 func main() {
 	flag.Parse()
 	tricorder.RegisterFlags()
-	setupTls(*caFile,
-		pathJoin(*certDir, *certFile), pathJoin(*certDir, *keyFile))
+	circularBuffer := logbuf.New(*logbufLines)
+	logger := log.New(circularBuffer, "", log.LstdFlags)
+	if err := setupserver.SetupTlsClientOnly(); err != nil {
+		logger.Println(err)
+		circularBuffer.Flush()
+	}
 	rlim := syscall.Rlimit{*fdLimit, *fdLimit}
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot set FD limit\t%s\n", err)
@@ -151,8 +148,6 @@ func main() {
 		os.Exit(1)
 	}
 	interval := time.Duration(*minInterval) * time.Second
-	circularBuffer := logbuf.New(*logbufLines)
-	logger := log.New(circularBuffer, "", log.LstdFlags)
 	mdbChannel := mdbd.StartMdbDaemon(path.Join(*stateDir, *mdbFile), logger)
 	objectServer, err := newObjectServer(path.Join(*stateDir, *objectsDir),
 		logger)
