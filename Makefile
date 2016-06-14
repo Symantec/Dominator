@@ -13,7 +13,7 @@ subd.tarball:
 	scripts/install.lib \
 	-C sub install \
 	-C $(GOPATH) bin/run-in-mntns bin/subd \
-	-C $(ETCDIR) ssl/CA.pem ssl/subd
+	-C $(ETCDIR) ssl
 
 
 format:
