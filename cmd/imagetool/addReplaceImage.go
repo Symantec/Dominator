@@ -56,6 +56,9 @@ func addReplaceImage(imageSClient *srpc.Client,
 			return err
 		}
 	}
+	if err := spliceComputedFiles(newImage.FileSystem); err != nil {
+		return err
+	}
 	return addImage(imageSClient, name, newImage)
 }
 
