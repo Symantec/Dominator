@@ -39,6 +39,11 @@ func spliceComputedFiles(fs *filesystem.FileSystem) error {
 			return fmt.Errorf("%s: multiple inodes: %d", computedFile.Filename,
 				len(filenames))
 		}
+		if inode, ok :=
+			fs.InodeTable[inum].(*filesystem.ComputedRegularInode); ok {
+			inode.Source = computedFile.Source
+			continue
+		}
 		if oldInode, ok := fs.InodeTable[inum].(*filesystem.RegularInode); !ok {
 			return fmt.Errorf("%s: type: %T is not a regular inode",
 				computedFile.Filename, fs.InodeTable[inum])
