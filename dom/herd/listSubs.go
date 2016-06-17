@@ -3,6 +3,7 @@ package herd
 import (
 	"bufio"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/url"
 	"net/http"
 )
 
@@ -10,7 +11,7 @@ func (herd *Herd) listReachableSubsHandler(w http.ResponseWriter,
 	req *http.Request) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
-	selector, err := herd.getReachableSelector(req.URL.RawQuery)
+	selector, err := herd.getReachableSelector(url.ParseQuery(req.URL))
 	if err != nil {
 		fmt.Fprintln(writer, err)
 		return

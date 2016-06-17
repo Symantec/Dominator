@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/url"
 	"io"
 	"net/http"
 	"strings"
@@ -32,7 +33,7 @@ func (herd *Herd) showDeviantSubsHandler(w http.ResponseWriter,
 
 func (herd *Herd) showReachableSubsHandler(w http.ResponseWriter,
 	req *http.Request) {
-	selector, err := herd.getReachableSelector(req.URL.RawQuery)
+	selector, err := herd.getReachableSelector(url.ParseQuery(req.URL))
 	if err != nil {
 		fmt.Fprintln(w, err)
 		return

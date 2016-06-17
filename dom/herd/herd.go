@@ -5,6 +5,7 @@ import (
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectserver"
+	"github.com/Symantec/Dominator/lib/url"
 	"log"
 	"runtime"
 	"strconv"
@@ -96,7 +97,12 @@ func (herd *Herd) getSelectedSubs(selectFunc func(*Sub) bool) []*Sub {
 	return subs
 }
 
-func (herd *Herd) getReachableSelector(query string) (func(*Sub) bool, error) {
+func (herd *Herd) getReachableSelector(parsedQuery url.ParsedQuery) (
+	func(*Sub) bool, error) {
+	query, ok := parsedQuery.Table["last"]
+	if !ok {
+		return nil, errors.New("bad query")
+	}
 	length := len(query)
 	if length < 2 {
 		return nil, errors.New("bad query")

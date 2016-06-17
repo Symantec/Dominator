@@ -67,9 +67,9 @@ func (herd *Herd) writeReachableSubsLink(writer io.Writer,
 	duration time.Duration, durationString string, query string,
 	moreToCome bool) {
 	numSubs := herd.countSelectedSubs(rDuration(duration).selector)
-	fmt.Fprintf(writer, "<a href=\"showReachableSubs?%s\">%s</a>",
+	fmt.Fprintf(writer, "<a href=\"showReachableSubs?last=%s\">%s</a>",
 		query, durationString)
-	fmt.Fprintf(writer, "(<a href=\"listReachableSubs?%s\">%d</a>)",
+	fmt.Fprintf(writer, "(<a href=\"listReachableSubs?last=%s\">%d</a>)",
 		query, numSubs)
 	if moreToCome {
 		fmt.Fprint(writer, ", ")
