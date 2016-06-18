@@ -3,6 +3,7 @@ package herd
 import (
 	"bufio"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/url"
 	"net/http"
 )
@@ -11,13 +12,26 @@ func (herd *Herd) listReachableSubsHandler(w http.ResponseWriter,
 	req *http.Request) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
-	selector, err := herd.getReachableSelector(url.ParseQuery(req.URL))
+	parsedQuery := url.ParseQuery(req.URL)
+	selector, err := herd.getReachableSelector(parsedQuery)
 	if err != nil {
 		fmt.Fprintln(writer, err)
 		return
 	}
-	for _, sub := range herd.getSelectedSubs(selector) {
-		fmt.Fprintln(writer, sub.mdb.Hostname)
+	subs := herd.getSelectedSubs(selector)
+	switch parsedQuery.OutputType() {
+	case url.OutputTypeText:
+	case url.OutputTypeHtml:
+		for _, sub := range subs {
+			fmt.Fprintln(writer, sub.mdb.Hostname)
+		}
+	case url.OutputTypeJson:
+		subNames := make([]string, 0, len(subs))
+		for _, sub := range subs {
+			subNames = append(subNames, sub.mdb.Hostname)
+		}
+		json.WriteWithIndent(writer, "  ", subNames)
+		fmt.Fprintln(writer)
 	}
 }
 
@@ -25,12 +39,20 @@ func (herd *Herd) listSubsHandler(w http.ResponseWriter, req *http.Request) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
 	herd.RLock()
-	subs := make([]string, 0, len(herd.subsByIndex))
+	subNames := make([]string, 0, len(herd.subsByIndex))
 	for _, sub := range herd.subsByIndex {
-		subs = append(subs, sub.mdb.Hostname)
+		subNames = append(subNames, sub.mdb.Hostname)
 	}
 	herd.RUnlock()
-	for _, name := range subs {
-		fmt.Fprintln(writer, name)
+	parsedQuery := url.ParseQuery(req.URL)
+	switch parsedQuery.OutputType() {
+	case url.OutputTypeText:
+	case url.OutputTypeHtml:
+		for _, name := range subNames {
+			fmt.Fprintln(writer, name)
+		}
+	case url.OutputTypeJson:
+		json.WriteWithIndent(writer, "  ", subNames)
+		fmt.Fprintln(writer)
 	}
 }
