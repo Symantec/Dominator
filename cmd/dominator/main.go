@@ -43,7 +43,7 @@ var (
 		"Minimum interval between loops (in seconds)")
 	objectsDir = flag.String("objectsDir", "objects",
 		"Directory containing computed objects, relative to stateDir")
-	portNum = flag.Uint("portNum", constants.DomPortNumber,
+	portNum = flag.Uint("portNum", constants.DominatorPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
 	stateDir = flag.String("stateDir", "/var/lib/Dominator",
 		"Name of dominator state directory.")
