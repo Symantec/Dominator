@@ -16,7 +16,8 @@ var (
 		"Name of file to write encoded data to")
 	interval = flag.Uint("interval", 1,
 		"Seconds to sleep between Polls")
-	networkSpeedPercent = flag.Uint("networkSpeedPercent", 10,
+	networkSpeedPercent = flag.Uint("networkSpeedPercent",
+		constants.DefaultNetworkSpeedPercent,
 		"Network speed as percentage of capacity")
 	newConnection = flag.Bool("newConnection", false,
 		"If true, (re)open a connection for each Poll")
@@ -28,7 +29,8 @@ var (
 		constants.ImageServerPortNumber,
 		"Port number of image server")
 	scanExcludeList  flagutil.StringList = constants.ScanExcludeList
-	scanSpeedPercent                     = flag.Uint("scanSpeedPercent", 2,
+	scanSpeedPercent                     = flag.Uint("scanSpeedPercent",
+		constants.DefaultScanSpeedPercent,
 		"Scan speed as percentage of capacity")
 	shortPoll = flag.Bool("shortPoll", false,
 		"If true, perform a short poll which does not request image or object data")
