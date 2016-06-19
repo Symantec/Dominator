@@ -53,7 +53,18 @@ Since *dominator* does not need root privileges, the init script runs
 *dominator* as this user.
 
 ## Security
+RPC access is restricted using TLS client authentication. *Dominator* expects a
+root certificate in the file `/etc/ssl/CA.pem` which it trusts to sign
+certificates which grant access.
+
 *Dominator* will require signed SSL certificates in order to communicate with
 *[subd](../subd/README.md)* and the *[imageserver](../imageserver/README.md)*.
 The certificate and key should be in the files
 `/etc/ssl/dominator/cert.pem` and `/etc/ssl/dominator/key.pem`, respectively.
+
+If any of these files are missing, *dominator* will refuse to start. This
+prevents accidental deployments without access control.
+
+## Control
+The *[domtool](../domtool/README.md)* utility may be used to manipulate various
+operating parameters of a running *dominator* and perform RPC requests.
