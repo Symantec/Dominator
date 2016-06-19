@@ -2,10 +2,12 @@ package herd
 
 import (
 	"errors"
+	"github.com/Symantec/Dominator/lib/constants"
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/url"
+	subproto "github.com/Symantec/Dominator/proto/sub"
 	"log"
 	"runtime"
 	"strconv"
@@ -20,6 +22,12 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	herd.objectServer = objectServer
 	herd.computedFilesManager = filegenclient.New(objectServer, logger)
 	herd.logger = logger
+	herd.configurationForSubs.ScanSpeedPercent =
+		constants.DefaultScanSpeedPercent
+	herd.configurationForSubs.NetworkSpeedPercent =
+		constants.DefaultNetworkSpeedPercent
+	herd.configurationForSubs.ScanExclusionList =
+		constants.ScanExcludeList
 	herd.subsByName = make(map[string]*Sub)
 	herd.imagesByName = make(map[string]*image.Image)
 	herd.missingImages = make(map[string]missingImage)
@@ -42,6 +50,13 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	herd.computeSemaphore = make(chan struct{}, runtime.NumCPU())
 	herd.currentScanStartTime = time.Now()
 	return &herd
+}
+
+func (herd *Herd) configureSubs(configuration subproto.Configuration) error {
+	herd.Lock()
+	defer herd.Unlock()
+	herd.configurationForSubs = configuration
+	return nil
 }
 
 func (herd *Herd) disableUpdates(username, reason string) error {

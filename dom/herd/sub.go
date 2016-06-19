@@ -247,6 +247,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	}
 	sub.startTime = reply.StartTime
 	sub.pollTime = reply.PollTime
+	sub.updateConfiguration(srpcClient, reply.CurrentConfiguration)
 	if reply.FetchInProgress {
 		sub.status = statusFetching
 		return
@@ -344,6 +345,40 @@ func (sub *Sub) reclaim() {
 	sub.fileSystem = nil  // Mark memory for reclaim.
 	sub.objectCache = nil // Mark memory for reclaim.
 	runtime.GC()          // Reclaim now.
+}
+
+func (sub *Sub) updateConfiguration(srpcClient *srpc.Client,
+	oldConf subproto.Configuration) {
+	sub.herd.RLock()
+	newConf := sub.herd.configurationForSubs
+	sub.herd.RUnlock()
+	if compareConfigs(oldConf, newConf) {
+		return
+	}
+	if err := client.SetConfiguration(srpcClient, newConf); err != nil {
+		logger := sub.herd.logger
+		logger.Printf("Error setting configuration for sub: %s: %s\n",
+			sub, err)
+		return
+	}
+}
+
+func compareConfigs(oldConf, newConf subproto.Configuration) bool {
+	if newConf.ScanSpeedPercent != oldConf.ScanSpeedPercent {
+		return false
+	}
+	if newConf.NetworkSpeedPercent != oldConf.NetworkSpeedPercent {
+		return false
+	}
+	if len(newConf.ScanExclusionList) != len(oldConf.ScanExclusionList) {
+		return false
+	}
+	for index, newString := range newConf.ScanExclusionList {
+		if newString != oldConf.ScanExclusionList[index] {
+			return false
+		}
+	}
+	return true
 }
 
 // Returns true if all required objects are available.

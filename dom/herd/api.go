@@ -7,7 +7,8 @@ import (
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectserver"
-	proto "github.com/Symantec/Dominator/proto/filegenerator"
+	filegenproto "github.com/Symantec/Dominator/proto/filegenerator"
+	subproto "github.com/Symantec/Dominator/proto/sub"
 	"io"
 	"log"
 	"sync"
@@ -62,7 +63,7 @@ type Sub struct {
 	herd                         *Herd
 	mdb                          mdb.Machine
 	computedInodes               map[string]*filesystem.RegularInode
-	fileUpdateChannel            <-chan []proto.FileInfo
+	fileUpdateChannel            <-chan []filegenproto.FileInfo
 	busyMutex                    sync.Mutex
 	busy                         bool
 	busyStartTime                time.Time
@@ -106,10 +107,11 @@ type Herd struct {
 	objectServer          objectserver.ObjectServer
 	computedFilesManager  *filegenclient.Manager
 	logger                *log.Logger
+	htmlWriters           []HtmlWriter
 	updatesDisabledReason string
 	updatesDisabledBy     string
 	updatesDisabledTime   time.Time
-	htmlWriters           []HtmlWriter
+	configurationForSubs  subproto.Configuration
 	nextSubToPoll         uint
 	subsByName            map[string]*Sub
 	subsByIndex           []*Sub // Sorted by Sub.hostname.
@@ -126,6 +128,10 @@ type Herd struct {
 func NewHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	logger *log.Logger) *Herd {
 	return newHerd(imageServerAddress, objectServer, logger)
+}
+
+func (herd *Herd) ConfigureSubs(configuration subproto.Configuration) error {
+	return herd.configureSubs(configuration)
 }
 
 func (herd *Herd) DisableUpdates(username, reason string) error {
