@@ -53,6 +53,11 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
                           </style>`)
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<h3>")
+	if herd.updatesDisabledReason != "" {
+		fmt.Fprintf(writer, "<center>")
+		herd.writeDisableStatus(writer)
+		fmt.Fprintln(writer, "</center>")
+	}
 	fmt.Fprintln(writer, `<table border="1" style="width:100%">`)
 	fmt.Fprintln(writer, "  <tr>")
 	fmt.Fprintln(writer, "    <th>Name</th>")

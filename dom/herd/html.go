@@ -17,6 +17,10 @@ func (d rDuration) selector(sub *Sub) bool {
 }
 
 func (herd *Herd) writeHtml(writer io.Writer) {
+	if herd.updatesDisabledReason != "" {
+		herd.writeDisableStatus(writer)
+		fmt.Fprintln(writer, "<br>")
+	}
 	numSubs := herd.countSelectedSubs(nil)
 	fmt.Fprintf(writer, "Time since current cycle start: %s<br>\n",
 		time.Since(herd.currentScanStartTime))
@@ -61,6 +65,19 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 		len(herd.connectionSemaphore), cap(herd.connectionSemaphore))
 	fmt.Fprintf(writer, "Poll slots: %d out of %d<br>\n",
 		len(herd.pollSemaphore), cap(herd.pollSemaphore))
+}
+
+func (herd *Herd) writeDisableStatus(writer io.Writer) {
+	timeString := herd.updatesDisabledTime.Format("02 Jan 2006 15:04:05.99 MST")
+	if herd.updatesDisabledBy == "" {
+		fmt.Fprintf(writer,
+			"<font color=\"red\">Updates disabled because: %s</font> at %s\n",
+			herd.updatesDisabledReason, timeString)
+	} else {
+		fmt.Fprintf(writer,
+			"<font color=\"red\">Updates disabled by: %s because: %s</font> at %s",
+			herd.updatesDisabledBy, herd.updatesDisabledReason, timeString)
+	}
 }
 
 func (herd *Herd) writeReachableSubsLink(writer io.Writer,

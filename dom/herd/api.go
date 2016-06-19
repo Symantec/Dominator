@@ -46,6 +46,7 @@ const (
 	statusComputingUpdate
 	statusSendingUpdate
 	statusMissingComputedFile
+	statusUpdatesDisabled
 	statusUpdating
 	statusUpdateDenied
 	statusFailedToUpdate
@@ -100,28 +101,43 @@ type missingImage struct {
 }
 
 type Herd struct {
-	sync.RWMutex         // Protect map and slice mutations.
-	imageServerAddress   string
-	objectServer         objectserver.ObjectServer
-	computedFilesManager *filegenclient.Manager
-	logger               *log.Logger
-	htmlWriters          []HtmlWriter
-	nextSubToPoll        uint
-	subsByName           map[string]*Sub
-	subsByIndex          []*Sub // Sorted by Sub.hostname.
-	imagesByName         map[string]*image.Image
-	missingImages        map[string]missingImage
-	connectionSemaphore  chan struct{}
-	pollSemaphore        chan struct{}
-	pushSemaphore        chan struct{}
-	computeSemaphore     chan struct{}
-	currentScanStartTime time.Time
-	previousScanDuration time.Duration
+	sync.RWMutex          // Protect map and slice mutations.
+	imageServerAddress    string
+	objectServer          objectserver.ObjectServer
+	computedFilesManager  *filegenclient.Manager
+	logger                *log.Logger
+	updatesDisabledReason string
+	updatesDisabledBy     string
+	updatesDisabledTime   time.Time
+	htmlWriters           []HtmlWriter
+	nextSubToPoll         uint
+	subsByName            map[string]*Sub
+	subsByIndex           []*Sub // Sorted by Sub.hostname.
+	imagesByName          map[string]*image.Image
+	missingImages         map[string]missingImage
+	connectionSemaphore   chan struct{}
+	pollSemaphore         chan struct{}
+	pushSemaphore         chan struct{}
+	computeSemaphore      chan struct{}
+	currentScanStartTime  time.Time
+	previousScanDuration  time.Duration
 }
 
 func NewHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	logger *log.Logger) *Herd {
 	return newHerd(imageServerAddress, objectServer, logger)
+}
+
+func (herd *Herd) DisableUpdates(username, reason string) error {
+	return herd.disableUpdates(username, reason)
+}
+
+func (herd *Herd) EnableUpdates() error {
+	return herd.enableUpdates()
+}
+
+func (herd *Herd) AddHtmlWriter(htmlWriter HtmlWriter) {
+	herd.addHtmlWriter(htmlWriter)
 }
 
 func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {
@@ -134,8 +150,4 @@ func (herd *Herd) PollNextSub() bool {
 
 func (herd *Herd) StartServer(portNum uint, daemon bool) error {
 	return herd.startServer(portNum, daemon)
-}
-
-func (herd *Herd) AddHtmlWriter(htmlWriter HtmlWriter) {
-	herd.addHtmlWriter(htmlWriter)
 }

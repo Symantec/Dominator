@@ -44,6 +44,21 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	return &herd
 }
 
+func (herd *Herd) disableUpdates(username, reason string) error {
+	if reason == "" {
+		return errors.New("error disabling updates: no reason given")
+	}
+	herd.updatesDisabledBy = username
+	herd.updatesDisabledReason = reason
+	herd.updatesDisabledTime = time.Now()
+	return nil
+}
+
+func (herd *Herd) enableUpdates() error {
+	herd.updatesDisabledReason = ""
+	return nil
+}
+
 func (herd *Herd) pollNextSub() bool {
 	if herd.nextSubToPoll >= uint(len(herd.subsByIndex)) {
 		herd.nextSubToPoll = 0

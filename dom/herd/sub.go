@@ -191,6 +191,12 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.computedFilesChangeTime.After(sub.lastSyncTime) {
 		sub.generationCount = 0 // Force a full poll.
 	}
+	// If the last update was disabled and updates are enabled now, force a full
+	// poll.
+	if previousStatus == statusUpdatesDisabled &&
+		sub.herd.updatesDisabledReason == "" {
+		sub.generationCount = 0 // Force a full poll.
+	}
 	var request subproto.PollRequest
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
@@ -303,6 +309,11 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	if idle, status := sub.fetchMissingObjects(srpcClient,
 		sub.mdb.RequiredImage, true); !idle {
 		sub.status = status
+		sub.reclaim()
+		return
+	}
+	if sub.herd.updatesDisabledReason != "" {
+		sub.status = statusUpdatesDisabled
 		sub.reclaim()
 		return
 	}
