@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/url"
 	"io"
 	"net/http"
 	"strings"
@@ -32,7 +33,7 @@ func (herd *Herd) showDeviantSubsHandler(w http.ResponseWriter,
 
 func (herd *Herd) showReachableSubsHandler(w http.ResponseWriter,
 	req *http.Request) {
-	selector, err := herd.getReachableSelector(req.URL.RawQuery)
+	selector, err := herd.getReachableSelector(url.ParseQuery(req.URL))
 	if err != nil {
 		fmt.Fprintln(w, err)
 		return
@@ -52,6 +53,11 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
                           </style>`)
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<h3>")
+	if herd.updatesDisabledReason != "" {
+		fmt.Fprintf(writer, "<center>")
+		herd.writeDisableStatus(writer)
+		fmt.Fprintln(writer, "</center>")
+	}
 	fmt.Fprintln(writer, `<table border="1" style="width:100%">`)
 	fmt.Fprintln(writer, "  <tr>")
 	fmt.Fprintln(writer, "    <th>Name</th>")

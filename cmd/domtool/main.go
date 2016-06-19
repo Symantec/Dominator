@@ -11,33 +11,17 @@ import (
 )
 
 var (
-	debug = flag.Bool("debug", false, "Enable debug mode")
-	file  = flag.String("file", "",
-		"Name of file to write encoded data to")
-	interval = flag.Uint("interval", 1,
-		"Seconds to sleep between Polls")
 	networkSpeedPercent = flag.Uint("networkSpeedPercent",
 		constants.DefaultNetworkSpeedPercent,
 		"Network speed as percentage of capacity")
-	newConnection = flag.Bool("newConnection", false,
-		"If true, (re)open a connection for each Poll")
-	numPolls = flag.Int("numPolls", 1,
-		"The number of polls to run (infinite: < 0)")
-	objectServerHostname = flag.String("objectServerHostname", "localhost",
-		"Hostname of image server")
-	objectServerPortNum = flag.Uint("objectServerPortNum",
-		constants.ImageServerPortNumber,
-		"Port number of image server")
 	scanExcludeList  flagutil.StringList = constants.ScanExcludeList
 	scanSpeedPercent                     = flag.Uint("scanSpeedPercent",
 		constants.DefaultScanSpeedPercent,
 		"Scan speed as percentage of capacity")
-	shortPoll = flag.Bool("shortPoll", false,
-		"If true, perform a short poll which does not request image or object data")
-	subHostname = flag.String("subHostname", "localhost", "Hostname of sub")
-	subPortNum  = flag.Uint("subPortNum", constants.SubPortNumber,
-		"Port number of sub")
-	wait = flag.Uint("wait", 0, "Seconds to sleep after last Poll")
+	domHostname = flag.String("domHostname", "localhost",
+		"Hostname of dominator")
+	domPortNum = flag.Uint("domPortNum", constants.DominatorPortNumber,
+		"Port number of dominator")
 )
 
 func init() {
@@ -47,15 +31,13 @@ func init() {
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr,
-		"Usage: subtool [flags...] fetch|get-config|poll|set-config")
+		"Usage: domtool [flags...] disable-updates|enable-updates|configure-subs")
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  fetch hashesFile")
-	fmt.Fprintln(os.Stderr, "  get-config")
-	fmt.Fprintln(os.Stderr, "  get-file remoteFile localFile")
-	fmt.Fprintln(os.Stderr, "  poll")
-	fmt.Fprintln(os.Stderr, "  set-config")
+	fmt.Fprintln(os.Stderr, "  disable-updates reason")
+	fmt.Fprintln(os.Stderr, "  enable-updates reason")
+	fmt.Fprintln(os.Stderr, "  configure-subs")
 }
 
 type commandFunc func(*srpc.Client, []string)
@@ -67,11 +49,9 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
-	{"fetch", 1, fetchSubcommand},
-	{"get-config", 0, getConfigSubcommand},
-	{"get-file", 2, getFileSubcommand},
-	{"poll", 0, pollSubcommand},
-	{"set-config", 0, setConfigSubcommand},
+	{"disable-updates", 1, disableUpdatesSubcommand},
+	{"enable-updates", 1, enableUpdatesSubcommand},
+	{"configure-subs", 0, configureSubsSubcommand},
 }
 
 func main() {
@@ -85,7 +65,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
+	clientName := fmt.Sprintf("%s:%d", *domHostname, *domPortNum)
 	client, err := srpc.DialHTTP("tcp", clientName, 0)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)

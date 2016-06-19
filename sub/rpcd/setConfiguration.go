@@ -18,5 +18,6 @@ func (t *rpcType) SetConfiguration(conn *srpc.Conn,
 		return err
 	}
 	t.scannerConfiguration.ScanFilter = newFilter
+	t.logger.Printf("SetConfiguration()\n")
 	return nil
 }

@@ -55,7 +55,7 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 	if recentFirst {
 		recentFirstString = "&recentFirst"
 	}
-	if _, ok := parsedQuery.Flags["text"]; ok {
+	if parsedQuery.OutputType() == url.OutputTypeText {
 		for _, name := range names {
 			fmt.Fprintln(writer, name)
 		}

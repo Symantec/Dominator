@@ -7,7 +7,8 @@ import (
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectserver"
-	proto "github.com/Symantec/Dominator/proto/filegenerator"
+	filegenproto "github.com/Symantec/Dominator/proto/filegenerator"
+	subproto "github.com/Symantec/Dominator/proto/sub"
 	"io"
 	"log"
 	"sync"
@@ -46,6 +47,7 @@ const (
 	statusComputingUpdate
 	statusSendingUpdate
 	statusMissingComputedFile
+	statusUpdatesDisabled
 	statusUpdating
 	statusUpdateDenied
 	statusFailedToUpdate
@@ -61,7 +63,7 @@ type Sub struct {
 	herd                         *Herd
 	mdb                          mdb.Machine
 	computedInodes               map[string]*filesystem.RegularInode
-	fileUpdateChannel            <-chan []proto.FileInfo
+	fileUpdateChannel            <-chan []filegenproto.FileInfo
 	busyMutex                    sync.Mutex
 	busy                         bool
 	busyStartTime                time.Time
@@ -100,28 +102,48 @@ type missingImage struct {
 }
 
 type Herd struct {
-	sync.RWMutex         // Protect map and slice mutations.
-	imageServerAddress   string
-	objectServer         objectserver.ObjectServer
-	computedFilesManager *filegenclient.Manager
-	logger               *log.Logger
-	htmlWriters          []HtmlWriter
-	nextSubToPoll        uint
-	subsByName           map[string]*Sub
-	subsByIndex          []*Sub // Sorted by Sub.hostname.
-	imagesByName         map[string]*image.Image
-	missingImages        map[string]missingImage
-	connectionSemaphore  chan struct{}
-	pollSemaphore        chan struct{}
-	pushSemaphore        chan struct{}
-	computeSemaphore     chan struct{}
-	currentScanStartTime time.Time
-	previousScanDuration time.Duration
+	sync.RWMutex          // Protect map and slice mutations.
+	imageServerAddress    string
+	objectServer          objectserver.ObjectServer
+	computedFilesManager  *filegenclient.Manager
+	logger                *log.Logger
+	htmlWriters           []HtmlWriter
+	updatesDisabledReason string
+	updatesDisabledBy     string
+	updatesDisabledTime   time.Time
+	configurationForSubs  subproto.Configuration
+	nextSubToPoll         uint
+	subsByName            map[string]*Sub
+	subsByIndex           []*Sub // Sorted by Sub.hostname.
+	imagesByName          map[string]*image.Image
+	missingImages         map[string]missingImage
+	connectionSemaphore   chan struct{}
+	pollSemaphore         chan struct{}
+	pushSemaphore         chan struct{}
+	computeSemaphore      chan struct{}
+	currentScanStartTime  time.Time
+	previousScanDuration  time.Duration
 }
 
 func NewHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	logger *log.Logger) *Herd {
 	return newHerd(imageServerAddress, objectServer, logger)
+}
+
+func (herd *Herd) ConfigureSubs(configuration subproto.Configuration) error {
+	return herd.configureSubs(configuration)
+}
+
+func (herd *Herd) DisableUpdates(username, reason string) error {
+	return herd.disableUpdates(username, reason)
+}
+
+func (herd *Herd) EnableUpdates() error {
+	return herd.enableUpdates()
+}
+
+func (herd *Herd) AddHtmlWriter(htmlWriter HtmlWriter) {
+	herd.addHtmlWriter(htmlWriter)
 }
 
 func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {
@@ -134,8 +156,4 @@ func (herd *Herd) PollNextSub() bool {
 
 func (herd *Herd) StartServer(portNum uint, daemon bool) error {
 	return herd.startServer(portNum, daemon)
-}
-
-func (herd *Herd) AddHtmlWriter(htmlWriter HtmlWriter) {
-	herd.addHtmlWriter(htmlWriter)
 }
