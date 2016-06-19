@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/dom/herd"
+	"github.com/Symantec/Dominator/dom/rpcd"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/Dominator/lib/mdb"
@@ -43,6 +44,8 @@ var (
 		"Minimum interval between loops (in seconds)")
 	objectsDir = flag.String("objectsDir", "objects",
 		"Directory containing computed objects, relative to stateDir")
+	permitInsecureMode = flag.Bool("permitInsecureMode", false,
+		"If true, run in insecure mode. This gives remote access to all")
 	portNum = flag.Uint("portNum", constants.DominatorPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
 	stateDir = flag.String("stateDir", "/var/lib/Dominator",
@@ -123,9 +126,12 @@ func main() {
 	tricorder.RegisterFlags()
 	circularBuffer := logbuf.New(*logbufLines)
 	logger := log.New(circularBuffer, "", log.LstdFlags)
-	if err := setupserver.SetupTlsClientOnly(); err != nil {
+	if err := setupserver.SetupTls(); err != nil {
 		logger.Println(err)
 		circularBuffer.Flush()
+		if !*permitInsecureMode {
+			os.Exit(1)
+		}
 	}
 	rlim := syscall.Rlimit{*fdLimit, *fdLimit}
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
@@ -158,6 +164,7 @@ func main() {
 	herd := herd.NewHerd(fmt.Sprintf("%s:%d", *imageServerHostname,
 		*imageServerPortNum), objectServer, logger)
 	herd.AddHtmlWriter(circularBuffer)
+	rpcd.Setup(herd, logger)
 	if err = herd.StartServer(*portNum, true); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
 		os.Exit(1)
