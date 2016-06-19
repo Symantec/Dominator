@@ -7,6 +7,7 @@ const (
 	BasicFileGenServerPortNumber = 6972
 
 	DefaultNetworkSpeedPercent = 10
+	DefaultScanSpeedPercent    = 2
 
 	AssignedOIDBase        = "1.3.6.1.4.1.9586.100.7"
 	PermittedMethodListOID = AssignedOIDBase + ".1"
