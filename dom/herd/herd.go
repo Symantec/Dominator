@@ -10,7 +10,6 @@ import (
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"log"
 	"runtime"
-	"strconv"
 	"syscall"
 	"time"
 )
@@ -129,33 +128,9 @@ func (herd *Herd) getSelectedSubs(selectFunc func(*Sub) bool) []*Sub {
 
 func (herd *Herd) getReachableSelector(parsedQuery url.ParsedQuery) (
 	func(*Sub) bool, error) {
-	query, ok := parsedQuery.Table["last"]
-	if !ok {
-		return nil, errors.New("bad query")
-	}
-	length := len(query)
-	if length < 2 {
-		return nil, errors.New("bad query")
-	}
-	var unit rDuration
-	unitString := query[length-1]
-	query = query[:length-1]
-	switch unitString {
-	case 's':
-		unit = rDuration(time.Second)
-	case 'm':
-		unit = rDuration(time.Minute)
-	case 'h':
-		unit = rDuration(time.Hour)
-	case 'd':
-		unit = rDuration(time.Hour * 24)
-	default:
-		return nil, errors.New("unknown unit in query")
-	}
-	if val, err := strconv.ParseUint(query, 10, 64); err != nil {
+	duration, err := parsedQuery.Last()
+	if err != nil {
 		return nil, err
-	} else {
-		duration := rDuration(val) * unit
-		return duration.selector, nil
 	}
+	return rDuration(duration).selector, nil
 }

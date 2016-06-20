@@ -45,7 +45,8 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 	herd.writeReachableSubsLink(writer, time.Minute, "1 min", "1m", true)
 	herd.writeReachableSubsLink(writer, time.Minute*10, "10 min", "10m", true)
 	herd.writeReachableSubsLink(writer, time.Hour, "1 hour", "1h", true)
-	herd.writeReachableSubsLink(writer, time.Hour*24, "1 day", "1d", false)
+	herd.writeReachableSubsLink(writer, time.Hour*24, "1 day", "1d", true)
+	herd.writeReachableSubsLink(writer, time.Hour*24*7, "1 week", "1w", false)
 	numSubs = herd.countSelectedSubs(selectDeviantSub)
 	fmt.Fprintf(writer,
 		"Number of deviant subs: <a href=\"showDeviantSubs\">%d</a><br>\n",
