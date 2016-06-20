@@ -59,6 +59,6 @@ To enable automated updates, issue the following command:
 
 ```domtool -domHostname=mydom.zone enable-updates "my restart reason"```
 
-This will restart automated updated updates. The reason for the restart
-(typically an explanation of why the emergency stop is no longer needed) along
-with the username of the person issuing the restart is logged.
+This will restart automated updates. The reason for the restart (typically an
+explanation of why the emergency stop is no longer needed) along with the
+username of the person issuing the restart is logged.
