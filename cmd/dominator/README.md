@@ -67,4 +67,23 @@ prevents accidental deployments without access control.
 
 ## Control
 The *[domtool](../domtool/README.md)* utility may be used to manipulate various
-operating parameters of a running *dominator* and perform RPC requests.
+operating parameters of a running *dominator* and perform RPC requests. The most
+important controls are described below for convenience.
+
+### Emergency Stop
+To disable automated updates, issue the following command:
+
+```domtool -domHostname=mydom.zone disable-updates "my stop reason"```
+
+This will prevent the *dominator* running on the host `mydom.zone` from
+performing automated updates. The reason for the emergency stop along with the
+username of the person issuing the stop is logged.
+
+### Restart
+To enable automated updates, issue the following command:
+
+```domtool -domHostname=mydom.zone enable-updates "my restart reason"```
+
+This will restart automated updates. The reason for the restart (typically an
+explanation of why the emergency stop is no longer needed) along with the
+username of the person issuing the restart is logged.

@@ -25,10 +25,15 @@ domtool -h
 
 Some of the sub-commands available are:
 
-- **disable-updates**: tell *dominator* to not perform automatic updates of *subs*
-- **enable-updates**: tell *dominator* to perform automatic updates of *subs*
-- **configure-subs**: set the current configuration of all *subs* (such as rate limits
-                  for scanning the file-system and **fetching** objects)
+- **configure-subs**: set the current configuration of all *subs* (such as rate
+                      limits for scanning the file-system and **fetching**
+                      objects)
+- **disable-updates** *reason*: tell *dominator* to not perform automatic
+                                updates of *subs*. The given *reason* must be
+                                provided and is logged
+- **enable-updates** *reason*: tell *dominator* to perform automatic updates of
+                               *subs*. The given *reason* must be provided and
+                               is logged
 
 ## Security
 *[Dominator](../dominator/README.md)* restricts RPC access using TLS client
@@ -36,3 +41,24 @@ authentication. *Domtool* expects a valid certificate and key in the files
 `~/.ssl/cert.pem` and `~/.ssl/key.pem`, respectively. *Domtool* will present
 this certificate to *dominator*. If the certificate is signed by a certificate
 authority that *dominator* trusts, *dominator* will grant access.
+
+## Critical Sub-Commands
+The most important sub-commands are described below for convenience.
+
+### Emergency Stop
+To disable automated updates, issue the following command:
+
+```domtool -domHostname=mydom.zone disable-updates "my stop reason"```
+
+This will prevent the *[dominator](../dominator/README.md)* running on the host
+`mydom.zone` from performing automated updates. The reason for the emergency
+stop along with the username of the person issuing the stop is logged.
+
+### Restart
+To enable automated updates, issue the following command:
+
+```domtool -domHostname=mydom.zone enable-updates "my restart reason"```
+
+This will restart automated updates. The reason for the restart (typically an
+explanation of why the emergency stop is no longer needed) along with the
+username of the person issuing the restart is logged.
