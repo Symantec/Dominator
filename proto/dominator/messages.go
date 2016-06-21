@@ -4,6 +4,10 @@ import (
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
+type ConfigureSubsRequest sub.Configuration
+
+type ConfigureSubsResponse struct{}
+
 type DisableUpdatesRequest struct {
 	Reason string
 }
@@ -16,6 +20,6 @@ type EnableUpdatesRequest struct {
 
 type EnableUpdatesResponse struct{}
 
-type ConfigureSubsRequest sub.Configuration
+type GetSubsConfigurationRequest struct{}
 
-type ConfigureSubsResponse struct{}
+type GetSubsConfigurationResponse sub.Configuration

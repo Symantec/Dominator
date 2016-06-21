@@ -34,6 +34,8 @@ Some of the sub-commands available are:
 - **enable-updates** *reason*: tell *dominator* to perform automatic updates of
                                *subs*. The given *reason* must be provided and
                                is logged
+- **get-subs-configuration**: get the current configuration that is pushed to
+                              all *subs*
 
 ## Security
 *[Dominator](../dominator/README.md)* restricts RPC access using TLS client

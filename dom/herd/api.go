@@ -130,6 +130,10 @@ func NewHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	return newHerd(imageServerAddress, objectServer, logger)
 }
 
+func (herd *Herd) AddHtmlWriter(htmlWriter HtmlWriter) {
+	herd.addHtmlWriter(htmlWriter)
+}
+
 func (herd *Herd) ConfigureSubs(configuration subproto.Configuration) error {
 	return herd.configureSubs(configuration)
 }
@@ -142,8 +146,8 @@ func (herd *Herd) EnableUpdates() error {
 	return herd.enableUpdates()
 }
 
-func (herd *Herd) AddHtmlWriter(htmlWriter HtmlWriter) {
-	herd.addHtmlWriter(htmlWriter)
+func (herd *Herd) GetSubsConfiguration() subproto.Configuration {
+	return herd.getSubsConfiguration()
 }
 
 func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {
