@@ -31,13 +31,14 @@ func init() {
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr,
-		"Usage: domtool [flags...] disable-updates|enable-updates|configure-subs")
+		"Usage: domtool [flags...] command")
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
+	fmt.Fprintln(os.Stderr, "  configure-subs")
 	fmt.Fprintln(os.Stderr, "  disable-updates reason")
 	fmt.Fprintln(os.Stderr, "  enable-updates reason")
-	fmt.Fprintln(os.Stderr, "  configure-subs")
+	fmt.Fprintln(os.Stderr, "  get-subs-configuration")
 }
 
 type commandFunc func(*srpc.Client, []string)
@@ -49,9 +50,10 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
+	{"configure-subs", 0, configureSubsSubcommand},
 	{"disable-updates", 1, disableUpdatesSubcommand},
 	{"enable-updates", 1, enableUpdatesSubcommand},
-	{"configure-subs", 0, configureSubsSubcommand},
+	{"get-subs-configuration", 0, getSubsConfigurationSubcommand},
 }
 
 func main() {
