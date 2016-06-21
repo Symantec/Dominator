@@ -2,6 +2,7 @@ package url
 
 import (
 	"net/url"
+	"time"
 )
 
 const (
@@ -17,6 +18,10 @@ type ParsedQuery struct {
 
 func ParseQuery(URL *url.URL) ParsedQuery {
 	return parseQuery(URL)
+}
+
+func (pq ParsedQuery) Last() (time.Duration, error) {
+	return pq.last()
 }
 
 func (pq ParsedQuery) OutputType() uint {
