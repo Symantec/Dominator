@@ -73,6 +73,12 @@ func (herd *Herd) enableUpdates() error {
 	return nil
 }
 
+func (herd *Herd) getSubsConfiguration() subproto.Configuration {
+	herd.RLock()
+	defer herd.RUnlock()
+	return herd.configurationForSubs
+}
+
 func (herd *Herd) pollNextSub() bool {
 	if herd.nextSubToPoll >= uint(len(herd.subsByIndex)) {
 		herd.nextSubToPoll = 0
