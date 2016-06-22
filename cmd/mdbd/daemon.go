@@ -82,6 +82,7 @@ func loadFromAll(sources []source, datacentre string,
 			if oldMachine, ok := machineMap[machine.Hostname]; ok {
 				if machine.RequiredImage != "" {
 					oldMachine.RequiredImage = machine.RequiredImage
+					oldMachine.DisableUpdates = machine.DisableUpdates
 				}
 				if machine.PlannedImage != "" {
 					oldMachine.PlannedImage = machine.PlannedImage
