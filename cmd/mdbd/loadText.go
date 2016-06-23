@@ -24,6 +24,9 @@ func loadText(reader io.Reader, datacentre string, logger *log.Logger) (
 				machine.RequiredImage = fields[1]
 				if len(fields) > 2 {
 					machine.PlannedImage = fields[2]
+					if len(fields) > 3 && fields[3] == "true" {
+						machine.DisableUpdates = true
+					}
 				}
 			}
 			newMdb.Machines = append(newMdb.Machines, machine)

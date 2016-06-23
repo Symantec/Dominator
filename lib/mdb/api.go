@@ -5,9 +5,10 @@ import (
 )
 
 type Machine struct {
-	Hostname      string
-	RequiredImage string `json:",omitempty"`
-	PlannedImage  string `json:",omitempty"`
+	Hostname       string
+	RequiredImage  string `json:",omitempty"`
+	PlannedImage   string `json:",omitempty"`
+	DisableUpdates bool   `json:",omitempty"`
 }
 
 type Mdb struct {

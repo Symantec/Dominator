@@ -12,8 +12,9 @@ func loadCis(reader io.Reader, datacentre string, logger *log.Logger) (
 	*mdb.Mdb, error) {
 
 	type instanceMetadataType struct {
-		RequiredImage string `json:"required_image"`
-		PlannedImage  string `json:"planned_image"`
+		RequiredImage  string `json:"required_image"`
+		PlannedImage   string `json:"planned_image"`
+		DisableUpdates bool   `json:"disable_updates"`
 	}
 
 	type sourceType struct {
