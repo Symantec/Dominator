@@ -115,7 +115,18 @@ func selectAliveSub(sub *Sub) bool {
 }
 
 func selectDeviantSub(sub *Sub) bool {
-	if sub.status == statusUpdating {
+	switch sub.status {
+	case statusComputingUpdate:
+		return true
+	case statusSendingUpdate:
+		return true
+	case statusUpdatesDisabled:
+		return true
+	case statusUpdating:
+		return true
+	case statusUpdateDenied:
+		return true
+	case statusFailedToUpdate:
 		return true
 	}
 	return false
