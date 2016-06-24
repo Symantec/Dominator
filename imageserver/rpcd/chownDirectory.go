@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
-	"github.com/proxypoke/group.go"
+	"os/user"
 )
 
 func (t *srpcType) ChownDirectory(conn *srpc.Conn,
@@ -15,7 +15,7 @@ func (t *srpcType) ChownDirectory(conn *srpc.Conn,
 		return errors.New("no username: unauthenticated connection")
 	}
 	if request.OwnerGroup != "" {
-		if _, err := group.Lookup(request.OwnerGroup); err != nil {
+		if _, err := user.LookupGroup(request.OwnerGroup); err != nil {
 			return err
 		}
 	}

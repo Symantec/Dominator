@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/image"
-	"github.com/proxypoke/group.go"
 	"io"
 	"log"
 	"os"
@@ -243,15 +242,16 @@ func checkUserInGroup(username, ownerGroup string) error {
 	if err != nil {
 		return err
 	}
-	groupData, err := group.Lookup(ownerGroup)
+	groupData, err := user.LookupGroup(ownerGroup)
 	if err != nil {
 		return err
 	}
-	if userData.Gid == groupData.Gid {
-		return nil
+	groupIDs, err := userData.GroupIds()
+	if err != nil {
+		return err
 	}
-	for _, member := range groupData.Members {
-		if username == member {
+	for _, groupID := range groupIDs {
+		if groupData.Gid == groupID {
 			return nil
 		}
 	}
