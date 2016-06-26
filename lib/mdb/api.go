@@ -9,6 +9,7 @@ type Machine struct {
 	RequiredImage  string `json:",omitempty"`
 	PlannedImage   string `json:",omitempty"`
 	DisableUpdates bool   `json:",omitempty"`
+	OwnerGroup     string `json:",omitempty"`
 }
 
 type Mdb struct {
