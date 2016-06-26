@@ -50,6 +50,7 @@ var (
 	bucketer               *tricorder.Bucketer
 	mutex                  sync.Mutex
 	numConnections         uint64
+	numOpenConnections     uint64
 	numRejectedConnections uint64
 )
 
@@ -62,13 +63,22 @@ func init() {
 	http.HandleFunc(rpcPath, unsecuredHttpHandler)
 	http.HandleFunc(tlsRpcPath, tlsHttpHandler)
 	http.HandleFunc(listMethodsPath, listMethodsHttpHandler)
+	registerMetrics()
+}
+
+func registerMetrics() {
 	var err error
 	serverMetricsDir, err = tricorder.RegisterDirectory("srpc/server")
 	if err != nil {
 		panic(err)
 	}
 	err = serverMetricsDir.RegisterMetric("num-connections", &numConnections,
-		units.None, "number of connections")
+		units.None, "number of connection attempts")
+	if err != nil {
+		panic(err)
+	}
+	err = serverMetricsDir.RegisterMetric("num-open-connections",
+		&numOpenConnections, units.None, "number of open connections")
 	if err != nil {
 		panic(err)
 	}
@@ -257,7 +267,13 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		defer unsecuredConn.Close()
 		myConn.ReadWriter = bufrw
 	}
+	mutex.Lock()
+	numOpenConnections++
+	mutex.Unlock()
 	handleConnection(myConn)
+	mutex.Lock()
+	numOpenConnections--
+	mutex.Unlock()
 }
 
 func getAuth(state tls.ConnectionState) (string, map[string]struct{}, error) {
