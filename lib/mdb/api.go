@@ -12,6 +12,10 @@ type Machine struct {
 	OwnerGroup     string `json:",omitempty"`
 }
 
+func (dest *Machine) UpdateFrom(source Machine) {
+	dest.updateFrom(source)
+}
+
 type Mdb struct {
 	Machines []Machine
 }
