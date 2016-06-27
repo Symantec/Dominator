@@ -169,7 +169,6 @@ func writeMdb(mdb *mdb.Mdb, mdbFileName string) error {
 			mdb.Machines); err != nil {
 			return err
 		}
-		writer.Write([]byte("\n"))
 	}
 	if err := writer.Flush(); err != nil {
 		return err
