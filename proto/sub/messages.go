@@ -16,6 +16,7 @@ type Configuration struct {
 
 type FetchRequest struct {
 	ServerAddress string
+	Wait          bool
 	Hashes        []hash.Hash
 }
 
