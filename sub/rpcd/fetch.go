@@ -34,6 +34,17 @@ func (t *rpcType) Fetch(conn *srpc.Conn, request sub.FetchRequest,
 		t.logger.Println(txt)
 		return errors.New(txt)
 	}
+	if err := t.getFetchLock(); err != nil {
+		return err
+	}
+	if request.Wait {
+		return t.fetchAndUnlock(request)
+	}
+	go t.fetchAndUnlock(request)
+	return nil
+}
+
+func (t *rpcType) getFetchLock() error {
 	t.rwLock.Lock()
 	defer t.rwLock.Unlock()
 	if t.fetchInProgress {
@@ -45,16 +56,18 @@ func (t *rpcType) Fetch(conn *srpc.Conn, request sub.FetchRequest,
 		return errors.New("update in progress")
 	}
 	t.fetchInProgress = true
-	go func() {
-		err := t.doFetch(request)
-		if err != nil && *exitOnFetchFailure {
-			os.Exit(1)
-		}
-		t.rwLock.Lock()
-		defer t.rwLock.Unlock()
-		t.lastFetchError = err
-	}()
 	return nil
+}
+
+func (t *rpcType) fetchAndUnlock(request sub.FetchRequest) error {
+	err := t.doFetch(request)
+	if err != nil && *exitOnFetchFailure {
+		os.Exit(1)
+	}
+	t.rwLock.Lock()
+	defer t.rwLock.Unlock()
+	t.lastFetchError = err
+	return err
 }
 
 func (t *rpcType) doFetch(request sub.FetchRequest) error {
