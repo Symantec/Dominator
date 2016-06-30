@@ -57,12 +57,15 @@ func (t *rpcType) Update(conn *srpc.Conn, request sub.UpdateRequest,
 	}
 	t.updateInProgress = true
 	t.lastUpdateError = nil
+	if request.Wait {
+		return t.doUpdate(request, fs.RootDirectoryName())
+	}
 	go t.doUpdate(request, fs.RootDirectoryName())
 	return nil
 }
 
 func (t *rpcType) doUpdate(request sub.UpdateRequest,
-	rootDirectoryName string) {
+	rootDirectoryName string) error {
 	defer t.clearUpdateInProgress()
 	t.disableScannerFunc(true)
 	defer t.disableScannerFunc(false)
@@ -135,6 +138,7 @@ func (t *rpcType) doUpdate(request sub.UpdateRequest,
 	}
 	t.logger.Printf("Update() completed in %s (change window: %s)\n",
 		timeTaken, fsChangeDuration)
+	return t.lastUpdateError
 }
 
 func (t *rpcType) clearUpdateInProgress() {
