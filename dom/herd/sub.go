@@ -3,6 +3,7 @@ package herd
 import (
 	"flag"
 	"fmt"
+	"github.com/Symantec/Dominator/dom/lib"
 	"github.com/Symantec/Dominator/lib/constants"
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
@@ -385,49 +386,22 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
 		return false, statusImageNotReady
 	}
 	logger := sub.herd.logger
-	objectsToFetch := make(map[hash.Hash]struct{})
-	objectsToPush := make(map[hash.Hash]struct{})
-	for inum, inode := range image.FileSystem.InodeTable {
-		if rInode, ok := inode.(*filesystem.RegularInode); ok {
-			if rInode.Size > 0 {
-				objectsToFetch[rInode.Hash] = struct{}{}
-			}
-		} else if pushComputedFiles {
-			if _, ok := inode.(*filesystem.ComputedRegularInode); ok {
-				pathname := image.FileSystem.InodeToFilenamesTable()[inum][0]
-				if inode, ok := sub.computedInodes[pathname]; !ok {
-					logger.Printf(
-						"fetchMissingObjects(%s): missing computed file: %s\n",
-						sub, pathname)
-					return false, statusMissingComputedFile
-				} else {
-					objectsToPush[inode.Hash] = struct{}{}
-				}
-			}
-		}
-	}
-	for _, hash := range sub.objectCache {
-		delete(objectsToFetch, hash)
-		delete(objectsToPush, hash)
-	}
-	for _, inode := range sub.fileSystem.InodeTable {
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			if inode.Size > 0 {
-				delete(objectsToFetch, inode.Hash)
-				delete(objectsToPush, inode.Hash)
-			}
-		}
+	objectsToFetch, objectsToPush := lib.BuildMissingLists(lib.Sub{
+		Hostname:       sub.mdb.Hostname,
+		FileSystem:     sub.fileSystem,
+		ComputedInodes: sub.computedInodes,
+		ObjectCache:    sub.objectCache},
+		image, pushComputedFiles, logger)
+	if objectsToPush == nil {
+		return false, statusMissingComputedFile
 	}
 	var returnAvailable bool = true
 	var returnStatus subStatus = statusSynced
 	if len(objectsToFetch) > 0 {
 		logger.Printf("Calling %s.Fetch() for: %d objects\n",
 			sub, len(objectsToFetch))
-		hashes := make([]hash.Hash, 0)
-		for hash := range objectsToFetch {
-			hashes = append(hashes, hash)
-		}
-		err := client.Fetch(srpcClient, sub.herd.imageServerAddress, hashes)
+		err := client.Fetch(srpcClient, sub.herd.imageServerAddress,
+			objectsToFetch)
 		if err != nil {
 			logger.Printf("Error calling %s.Fetch()\t%s\n", sub, err)
 			if err == srpc.ErrorAccessToMethodDenied {
