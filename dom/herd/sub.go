@@ -9,7 +9,6 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
-	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
@@ -386,24 +385,26 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
 		return false, statusImageNotReady
 	}
 	logger := sub.herd.logger
-	objectsToFetch, objectsToPush := lib.BuildMissingLists(lib.Sub{
+	subObj := lib.Sub{
 		Hostname:       sub.mdb.Hostname,
+		Client:         srpcClient,
 		FileSystem:     sub.fileSystem,
 		ComputedInodes: sub.computedInodes,
-		ObjectCache:    sub.objectCache},
-		image, pushComputedFiles, logger)
+		ObjectCache:    sub.objectCache}
+	objectsToFetch, objectsToPush := lib.BuildMissingLists(subObj, image,
+		pushComputedFiles, logger)
 	if objectsToPush == nil {
 		return false, statusMissingComputedFile
 	}
 	var returnAvailable bool = true
 	var returnStatus subStatus = statusSynced
 	if len(objectsToFetch) > 0 {
-		logger.Printf("Calling %s.Fetch() for: %d objects\n",
+		logger.Printf("Calling %s:Subd.Fetch() for: %d objects\n",
 			sub, len(objectsToFetch))
 		err := client.Fetch(srpcClient, sub.herd.imageServerAddress,
 			objectsToFetch)
 		if err != nil {
-			logger.Printf("Error calling %s.Fetch()\t%s\n", sub, err)
+			logger.Printf("Error calling %s:Subd.Fetch(): %s\n", sub, err)
 			if err == srpc.ErrorAccessToMethodDenied {
 				return false, statusFetchDenied
 			}
@@ -416,33 +417,15 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
 		sub.herd.pushSemaphore <- struct{}{}
 		defer func() { <-sub.herd.pushSemaphore }()
 		sub.status = statusPushing
-		objQ, err := objectclient.NewObjectAdderQueue(srpcClient)
+		err := lib.PushObjects(subObj, objectsToPush, sub.herd.objectServer,
+			logger)
 		if err != nil {
-			logger.Printf("Error creating object adder queue for: %s: %s\n",
-				sub, err)
 			if err == srpc.ErrorAccessToMethodDenied {
 				return false, statusPushDenied
 			}
-			return false, statusFailedToPush
-		}
-		for hashVal := range objectsToPush {
-			length, reader, err := sub.herd.objectServer.GetObject(hashVal)
-			if err != nil {
-				logger.Printf("Error getting object: %x: %s\n", hashVal, err)
-				objQ.Close()
+			if err == lib.ErrorFailedToGetObject {
 				return false, statusFailedToGetObject
 			}
-			_, err = objQ.Add(reader, length)
-			reader.Close()
-			if err != nil {
-				logger.Printf("Error pushing: %x to: %s: %s\n",
-					hashVal, sub, err)
-				objQ.Close()
-				return false, statusFailedToPush
-			}
-		}
-		if err := objQ.Close(); err != nil {
-			logger.Printf("Error pushing objects to: %s: %s\n", sub, err)
 			return false, statusFailedToPush
 		}
 		if returnAvailable {
