@@ -11,9 +11,10 @@ import (
 	"time"
 )
 
-// Returns true if there are missing computed files.
+// Returns true if there is a failure due to missing computed files.
 func (sub *Sub) buildUpdateRequest(image *image.Image,
-	request *subproto.UpdateRequest, logger *log.Logger) bool {
+	request *subproto.UpdateRequest, deleteMissingComputedFiles bool,
+	logger *log.Logger) bool {
 	sub.requiredFS = image.FileSystem
 	filter := image.Filter
 	request.Triggers = image.Triggers
@@ -31,7 +32,7 @@ func (sub *Sub) buildUpdateRequest(image *image.Image,
 	}
 	if sub.compareDirectories(request,
 		&sub.FileSystem.DirectoryInode, &sub.requiredFS.DirectoryInode,
-		"/", filter, logger) {
+		"/", filter, deleteMissingComputedFiles, logger) {
 		return true
 	}
 	// Look for multiply used objects and tell the sub.
@@ -46,10 +47,11 @@ func (sub *Sub) buildUpdateRequest(image *image.Image,
 	return false
 }
 
-// Returns true if there are missing computed files.
+// Returns true if there is a failure due to missing computed files.
 func (sub *Sub) compareDirectories(request *subproto.UpdateRequest,
 	subDirectory, requiredDirectory *filesystem.DirectoryInode,
-	myPathName string, filter *filter.Filter, logger *log.Logger) bool {
+	myPathName string, filter *filter.Filter, deleteMissingComputedFiles bool,
+	logger *log.Logger) bool {
 	// First look for entries that should be deleted.
 	if filter != nil && subDirectory != nil {
 		for name := range subDirectory.EntriesByName {
@@ -78,6 +80,13 @@ func (sub *Sub) compareDirectories(request *subproto.UpdateRequest,
 			// Replace with computed file.
 			inode, ok := sub.ComputedInodes[pathname]
 			if !ok {
+				if deleteMissingComputedFiles {
+					if subEntry != nil {
+						request.PathsToDelete = append(request.PathsToDelete,
+							pathname)
+					}
+					continue
+				}
 				logger.Printf(
 					"compareDirectories(%s): missing computed file: %s\n",
 					sub, pathname)
@@ -104,7 +113,7 @@ func (sub *Sub) compareDirectories(request *subproto.UpdateRequest,
 				}
 			}
 			sub.compareDirectories(request, subInode, requiredInode, pathname,
-				filter, logger)
+				filter, deleteMissingComputedFiles, logger)
 		}
 	}
 	return false

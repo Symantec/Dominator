@@ -36,8 +36,10 @@ func BuildMissingLists(sub Sub, image *image.Image, pushComputedFiles bool,
 }
 
 func BuildUpdateRequest(sub Sub, image *image.Image,
-	request *subproto.UpdateRequest, logger *log.Logger) bool {
-	return sub.buildUpdateRequest(image, request, logger)
+	request *subproto.UpdateRequest, deleteMissingComputedFiles bool,
+	logger *log.Logger) bool {
+	return sub.buildUpdateRequest(image, request, deleteMissingComputedFiles,
+		logger)
 }
 
 func PushObjects(sub Sub, objectsToPush map[hash.Hash]struct{},
