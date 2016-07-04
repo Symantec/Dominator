@@ -44,8 +44,8 @@ func BuildUpdateRequest(sub Sub, image *image.Image,
 }
 
 func PushObjects(sub Sub, objectsToPush map[hash.Hash]struct{},
-	objectServer objectserver.ObjectServer, logger *log.Logger) error {
-	return sub.pushObjects(objectsToPush, objectServer, logger)
+	objectGetter objectserver.ObjectGetter, logger *log.Logger) error {
+	return sub.pushObjects(objectsToPush, objectGetter, logger)
 }
 
 func (sub *Sub) String() string {
