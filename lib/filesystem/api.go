@@ -51,36 +51,36 @@ type FileSystem struct {
 	DirectoryInode
 }
 
-func (fs *FileSystem) RebuildInodePointers() error {
-	return fs.rebuildInodePointers()
-}
-
-func (fs *FileSystem) InodeToFilenamesTable() InodeToFilenamesTable {
-	return fs.buildInodeToFilenamesTable()
-}
-
-func (fs *FileSystem) FilenameToInodeTable() FilenameToInodeTable {
-	return fs.buildFilenameToInodeTable()
-}
-
-func (fs *FileSystem) HashToInodesTable() HashToInodesTable {
-	return fs.buildHashToInodesTable()
+func Decode(reader io.Reader) (*FileSystem, error) {
+	return decode(reader)
 }
 
 func (fs *FileSystem) ComputeTotalDataBytes() {
 	fs.computeTotalDataBytes()
 }
 
-func Decode(reader io.Reader) (*FileSystem, error) {
-	return decode(reader)
-}
-
 func (fs *FileSystem) Encode(writer io.Writer) error {
 	return fs.encode(writer)
 }
 
+func (fs *FileSystem) FilenameToInodeTable() FilenameToInodeTable {
+	return fs.buildFilenameToInodeTable()
+}
+
 func (fs *FileSystem) Filter(filter *filter.Filter) *FileSystem {
 	return fs.filter(filter)
+}
+
+func (fs *FileSystem) HashToInodesTable() HashToInodesTable {
+	return fs.buildHashToInodesTable()
+}
+
+func (fs *FileSystem) InodeToFilenamesTable() InodeToFilenamesTable {
+	return fs.buildInodeToFilenamesTable()
+}
+
+func (fs *FileSystem) List(w io.Writer) error {
+	return fs.list(w, ListSelectAll, nil)
 }
 
 func (fs *FileSystem) Listf(w io.Writer, listSelector ListSelector,
@@ -88,12 +88,12 @@ func (fs *FileSystem) Listf(w io.Writer, listSelector ListSelector,
 	return fs.list(w, listSelector, filter)
 }
 
-func (fs *FileSystem) List(w io.Writer) error {
-	return fs.list(w, ListSelectAll, nil)
-}
-
 func (fs *FileSystem) NumComputedRegularInodes() uint64 {
 	return fs.computeNumComputedRegularInodes()
+}
+
+func (fs *FileSystem) RebuildInodePointers() error {
+	return fs.rebuildInodePointers()
 }
 
 func (fs *FileSystem) String() string {
