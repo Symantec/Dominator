@@ -392,7 +392,7 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
 		ComputedInodes: sub.computedInodes,
 		ObjectCache:    sub.objectCache}
 	objectsToFetch, objectsToPush := lib.BuildMissingLists(subObj, image,
-		pushComputedFiles, logger)
+		pushComputedFiles, false, logger)
 	if objectsToPush == nil {
 		return false, statusMissingComputedFile
 	}

@@ -8,11 +8,10 @@ import (
 )
 
 func (sub *Sub) buildMissingLists(image *image.Image, pushComputedFiles bool,
-	logger *log.Logger) (
+	ignoreMissingComputedFiles bool, logger *log.Logger) (
 	[]hash.Hash, map[hash.Hash]struct{}) {
 	objectsToFetch := make(map[hash.Hash]struct{})
 	objectsToPush := make(map[hash.Hash]struct{})
-	var missingObjectsToPush bool
 	for inum, inode := range image.FileSystem.InodeTable {
 		if rInode, ok := inode.(*filesystem.RegularInode); ok {
 			if rInode.Size > 0 {
@@ -22,10 +21,13 @@ func (sub *Sub) buildMissingLists(image *image.Image, pushComputedFiles bool,
 			if _, ok := inode.(*filesystem.ComputedRegularInode); ok {
 				pathname := image.FileSystem.InodeToFilenamesTable()[inum][0]
 				if inode, ok := sub.ComputedInodes[pathname]; !ok {
+					if ignoreMissingComputedFiles {
+						continue
+					}
 					logger.Printf(
 						"buildMissingLists(%s): missing computed file: %s\n",
 						sub, pathname)
-					missingObjectsToPush = true
+					return nil, nil
 				} else {
 					objectsToPush[inode.Hash] = struct{}{}
 				}
@@ -47,9 +49,6 @@ func (sub *Sub) buildMissingLists(image *image.Image, pushComputedFiles bool,
 	fetchList := make([]hash.Hash, 0, len(objectsToFetch))
 	for hashVal := range objectsToFetch {
 		fetchList = append(fetchList, hashVal)
-	}
-	if missingObjectsToPush {
-		objectsToPush = nil
 	}
 	return fetchList, objectsToPush
 }

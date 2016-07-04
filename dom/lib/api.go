@@ -30,9 +30,10 @@ type Sub struct {
 }
 
 func BuildMissingLists(sub Sub, image *image.Image, pushComputedFiles bool,
-	logger *log.Logger) (
+	ignoreMissingComputedFiles bool, logger *log.Logger) (
 	[]hash.Hash, map[hash.Hash]struct{}) {
-	return sub.buildMissingLists(image, pushComputedFiles, logger)
+	return sub.buildMissingLists(image, pushComputedFiles,
+		ignoreMissingComputedFiles, logger)
 }
 
 func BuildUpdateRequest(sub Sub, image *image.Image,
