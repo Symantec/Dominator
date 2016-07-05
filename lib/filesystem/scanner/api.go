@@ -30,3 +30,8 @@ func ScanFileSystem(rootDirectoryName string,
 	return scanFileSystem(rootDirectoryName, fsScanContext, scanFilter,
 		checkScanDisableRequest, hasher, oldFS)
 }
+
+func (fs *FileSystem) GetObject(hashVal hash.Hash) (
+	uint64, io.ReadCloser, error) {
+	return fs.getObject(hashVal)
+}
