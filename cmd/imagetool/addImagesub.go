@@ -66,7 +66,7 @@ func applyDeleteFilter(fs *filesystem.FileSystem) (
 	if *deleteFilter == "" {
 		return fs, nil
 	}
-	filter, err := filter.LoadFilter(*deleteFilter)
+	filter, err := filter.Load(*deleteFilter)
 	if err != nil {
 		return nil, err
 	}

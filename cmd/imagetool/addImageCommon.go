@@ -13,7 +13,7 @@ func loadImageFiles(image *image.Image, objectClient *objectclient.ObjectClient,
 	filterFilename, triggersFilename string) error {
 	var err error
 	if filterFilename != "" {
-		image.Filter, err = filter.LoadFilter(filterFilename)
+		image.Filter, err = filter.Load(filterFilename)
 		if err != nil {
 			return err
 		}
