@@ -2,8 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
-	"errors"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/image"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
@@ -20,7 +18,8 @@ func loadImageFiles(image *image.Image, objectClient *objectclient.ObjectClient,
 			return err
 		}
 	}
-	if err := loadTriggers(image, triggersFilename); err != nil {
+	image.Triggers, err = triggers.Load(triggersFilename)
+	if err != nil {
 		return err
 	}
 	image.BuildLog, err = getAnnotation(objectClient, *buildLog)
@@ -31,21 +30,6 @@ func loadImageFiles(image *image.Image, objectClient *objectclient.ObjectClient,
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func loadTriggers(image *image.Image, triggersFilename string) error {
-	triggersFile, err := os.Open(triggersFilename)
-	if err != nil {
-		return err
-	}
-	defer triggersFile.Close()
-	decoder := json.NewDecoder(triggersFile)
-	var trig triggers.Triggers
-	if err = decoder.Decode(&trig.Triggers); err != nil {
-		return errors.New("error decoding triggers " + err.Error())
-	}
-	image.Triggers = &trig
 	return nil
 }
 
