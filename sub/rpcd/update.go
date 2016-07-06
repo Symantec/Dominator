@@ -35,36 +35,41 @@ var (
 
 func (t *rpcType) Update(conn *srpc.Conn, request sub.UpdateRequest,
 	reply *sub.UpdateResponse) error {
-	if *readOnly || *disableUpdates {
-		txt := "Update() rejected due to read-only mode"
-		t.logger.Println(txt)
-		return errors.New(txt)
+	if err := t.getUpdateLock(); err != nil {
+		t.logger.Println(err)
+		return err
 	}
-	t.rwLock.Lock()
-	defer t.rwLock.Unlock()
+	t.logger.Printf("Update()\n")
+	fs := t.fileSystemHistory.FileSystem()
+	if request.Wait {
+		return t.updateAndUnlock(request, fs.RootDirectoryName())
+	}
+	go t.updateAndUnlock(request, fs.RootDirectoryName())
+	return nil
+}
+
+func (t *rpcType) getUpdateLock() error {
+	if *readOnly || *disableUpdates {
+		return errors.New("Update() rejected due to read-only mode")
+	}
 	fs := t.fileSystemHistory.FileSystem()
 	if fs == nil {
 		return errors.New("No file-system history yet")
 	}
-	t.logger.Printf("Update()\n")
+	t.rwLock.Lock()
+	defer t.rwLock.Unlock()
 	if t.fetchInProgress {
-		t.logger.Println("Error: fetch already in progress")
-		return errors.New("fetch already in progress")
+		return errors.New("Fetch() in progress")
 	}
 	if t.updateInProgress {
-		t.logger.Println("Error: update progress")
-		return errors.New("update in progress")
+		return errors.New("Update() already in progress")
 	}
 	t.updateInProgress = true
 	t.lastUpdateError = nil
-	if request.Wait {
-		return t.doUpdate(request, fs.RootDirectoryName())
-	}
-	go t.doUpdate(request, fs.RootDirectoryName())
 	return nil
 }
 
-func (t *rpcType) doUpdate(request sub.UpdateRequest,
+func (t *rpcType) updateAndUnlock(request sub.UpdateRequest,
 	rootDirectoryName string) error {
 	defer t.clearUpdateInProgress()
 	t.disableScannerFunc(true)
