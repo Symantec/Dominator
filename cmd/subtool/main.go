@@ -11,9 +11,18 @@ import (
 )
 
 var (
+	computedFilesRoot = flag.String("computedFilesRoot", "",
+		"Name of directory tree containing computed files")
 	debug = flag.Bool("debug", false, "Enable debug mode")
 	file  = flag.String("file", "",
 		"Name of file to write encoded data to")
+	filterFile = flag.String("filterFile", "",
+		"Replacement filter file to apply when pushing image")
+	imageServerHostname = flag.String("imageServerHostname", "localhost",
+		"Hostname of image server")
+	imageServerPortNum = flag.Uint("imageServerPortNum",
+		constants.ImageServerPortNumber,
+		"Port number of image server")
 	interval = flag.Uint("interval", 1,
 		"Seconds to sleep between Polls")
 	networkSpeedPercent = flag.Uint("networkSpeedPercent",
@@ -37,6 +46,8 @@ var (
 	subHostname = flag.String("subHostname", "localhost", "Hostname of sub")
 	subPortNum  = flag.Uint("subPortNum", constants.SubPortNumber,
 		"Port number of sub")
+	triggersFile = flag.String("triggersFile", "",
+		"Replacement triggers file to apply when pushing image")
 	wait = flag.Uint("wait", 0, "Seconds to sleep after last Poll")
 )
 
@@ -55,6 +66,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  get-config")
 	fmt.Fprintln(os.Stderr, "  get-file remoteFile localFile")
 	fmt.Fprintln(os.Stderr, "  poll")
+	fmt.Fprintln(os.Stderr, "  push-image image")
 	fmt.Fprintln(os.Stderr, "  set-config")
 }
 
@@ -71,6 +83,7 @@ var subcommands = []subcommand{
 	{"get-config", 0, getConfigSubcommand},
 	{"get-file", 2, getFileSubcommand},
 	{"poll", 0, pollSubcommand},
+	{"push-image", 1, pushImageSubcommand},
 	{"set-config", 0, setConfigSubcommand},
 }
 
