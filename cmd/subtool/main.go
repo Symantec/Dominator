@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"os"
+	"time"
 )
 
 var (
@@ -46,6 +47,8 @@ var (
 	subHostname = flag.String("subHostname", "localhost", "Hostname of sub")
 	subPortNum  = flag.Uint("subPortNum", constants.SubPortNumber,
 		"Port number of sub")
+	timeout = flag.Duration("timeout", 15*time.Minute,
+		"timeout for push-image retry loop")
 	triggersFile = flag.String("triggersFile", "",
 		"Replacement triggers file to apply when pushing image")
 	wait = flag.Uint("wait", 0, "Seconds to sleep after last Poll")

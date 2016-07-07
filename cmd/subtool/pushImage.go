@@ -18,6 +18,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
 )
 
 type nullObjectGetterType struct{}
@@ -36,6 +37,7 @@ func pushImageSubcommand(srpcClient *srpc.Client, args []string) {
 }
 
 func pushImage(srpcClient *srpc.Client, imageName string) error {
+	timeoutTime := time.Now().Add(*timeout)
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	computedInodes := make(map[string]*filesystem.RegularInode)
 	var computedObjectGetter objectserver.ObjectGetter
@@ -56,7 +58,7 @@ func pushImage(srpcClient *srpc.Client, imageName string) error {
 	}
 	imageServerAddress := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)
-	img, err := getImage(imageServerAddress, imageName)
+	img, err := getImageRetry(imageServerAddress, imageName, timeoutTime)
 	if err != nil {
 		return err
 	}
@@ -72,42 +74,14 @@ func pushImage(srpcClient *srpc.Client, imageName string) error {
 			return err
 		}
 	}
-	// TODO(rgooch): Put poll&fetch in a retry loop: iterate before update.
-	var pollReply sub.PollResponse
-	if err := pollAndBuildPointers(srpcClient, &pollReply); err != nil {
-		return err
-	}
 	subObj := lib.Sub{
 		Hostname:       *subHostname,
 		Client:         srpcClient,
-		FileSystem:     pollReply.FileSystem,
-		ComputedInodes: computedInodes,
-		ObjectCache:    pollReply.ObjectCache}
-	objectsToFetch, objectsToPush := lib.BuildMissingLists(subObj, img, true,
-		true, logger)
-	if len(objectsToFetch) > 0 {
-		err := srpcClient.RequestReply("Subd.Fetch", sub.FetchRequest{
-			ServerAddress: imageServerAddress,
-			Wait:          true,
-			Hashes:        objectsToFetch},
-			&sub.FetchResponse{})
-		if err != nil {
-			logger.Printf("Error calling %s:Subd.Fetch(): %s\n", subHostname,
-				err)
-			return err
-		}
-	}
-	if len(objectsToPush) > 0 {
-		err := lib.PushObjects(subObj, objectsToPush, computedObjectGetter,
-			logger)
-		if err != nil {
-			return nil
-		}
-	}
-	if err := pollAndBuildPointers(srpcClient, &pollReply); err != nil {
+		ComputedInodes: computedInodes}
+	if err := pollFetchAndPush(&subObj, computedObjectGetter, img,
+		imageServerAddress, timeoutTime, logger); err != nil {
 		return err
 	}
-	subObj.ObjectCache = pollReply.ObjectCache
 	var updateRequest sub.UpdateRequest
 	var updateReply sub.UpdateResponse
 	if lib.BuildUpdateRequest(subObj, img, &updateRequest, true, logger) {
@@ -118,8 +92,18 @@ func pushImage(srpcClient *srpc.Client, imageName string) error {
 	return client.CallUpdate(srpcClient, updateRequest, &updateReply)
 }
 
+func getImageRetry(imageServerAddress, imageName string,
+	timeoutTime time.Time) (*image.Image, error) {
+	for ; time.Now().Before(timeoutTime); time.Sleep(time.Second) {
+		img, err := getImage(imageServerAddress, imageName)
+		if img != nil && err == nil {
+			return img, nil
+		}
+	}
+	return nil, errors.New("timed out getting image")
+}
+
 func getImage(imageServerAddress, imageName string) (*image.Image, error) {
-	// TODO(rgooch): Put everything below in a retry loop.
 	imageSrpcClient, err := srpc.DialHTTP("tcp", imageServerAddress, 0)
 	if err != nil {
 		return nil, err
@@ -143,16 +127,61 @@ func getImage(imageServerAddress, imageName string) (*image.Image, error) {
 	return img, nil
 }
 
-func pollAndBuildPointers(srpcClient *srpc.Client,
+func pollFetchAndPush(subObj *lib.Sub,
+	computedObjectGetter objectserver.ObjectGetter, img *image.Image,
+	imageServerAddress string, timeoutTime time.Time,
+	logger *log.Logger) error {
+	var generationCount uint64
+	for ; time.Now().Before(timeoutTime); time.Sleep(time.Second) {
+		var pollReply sub.PollResponse
+		if err := pollAndBuildPointers(subObj.Client, &generationCount,
+			&pollReply); err != nil {
+			return err
+		}
+		if pollReply.FileSystem == nil {
+			continue
+		}
+		subObj.FileSystem = pollReply.FileSystem
+		subObj.ObjectCache = pollReply.ObjectCache
+		objectsToFetch, objectsToPush := lib.BuildMissingLists(*subObj, img,
+			true, true, logger)
+		if len(objectsToFetch) < 1 && len(objectsToPush) < 1 {
+			return nil
+		}
+		if len(objectsToFetch) > 0 {
+			err := subObj.Client.RequestReply("Subd.Fetch", sub.FetchRequest{
+				ServerAddress: imageServerAddress,
+				Wait:          true,
+				Hashes:        objectsToFetch},
+				&sub.FetchResponse{})
+			if err != nil {
+				logger.Printf("Error calling %s:Subd.Fetch(): %s\n",
+					subHostname, err)
+				return err
+			}
+		}
+		if len(objectsToPush) > 0 {
+			err := lib.PushObjects(*subObj, objectsToPush, computedObjectGetter,
+				logger)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return errors.New("timed out fetching and pushing objects")
+}
+
+func pollAndBuildPointers(srpcClient *srpc.Client, generationCount *uint64,
 	pollReply *sub.PollResponse) error {
-	pollRequest := sub.PollRequest{}
+	pollRequest := sub.PollRequest{HaveGeneration: *generationCount}
 	err := client.CallPoll(srpcClient, pollRequest, pollReply)
 	if err != nil {
 		return err
 	}
+	*generationCount = pollReply.GenerationCount
 	fs := pollReply.FileSystem
 	if fs == nil {
-		return errors.New("no file-system data")
+		return nil
 	}
 	if err := fs.RebuildInodePointers(); err != nil {
 		return err
