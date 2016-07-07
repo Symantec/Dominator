@@ -10,7 +10,6 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
@@ -40,16 +39,19 @@ func pushImage(srpcClient *srpc.Client, imageName string) error {
 	timeoutTime := time.Now().Add(*timeout)
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	computedInodes := make(map[string]*filesystem.RegularInode)
-	var computedObjectGetter objectserver.ObjectGetter
+	subObj := lib.Sub{
+		Hostname:       *subHostname,
+		Client:         srpcClient,
+		ComputedInodes: computedInodes}
 	if *computedFilesRoot == "" {
-		computedObjectGetter = nullObjectGetterType{}
+		subObj.ObjectGetter = nullObjectGetterType{}
 	} else {
 		fs, err := scanner.ScanFileSystem(*computedFilesRoot, nil, nil, nil,
 			nil, nil)
 		if err != nil {
 			return err
 		}
-		computedObjectGetter = fs
+		subObj.ObjectGetter = fs
 		for filename, inum := range fs.FilenameToInodeTable() {
 			if inode, ok := fs.InodeTable[inum].(*filesystem.RegularInode); ok {
 				computedInodes[filename] = inode
@@ -74,12 +76,8 @@ func pushImage(srpcClient *srpc.Client, imageName string) error {
 			return err
 		}
 	}
-	subObj := lib.Sub{
-		Hostname:       *subHostname,
-		Client:         srpcClient,
-		ComputedInodes: computedInodes}
-	if err := pollFetchAndPush(&subObj, computedObjectGetter, img,
-		imageServerAddress, timeoutTime, logger); err != nil {
+	if err := pollFetchAndPush(&subObj, img, imageServerAddress, timeoutTime,
+		logger); err != nil {
 		return err
 	}
 	var updateRequest sub.UpdateRequest
@@ -127,8 +125,7 @@ func getImage(imageServerAddress, imageName string) (*image.Image, error) {
 	return img, nil
 }
 
-func pollFetchAndPush(subObj *lib.Sub,
-	computedObjectGetter objectserver.ObjectGetter, img *image.Image,
+func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 	imageServerAddress string, timeoutTime time.Time,
 	logger *log.Logger) error {
 	var generationCount uint64
@@ -161,8 +158,7 @@ func pollFetchAndPush(subObj *lib.Sub,
 			}
 		}
 		if len(objectsToPush) > 0 {
-			err := lib.PushObjects(*subObj, objectsToPush, computedObjectGetter,
-				logger)
+			err := lib.PushObjects(*subObj, objectsToPush, logger)
 			if err != nil {
 				return err
 			}

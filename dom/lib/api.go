@@ -22,6 +22,7 @@ type Sub struct {
 	FileSystem              *filesystem.FileSystem
 	ComputedInodes          map[string]*filesystem.RegularInode
 	ObjectCache             objectcache.ObjectCache
+	ObjectGetter            objectserver.ObjectGetter
 	requiredInodeToSubInode map[uint64]uint64
 	inodesChanged           map[uint64]bool   // Required inode number.
 	inodesCreated           map[uint64]string // Required inode number.
@@ -44,8 +45,8 @@ func BuildUpdateRequest(sub Sub, image *image.Image,
 }
 
 func PushObjects(sub Sub, objectsToPush map[hash.Hash]struct{},
-	objectGetter objectserver.ObjectGetter, logger *log.Logger) error {
-	return sub.pushObjects(objectsToPush, objectGetter, logger)
+	logger *log.Logger) error {
+	return sub.pushObjects(objectsToPush, logger)
 }
 
 func (sub *Sub) String() string {

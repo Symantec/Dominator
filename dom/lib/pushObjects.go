@@ -2,13 +2,12 @@ package lib
 
 import (
 	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/objectserver"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"log"
 )
 
 func (sub *Sub) pushObjects(objectsToPush map[hash.Hash]struct{},
-	objectGetter objectserver.ObjectGetter, logger *log.Logger) error {
+	logger *log.Logger) error {
 	objQ, err := objectclient.NewObjectAdderQueue(sub.Client)
 	if err != nil {
 		logger.Printf("Error creating object adder queue for: %s: %s\n",
@@ -16,7 +15,7 @@ func (sub *Sub) pushObjects(objectsToPush map[hash.Hash]struct{},
 		return err
 	}
 	for hashVal := range objectsToPush {
-		length, reader, err := objectGetter.GetObject(hashVal)
+		length, reader, err := sub.ObjectGetter.GetObject(hashVal)
 		if err != nil {
 			logger.Printf("Error getting object: %x: %s\n", hashVal, err)
 			objQ.Close()

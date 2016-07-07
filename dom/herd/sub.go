@@ -390,7 +390,8 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
 		Client:         srpcClient,
 		FileSystem:     sub.fileSystem,
 		ComputedInodes: sub.computedInodes,
-		ObjectCache:    sub.objectCache}
+		ObjectCache:    sub.objectCache,
+		ObjectGetter:   sub.herd.objectServer}
 	objectsToFetch, objectsToPush := lib.BuildMissingLists(subObj, image,
 		pushComputedFiles, false, logger)
 	if objectsToPush == nil {
@@ -417,8 +418,7 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
 		sub.herd.pushSemaphore <- struct{}{}
 		defer func() { <-sub.herd.pushSemaphore }()
 		sub.status = statusPushing
-		err := lib.PushObjects(subObj, objectsToPush, sub.herd.objectServer,
-			logger)
+		err := lib.PushObjects(subObj, objectsToPush, logger)
 		if err != nil {
 			if err == srpc.ErrorAccessToMethodDenied {
 				return false, statusPushDenied
