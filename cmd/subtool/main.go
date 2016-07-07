@@ -44,6 +44,8 @@ var (
 		"Scan speed as percentage of capacity")
 	shortPoll = flag.Bool("shortPoll", false,
 		"If true, perform a short poll which does not request image or object data")
+	showTimes = flag.Bool("showTimes", false,
+		"If true, show time taken for some operations")
 	subHostname = flag.String("subHostname", "localhost", "Hostname of sub")
 	subPortNum  = flag.Uint("subPortNum", constants.SubPortNumber,
 		"Port number of sub")

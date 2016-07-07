@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filesystem/scanner"
 	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -82,12 +83,22 @@ func pushImage(srpcClient *srpc.Client, imageName string) error {
 	}
 	var updateRequest sub.UpdateRequest
 	var updateReply sub.UpdateResponse
+	startTime := showStart("lib.BuildUpdateRequest()")
 	if lib.BuildUpdateRequest(subObj, img, &updateRequest, true, logger) {
+		showBlankLine()
 		return errors.New("missing computed file(s)")
 	}
+	showTimeTaken(startTime)
 	updateRequest.ImageName = imageName
 	updateRequest.Wait = true
-	return client.CallUpdate(srpcClient, updateRequest, &updateReply)
+	startTime = showStart("Subd.Update()")
+	err = client.CallUpdate(srpcClient, updateRequest, &updateReply)
+	if err != nil {
+		showBlankLine()
+		return err
+	}
+	showTimeTaken(startTime)
+	return nil
 }
 
 func getImageRetry(imageServerAddress, imageName string,
@@ -140,28 +151,36 @@ func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 		}
 		subObj.FileSystem = pollReply.FileSystem
 		subObj.ObjectCache = pollReply.ObjectCache
+		startTime := showStart("lib.BuildMissingLists()")
 		objectsToFetch, objectsToPush := lib.BuildMissingLists(*subObj, img,
 			true, true, logger)
+		showTimeTaken(startTime)
 		if len(objectsToFetch) < 1 && len(objectsToPush) < 1 {
 			return nil
 		}
 		if len(objectsToFetch) > 0 {
+			startTime := showStart("Fetch()")
 			err := subObj.Client.RequestReply("Subd.Fetch", sub.FetchRequest{
 				ServerAddress: imageServerAddress,
 				Wait:          true,
 				Hashes:        objectsToFetch},
 				&sub.FetchResponse{})
 			if err != nil {
+				showBlankLine()
 				logger.Printf("Error calling %s:Subd.Fetch(): %s\n",
 					subHostname, err)
 				return err
 			}
+			showTimeTaken(startTime)
 		}
 		if len(objectsToPush) > 0 {
+			startTime := showStart("lib.PushObjects()")
 			err := lib.PushObjects(*subObj, objectsToPush, logger)
 			if err != nil {
+				showBlankLine()
 				return err
 			}
+			showTimeTaken(startTime)
 		}
 	}
 	return errors.New("timed out fetching and pushing objects")
@@ -170,18 +189,45 @@ func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 func pollAndBuildPointers(srpcClient *srpc.Client, generationCount *uint64,
 	pollReply *sub.PollResponse) error {
 	pollRequest := sub.PollRequest{HaveGeneration: *generationCount}
+	startTime := showStart("Poll()")
 	err := client.CallPoll(srpcClient, pollRequest, pollReply)
 	if err != nil {
+		showBlankLine()
 		return err
 	}
+	showTimeTaken(startTime)
 	*generationCount = pollReply.GenerationCount
 	fs := pollReply.FileSystem
 	if fs == nil {
 		return nil
 	}
+	startTime = showStart("FileSystem.RebuildInodePointers()")
 	if err := fs.RebuildInodePointers(); err != nil {
+		showBlankLine()
 		return err
 	}
+	showTimeTaken(startTime)
 	fs.BuildEntryMap()
 	return nil
+}
+
+func showStart(operation string) time.Time {
+	if *showTimes {
+		fmt.Fprint(os.Stderr, operation, " ")
+	}
+	return time.Now()
+}
+
+func showTimeTaken(startTime time.Time) {
+	if *showTimes {
+		stopTime := time.Now()
+		fmt.Fprintf(os.Stderr, "took %s\n",
+			format.Duration(stopTime.Sub(startTime)))
+	}
+}
+
+func showBlankLine() {
+	if *showTimes {
+		fmt.Fprintln(os.Stderr)
+	}
 }
