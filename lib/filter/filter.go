@@ -5,12 +5,12 @@ import (
 	"regexp"
 )
 
-func loadFilter(filename string) (*Filter, error) {
+func load(filename string) (*Filter, error) {
 	lines, err := fsutil.LoadLines(filename)
 	if err != nil {
 		return nil, err
 	}
-	return NewFilter(lines)
+	return New(lines)
 }
 
 func newFilter(filterLines []string) (*Filter, error) {

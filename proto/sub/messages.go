@@ -16,6 +16,7 @@ type Configuration struct {
 
 type FetchRequest struct {
 	ServerAddress string
+	Wait          bool
 	Hashes        []hash.Hash
 }
 
@@ -80,6 +81,7 @@ type Inode struct {
 
 type UpdateRequest struct {
 	ImageName string
+	Wait      bool
 	// The ordering here reflects the ordering that the sub is expected to use.
 	FilesToCopyToCache  []FileToCopyToCache
 	DirectoriesToMake   []Inode

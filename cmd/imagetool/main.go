@@ -160,7 +160,7 @@ func main() {
 	listSelector = makeListSelector(*skipFields)
 	var err error
 	if *filterFile != "" {
-		listFilter, err = filter.LoadFilter(*filterFile)
+		listFilter, err = filter.Load(*filterFile)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(2)

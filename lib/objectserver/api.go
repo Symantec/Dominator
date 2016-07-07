@@ -10,11 +10,15 @@ type ObjectsReader interface {
 	NextObject() (uint64, io.ReadCloser, error)
 }
 
+type ObjectGetter interface {
+	GetObject(hashVal hash.Hash) (uint64, io.ReadCloser, error)
+}
+
 type ObjectServer interface {
 	AddObject(reader io.Reader, length uint64, expectedHash *hash.Hash) (
 		hash.Hash, bool, error)
 	CheckObjects(hashes []hash.Hash) ([]uint64, error)
-	GetObject(hashVal hash.Hash) (uint64, io.ReadCloser, error)
+	ObjectGetter
 	GetObjects(hashes []hash.Hash) (ObjectsReader, error)
 }
 

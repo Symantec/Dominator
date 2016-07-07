@@ -18,6 +18,10 @@ type Triggers struct {
 	unmatchedTriggers map[*Trigger]bool
 }
 
+func Load(filename string) (*Triggers, error) {
+	return load(filename)
+}
+
 func New() *Triggers {
 	return newTriggers()
 }

@@ -3,12 +3,12 @@ package herd
 import (
 	"flag"
 	"fmt"
+	"github.com/Symantec/Dominator/dom/lib"
 	"github.com/Symantec/Dominator/lib/constants"
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
-	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
@@ -385,51 +385,27 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
 		return false, statusImageNotReady
 	}
 	logger := sub.herd.logger
-	objectsToFetch := make(map[hash.Hash]struct{})
-	objectsToPush := make(map[hash.Hash]struct{})
-	for inum, inode := range image.FileSystem.InodeTable {
-		if rInode, ok := inode.(*filesystem.RegularInode); ok {
-			if rInode.Size > 0 {
-				objectsToFetch[rInode.Hash] = struct{}{}
-			}
-		} else if pushComputedFiles {
-			if _, ok := inode.(*filesystem.ComputedRegularInode); ok {
-				pathname := image.FileSystem.InodeToFilenamesTable()[inum][0]
-				if inode, ok := sub.computedInodes[pathname]; !ok {
-					logger.Printf(
-						"fetchMissingObjects(%s): missing computed file: %s\n",
-						sub, pathname)
-					return false, statusMissingComputedFile
-				} else {
-					objectsToPush[inode.Hash] = struct{}{}
-				}
-			}
-		}
-	}
-	for _, hash := range sub.objectCache {
-		delete(objectsToFetch, hash)
-		delete(objectsToPush, hash)
-	}
-	for _, inode := range sub.fileSystem.InodeTable {
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			if inode.Size > 0 {
-				delete(objectsToFetch, inode.Hash)
-				delete(objectsToPush, inode.Hash)
-			}
-		}
+	subObj := lib.Sub{
+		Hostname:       sub.mdb.Hostname,
+		Client:         srpcClient,
+		FileSystem:     sub.fileSystem,
+		ComputedInodes: sub.computedInodes,
+		ObjectCache:    sub.objectCache,
+		ObjectGetter:   sub.herd.objectServer}
+	objectsToFetch, objectsToPush := lib.BuildMissingLists(subObj, image,
+		pushComputedFiles, false, logger)
+	if objectsToPush == nil {
+		return false, statusMissingComputedFile
 	}
 	var returnAvailable bool = true
 	var returnStatus subStatus = statusSynced
 	if len(objectsToFetch) > 0 {
-		logger.Printf("Calling %s.Fetch() for: %d objects\n",
+		logger.Printf("Calling %s:Subd.Fetch() for: %d objects\n",
 			sub, len(objectsToFetch))
-		hashes := make([]hash.Hash, 0)
-		for hash := range objectsToFetch {
-			hashes = append(hashes, hash)
-		}
-		err := client.Fetch(srpcClient, sub.herd.imageServerAddress, hashes)
+		err := client.Fetch(srpcClient, sub.herd.imageServerAddress,
+			objectsToFetch)
 		if err != nil {
-			logger.Printf("Error calling %s.Fetch()\t%s\n", sub, err)
+			logger.Printf("Error calling %s:Subd.Fetch(): %s\n", sub, err)
 			if err == srpc.ErrorAccessToMethodDenied {
 				return false, statusFetchDenied
 			}
@@ -442,33 +418,14 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
 		sub.herd.pushSemaphore <- struct{}{}
 		defer func() { <-sub.herd.pushSemaphore }()
 		sub.status = statusPushing
-		objQ, err := objectclient.NewObjectAdderQueue(srpcClient)
+		err := lib.PushObjects(subObj, objectsToPush, logger)
 		if err != nil {
-			logger.Printf("Error creating object adder queue for: %s: %s\n",
-				sub, err)
 			if err == srpc.ErrorAccessToMethodDenied {
 				return false, statusPushDenied
 			}
-			return false, statusFailedToPush
-		}
-		for hashVal := range objectsToPush {
-			length, reader, err := sub.herd.objectServer.GetObject(hashVal)
-			if err != nil {
-				logger.Printf("Error getting object: %x: %s\n", hashVal, err)
-				objQ.Close()
+			if err == lib.ErrorFailedToGetObject {
 				return false, statusFailedToGetObject
 			}
-			_, err = objQ.Add(reader, length)
-			reader.Close()
-			if err != nil {
-				logger.Printf("Error pushing: %x to: %s: %s\n",
-					hashVal, sub, err)
-				objQ.Close()
-				return false, statusFailedToPush
-			}
-		}
-		if err := objQ.Close(); err != nil {
-			logger.Printf("Error pushing objects to: %s: %s\n", sub, err)
 			return false, statusFailedToPush
 		}
 		if returnAvailable {

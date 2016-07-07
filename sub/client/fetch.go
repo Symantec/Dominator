@@ -8,7 +8,7 @@ import (
 
 func fetch(client *srpc.Client, serverAddress string,
 	hashes []hash.Hash) error {
-	request := sub.FetchRequest{serverAddress, hashes}
+	request := sub.FetchRequest{ServerAddress: serverAddress, Hashes: hashes}
 	var reply sub.FetchResponse
 	return client.RequestReply("Subd.Fetch", request, &reply)
 }

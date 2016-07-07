@@ -44,7 +44,7 @@ func main() {
 		return
 	}
 	var configuration scanner.Configuration
-	configuration.ScanFilter, err = filter.NewFilter(nil)
+	configuration.ScanFilter, err = filter.New(nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create empty filter\t%s\n", err)
 		os.Exit(1)

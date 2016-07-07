@@ -9,11 +9,11 @@ type Filter struct {
 	filterExpressions []*regexp.Regexp
 }
 
-func LoadFilter(filename string) (*Filter, error) {
-	return loadFilter(filename)
+func Load(filename string) (*Filter, error) {
+	return load(filename)
 }
 
-func NewFilter(filterLines []string) (*Filter, error) {
+func New(filterLines []string) (*Filter, error) {
 	return newFilter(filterLines)
 }
 

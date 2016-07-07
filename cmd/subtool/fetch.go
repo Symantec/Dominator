@@ -6,13 +6,13 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/sub/client"
+	"github.com/Symantec/Dominator/proto/sub"
 	"os"
 )
 
 func fetchSubcommand(srpcClient *srpc.Client, args []string) {
 	if err := fetch(srpcClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error fetching\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error fetching: %s\n", err)
 		os.Exit(2)
 	}
 	os.Exit(0)
@@ -38,5 +38,9 @@ func fetch(srpcClient *srpc.Client, hashesFilename string) error {
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	return client.Fetch(srpcClient, serverAddress, hashes)
+	return srpcClient.RequestReply("Subd.Fetch", sub.FetchRequest{
+		ServerAddress: serverAddress,
+		Wait:          true,
+		Hashes:        hashes},
+		&sub.FetchResponse{})
 }

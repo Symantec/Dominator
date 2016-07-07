@@ -15,6 +15,7 @@ func loadCis(reader io.Reader, datacentre string, logger *log.Logger) (
 		RequiredImage  string `json:"required_image"`
 		PlannedImage   string `json:"planned_image"`
 		DisableUpdates bool   `json:"disable_updates"`
+		OwnerGroup     string `json:"owner_group"`
 	}
 
 	type sourceType struct {
@@ -48,12 +49,10 @@ func loadCis(reader io.Reader, datacentre string, logger *log.Logger) (
 		} else {
 			outMachine.Hostname = hit.Source.Name
 		}
-		if hit.Source.InstanceMetadata.RequiredImage != "" {
-			outMachine.RequiredImage = hit.Source.InstanceMetadata.RequiredImage
-		}
-		if hit.Source.InstanceMetadata.PlannedImage != "" {
-			outMachine.PlannedImage = hit.Source.InstanceMetadata.PlannedImage
-		}
+		outMachine.RequiredImage = hit.Source.InstanceMetadata.RequiredImage
+		outMachine.PlannedImage = hit.Source.InstanceMetadata.PlannedImage
+		outMachine.DisableUpdates = hit.Source.InstanceMetadata.DisableUpdates
+		outMachine.OwnerGroup = hit.Source.InstanceMetadata.OwnerGroup
 		outMdb.Machines = append(outMdb.Machines, outMachine)
 	}
 	return &outMdb, nil

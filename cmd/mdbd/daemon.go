@@ -80,13 +80,7 @@ func loadFromAll(sources []source, datacentre string,
 		}
 		for _, machine := range mdb.Machines {
 			if oldMachine, ok := machineMap[machine.Hostname]; ok {
-				if machine.RequiredImage != "" {
-					oldMachine.RequiredImage = machine.RequiredImage
-					oldMachine.DisableUpdates = machine.DisableUpdates
-				}
-				if machine.PlannedImage != "" {
-					oldMachine.PlannedImage = machine.PlannedImage
-				}
+				oldMachine.UpdateFrom(machine)
 				machineMap[machine.Hostname] = oldMachine
 			} else {
 				machineMap[machine.Hostname] = machine
@@ -175,7 +169,6 @@ func writeMdb(mdb *mdb.Mdb, mdbFileName string) error {
 			mdb.Machines); err != nil {
 			return err
 		}
-		writer.Write([]byte("\n"))
 	}
 	if err := writer.Flush(); err != nil {
 		return err

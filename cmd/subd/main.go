@@ -289,7 +289,7 @@ func main() {
 	publishFsSpeed(bytesPerSecond, blocksPerSecond)
 	var configuration scanner.Configuration
 	var err error
-	configuration.ScanFilter, err = filter.NewFilter(constants.ScanExcludeList)
+	configuration.ScanFilter, err = filter.New(constants.ScanExcludeList)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to set default scan exclusions\t%s\n",
 			err)
