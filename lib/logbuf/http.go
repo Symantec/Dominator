@@ -115,10 +115,19 @@ func (lb *LogBuffer) httpDumpHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	_, recentFirst := parsedQuery.Flags["recentFirst"]
 	if name == "latest" {
-		writer := bufio.NewWriter(w)
-		defer writer.Flush()
-		lb.Dump(writer, "", "", recentFirst)
-		return
+		lbFilename := ""
+		lb.rwMutex.Lock()
+		if lb.file != nil {
+			lbFilename = lb.file.Name()
+		}
+		lb.rwMutex.Unlock()
+		if lbFilename == "" {
+			writer := bufio.NewWriter(w)
+			defer writer.Flush()
+			lb.Dump(writer, "", "", recentFirst)
+			return
+		}
+		name = path.Base(lbFilename)
 	}
 	file, err := os.Open(path.Join(lb.logDir, path.Base(path.Clean(name))))
 	if err != nil {
