@@ -1,7 +1,7 @@
 package verstr
 
 import (
-	sortlib "sort"
+	"sort"
 )
 
 type sliceWrapper []string
@@ -18,6 +18,6 @@ func (list sliceWrapper) Swap(i, j int) {
 	list[i], list[j] = list[j], list[i]
 }
 
-func sort(list []string) {
-	sortlib.Sort(sliceWrapper(list))
+func doSort(list []string) {
+	sort.Sort(sliceWrapper(list))
 }
