@@ -17,5 +17,5 @@ func Less(left, right string) bool {
 
 // Sort sorts a slice of strings in-place, treating them as version strings.
 func Sort(list []string) {
-	sort(list)
+	doSort(list)
 }
