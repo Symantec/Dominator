@@ -19,7 +19,7 @@ func loadCis(reader io.Reader, datacentre string, logger *log.Logger) (
 	}
 
 	type sourceType struct {
-		Name             string
+		HostName         string               `json:"host_name"`
 		InstanceMetadata instanceMetadataType `json:"instance_metadata"`
 		Fqdn             string
 	}
@@ -47,7 +47,7 @@ func loadCis(reader io.Reader, datacentre string, logger *log.Logger) (
 		if hit.Source.Fqdn != "" {
 			outMachine.Hostname = hit.Source.Fqdn
 		} else {
-			outMachine.Hostname = hit.Source.Name
+			outMachine.Hostname = hit.Source.HostName
 		}
 		outMachine.RequiredImage = hit.Source.InstanceMetadata.RequiredImage
 		outMachine.PlannedImage = hit.Source.InstanceMetadata.PlannedImage
