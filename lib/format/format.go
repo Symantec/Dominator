@@ -1,3 +1,6 @@
+/*
+	Package format provides convenience functions for formatting.
+*/
 package format
 
 import (
@@ -5,6 +8,8 @@ import (
 	"time"
 )
 
+// FormatBytes returns a string with the number of bytes specified converted
+// into a human-friendly format with a binary multiplier (i.e. GiB).
 func FormatBytes(bytes uint64) string {
 	if bytes>>30 > 100 {
 		return fmt.Sprintf("%d GiB", bytes>>30)
@@ -17,6 +22,9 @@ func FormatBytes(bytes uint64) string {
 	}
 }
 
+// Duration is similar to the time.Duration.String method from the standard
+// library but is more readable and shows only 3 digits of precision when
+// duration is less than 1 minute.
 func Duration(duration time.Duration) string {
 	if ns := duration.Nanoseconds(); ns < 1000 {
 		return fmt.Sprintf("%dns", ns)
