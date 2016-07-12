@@ -22,12 +22,13 @@ func (measurer *ReadMeasurer) MeasureReadIO(bytesSinceLastMeasurement uint64) (
 func (measurer *ReadMeasurer) Reset() {}
 
 type ReaderContext struct {
-	maxIOPerSecond      uint64
-	speedPercent        uint64
-	measurer            ReadIOMeasurer
-	bytesSinceLastPause uint64
-	chunklen            uint64
-	timeOfLastPause     time.Time
+	maxIOPerSecond        uint64
+	speedPercent          uint64
+	measurer              ReadIOMeasurer
+	bytesSinceLastPause   uint64
+	chunklen              uint64
+	timeOfLastPause       time.Time
+	sleepTimeDistribution *tricorder.CumulativeDistribution
 }
 
 func NewReaderContext(maxIOPerSecond uint64, speedPercent uint64,
