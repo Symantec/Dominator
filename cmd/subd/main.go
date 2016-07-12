@@ -29,6 +29,9 @@ import (
 )
 
 var (
+	defaultScanSpeedPercent = flag.Uint64("defaultScanSpeedPercent",
+		constants.DefaultScanSpeedPercent,
+		"Scan speed as percentage of capacity")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
 	maxThreads = flag.Uint("maxThreads", 1,
@@ -296,7 +299,7 @@ func main() {
 		os.Exit(1)
 	}
 	configuration.FsScanContext = fsrateio.NewReaderContext(bytesPerSecond,
-		blocksPerSecond, 0)
+		blocksPerSecond, *defaultScanSpeedPercent)
 	defaultSpeed := configuration.FsScanContext.GetContext().SpeedPercent()
 	if firstScan {
 		configuration.FsScanContext.GetContext().SetSpeedPercent(100)
