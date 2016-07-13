@@ -194,7 +194,7 @@ func (t *rpcType) makeObjectCopies(multiplyUsedObjects map[hash.Hash]uint64) {
 		objectPathname := path.Join(t.objectsDir,
 			objectcache.HashToFilename(hash))
 		for numCopies--; numCopies > 0; numCopies-- {
-			ext := strings.Repeat("~", int(numCopies))
+			ext := fmt.Sprintf("~%d~", numCopies)
 			if err := copyFile(objectPathname+ext, objectPathname); err != nil {
 				t.lastUpdateError = err
 				t.logger.Println(err)
@@ -239,7 +239,7 @@ func makeRegularInode(fullPathname string,
 		numCopies := multiplyUsedObjects[inode.Hash]
 		if numCopies > 1 {
 			numCopies--
-			objectPathname += strings.Repeat("~", int(numCopies))
+			objectPathname += fmt.Sprintf("~%d~", numCopies)
 			if numCopies < 2 {
 				delete(multiplyUsedObjects, inode.Hash)
 			} else {
