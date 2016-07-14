@@ -14,8 +14,10 @@ import (
 var (
 	computedFilesRoot = flag.String("computedFilesRoot", "",
 		"Name of directory tree containing computed files")
-	debug = flag.Bool("debug", false, "Enable debug mode")
-	file  = flag.String("file", "",
+	debug             = flag.Bool("debug", false, "Enable debug mode")
+	deleteBeforeFetch = flag.Bool("deleteBeforeFetch", false,
+		"If true, delete prior to Fetch rather than during Update")
+	file = flag.String("file", "",
 		"Name of file to write encoded data to")
 	filterFile = flag.String("filterFile", "",
 		"Replacement filter file to apply when pushing image")
