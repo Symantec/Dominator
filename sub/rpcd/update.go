@@ -75,6 +75,9 @@ func (t *rpcType) updateAndUnlock(request sub.UpdateRequest,
 	t.disableScannerFunc(true)
 	defer t.disableScannerFunc(false)
 	startTime := time.Now()
+	if request.Triggers == nil {
+		request.Triggers = triggers.New()
+	}
 	var oldTriggers triggers.Triggers
 	file, err := os.Open(t.oldTriggersFilename)
 	if err == nil {
