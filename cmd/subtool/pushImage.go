@@ -256,8 +256,7 @@ func deleteUnneededFiles(srpcClient *srpc.Client, subFS *filesystem.FileSystem,
 	showTimeTaken(startTime)
 	updateRequest := sub.UpdateRequest{
 		Wait:          true,
-		PathsToDelete: pathsToDelete,
-		Triggers:      triggers.New()}
+		PathsToDelete: pathsToDelete}
 	var updateReply sub.UpdateResponse
 	startTime = showStart("Subd.Update() for early files to delete")
 	err := client.CallUpdate(srpcClient, updateRequest, &updateReply)
