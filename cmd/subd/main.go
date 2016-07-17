@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/html"
@@ -44,7 +45,8 @@ var (
 		"Port number to allocate and listen on for HTTP/RPC")
 	rootDir = flag.String("rootDir", "/",
 		"Name of root of directory tree to manage")
-	showStats = flag.Bool("showStats", false,
+	scanExcludeList flagutil.StringList = constants.ScanExcludeList
+	showStats                           = flag.Bool("showStats", false,
 		"If true, show statistics after each cycle")
 	subdDir = flag.String("subdDir", ".subd",
 		"Name of subd private directory, relative to rootDir. This must be on the same file-system as rootDir")
@@ -53,6 +55,8 @@ var (
 
 func init() {
 	runtime.LockOSThread()
+	flag.Var(&scanExcludeList, "scanExcludeList",
+		"Comma separated list of patterns to exclude from scanning")
 }
 
 func sanityCheck() bool {
@@ -292,7 +296,7 @@ func main() {
 	publishFsSpeed(bytesPerSecond, blocksPerSecond)
 	var configuration scanner.Configuration
 	var err error
-	configuration.ScanFilter, err = filter.New(constants.ScanExcludeList)
+	configuration.ScanFilter, err = filter.New(scanExcludeList)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to set default scan exclusions\t%s\n",
 			err)
