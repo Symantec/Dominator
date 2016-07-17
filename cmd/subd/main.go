@@ -318,10 +318,16 @@ func main() {
 			getCachedNetworkSpeed(netbenchFilename),
 			constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 		configuration.NetworkReaderContext = networkReaderContext
-		rescanObjectCacheChannel, rpcdHtmlWriter :=
+		invalidateNextScanObjectCache := false
+		rpcdHtmlWriter :=
 			rpcd.Setup(&configuration, &fsh, objectsDir,
 				workingRootDir, networkReaderContext, netbenchFilename,
-				oldTriggersFilename, disableScanner, logger)
+				oldTriggersFilename, disableScanner,
+				func() {
+					invalidateNextScanObjectCache = true
+					fsh.UpdateObjectCacheOnly()
+				},
+				logger)
 		configMetricsDir, err := tricorder.RegisterDirectory("/config")
 		if err != nil {
 			fmt.Fprintf(os.Stderr,
@@ -346,7 +352,6 @@ func main() {
 			os.Exit(1)
 		}
 		fsh.Update(nil)
-		invalidateNextScanObjectCache := false
 		sighupChannel := make(chan os.Signal)
 		signal.Notify(sighupChannel, syscall.SIGHUP)
 		sigtermChannel := make(chan os.Signal)
@@ -390,9 +395,6 @@ func main() {
 						fmt.Println(configuration.FsScanContext)
 					}
 				}
-			case <-rescanObjectCacheChannel:
-				invalidateNextScanObjectCache = true
-				fsh.UpdateObjectCacheOnly()
 			}
 		}
 	}
