@@ -15,7 +15,12 @@ func load(filename string) (*Filter, error) {
 
 func newFilter(filterLines []string) (*Filter, error) {
 	var filter Filter
-	filter.FilterLines = filterLines
+	filter.FilterLines = make([]string, 0)
+	for _, line := range filterLines {
+		if line != "" {
+			filter.FilterLines = append(filter.FilterLines, line)
+		}
+	}
 	if err := filter.compile(); err != nil {
 		return nil, err
 	}
