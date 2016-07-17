@@ -30,6 +30,9 @@ import (
 )
 
 var (
+	defaultNetworkSpeedPercent = flag.Uint64("defaultNetworkSpeedPercent",
+		constants.DefaultNetworkSpeedPercent,
+		"Network speed as percentage of capacity")
 	defaultScanSpeedPercent = flag.Uint64("defaultScanSpeedPercent",
 		constants.DefaultScanSpeedPercent,
 		"Scan speed as percentage of capacity")
@@ -316,7 +319,7 @@ func main() {
 		disableScanner func(disableScanner bool)) {
 		networkReaderContext := rateio.NewReaderContext(
 			getCachedNetworkSpeed(netbenchFilename),
-			constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
+			*defaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 		configuration.NetworkReaderContext = networkReaderContext
 		invalidateNextScanObjectCache := false
 		rpcdHtmlWriter :=
