@@ -42,6 +42,9 @@ func (s state) showImageHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(writer,
 		"Number of triggers: <a href=\"listTriggers?%s\">%d</a><br>\n",
 		imageName, len(image.Triggers.Triggers))
+	if !image.ExpiresAt.IsZero() {
+		fmt.Fprintf(writer, "Expires at: %s<br>\n", image.ExpiresAt)
+	}
 	showAnnotation(writer, image.ReleaseNotes, imageName, "Release notes",
 		"listReleaseNotes")
 	showAnnotation(writer, image.BuildLog, imageName, "Build log",
