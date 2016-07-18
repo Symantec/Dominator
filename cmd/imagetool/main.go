@@ -11,6 +11,7 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"os"
+	"time"
 )
 
 var (
@@ -22,6 +23,8 @@ var (
 		"If true, show debugging output")
 	deleteFilter = flag.String("deleteFilter", "",
 		"Name of delete filter file for addi, adds subcommand and right image")
+	expiresIn = flag.Duration("expiresIn", 0,
+		"How long before the image expires (auto deletes). Default: never")
 	filterFile = flag.String("filterFile", "",
 		"Filter file to apply when diffing images")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
@@ -34,6 +37,8 @@ var (
 	requiredPaths = flagutil.StringToRuneMap(constants.RequiredPaths)
 	skipFields    = flag.String("skipFields", "",
 		"Fields to skip when showing or diffing images")
+
+	minimumExpiration = 15 * time.Minute
 )
 
 func init() {
@@ -155,6 +160,10 @@ func main() {
 	flag.Parse()
 	if flag.NArg() < 1 {
 		printUsage()
+		os.Exit(2)
+	}
+	if *expiresIn > 0 && *expiresIn < minimumExpiration {
+		fmt.Fprintf(os.Stderr, "Minimum expiration: %s\n", minimumExpiration)
 		os.Exit(2)
 	}
 	listSelector = makeListSelector(*skipFields)
