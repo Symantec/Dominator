@@ -5,6 +5,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/triggers"
+	"time"
 )
 
 type Annotation struct {
@@ -28,6 +29,7 @@ type Image struct {
 	Triggers     *triggers.Triggers
 	ReleaseNotes *Annotation
 	BuildLog     *Annotation
+	ExpiresAt    time.Time
 }
 
 // Verify will perform some self-consistency checks on the image. If a problem
