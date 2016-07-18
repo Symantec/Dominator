@@ -29,6 +29,10 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string,
 	}
 	imdb.Lock()
 	defer imdb.Unlock()
+	if imdb.scheduleExpiration(image, name) {
+		imdb.logger.Printf("Ignoring already expired image: %s\n", name)
+		return nil
+	}
 	if _, ok := imdb.imageMap[name]; ok {
 		return errors.New("image: " + name + " already exists")
 	} else {
