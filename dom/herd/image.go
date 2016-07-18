@@ -55,8 +55,9 @@ func (herd *Herd) getImageHaveLock(name string) (*image.Image, error) {
 		herd.logger.Printf("Error calling\t%s\n", err)
 		return nil, err
 	}
-	if img == nil {
+	if img == nil || herd.scheduleExpiration(img, name) {
 		herd.missingImages[name] = missingImage{time.Now(), nil}
+		img = nil
 	} else {
 		if err := img.FileSystem.RebuildInodePointers(); err != nil {
 			herd.logger.Printf("Error building inode pointers for image: %s %s",
@@ -74,4 +75,21 @@ func (herd *Herd) getImageHaveLock(name string) (*image.Image, error) {
 		herd.logger.Printf("Got image: %s\n", name)
 	}
 	return img, nil
+}
+
+func (herd *Herd) scheduleExpiration(image *image.Image, name string) bool {
+	if image.ExpiresAt.IsZero() {
+		return false
+	}
+	duration := image.ExpiresAt.Sub(time.Now())
+	if duration <= 0 {
+		return true
+	}
+	time.AfterFunc(duration, func() {
+		herd.logger.Printf("Auto expiring (deleting) image: %s\n", name)
+		herd.Lock()
+		defer herd.Unlock()
+		delete(herd.imagesByName, name)
+	})
+	return false
 }
