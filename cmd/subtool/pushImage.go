@@ -152,9 +152,10 @@ func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 		}
 		if deleteEarly {
 			deleteEarly = false
-			deleteUnneededFiles(subObj.Client, pollReply.FileSystem,
-				img.FileSystem, logger)
-			continue
+			if deleteUnneededFiles(subObj.Client, pollReply.FileSystem,
+				img.FileSystem, logger) {
+				continue
+			}
 		}
 		subObj.FileSystem = pollReply.FileSystem
 		subObj.ObjectCache = pollReply.ObjectCache
@@ -240,7 +241,7 @@ func showBlankLine() {
 }
 
 func deleteUnneededFiles(srpcClient *srpc.Client, subFS *filesystem.FileSystem,
-	imgFS *filesystem.FileSystem, logger *log.Logger) {
+	imgFS *filesystem.FileSystem, logger *log.Logger) bool {
 	startTime := showStart("compute early files to delete")
 	pathsToDelete := make([]string, 0)
 	imgHashToInodesTable := imgFS.HashToInodesTable()
@@ -254,6 +255,9 @@ func deleteUnneededFiles(srpcClient *srpc.Client, subFS *filesystem.FileSystem,
 		}
 	}
 	showTimeTaken(startTime)
+	if len(pathsToDelete) < 1 {
+		return false
+	}
 	updateRequest := sub.UpdateRequest{
 		Wait:          true,
 		PathsToDelete: pathsToDelete}
@@ -264,4 +268,5 @@ func deleteUnneededFiles(srpcClient *srpc.Client, subFS *filesystem.FileSystem,
 	if err != nil {
 		logger.Println(err)
 	}
+	return true
 }
