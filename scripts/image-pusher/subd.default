@@ -1,0 +1,8 @@
+PROG_ARGS="-defaultNetworkSpeedPercent=100 \
+           -defaultScanSpeedPercent=100 \
+           -maxThreads=2 \
+           -rootDir=/mnt \
+           -scanExcludeList="
+
+mount -o remount,rw /mnt
+umount /mnt/* /mnt/dev/*

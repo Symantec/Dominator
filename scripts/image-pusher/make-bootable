@@ -1,0 +1,31 @@
+#! /bin/bash --posix
+
+case "$1" in
+  start)
+    cp -p /etc/fstab /mnt/etc
+    cp -p "$0" /mnt/tmp/make-bootable
+    chroot /mnt /tmp/make-bootable make-bootable
+    rm /mnt/tmp/make-bootable
+    exit 0
+    ;;
+
+  make-bootable)
+    ;;
+
+  *)
+    echo "Usage: /etc/init.d/make-bootable {start|make-bootable}"
+    exit 1
+esac
+
+mount -n none -t proc /proc
+mount -n none -t devtmpfs /dev
+mount -n none -t sysfs /sys
+
+readonly boot_device=$(blkid -L rootfs | sed -re 's/([[:digit:]]+$)//')
+readonly kernel_version=$(ls -v /lib/modules | tail -n 1)
+
+# This section works on CentOS-7. It probably won't work elsewhere.
+# TODO(rgooch): Implement for other OSes.
+dracut --force --kver "$kernel_version"
+grub2-mkconfig -o /boot/grub2/grub.cfg
+grub2-install "$boot_device"

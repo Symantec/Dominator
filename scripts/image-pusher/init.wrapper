@@ -1,0 +1,14 @@
+#! /bin/bash --posix
+
+mount -n none -t tmpfs /mnt
+cd /
+cp -ax . /mnt
+if [ -d /proc/1 ]; then
+    mount -n none -t proc /mnt/proc
+fi
+cd /mnt
+ln sbin/init.real init
+pivot_root . mnt
+umount /mnt/* /mnt/dev/*
+mount -n -o remount,rw /mnt
+exec chroot . /init
