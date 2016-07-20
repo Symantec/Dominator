@@ -55,6 +55,8 @@ var (
 		"timeout for push-image retry loop")
 	triggersFile = flag.String("triggersFile", "",
 		"Replacement triggers file to apply when pushing image")
+	triggersString = flag.String("triggersString", "",
+		"Replacement triggers string to apply when pushing image")
 	wait = flag.Uint("wait", 0, "Seconds to sleep after last Poll")
 )
 
@@ -99,6 +101,11 @@ func main() {
 	flag.Parse()
 	if flag.NArg() < 1 {
 		printUsage()
+		os.Exit(2)
+	}
+	if *triggersFile != "" && *triggersString != "" {
+		fmt.Fprintln(os.Stderr,
+			"Cannot specify both -triggersFile and -triggersString")
 		os.Exit(2)
 	}
 	if err := setupclient.SetupTls(true); err != nil {

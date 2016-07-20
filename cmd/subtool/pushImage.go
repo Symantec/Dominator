@@ -76,6 +76,11 @@ func pushImage(srpcClient *srpc.Client, imageName string) error {
 		if err != nil {
 			return err
 		}
+	} else if *triggersString != "" {
+		img.Triggers, err = triggers.Decode([]byte(*triggersString))
+		if err != nil {
+			return err
+		}
 	}
 	if err := pollFetchAndPush(&subObj, img, imageServerAddress, timeoutTime,
 		logger); err != nil {
