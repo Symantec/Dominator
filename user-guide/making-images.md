@@ -18,7 +18,7 @@ First, you will need to add your image to the imageserver. Run this command:
 imagetool -imageServerHostname=imageserver.my.domain add sparse.0 path "" ""
 ```
 
-This will package up the files in the directory tree `path` to the imageserver
-`imageserver.my.domain` and will upload them, creating the image `sparse.0`.
+This will package up the files in the directory tree `path` and will upload them
+to the imageserver `imageserver.my.domain`, creating the image `sparse.0`.
 If `path` is a tarfile (extension `.tar`) or a compressed tarfile (extension
 `.tar.gz`), then the contents of the tarfile are uploaded.
