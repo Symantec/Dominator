@@ -3,7 +3,8 @@ The Dominator Config Management and Image Deployment System. This system can
 push image updates to a large fleet of machines and keep them in sync.
 
 Please see the
-[design document](https://docs.google.com/document/d/1fiDFY9T0mc5zMcFqPvmQcD90T4WQr8wpiMTHVDjTkOE/pub)
+[design document](https://docs.google.com/document/d/1fiDFY9T0mc5zMcFqPvmQcD90T4WQr8wpiMTHVDjTkOE/pub),
+the [user guide](user-guide/README.md)
 and the
 [online code documentation](https://godoc.org/?q=github.com%2FSymantec%2FDominator%2F)
 for more information.
