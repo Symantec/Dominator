@@ -64,3 +64,43 @@ image, this time with the triggers configuration:
 ```
 imagetool -imageServerHostname=imageserver.my.domain add sparse.0 path "" /tmp/triggers.sshd
 ```
+
+## I've realised I want total *Domination*
+You've discovered how powerful it is to push a few files to your machines and
+have them constantly kept in compliance without having to do further work, and
+now you want to control the whole root file-systems of your machines. For this
+you will need to create normal images rather than *sparse* images. With normal
+images you will need to specify a *filter*. This tells the **Dominator** that
+certain files should not be updated. For example, you probably don't want to be
+updating the `/etc/fstab` or `/etc/hostname` files, since they will be different
+on each machine.
+
+A filter file is a simple text file with a list of filter lines, each being a
+regular expression pathname that you want to exclude from changes. An example
+filter file may contain:
+
+```
+/etc/fstab
+/etc/hostname
+/tmp/.*
+/var/log/.*
+/var/mail/.*
+/var/spool/.*
+/var/tmp/.*
+```
+
+If this is contained in the file `/tmp/filter` then you would use the following
+command to create an image:
+
+```
+imagetool -imageServerHostname=imageserver.my.domain add image.0 path /tmp/filter /tmp/triggers
+```
+
+The main difference between this command and the one shown earlier is that
+`/tmp/filter` is passed for the name of the filter file rather than an empty
+string.
+
+This will package up the files in the directory tree `path` and will upload them
+to the imageserver `imageserver.my.domain`, creating the image `image.0`.
+If `path` is a tarfile (extension `.tar`) or a compressed tarfile (extension
+`.tar.gz`), then the contents of the tarfile are uploaded.
