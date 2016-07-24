@@ -18,6 +18,10 @@ type Triggers struct {
 	unmatchedTriggers map[*Trigger]bool
 }
 
+func Decode(jsonData []byte) (*Triggers, error) {
+	return decode(jsonData)
+}
+
 func Load(filename string) (*Triggers, error) {
 	return load(filename)
 }

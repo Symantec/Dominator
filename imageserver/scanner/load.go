@@ -125,7 +125,8 @@ func (imdb *ImageDataBase) readDirectoryMetadata(dirname string) (
 }
 
 func (imdb *ImageDataBase) loadFile(filename string, logger *log.Logger) error {
-	file, err := os.Open(path.Join(imdb.baseDir, filename))
+	pathname := path.Join(imdb.baseDir, filename)
+	file, err := os.Open(pathname)
 	if err != nil {
 		return err
 	}
@@ -151,6 +152,10 @@ func (imdb *ImageDataBase) loadFile(filename string, logger *log.Logger) error {
 	}
 	imdb.Lock()
 	defer imdb.Unlock()
+	if imdb.scheduleExpiration(&image, filename) {
+		imdb.logger.Printf("Deleting already expired image: %s\n", filename)
+		return os.Remove(pathname)
+	}
 	imdb.imageMap[filename] = &image
 	return nil
 }

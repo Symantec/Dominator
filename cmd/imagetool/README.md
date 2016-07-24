@@ -43,7 +43,7 @@ Some of the sub-commands available are:
 
 ## Security
 *[Imageserver](../imageserver/README.md)* restricts RPC access using TLS client
-authentication. *Imagetool* expects a valid certificate and key in the files
-`~/.ssl/cert.pem` and `~/.ssl/key.pem`, respectively. *Imagetool* will present
-this certificate to *imageserver*. If the certificate is signed by a certificate
-authority that *imageserver* trusts, *imageserver* will grant access.
+authentication. *Imagetool* will load certificate and key files from the
+`~/.ssl` directory. *Imagetool* will present these certificates to
+*imageserver*. If one of the certificates is signed by a certificate authority
+that *imageserver* trusts, *imageserver* will grant access.

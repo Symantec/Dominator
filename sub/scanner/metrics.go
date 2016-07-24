@@ -17,10 +17,18 @@ func init() {
 
 func (configuration *Configuration) registerMetrics(
 	dir *tricorder.DirectorySpec) error {
+	scannerDir, err := dir.RegisterDirectory("scanner")
+	if err != nil {
+		return err
+	}
+	err = configuration.FsScanContext.RegisterMetrics(scannerDir)
+	if err != nil {
+		return err
+	}
 	netDir, err := dir.RegisterDirectory("network")
 	if err != nil {
 		return err
 	}
 	return configuration.NetworkReaderContext.RegisterMetrics(netDir,
-		units.Byte, "network speed")
+		units.BytePerSecond, "network speed")
 }

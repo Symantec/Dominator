@@ -39,6 +39,15 @@ func CheckTlsRequired() bool {
 	return tlsRequired
 }
 
+// LoadCertificates loads zero or more X509 certificates from directory. Each
+// certificate must be stored in a pair of PEM-encoded files, with the private
+// key in a file with extension '.key' and the corresponding public key
+// certificate in a file with extension 'cert'. If there is an error loading a
+// certificate pair then processing stops and the error is returned.
+func LoadCertificates(directory string) ([]tls.Certificate, error) {
+	return loadCertificates(directory)
+}
+
 // RegisterName publishes in the server the set of methods of the receiver
 // value that satisfy one of the following interfaces:
 //   func Method(*Conn) error

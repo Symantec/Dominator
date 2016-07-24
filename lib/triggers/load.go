@@ -19,3 +19,11 @@ func load(filename string) (*Triggers, error) {
 	}
 	return &trig, nil
 }
+
+func decode(jsonData []byte) (*Triggers, error) {
+	var trig Triggers
+	if err := json.Unmarshal(jsonData, &trig.Triggers); err != nil {
+		return nil, errors.New("error decoding triggers " + err.Error())
+	}
+	return &trig, nil
+}

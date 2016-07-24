@@ -19,7 +19,7 @@ type rpcType struct {
 	networkReaderContext         *rateio.ReaderContext
 	netbenchFilename             string
 	oldTriggersFilename          string
-	rescanObjectCacheChannel     chan<- bool
+	rescanObjectCacheFunction    func()
 	disableScannerFunc           func(disableScanner bool)
 	logger                       *log.Logger
 	rwLock                       sync.RWMutex
@@ -48,19 +48,18 @@ func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 	netReaderContext *rateio.ReaderContext,
 	netbenchFname string, oldTriggersFname string,
 	disableScannerFunction func(disableScanner bool),
-	logger *log.Logger) (<-chan bool, *HtmlWriter) {
-	rescanObjectCacheChannel := make(chan bool)
+	rescanObjectCacheFunction func(), logger *log.Logger) *HtmlWriter {
 	rpcObj := &rpcType{
-		scannerConfiguration:     configuration,
-		fileSystemHistory:        fsh,
-		objectsDir:               objectsDirname,
-		rootDir:                  rootDirname,
-		networkReaderContext:     netReaderContext,
-		netbenchFilename:         netbenchFname,
-		oldTriggersFilename:      oldTriggersFname,
-		rescanObjectCacheChannel: rescanObjectCacheChannel,
-		disableScannerFunc:       disableScannerFunction,
-		logger:                   logger}
+		scannerConfiguration:      configuration,
+		fileSystemHistory:         fsh,
+		objectsDir:                objectsDirname,
+		rootDir:                   rootDirname,
+		networkReaderContext:      netReaderContext,
+		netbenchFilename:          netbenchFname,
+		oldTriggersFilename:       oldTriggersFname,
+		rescanObjectCacheFunction: rescanObjectCacheFunction,
+		disableScannerFunc:        disableScannerFunction,
+		logger:                    logger}
 	srpc.RegisterName("Subd", rpcObj)
 	addObjectsHandler := &addObjectsHandlerType{
 		objectsDir: objectsDirname,
@@ -68,8 +67,7 @@ func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 	srpc.RegisterName("ObjectServer", addObjectsHandler)
 	tricorder.RegisterMetric("/image-name", &rpcObj.lastSuccessfulImageName,
 		units.None, "name of the image for the last successful update")
-	return rescanObjectCacheChannel,
-		&HtmlWriter{&rpcObj.lastSuccessfulImageName}
+	return &HtmlWriter{&rpcObj.lastSuccessfulImageName}
 }
 
 func (hw *HtmlWriter) WriteHtml(writer io.Writer) {

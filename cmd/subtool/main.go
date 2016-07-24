@@ -14,8 +14,10 @@ import (
 var (
 	computedFilesRoot = flag.String("computedFilesRoot", "",
 		"Name of directory tree containing computed files")
-	debug = flag.Bool("debug", false, "Enable debug mode")
-	file  = flag.String("file", "",
+	debug             = flag.Bool("debug", false, "Enable debug mode")
+	deleteBeforeFetch = flag.Bool("deleteBeforeFetch", false,
+		"If true, delete prior to Fetch rather than during Update")
+	file = flag.String("file", "",
 		"Name of file to write encoded data to")
 	filterFile = flag.String("filterFile", "",
 		"Replacement filter file to apply when pushing image")
@@ -53,6 +55,8 @@ var (
 		"timeout for push-image retry loop")
 	triggersFile = flag.String("triggersFile", "",
 		"Replacement triggers file to apply when pushing image")
+	triggersString = flag.String("triggersString", "",
+		"Replacement triggers string to apply when pushing image")
 	wait = flag.Uint("wait", 0, "Seconds to sleep after last Poll")
 )
 
@@ -97,6 +101,11 @@ func main() {
 	flag.Parse()
 	if flag.NArg() < 1 {
 		printUsage()
+		os.Exit(2)
+	}
+	if *triggersFile != "" && *triggersString != "" {
+		fmt.Fprintln(os.Stderr,
+			"Cannot specify both -triggersFile and -triggersString")
 		os.Exit(2)
 	}
 	if err := setupclient.SetupTls(true); err != nil {

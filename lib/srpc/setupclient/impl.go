@@ -3,35 +3,34 @@ package setupclient
 import (
 	"crypto/tls"
 	"flag"
-	"fmt"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"os"
 	"path"
 )
 
 var (
-	certFile = flag.String("certFile",
-		path.Join(os.Getenv("HOME"), ".ssl/cert.pem"),
-		"Name of file containing the user SSL certificate")
-	keyFile = flag.String("keyFile",
-		path.Join(os.Getenv("HOME"), ".ssl/key.pem"),
-		"Name of file containing the user SSL key")
+	certDirectory = flag.String("certDirectory",
+		path.Join(os.Getenv("HOME"), ".ssl"),
+		"Name of directory containing user SSL certificates")
 )
 
 func setupTls(ignoreMissingCerts bool) error {
-	// Load certificates and key.
-	cert, err := tls.LoadX509KeyPair(*certFile, *keyFile)
+	if *certDirectory == "" {
+		return nil
+	}
+	// Load certificates.
+	certs, err := srpc.LoadCertificates(*certDirectory)
 	if ignoreMissingCerts && os.IsNotExist(err) {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("unable to load keypair: %s", err)
+		return err
 	}
 	// Setup client.
 	clientConfig := new(tls.Config)
 	clientConfig.InsecureSkipVerify = true
 	clientConfig.MinVersion = tls.VersionTLS12
-	clientConfig.Certificates = append(clientConfig.Certificates, cert)
+	clientConfig.Certificates = certs
 	srpc.RegisterClientTlsConfig(clientConfig)
 	return nil
 }

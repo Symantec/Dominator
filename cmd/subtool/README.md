@@ -43,7 +43,7 @@ the *[dominator](../dominator/README.md)* to change the configuration of all the
 
 ## Security
 *[Subd](../subd/README.md)* restricts RPC access using TLS client
-authentication. *Subtool* expects a valid certificate and key in the files
-`~/.ssl/cert.pem` and `~/.ssl/key.pem`, respectively. *Subtool* will present
-this certificate to *subd*. If the certificate is signed by a certificate
-authority that *subd* trusts, *subd* will grant access.
+authentication. *Subtool* will load certificate and key files from the
+`~/.ssl` directory. *Subtool* will present these certificates to *subd*. If one
+of the certificates is signed by a certificate authority that *subd* trusts,
+*subd* will grant access.

@@ -26,8 +26,7 @@ contents will be generated and displayed.
 
 ## Security
 *[Filegen-server](../filegen-server/README.md)* restricts RPC access using TLS
-client authentication. *Filegen-client* expects a valid certificate and key in
-the files `~/.ssl/cert.pem` and `~/.ssl/key.pem`, respectively. *Filegen-client*
-will present this certificate to *filegen-server*. If the certificate is signed
-by a certificate authority that *filegen-server* trusts, *filegen-server* will
-grant access.
+client authentication. *Filegen-client* will load certificate and key files from
+the `~/.ssl` directory. *Filegen-client* will present these certificates to
+*filegen-server*. If one of the certificates is signed by a certificate
+authority that *filegen-server* trusts, *filegen-server* will grant access.

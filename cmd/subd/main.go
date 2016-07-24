@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/html"
@@ -29,6 +30,12 @@ import (
 )
 
 var (
+	defaultNetworkSpeedPercent = flag.Uint64("defaultNetworkSpeedPercent",
+		constants.DefaultNetworkSpeedPercent,
+		"Network speed as percentage of capacity")
+	defaultScanSpeedPercent = flag.Uint64("defaultScanSpeedPercent",
+		constants.DefaultScanSpeedPercent,
+		"Scan speed as percentage of capacity")
 	logbufLines = flag.Uint("logbufLines", 1024,
 		"Number of lines to store in the log buffer")
 	maxThreads = flag.Uint("maxThreads", 1,
@@ -41,7 +48,8 @@ var (
 		"Port number to allocate and listen on for HTTP/RPC")
 	rootDir = flag.String("rootDir", "/",
 		"Name of root of directory tree to manage")
-	showStats = flag.Bool("showStats", false,
+	scanExcludeList flagutil.StringList = constants.ScanExcludeList
+	showStats                           = flag.Bool("showStats", false,
 		"If true, show statistics after each cycle")
 	subdDir = flag.String("subdDir", ".subd",
 		"Name of subd private directory, relative to rootDir. This must be on the same file-system as rootDir")
@@ -50,6 +58,8 @@ var (
 
 func init() {
 	runtime.LockOSThread()
+	flag.Var(&scanExcludeList, "scanExcludeList",
+		"Comma separated list of patterns to exclude from scanning")
 }
 
 func sanityCheck() bool {
@@ -289,14 +299,14 @@ func main() {
 	publishFsSpeed(bytesPerSecond, blocksPerSecond)
 	var configuration scanner.Configuration
 	var err error
-	configuration.ScanFilter, err = filter.New(constants.ScanExcludeList)
+	configuration.ScanFilter, err = filter.New(scanExcludeList)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to set default scan exclusions\t%s\n",
 			err)
 		os.Exit(1)
 	}
 	configuration.FsScanContext = fsrateio.NewReaderContext(bytesPerSecond,
-		blocksPerSecond, 0)
+		blocksPerSecond, *defaultScanSpeedPercent)
 	defaultSpeed := configuration.FsScanContext.GetContext().SpeedPercent()
 	if firstScan {
 		configuration.FsScanContext.GetContext().SetSpeedPercent(100)
@@ -309,12 +319,18 @@ func main() {
 		disableScanner func(disableScanner bool)) {
 		networkReaderContext := rateio.NewReaderContext(
 			getCachedNetworkSpeed(netbenchFilename),
-			constants.DefaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
+			*defaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
 		configuration.NetworkReaderContext = networkReaderContext
-		rescanObjectCacheChannel, rpcdHtmlWriter :=
+		invalidateNextScanObjectCache := false
+		rpcdHtmlWriter :=
 			rpcd.Setup(&configuration, &fsh, objectsDir,
 				workingRootDir, networkReaderContext, netbenchFilename,
-				oldTriggersFilename, disableScanner, logger)
+				oldTriggersFilename, disableScanner,
+				func() {
+					invalidateNextScanObjectCache = true
+					fsh.UpdateObjectCacheOnly()
+				},
+				logger)
 		configMetricsDir, err := tricorder.RegisterDirectory("/config")
 		if err != nil {
 			fmt.Fprintf(os.Stderr,
@@ -339,7 +355,6 @@ func main() {
 			os.Exit(1)
 		}
 		fsh.Update(nil)
-		invalidateNextScanObjectCache := false
 		sighupChannel := make(chan os.Signal)
 		signal.Notify(sighupChannel, syscall.SIGHUP)
 		sigtermChannel := make(chan os.Signal)
@@ -383,9 +398,6 @@ func main() {
 						fmt.Println(configuration.FsScanContext)
 					}
 				}
-			case <-rescanObjectCacheChannel:
-				invalidateNextScanObjectCache = true
-				fsh.UpdateObjectCacheOnly()
 			}
 		}
 	}

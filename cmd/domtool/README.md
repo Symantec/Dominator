@@ -39,10 +39,10 @@ Some of the sub-commands available are:
 
 ## Security
 *[Dominator](../dominator/README.md)* restricts RPC access using TLS client
-authentication. *Domtool* expects a valid certificate and key in the files
-`~/.ssl/cert.pem` and `~/.ssl/key.pem`, respectively. *Domtool* will present
-this certificate to *dominator*. If the certificate is signed by a certificate
-authority that *dominator* trusts, *dominator* will grant access.
+authentication. *Domtool* will load certificate and key files from the
+`~/.ssl` directory. *Domtool* will present these certificates to *dominator*. If
+one of the certificates is signed by a certificate authority that *dominator*
+trusts, *dominator* will grant access.
 
 ## Critical Sub-Commands
 The most important sub-commands are described below for convenience.

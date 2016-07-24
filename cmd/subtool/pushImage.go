@@ -76,6 +76,11 @@ func pushImage(srpcClient *srpc.Client, imageName string) error {
 		if err != nil {
 			return err
 		}
+	} else if *triggersString != "" {
+		img.Triggers, err = triggers.Decode([]byte(*triggersString))
+		if err != nil {
+			return err
+		}
 	}
 	if err := pollFetchAndPush(&subObj, img, imageServerAddress, timeoutTime,
 		logger); err != nil {
@@ -140,6 +145,7 @@ func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 	imageServerAddress string, timeoutTime time.Time,
 	logger *log.Logger) error {
 	var generationCount uint64
+	deleteEarly := *deleteBeforeFetch
 	for ; time.Now().Before(timeoutTime); time.Sleep(time.Second) {
 		var pollReply sub.PollResponse
 		if err := pollAndBuildPointers(subObj.Client, &generationCount,
@@ -148,6 +154,13 @@ func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 		}
 		if pollReply.FileSystem == nil {
 			continue
+		}
+		if deleteEarly {
+			deleteEarly = false
+			if deleteUnneededFiles(subObj.Client, pollReply.FileSystem,
+				img.FileSystem, logger) {
+				continue
+			}
 		}
 		subObj.FileSystem = pollReply.FileSystem
 		subObj.ObjectCache = pollReply.ObjectCache
@@ -230,4 +243,35 @@ func showBlankLine() {
 	if *showTimes {
 		fmt.Fprintln(os.Stderr)
 	}
+}
+
+func deleteUnneededFiles(srpcClient *srpc.Client, subFS *filesystem.FileSystem,
+	imgFS *filesystem.FileSystem, logger *log.Logger) bool {
+	startTime := showStart("compute early files to delete")
+	pathsToDelete := make([]string, 0)
+	imgHashToInodesTable := imgFS.HashToInodesTable()
+	for pathname, inum := range subFS.FilenameToInodeTable() {
+		if inode, ok := subFS.InodeTable[inum].(*filesystem.RegularInode); ok {
+			if inode.Size > 0 {
+				if _, ok := imgHashToInodesTable[inode.Hash]; !ok {
+					pathsToDelete = append(pathsToDelete, pathname)
+				}
+			}
+		}
+	}
+	showTimeTaken(startTime)
+	if len(pathsToDelete) < 1 {
+		return false
+	}
+	updateRequest := sub.UpdateRequest{
+		Wait:          true,
+		PathsToDelete: pathsToDelete}
+	var updateReply sub.UpdateResponse
+	startTime = showStart("Subd.Update() for early files to delete")
+	err := client.CallUpdate(srpcClient, updateRequest, &updateReply)
+	showTimeTaken(startTime)
+	if err != nil {
+		logger.Println(err)
+	}
+	return true
 }
