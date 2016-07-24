@@ -37,6 +37,15 @@ shown) using the following command:
 imagetool -imageServerHostname=imageserver.my.domain show sparse.0
 ```
 
+### My image looks good. I'm ready to push it
+All you need to do is decide which machine(s) you want to push the new image to
+and edit the MDB (Machine Data Base) records for those machines. For each
+machine record, you need to create/update the *RequiredImage* field with the
+name of your new image (`sparse.0` in this example). Shortly afterwards the
+**[Dominator](../cmd/dominator/README.md)** will pick up the updated MDB data
+and will push the new image to the appropriate machines. If machines are down,
+they will be automatically updated once they are back online. Your work is done.
+
 ### I changed my mind. I want to restart a service
 Imagine that your *sparse* image has the SSH daemon configuration file:
 `/etc/ssh/sshd.conf` and you want to restart sshd if the file changes. You will
