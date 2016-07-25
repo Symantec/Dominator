@@ -1,0 +1,25 @@
+#! /bin/bash --posix
+#
+# push-to-seed sub image image_server
+#
+# Push an image to a sub which is running a seed image designed for importing
+# an image. The seed image should implement the make-bootable service such that
+# the command "service make-bootable-start" will make the parent block device
+# of the destination file-system bootable.
+# The following parameters are required:
+#   sub:          the hostname of the sub
+#   image:        the image to push
+#   image_server: the hostname of the image server
+
+set -o nounset
+
+readonly sub="$1"
+readonly image="$2"
+readonly image_server="$3"
+
+subtool -subHostname="$sub" \
+        -deleteBeforeFetch=true \
+        -imageServerHostname="$image_server" \
+        -showTimes=true \
+        -triggersString='[{"MatchLines":[".*"],"Service":"make-bootable"}]' \
+  push-image "$image"
