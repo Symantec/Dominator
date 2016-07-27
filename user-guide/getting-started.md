@@ -11,6 +11,10 @@ of several components:
 
 - [dominator](../cmd/dominator/README.md): a daemon which constantly polls the
   file-system state of each machine in the fleet
+- [filegen-server](../cmd/filegen-server/README.md): a daemon which computes
+  file data on request from the [dominator](../cmd/dominator/README.md) (this is
+  typically used to provide machine-specific files such as certificates and
+  configuration files)
 - [imageserver](../cmd/imageserver/README.md): a daemon which hosts the images
   registered with the system and responds to management and data requests
 - [imagetool](../cmd/imagetool/README.md): a utility to manage images hosted on
