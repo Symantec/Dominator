@@ -56,3 +56,36 @@ make
 ```
 
 The compiled binaries will be available in `$HOME/go/bin`.
+
+## Making certificates
+In order for the various components of the **Dominator** to communicate, each
+component will need SSL certificate+key pairs and/or Certificate Authority (CA)
+files, so that trust relationships can be established. This is necessary for
+operational security, so that you can control and audit who creates images and
+who can issue update requests to the *subs*.
+
+### Creating a root CA
+You will need to create a CA which will be used as the root of trust for all the
+components. It is recommended that you do not use a commercial CA, since the CA
+can issue certificates that effectively give root-level access to your machines.
+Additionally, the trust relationships between the **Dominator** components are
+only needed within your infrastructure, so there is no benefit to a public
+(commercial) CA.
+
+Below are sample commands which would produce a CA with 3 year expiration:
+
+```
+openssl genpkey -algorithm RSA -out root.key.pem -pkeyopt rsa_keygen_bits:4096
+openssl req -new -key root.key.pem -days 1096 -extensions v3_ca -batch -out root.csr -utf8 -subj '/CN=Dominator'
+openssl x509 -req -sha256 -days 1096 -in root.csr -signkey root.key.pem -set_serial 1 -out root.pem
+chmod a+r root.pem
+```
+
+This root CA will be used to sign all the other certificate+key pairs. In
+addition, the `root.pem` file that is created should be copied to
+`/etc/ssl/CA.pem` on every machine which runs a daemon component of the
+**Dominator** ([dominator](../cmd/dominator/README.md),
+[filegen-server](../cmd/filegen-server/README.md),
+[imageserver](../cmd/imageserver/README.md) and [subd](../cmd/subd/README.md)).
+The simplest approach is to copy this file to all machines and/or including it
+in the installation image that every machine is booted with.
