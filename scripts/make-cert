@@ -10,14 +10,28 @@ set -o noglob
 set -o nounset
 
 if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
-    echo "Usage: make-cert signing-key newkey serial username [methods]"
-    echo "  methods: an optional comma-separated list of method names"
+    echo 'Usage: make-cert signing-key newkey serial username [methods]'
+    echo '  methods: an optional comma-separated list of method names'
+    echo 'If serial="AUTO" then the serial numbers are auto-incremented and use'
+    echo 'the .serial file to maintain state.'
     exit 1
 fi
 
 readonly signing_key="$1"
 readonly newkey="$2"
-readonly serial="$3"
+
+if [ "$3" == "AUTO" ]; then
+    if [ -r .serial ]; then
+	old_serial=$(< .serial)
+    else
+	old_serial=1
+    fi
+    readonly serial=$(($old_serial + 1))
+    echo "$serial" > .serial
+else
+    readonly serial="$3"
+fi
+
 readonly username="$4"
 
 if [ "$#" -lt 5 ]; then
