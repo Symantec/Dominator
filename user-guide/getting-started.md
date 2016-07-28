@@ -93,3 +93,41 @@ addition, the `root.pem` file that is created should be copied to
 [imageserver](../cmd/imageserver/README.md) and [subd](../cmd/subd/README.md)).
 The simplest approach is to copy this file to all machines and/or including it
 in the installation image that every machine is booted with.
+
+### Creating a certificate+key for [subd](../cmd/subd/README.md)
+Using the previously created root certificate+key, you can create and sign a
+certificate and key pair for [subd](../cmd/subd/README.md) using the
+[make-cert](../scripts/make-cert) utility provided in the source repository.
+Use the following command to generate the certificate and key pair:
+
+```
+make-cert root subd AUTO subd 'ObjectServer.GetObjects'
+```
+
+This will create the `subd.pem` and `subd.key.pem` files. These should be copied
+to the files `/etc/ssl/subd/cert.pem` and `/etc/ssl/subd/key.pem` respectively
+on all machines. As with the CA file, this should also be included in the
+installation image that every machine is booted with.
+
+### Adding [subd](../cmd/subd/README.md) to all your machines and boot image
+Before moving onto making other certificates, let's finish off the steps to get
+[subd](../cmd/subd/README.md) onto all your machines and into your boot image,
+so that it will run everywhere. You will need to copy `$HOME/go/bin/subd` and
+`$HOME/go/bin/run-in-mntns` to your machines. The recommended location is
+`/usr/local/sbin`. You will also need to copy the appropriate boot script from
+the [init scripts](../init.d) directory, and run the OS-specific command to
+install or activate the boot script.
+
+### Creating a certificate+key for [dominator](../cmd/dominator/README.md)
+Run the following command:
+
+```
+make-cert root Dominator AUTO dominator \
+    'ObjectServer.AddObjects,Subd.*,ImageServer.GetImage,FileGenerator.Connect'
+```
+
+This will create the `Dominator.pem` and `Dominator.key.pem` files. These should
+be copied to the files `/etc/ssl/dominator/cert.pem` and
+`/etc/ssl/dominator/key.pem` on the machine where
+[dominator](../cmd/dominator/README.md) will run. This is a high value key, as
+it gives root level access to your fleet, so you should restrict access to it.
