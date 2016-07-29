@@ -131,3 +131,16 @@ be copied to the files `/etc/ssl/dominator/cert.pem` and
 `/etc/ssl/dominator/key.pem` on the machine where
 [dominator](../cmd/dominator/README.md) will run. This is a high value key, as
 it gives root level access to your fleet, so you should restrict access to it.
+
+### Creating a certificate+key for [imageserver](../cmd/imageserver/README.md)
+Run the following command:
+
+```
+make-cert root imageserver AUTO imageserver \
+    'ImageServer.GetImageUpdates,ImageServer.GetImage,ObjectServer.GetObjects'
+```
+
+This will create the `imageserver.pem` and `imageserver.key.pem` files. These
+should be copied to the files `/etc/ssl/imageserver/cert.pem` and
+`/etc/ssl/imageserver/key.pem` on the machine where
+[imageserver](../cmd/imageserver/README.md) will run.
