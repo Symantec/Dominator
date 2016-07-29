@@ -109,6 +109,9 @@ to the files `/etc/ssl/subd/cert.pem` and `/etc/ssl/subd/key.pem` respectively
 on all machines. As with the CA file, this should also be included in the
 installation image that every machine is booted with.
 
+Note how [subd](../cmd/subd/README.md) is given access to a single RPC method:
+`ObjectServer.GetObjects`. This is required to allow it to fetch objects.
+
 ### Adding [subd](../cmd/subd/README.md) to all your machines and boot image
 Before moving onto making other certificates, let's finish off the steps to get
 [subd](../cmd/subd/README.md) onto all your machines and into your boot image,
@@ -129,8 +132,12 @@ make-cert root Dominator AUTO dominator \
 This will create the `Dominator.pem` and `Dominator.key.pem` files. These should
 be copied to the files `/etc/ssl/dominator/cert.pem` and
 `/etc/ssl/dominator/key.pem` on the machine where
-[dominator](../cmd/dominator/README.md) will run. This is a high value key, as
-it gives root level access to your fleet, so you should restrict access to it.
+[dominator](../cmd/dominator/README.md) will run.
+
+Note how (in addition to access to some other RPC methods) the
+[dominator](../cmd/dominator/README.md) is given access to call all
+[subd](../cmd/subd/README.md) RPC methods. Thus, this is a high value key, as it
+gives root level access to your fleet, so you should restrict access to it.
 
 ### Creating a certificate+key for [imageserver](../cmd/imageserver/README.md)
 Run the following command:
@@ -144,3 +151,8 @@ This will create the `imageserver.pem` and `imageserver.key.pem` files. These
 should be copied to the files `/etc/ssl/imageserver/cert.pem` and
 `/etc/ssl/imageserver/key.pem` on the machine where
 [imageserver](../cmd/imageserver/README.md) will run.
+
+Note that the list of RPC methods given above allows
+[imageserver](../cmd/imageserver/README.md) to replicate images from another
+[imageserver](../cmd/imageserver/README.md). If you never plan to enable image
+replication (that would be unwise), you could provide an empty list of methods.
