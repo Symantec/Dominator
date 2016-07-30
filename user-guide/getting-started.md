@@ -156,3 +156,20 @@ Note that the list of RPC methods given above allows
 [imageserver](../cmd/imageserver/README.md) to replicate images from another
 [imageserver](../cmd/imageserver/README.md). If you never plan to enable image
 replication (that would be unwise), you could provide an empty list of methods.
+
+### Creating a certificate+key for [filegen-server](../cmd/filegen-server/README.md)
+Run the following command:
+
+```
+make-cert root filegen-server AUTO filegen-server ''
+```
+
+This will create the `filegen-server.pem` and `filegen-server.key.pem` files.
+These should be copied to the files `/etc/ssl/filegen-server/cert.pem` and
+`/etc/ssl/filegen-server/key.pem` on the machine where
+[filegen-server](../cmd/filegen-server/README.md) will run.
+
+Note how an empty list of RPC methods is specified. This is because
+[filegen-server](../cmd/filegen-server/README.md) does not initiate any RPC
+connections: it only responds to RPC requests. The certificate+key pair is a
+standard requirement for every TLS server.
