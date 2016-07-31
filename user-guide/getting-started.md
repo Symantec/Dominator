@@ -174,3 +174,48 @@ Note how an empty list of RPC methods is specified. This is because
 connections: it only responds to RPC requests. Thus, it does not need permission
 to access any methods. The certificate+key pair is a standard requirement for
 every TLS server.
+
+### Creating a certificate+key pair for a user
+Unlike daemons, which require access to a specific set of methods, users require
+access to a variety of methods depending on their level of access and your
+security policy, so this section will discuss creating these certificate+key
+pairs in general terms. To create, run the following command:
+
+```
+make-cert root "$LOGNAME" AUTO "$LOGNAME" '$methods'
+```
+
+This will create the `$LOGNAME.pem` and `$LOGNAME.key.pem` files.
+These should be copied to the `$HOME/.ssl` directory for the user, with matched
+`$file.cert` and `$file.key` names. A common convention is to use the names
+`$LOGNAME.cert` and `$LOGNAME.key`. The command-line tools such as
+[domtool](../cmd/domtool/README.md) and [imagetool](../cmd/imagetool/README.md)
+will read all certificate+key pairs from the `$HOME/.ssl` directory.
+
+The forth parameter to `make-cert` is the username that the certificate+key pair
+is issued to. This username will be recorded in logs for certain RPC methods and
+will be recorded in image metadata when images are created. The entity creating
+the certificate+key pairs must therefore be trusted.
+
+The final parameter is the comma separated list of methods that the user may
+access. The sections below discuss how to determine the list of methods.
+
+#### Discovering methods
+The [list-methods](../scripts/list-methods) utility provided in the source
+repository will connect to a running server and show the list of methods that
+the server supports. To find the list of methods that a server supports, run the
+following command:
+
+```
+list-methods host:port
+```
+
+These are the assigned port numbers:
+
+- [dominator](../cmd/dominator/README.md): 6970
+- [filegen-server](../cmd/filegen-server/README.md): 6972
+- [imageserver](../cmd/imageserver/README.md): 6971
+- [subd](../cmd/subd/README.md): 6969
+
+By knowing the list of methods that servers (daemons) support, you can make an
+informed choice about which methods to grant users access to.
