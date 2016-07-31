@@ -171,5 +171,6 @@ These should be copied to the files `/etc/ssl/filegen-server/cert.pem` and
 
 Note how an empty list of RPC methods is specified. This is because
 [filegen-server](../cmd/filegen-server/README.md) does not initiate any RPC
-connections: it only responds to RPC requests. The certificate+key pair is a
-standard requirement for every TLS server.
+connections: it only responds to RPC requests. Thus, it does not need permission
+to access any methods. The certificate+key pair is a standard requirement for
+every TLS server.
