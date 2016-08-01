@@ -219,3 +219,17 @@ These are the assigned port numbers:
 
 By knowing the list of methods that servers (daemons) support, you can make an
 informed choice about which methods to grant users access to.
+
+#### Common method lists
+In this section some common roles are listed, with the corresponding method
+lists that are required to perform these roles:
+
+- Simple image creator (for use in an image build pipeline):
+  `ImageServer.AddImage,ImageServer.CheckImage,ObjectServer.AddObjects`
+- Image creator (can also create derivative images and snapshot machines):
+  `ImageServer.AddImage,ImageServer.CheckImage,ImageServer.GetImage,ObjectServer.AddObjects,Subd.Poll`
+- Image administrator (i.e. can delete images, create directories and change
+  directory access): `ImageServer.*`
+- [dominator](../cmd/dominator/README.md) administrator: `Dominator.*`
+- All-powerful user (full control over all **Dominator** components and
+  root-level access to all *subs*): `*.*`
