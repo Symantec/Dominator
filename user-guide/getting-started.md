@@ -227,7 +227,7 @@ lists that are required to perform these roles:
 - Simple image creator (for use in an image build pipeline):
   `ImageServer.AddImage,ImageServer.CheckImage,ObjectServer.AddObjects`
 - Image creator (can also create derivative images and snapshot machines):
-  `ImageServer.AddImage,ImageServer.CheckImage,ImageServer.GetImage,ObjectServer.AddObjects,Subd.Poll`
+  `ImageServer.AddImage,ImageServer.CheckImage,ImageServer.GetImage,ObjectServer.AddObjects,ObjectServer.CheckObjects,Subd.Poll`
 - Image administrator (i.e. can delete images, create directories and change
   directory access): `ImageServer.*`
 - [dominator](../cmd/dominator/README.md) administrator: `Dominator.*`
