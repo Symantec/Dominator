@@ -222,14 +222,36 @@ informed choice about which methods to grant users access to.
 
 #### Common method lists
 In this section some common roles are listed, with the corresponding method
-lists that are required to perform these roles:
+lists that are required to perform these roles. When creating certificate+key
+pairs the list of methods most be comma separated. The method lists are split
+out below for readability:
 
 - Simple image creator (for use in an image build pipeline):
-  `ImageServer.AddImage,ImageServer.CheckImage,ObjectServer.AddObjects`
+  ```
+  ImageServer.AddImage
+  ImageServer.CheckImage
+  ObjectServer.AddObjects
+  ```
 - Image creator (can also create derivative images and snapshot machines):
-  `ImageServer.AddImage,ImageServer.CheckImage,ImageServer.GetImage,ObjectServer.AddObjects,ObjectServer.CheckObjects,Subd.Poll`
+  ```
+  ImageServer.AddImage
+  ImageServer.CheckImage
+  ImageServer.GetImage
+  ObjectServer.AddObjects
+  ObjectServer.CheckObjects
+  Subd.Poll
+  ```
 - Image administrator (i.e. can delete images, create directories and change
-  directory access): `ImageServer.*`
-- [dominator](../cmd/dominator/README.md) administrator: `Dominator.*`
+  directory access):
+  ```
+  ImageServer.*
+  ```
+- [dominator](../cmd/dominator/README.md) administrator:
+  ```
+  Dominator.*
+  ```
 - All-powerful user (full control over all **Dominator** components and
-  root-level access to all *subs*): `*.*`
+  root-level access to all *subs*):
+  ```
+  *.*
+  ```
