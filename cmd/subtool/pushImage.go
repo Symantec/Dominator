@@ -108,37 +108,28 @@ func pushImage(srpcClient *srpc.Client, imageName string) error {
 
 func getImageRetry(imageServerAddress, imageName string,
 	timeoutTime time.Time) (*image.Image, error) {
-	for ; time.Now().Before(timeoutTime); time.Sleep(time.Second) {
-		img, err := getImage(imageServerAddress, imageName)
-		if img != nil && err == nil {
-			return img, nil
-		}
-	}
-	return nil, errors.New("timed out getting image")
-}
-
-func getImage(imageServerAddress, imageName string) (*image.Image, error) {
 	imageSrpcClient, err := srpc.DialHTTP("tcp", imageServerAddress, 0)
 	if err != nil {
 		return nil, err
 	}
 	defer imageSrpcClient.Close()
-	img, err := imgclient.GetImage(imageSrpcClient, imageName)
-	if err != nil {
-		return nil, err
+	for ; time.Now().Before(timeoutTime); time.Sleep(time.Second) {
+		img, err := imgclient.GetImage(imageSrpcClient, imageName)
+		if err != nil {
+			return nil, err
+		} else if img != nil {
+			if err := img.FileSystem.RebuildInodePointers(); err != nil {
+				return nil, err
+			}
+			img.FileSystem.InodeToFilenamesTable()
+			img.FileSystem.FilenameToInodeTable()
+			img.FileSystem.HashToInodesTable()
+			img.FileSystem.ComputeTotalDataBytes()
+			img.FileSystem.BuildEntryMap()
+			return img, nil
+		}
 	}
-	if img == nil {
-		return nil, errors.New(imageName + ": not found")
-	}
-	if err := img.FileSystem.RebuildInodePointers(); err != nil {
-		return nil, err
-	}
-	img.FileSystem.InodeToFilenamesTable()
-	img.FileSystem.FilenameToInodeTable()
-	img.FileSystem.HashToInodesTable()
-	img.FileSystem.ComputeTotalDataBytes()
-	img.FileSystem.BuildEntryMap()
-	return img, nil
+	return nil, errors.New("timed out getting image")
 }
 
 func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
