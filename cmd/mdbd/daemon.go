@@ -21,7 +21,7 @@ type genericEncoder interface {
 	Encode(v interface{}) error
 }
 
-func runDaemon(sources []source, mdbFileName, hostnameRegex string,
+func runDaemon(generators []generator, mdbFileName, hostnameRegex string,
 	datacentre string, fetchInterval uint, logger *log.Logger, debug bool) {
 	var prevMdb *mdb.Mdb
 	var hostnameRE *regexp.Regexp
@@ -37,7 +37,7 @@ func runDaemon(sources []source, mdbFileName, hostnameRegex string,
 	fetchIntervalDuration := time.Duration(fetchInterval) * time.Second
 	for ; ; sleepUntil(cycleStopTime) {
 		cycleStopTime = time.Now().Add(fetchIntervalDuration)
-		newMdb, err := loadFromAll(sources, datacentre, logger)
+		newMdb, err := loadFromAll(generators, datacentre, logger)
 		if err != nil {
 			logger.Println(err)
 			continue
@@ -70,11 +70,11 @@ func sleepUntil(wakeTime time.Time) {
 	time.Sleep(sleepTime)
 }
 
-func loadFromAll(sources []source, datacentre string,
+func loadFromAll(generators []generator, datacentre string,
 	logger *log.Logger) (*mdb.Mdb, error) {
 	machineMap := make(map[string]mdb.Machine)
-	for _, source := range sources {
-		mdb, err := loadMdb(source.driverFunc, source.url, datacentre, logger)
+	for _, gen := range generators {
+		mdb, err := gen.Generate(datacentre, logger)
 		if err != nil {
 			return nil, err
 		}
