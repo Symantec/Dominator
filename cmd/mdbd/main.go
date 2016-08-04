@@ -43,7 +43,15 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr,
 		"  text: each line contains: host required-image planned-image")
 	fmt.Fprintln(os.Stderr,
-		"  aws: Amazon AWS endpoint. url is datacenter like 'us-east-1'")
+		"  aws: Amazon AWS endpoint. url is datacenter like 'us-east-1'.")
+	fmt.Fprintln(os.Stderr,
+		"       This driver requires the file ~/.aws/credentials which")
+	fmt.Fprintln(os.Stderr,
+		"       contains the amazon aws credentials. For additional")
+	fmt.Fprintln(os.Stderr,
+		"       information see:")
+	fmt.Fprintln(os.Stderr,
+		"       http://docs.aws.amazon.com/sdk-for-go/latest/v1/developerguide/sdkforgo-dg.pdf")
 }
 
 type driverFunc func(reader io.Reader, datacentre string,
