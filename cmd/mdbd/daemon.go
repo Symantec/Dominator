@@ -7,13 +7,11 @@ import (
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"log"
-	"net/http"
 	"os"
 	"path"
 	"regexp"
 	"runtime"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -21,7 +19,7 @@ type genericEncoder interface {
 	Encode(v interface{}) error
 }
 
-func runDaemon(sources []source, mdbFileName, hostnameRegex string,
+func runDaemon(generators []generator, mdbFileName, hostnameRegex string,
 	datacentre string, fetchInterval uint, logger *log.Logger, debug bool) {
 	var prevMdb *mdb.Mdb
 	var hostnameRE *regexp.Regexp
@@ -37,7 +35,7 @@ func runDaemon(sources []source, mdbFileName, hostnameRegex string,
 	fetchIntervalDuration := time.Duration(fetchInterval) * time.Second
 	for ; ; sleepUntil(cycleStopTime) {
 		cycleStopTime = time.Now().Add(fetchIntervalDuration)
-		newMdb, err := loadFromAll(sources, datacentre, logger)
+		newMdb, err := loadFromAll(generators, datacentre, logger)
 		if err != nil {
 			logger.Println(err)
 			continue
@@ -70,11 +68,11 @@ func sleepUntil(wakeTime time.Time) {
 	time.Sleep(sleepTime)
 }
 
-func loadFromAll(sources []source, datacentre string,
+func loadFromAll(generators []generator, datacentre string,
 	logger *log.Logger) (*mdb.Mdb, error) {
 	machineMap := make(map[string]mdb.Machine)
-	for _, source := range sources {
-		mdb, err := loadMdb(source.driverFunc, source.url, datacentre, logger)
+	for _, gen := range generators {
+		mdb, err := gen.Generate(datacentre, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -92,34 +90,6 @@ func loadFromAll(sources []source, datacentre string,
 		newMdb.Machines = append(newMdb.Machines, machine)
 	}
 	return &newMdb, nil
-}
-
-func loadMdb(driverFunc driverFunc, url string, datacentre string,
-	logger *log.Logger) (
-	*mdb.Mdb, error) {
-	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
-		return loadHttpMdb(driverFunc, url, datacentre, logger)
-	}
-	file, err := os.Open(url)
-	if err != nil {
-		return nil, errors.New(("Error opening file " + err.Error()))
-	}
-	defer file.Close()
-	return driverFunc(bufio.NewReader(file), datacentre, logger)
-}
-
-func loadHttpMdb(driverFunc driverFunc, url string, datacentre string,
-	logger *log.Logger) (
-	*mdb.Mdb, error) {
-	response, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		return nil, errors.New("HTTP get failed")
-	}
-	return driverFunc(response.Body, datacentre, logger)
 }
 
 func selectHosts(inMdb *mdb.Mdb, hostnameRE *regexp.Regexp) *mdb.Mdb {
