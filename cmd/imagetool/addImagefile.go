@@ -112,40 +112,38 @@ func buildImageWithHasher(imageSClient *srpc.Client, filter *filter.Filter,
 	if err != nil {
 		return nil, err
 	}
-	var fs *filesystem.FileSystem
 	if fi.IsDir() {
 		sfs, err := scanner.ScanFileSystem(imageFilename, nil, filter, nil, h,
 			nil)
 		if err != nil {
 			return nil, err
 		}
-		fs = &sfs.FileSystem
+		return &sfs.FileSystem, nil
+	}
+	imageFile, err := os.Open(imageFilename)
+	if err != nil {
+		return nil, errors.New("error opening image file: " + err.Error())
+	}
+	defer imageFile.Close()
+	var imageReader io.Reader
+	if strings.HasSuffix(imageFilename, ".tar") {
+		imageReader = imageFile
+	} else if strings.HasSuffix(imageFilename, ".tar.gz") ||
+		strings.HasSuffix(imageFilename, ".tgz") {
+		gzipReader, err := gzip.NewReader(imageFile)
+		if err != nil {
+			return nil, errors.New(
+				"error creating gzip reader: " + err.Error())
+		}
+		defer gzipReader.Close()
+		imageReader = gzipReader
 	} else {
-		imageFile, err := os.Open(imageFilename)
-		if err != nil {
-			return nil, errors.New("error opening image file: " + err.Error())
-		}
-		defer imageFile.Close()
-		var imageReader io.Reader
-		if strings.HasSuffix(imageFilename, ".tar") {
-			imageReader = imageFile
-		} else if strings.HasSuffix(imageFilename, ".tar.gz") ||
-			strings.HasSuffix(imageFilename, ".tgz") {
-			gzipReader, err := gzip.NewReader(imageFile)
-			if err != nil {
-				return nil, errors.New(
-					"error creating gzip reader: " + err.Error())
-			}
-			defer gzipReader.Close()
-			imageReader = gzipReader
-		} else {
-			return nil, errors.New("unrecognised image type")
-		}
-		tarReader := tar.NewReader(imageReader)
-		fs, err = untar.Decode(tarReader, h, filter)
-		if err != nil {
-			return nil, errors.New("error building image: " + err.Error())
-		}
+		return nil, errors.New("unrecognised image type")
+	}
+	tarReader := tar.NewReader(imageReader)
+	fs, err := untar.Decode(tarReader, h, filter)
+	if err != nil {
+		return nil, errors.New("error building image: " + err.Error())
 	}
 	return fs, nil
 }
