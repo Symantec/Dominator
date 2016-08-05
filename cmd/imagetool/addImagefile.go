@@ -12,10 +12,12 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/mbr"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -125,6 +127,12 @@ func buildImageWithHasher(imageSClient *srpc.Client, filter *filter.Filter,
 		return nil, errors.New("error opening image file: " + err.Error())
 	}
 	defer imageFile.Close()
+	if partitionTable, err := mbr.Decode(imageFile); err != nil {
+		return nil, err
+	} else if partitionTable != nil {
+		return buildImageFromRaw(imageSClient, filter, imageFile,
+			partitionTable, h)
+	}
 	var imageReader io.Reader
 	if strings.HasSuffix(imageFilename, ".tar") {
 		imageReader = imageFile
@@ -146,4 +154,41 @@ func buildImageWithHasher(imageSClient *srpc.Client, filter *filter.Filter,
 		return nil, errors.New("error building image: " + err.Error())
 	}
 	return fs, nil
+}
+
+func buildImageFromRaw(imageSClient *srpc.Client, filter *filter.Filter,
+	imageFile *os.File, partitionTable *mbr.Mbr,
+	h *hasher) (*filesystem.FileSystem, error) {
+	var index uint
+	var offsetOfLargest, sizeOfLargest uint64
+	numPartitions := partitionTable.GetNumPartitions()
+	for index = 0; index < numPartitions; index++ {
+		offset := partitionTable.GetPartitionOffset(index)
+		size := partitionTable.GetPartitionSize(index)
+		if size > sizeOfLargest {
+			offsetOfLargest = offset
+			sizeOfLargest = size
+		}
+	}
+	if sizeOfLargest < 1 {
+		return nil, errors.New("unable to find largest partition")
+	}
+	cmd := exec.Command("mount", "-o",
+		fmt.Sprintf("loop,offset=%d", offsetOfLargest), imageFile.Name(),
+		"/mnt")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+	fs, err := buildImageWithHasher(imageSClient, filter, "/mnt", h)
+	cmd = exec.Command("umount", "/mnt")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+	return fs, err
 }
