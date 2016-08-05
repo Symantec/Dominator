@@ -7,13 +7,11 @@ import (
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"log"
-	"net/http"
 	"os"
 	"path"
 	"regexp"
 	"runtime"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -92,34 +90,6 @@ func loadFromAll(generators []generator, datacentre string,
 		newMdb.Machines = append(newMdb.Machines, machine)
 	}
 	return &newMdb, nil
-}
-
-func loadMdb(driverFunc driverFunc, url string, datacentre string,
-	logger *log.Logger) (
-	*mdb.Mdb, error) {
-	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
-		return loadHttpMdb(driverFunc, url, datacentre, logger)
-	}
-	file, err := os.Open(url)
-	if err != nil {
-		return nil, errors.New(("Error opening file " + err.Error()))
-	}
-	defer file.Close()
-	return driverFunc(bufio.NewReader(file), datacentre, logger)
-}
-
-func loadHttpMdb(driverFunc driverFunc, url string, datacentre string,
-	logger *log.Logger) (
-	*mdb.Mdb, error) {
-	response, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		return nil, errors.New("HTTP get failed")
-	}
-	return driverFunc(response.Body, datacentre, logger)
 }
 
 func selectHosts(inMdb *mdb.Mdb, hostnameRE *regexp.Regexp) *mdb.Mdb {

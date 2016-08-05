@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/mdb"
-	"io"
 	"log"
 	"log/syslog"
 	"os"
@@ -37,12 +35,6 @@ func printUsage() {
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Drivers:")
 	fmt.Fprintln(os.Stderr,
-		"  cis: Cloud Intelligence Service endpoint")
-	fmt.Fprintln(os.Stderr,
-		"  ds.host.fqdn: JSON with map of map of hosts with fqdn entries")
-	fmt.Fprintln(os.Stderr,
-		"  text: each line contains: host required-image planned-image")
-	fmt.Fprintln(os.Stderr,
 		"  aws: Amazon AWS endpoint. url is datacenter like 'us-east-1'.")
 	fmt.Fprintln(os.Stderr,
 		"       This driver requires the file ~/.aws/credentials which")
@@ -52,10 +44,13 @@ func printUsage() {
 		"       information see:")
 	fmt.Fprintln(os.Stderr,
 		"       http://docs.aws.amazon.com/sdk-for-go/latest/v1/developerguide/sdkforgo-dg.pdf")
+	fmt.Fprintln(os.Stderr,
+		"  cis: Cloud Intelligence Service endpoint")
+	fmt.Fprintln(os.Stderr,
+		"  ds.host.fqdn: JSON with map of map of hosts with fqdn entries")
+	fmt.Fprintln(os.Stderr,
+		"  text: each line contains: host required-image planned-image")
 }
-
-type driverFunc func(reader io.Reader, datacentre string,
-	logger *log.Logger) (*mdb.Mdb, error)
 
 type driver struct {
 	name       string
@@ -80,25 +75,6 @@ func getLogger() *log.Logger {
 		return log.New(s, "", 0)
 	}
 	return log.New(os.Stderr, "", log.LstdFlags)
-}
-
-// The generator interface generates an mdb from some source.
-type generator interface {
-	Generate(datacentre string, logger *log.Logger) (*mdb.Mdb, error)
-}
-
-// source implements the generator interface and generates an mdb from
-// either a flat file or a url.
-type source struct {
-	// The function parses the data from url or flat file.
-	driverFunc driverFunc
-	// the url or path of the flat file
-	url string
-}
-
-func (s source) Generate(
-	datacentre string, logger *log.Logger) (*mdb.Mdb, error) {
-	return loadMdb(s.driverFunc, s.url, datacentre, logger)
 }
 
 func getSource(driverName, url string) generator {
