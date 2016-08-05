@@ -166,13 +166,8 @@ func main() {
 		}
 	}
 	for index := 0; index < flag.NArg(); index += 2 {
-		generators = append(
-			generators,
-			getSource(
-				flag.Arg(index),
-				flag.Arg(index+1)))
+		generators = append(generators,
+			getSource(flag.Arg(index), flag.Arg(index+1)))
 	}
-	runDaemon(
-		generators, *mdbFile, *hostnameRegex, *datacentre,
-		*fetchInterval, logger, *debug)
+	runDaemon(generators, *mdbFile, *hostnameRegex, *datacentre, *fetchInterval, logger, *debug)
 }
