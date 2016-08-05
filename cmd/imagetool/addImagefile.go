@@ -88,28 +88,41 @@ func (h *hasher) Hash(reader io.Reader, length uint64) (
 
 func buildImage(imageSClient *srpc.Client, filter *filter.Filter,
 	imageFilename string) (*filesystem.FileSystem, error) {
-	fi, err := os.Lstat(imageFilename)
+	var h hasher
+	var err error
+	h.objQ, err = objectclient.NewObjectAdderQueue(imageSClient)
 	if err != nil {
 		return nil, err
 	}
-	var h hasher
-	h.objQ, err = objectclient.NewObjectAdderQueue(imageSClient)
+	fs, err := buildImageWithHasher(imageSClient, filter, imageFilename, &h)
+	if err != nil {
+		h.objQ.Close()
+		return nil, err
+	}
+	err = h.objQ.Close()
+	if err != nil {
+		return nil, err
+	}
+	return fs, nil
+}
+
+func buildImageWithHasher(imageSClient *srpc.Client, filter *filter.Filter,
+	imageFilename string, h *hasher) (*filesystem.FileSystem, error) {
+	fi, err := os.Lstat(imageFilename)
 	if err != nil {
 		return nil, err
 	}
 	var fs *filesystem.FileSystem
 	if fi.IsDir() {
-		sfs, err := scanner.ScanFileSystem(imageFilename, nil, filter, nil, &h,
+		sfs, err := scanner.ScanFileSystem(imageFilename, nil, filter, nil, h,
 			nil)
 		if err != nil {
-			h.objQ.Close()
 			return nil, err
 		}
 		fs = &sfs.FileSystem
 	} else {
 		imageFile, err := os.Open(imageFilename)
 		if err != nil {
-			h.objQ.Close()
 			return nil, errors.New("error opening image file: " + err.Error())
 		}
 		defer imageFile.Close()
@@ -120,30 +133,19 @@ func buildImage(imageSClient *srpc.Client, filter *filter.Filter,
 			strings.HasSuffix(imageFilename, ".tgz") {
 			gzipReader, err := gzip.NewReader(imageFile)
 			if err != nil {
-				h.objQ.Close()
 				return nil, errors.New(
 					"error creating gzip reader: " + err.Error())
 			}
 			defer gzipReader.Close()
 			imageReader = gzipReader
 		} else {
-			h.objQ.Close()
 			return nil, errors.New("unrecognised image type")
 		}
 		tarReader := tar.NewReader(imageReader)
-		fs, err = untar.Decode(tarReader, &h, filter)
+		fs, err = untar.Decode(tarReader, h, filter)
 		if err != nil {
-			h.objQ.Close()
 			return nil, errors.New("error building image: " + err.Error())
 		}
-	}
-	if err != nil {
-		h.objQ.Close()
-		return nil, err
-	}
-	err = h.objQ.Close()
-	if err != nil {
-		return nil, err
 	}
 	return fs, nil
 }
