@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/mdb"
-	"io"
 	"log"
 	"log/syslog"
 	"os"
@@ -37,15 +35,22 @@ func printUsage() {
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Drivers:")
 	fmt.Fprintln(os.Stderr,
+		"  aws: Amazon AWS endpoint. url is datacenter like 'us-east-1'.")
+	fmt.Fprintln(os.Stderr,
+		"       This driver requires the file ~/.aws/credentials which")
+	fmt.Fprintln(os.Stderr,
+		"       contains the amazon aws credentials. For additional")
+	fmt.Fprintln(os.Stderr,
+		"       information see:")
+	fmt.Fprintln(os.Stderr,
+		"       http://docs.aws.amazon.com/sdk-for-go/latest/v1/developerguide/sdkforgo-dg.pdf")
+	fmt.Fprintln(os.Stderr,
 		"  cis: Cloud Intelligence Service endpoint")
 	fmt.Fprintln(os.Stderr,
 		"  ds.host.fqdn: JSON with map of map of hosts with fqdn entries")
 	fmt.Fprintln(os.Stderr,
 		"  text: each line contains: host required-image planned-image")
 }
-
-type driverFunc func(reader io.Reader, datacentre string,
-	logger *log.Logger) (*mdb.Mdb, error)
 
 type driver struct {
 	name       string
@@ -56,6 +61,8 @@ var drivers = []driver{
 	{"cis", loadCis},
 	{"ds.host.fqdn", loadDsHostFqdn},
 	{"text", loadText},
+	// aws driver is handled as a special case for now. See getSource
+	// function in this file.
 }
 
 func getLogger() *log.Logger {
@@ -70,12 +77,17 @@ func getLogger() *log.Logger {
 	return log.New(os.Stderr, "", log.LstdFlags)
 }
 
-type source struct {
-	driverFunc driverFunc
-	url        string
-}
-
-func getSource(driverName, url string) source {
+func getSource(driverName, url string) generator {
+	// special case for aws.
+	if driverName == "aws" {
+		// With aws, we must know the datacentre up front
+		result, err := newAwsGenerator(url)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+		return result
+	}
 	for _, driver := range drivers {
 		if driverName == driver.name {
 			return source{driver.driverFunc, url}
@@ -124,9 +136,14 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
+	// We have to have at least one input.
+	if *sourcesFile == "" && flag.NArg() == 0 {
+		printUsage()
+		os.Exit(2)
+	}
 	logger := getLogger()
 	handleSignals(logger)
-	sources := make([]source, 0, flag.NArg()/2)
+	generators := make([]generator, 0, flag.NArg()/2)
 	if *sourcesFile != "" {
 		file, err := os.Open(*sourcesFile)
 		if err != nil {
@@ -140,7 +157,7 @@ func main() {
 				if fields[0][0] == '#' {
 					continue
 				}
-				sources = append(sources, getSource(fields[0], fields[1]))
+				generators = append(generators, getSource(fields[0], fields[1]))
 			}
 		}
 		if err := scanner.Err(); err != nil {
@@ -149,8 +166,8 @@ func main() {
 		}
 	}
 	for index := 0; index < flag.NArg(); index += 2 {
-		sources = append(sources, getSource(flag.Arg(index), flag.Arg(index+1)))
+		generators = append(generators,
+			getSource(flag.Arg(index), flag.Arg(index+1)))
 	}
-	runDaemon(sources, *mdbFile, *hostnameRegex, *datacentre, *fetchInterval,
-		logger, *debug)
+	runDaemon(generators, *mdbFile, *hostnameRegex, *datacentre, *fetchInterval, logger, *debug)
 }
