@@ -39,9 +39,13 @@ func (s state) showImageHandler(w http.ResponseWriter, req *http.Request) {
 			"Filter has <a href=\"listFilter?%s\">%d</a> lines<br>\n",
 			imageName, len(image.Filter.FilterLines))
 	}
-	fmt.Fprintf(writer,
-		"Number of triggers: <a href=\"listTriggers?%s\">%d</a><br>\n",
-		imageName, len(image.Triggers.Triggers))
+	if image.Triggers == nil || len(image.Triggers.Triggers) < 1 {
+		fmt.Fprintln(writer, "Image has no triggers<br>")
+	} else {
+		fmt.Fprintf(writer,
+			"Number of triggers: <a href=\"listTriggers?%s\">%d</a><br>\n",
+			imageName, len(image.Triggers.Triggers))
+	}
 	if !image.ExpiresAt.IsZero() {
 		fmt.Fprintf(writer, "Expires at: %s<br>\n", image.ExpiresAt)
 	}

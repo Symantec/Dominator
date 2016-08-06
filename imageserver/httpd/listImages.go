@@ -66,7 +66,11 @@ func showImage(writer io.Writer, name string, image *image.Image) {
 		fmt.Fprintf(writer, "    <td><a href=\"listFilter?%s\">%d</a></td>\n",
 			name, len(image.Filter.FilterLines))
 	}
-	fmt.Fprintf(writer, "    <td><a href=\"listTriggers?%s\">%d</a></td>\n",
-		name, len(image.Triggers.Triggers))
+	if image.Triggers == nil || len(image.Triggers.Triggers) < 1 {
+		fmt.Fprintln(writer, "    <td>0</td>")
+	} else {
+		fmt.Fprintf(writer, "    <td><a href=\"listTriggers?%s\">%d</a></td>\n",
+			name, len(image.Triggers.Triggers))
+	}
 	fmt.Fprintf(writer, "  </tr>\n")
 }
