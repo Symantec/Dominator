@@ -12,10 +12,12 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/mbr"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -88,55 +90,13 @@ func (h *hasher) Hash(reader io.Reader, length uint64) (
 
 func buildImage(imageSClient *srpc.Client, filter *filter.Filter,
 	imageFilename string) (*filesystem.FileSystem, error) {
-	fi, err := os.Lstat(imageFilename)
-	if err != nil {
-		return nil, err
-	}
 	var h hasher
+	var err error
 	h.objQ, err = objectclient.NewObjectAdderQueue(imageSClient)
 	if err != nil {
 		return nil, err
 	}
-	var fs *filesystem.FileSystem
-	if fi.IsDir() {
-		sfs, err := scanner.ScanFileSystem(imageFilename, nil, filter, nil, &h,
-			nil)
-		if err != nil {
-			h.objQ.Close()
-			return nil, err
-		}
-		fs = &sfs.FileSystem
-	} else {
-		imageFile, err := os.Open(imageFilename)
-		if err != nil {
-			h.objQ.Close()
-			return nil, errors.New("error opening image file: " + err.Error())
-		}
-		defer imageFile.Close()
-		var imageReader io.Reader
-		if strings.HasSuffix(imageFilename, ".tar") {
-			imageReader = imageFile
-		} else if strings.HasSuffix(imageFilename, ".tar.gz") ||
-			strings.HasSuffix(imageFilename, ".tgz") {
-			gzipReader, err := gzip.NewReader(imageFile)
-			if err != nil {
-				h.objQ.Close()
-				return nil, errors.New(
-					"error creating gzip reader: " + err.Error())
-			}
-			defer gzipReader.Close()
-			imageReader = gzipReader
-		} else {
-			h.objQ.Close()
-			return nil, errors.New("unrecognised image type")
-		}
-		tarReader := tar.NewReader(imageReader)
-		fs, err = untar.Decode(tarReader, &h, filter)
-		if err != nil {
-			h.objQ.Close()
-			return nil, errors.New("error building image: " + err.Error())
-		}
-	}
+	fs, err := buildImageWithHasher(imageSClient, filter, imageFilename, &h)
 	if err != nil {
 		h.objQ.Close()
 		return nil, err
@@ -146,4 +106,89 @@ func buildImage(imageSClient *srpc.Client, filter *filter.Filter,
 		return nil, err
 	}
 	return fs, nil
+}
+
+func buildImageWithHasher(imageSClient *srpc.Client, filter *filter.Filter,
+	imageFilename string, h *hasher) (*filesystem.FileSystem, error) {
+	fi, err := os.Lstat(imageFilename)
+	if err != nil {
+		return nil, err
+	}
+	if fi.IsDir() {
+		sfs, err := scanner.ScanFileSystem(imageFilename, nil, filter, nil, h,
+			nil)
+		if err != nil {
+			return nil, err
+		}
+		return &sfs.FileSystem, nil
+	}
+	imageFile, err := os.Open(imageFilename)
+	if err != nil {
+		return nil, errors.New("error opening image file: " + err.Error())
+	}
+	defer imageFile.Close()
+	if partitionTable, err := mbr.Decode(imageFile); err != nil {
+		return nil, err
+	} else if partitionTable != nil {
+		return buildImageFromRaw(imageSClient, filter, imageFile,
+			partitionTable, h)
+	}
+	var imageReader io.Reader
+	if strings.HasSuffix(imageFilename, ".tar") {
+		imageReader = imageFile
+	} else if strings.HasSuffix(imageFilename, ".tar.gz") ||
+		strings.HasSuffix(imageFilename, ".tgz") {
+		gzipReader, err := gzip.NewReader(imageFile)
+		if err != nil {
+			return nil, errors.New(
+				"error creating gzip reader: " + err.Error())
+		}
+		defer gzipReader.Close()
+		imageReader = gzipReader
+	} else {
+		return nil, errors.New("unrecognised image type")
+	}
+	tarReader := tar.NewReader(imageReader)
+	fs, err := untar.Decode(tarReader, h, filter)
+	if err != nil {
+		return nil, errors.New("error building image: " + err.Error())
+	}
+	return fs, nil
+}
+
+func buildImageFromRaw(imageSClient *srpc.Client, filter *filter.Filter,
+	imageFile *os.File, partitionTable *mbr.Mbr,
+	h *hasher) (*filesystem.FileSystem, error) {
+	var index uint
+	var offsetOfLargest, sizeOfLargest uint64
+	numPartitions := partitionTable.GetNumPartitions()
+	for index = 0; index < numPartitions; index++ {
+		offset := partitionTable.GetPartitionOffset(index)
+		size := partitionTable.GetPartitionSize(index)
+		if size > sizeOfLargest {
+			offsetOfLargest = offset
+			sizeOfLargest = size
+		}
+	}
+	if sizeOfLargest < 1 {
+		return nil, errors.New("unable to find largest partition")
+	}
+	cmd := exec.Command("mount", "-o",
+		fmt.Sprintf("loop,offset=%d", offsetOfLargest), imageFile.Name(),
+		"/mnt")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+	fs, err := buildImageWithHasher(imageSClient, filter, "/mnt", h)
+	cmd = exec.Command("umount", "/mnt")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+	return fs, err
 }

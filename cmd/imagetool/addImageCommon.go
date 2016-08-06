@@ -18,9 +18,11 @@ func loadImageFiles(image *image.Image, objectClient *objectclient.ObjectClient,
 			return err
 		}
 	}
-	image.Triggers, err = triggers.Load(triggersFilename)
-	if err != nil {
-		return err
+	if triggersFilename != "" {
+		image.Triggers, err = triggers.Load(triggersFilename)
+		if err != nil {
+			return err
+		}
 	}
 	image.BuildLog, err = getAnnotation(objectClient, *buildLog)
 	if err != nil {
