@@ -15,6 +15,7 @@ import (
 	"github.com/Symantec/Dominator/lib/mbr"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/wsyscall"
 	"io"
 	"os"
 	"os/exec"
@@ -27,7 +28,7 @@ func addImagefileSubcommand(args []string) {
 	err := addImagefile(imageSClient, objectClient, args[0], args[1], args[2],
 		args[3])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error adding image: \"%s\"\t%s\n", args[0], err)
+		fmt.Fprintf(os.Stderr, "Error adding image: \"%s\": %s\n", args[0], err)
 		os.Exit(1)
 	}
 	os.Exit(0)
@@ -173,6 +174,10 @@ func buildImageFromRaw(imageSClient *srpc.Client, filter *filter.Filter,
 	if sizeOfLargest < 1 {
 		return nil, errors.New("unable to find largest partition")
 	}
+	if err := wsyscall.UnshareMountNamespace(); err != nil {
+		return nil, errors.New(
+			"error unsharing mount namespace: " + err.Error())
+	}
 	cmd := exec.Command("mount", "-o",
 		fmt.Sprintf("loop,offset=%d", offsetOfLargest), imageFile.Name(),
 		"/mnt")
@@ -182,13 +187,5 @@ func buildImageFromRaw(imageSClient *srpc.Client, filter *filter.Filter,
 	if err := cmd.Run(); err != nil {
 		return nil, err
 	}
-	fs, err := buildImageWithHasher(imageSClient, filter, "/mnt", h)
-	cmd = exec.Command("umount", "/mnt")
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return nil, err
-	}
-	return fs, err
+	return buildImageWithHasher(imageSClient, filter, "/mnt", h)
 }
