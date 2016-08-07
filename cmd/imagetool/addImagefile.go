@@ -15,11 +15,13 @@ import (
 	"github.com/Symantec/Dominator/lib/mbr"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"github.com/Symantec/Dominator/lib/wsyscall"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -175,6 +177,22 @@ func buildImageFromRaw(imageSClient *srpc.Client, filter *filter.Filter,
 		return nil, errors.New("unable to find largest partition")
 	}
 	if err := wsyscall.UnshareMountNamespace(); err != nil {
+		if os.IsPermission(err) {
+			// Try again with sudo(8).
+			args := make([]string, 0, len(os.Args)+1)
+			if sudoPath, err := exec.LookPath("sudo"); err != nil {
+				return nil, err
+			} else {
+				args = append(args, sudoPath)
+			}
+			args = append(args, os.Args[0])
+			args = append(args, fmt.Sprintf("-certDirectory=%s",
+				setupclient.GetCertDirectory()))
+			args = append(args, os.Args[1:]...)
+			if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
+				return nil, errors.New("unable to Exec: " + err.Error())
+			}
+		}
 		return nil, errors.New(
 			"error unsharing mount namespace: " + err.Error())
 	}
