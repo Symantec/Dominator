@@ -14,6 +14,7 @@ import (
 	"github.com/Symantec/Dominator/lib/netspeed"
 	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
+	"github.com/Symantec/Dominator/lib/wsyscall"
 	"github.com/Symantec/Dominator/sub/httpd"
 	"github.com/Symantec/Dominator/sub/rpcd"
 	"github.com/Symantec/Dominator/sub/scanner"
@@ -101,7 +102,7 @@ func mountTmpfs(dirname string) bool {
 		return false
 	}
 	if statfs.Type != 0x01021994 {
-		err := syscall.Mount("none", dirname, "tmpfs", 0,
+		err := wsyscall.Mount("none", dirname, "tmpfs", 0,
 			"size=65536,mode=0750")
 		if err == nil {
 			fmt.Printf("Mounted tmpfs on: %s\n", dirname)
@@ -145,7 +146,7 @@ func unshareAndBind(workingRootDir string) bool {
 		return false
 	}
 	syscall.Unmount(workingRootDir, 0)
-	err = syscall.Mount(*rootDir, workingRootDir, "", syscall.MS_BIND, "")
+	err = wsyscall.Mount(*rootDir, workingRootDir, "", wsyscall.MS_BIND, "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to bind mount %s to %s\t%s\n",
 			*rootDir, workingRootDir, err)
