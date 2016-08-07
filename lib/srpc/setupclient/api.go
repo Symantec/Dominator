@@ -6,9 +6,21 @@
 */
 package setupclient
 
+import (
+	"flag"
+	"os"
+	"path"
+)
+
+var (
+	certDirectory = flag.String("certDirectory",
+		path.Join(os.Getenv("HOME"), ".ssl"),
+		"Name of directory containing user SSL certificates")
+)
+
 // GetCertDirectory returns the directory containing the client certificates.
 func GetCertDirectory() string {
-	return getCertDirectory()
+	return *certDirectory
 }
 
 // SetupTls loads zero or more client certificates from files and registers them
