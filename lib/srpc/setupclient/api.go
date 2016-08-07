@@ -6,6 +6,11 @@
 */
 package setupclient
 
+// GetCertDirectory returns the directory containing the client certificates.
+func GetCertDirectory() string {
+	return getCertDirectory()
+}
+
 // SetupTls loads zero or more client certificates from files and registers them
 // with the lib/srpc package. The following command-line flags are registered
 // with the standard flag package:

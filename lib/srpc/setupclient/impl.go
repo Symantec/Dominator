@@ -14,6 +14,10 @@ var (
 		"Name of directory containing user SSL certificates")
 )
 
+func getCertDirectory() string {
+	return *certDirectory
+}
+
 func setupTls(ignoreMissingCerts bool) error {
 	if *certDirectory == "" {
 		return nil
