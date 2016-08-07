@@ -2,6 +2,10 @@ package wsyscall
 
 import "syscall"
 
+const (
+	MS_BIND = iota
+)
+
 type Stat_t struct {
 	Dev     uint64
 	Ino     uint64
@@ -25,6 +29,11 @@ func Lstat(path string, statbuf *Stat_t) error {
 	}
 	convertStat(statbuf, &rawStatbuf)
 	return nil
+}
+
+func Mount(source string, target string, fstype string, flags uintptr,
+	data string) error {
+	return mount(source, target, fstype, flags, data)
 }
 
 func SetAllGid(gid int) error {

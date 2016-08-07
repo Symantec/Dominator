@@ -21,6 +21,15 @@ func convertStat(dest *Stat_t, source *syscall.Stat_t) {
 	dest.Ctim = source.Ctim
 }
 
+func mount(source string, target string, fstype string, flags uintptr,
+	data string) error {
+	var linuxFlags uintptr
+	if flags&MS_BIND != 0 {
+		linuxFlags |= syscall.MS_BIND
+	}
+	return syscall.Mount(source, target, fstype, linuxFlags, data)
+}
+
 func setAllGid(gid int) error {
 	return syscall.Setresgid(gid, gid, gid)
 }
