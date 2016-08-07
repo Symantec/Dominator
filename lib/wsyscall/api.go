@@ -3,7 +3,7 @@ package wsyscall
 import "syscall"
 
 const (
-	MS_BIND = iota
+	MS_BIND = 1 << iota
 )
 
 type Stat_t struct {
