@@ -43,8 +43,17 @@ git clone https://github.com/Symantec/Dominator.git
 ```
 
 This will create a sub-directory called `Dominator` containing the source code.
-You can update the directory to the latest version of the source code by using
-the following command:
+You will also need some other repositories. You can use `go get` or run the
+following commands:
+
+```
+git clone https://github.com/Symantec/tricorder.git
+git clone https://github.com/golang/exp.git
+git clone https://github.com/aws/aws-sdk-go.git
+```
+
+You can update the local copies of these repositories to the latest version of
+the source code by using the following command in each:
 
 ```
 git pull
