@@ -43,3 +43,7 @@ func Stat(path string, statbuf *Stat_t) error {
 	convertStat(statbuf, &rawStatbuf)
 	return nil
 }
+
+func UnshareMountNamespace() error {
+	return unshareMountNamespace()
+}

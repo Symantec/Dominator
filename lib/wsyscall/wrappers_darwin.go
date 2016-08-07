@@ -25,3 +25,7 @@ func setAllGid(gid int) error {
 func setAllUid(uid int) error {
 	return syscall.Setreuid(uid, uid)
 }
+
+func unshareMountNamespace() error {
+	return syscall.ENOTSUP
+}
