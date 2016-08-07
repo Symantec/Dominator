@@ -2,16 +2,8 @@ package setupclient
 
 import (
 	"crypto/tls"
-	"flag"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"os"
-	"path"
-)
-
-var (
-	certDirectory = flag.String("certDirectory",
-		path.Join(os.Getenv("HOME"), ".ssl"),
-		"Name of directory containing user SSL certificates")
 )
 
 func setupTls(ignoreMissingCerts bool) error {

@@ -18,10 +18,19 @@ func convertStat(dest *Stat_t, source *syscall.Stat_t) {
 	dest.Ctim = source.Ctimespec
 }
 
+func mount(source string, target string, fstype string, flags uintptr,
+	data string) error {
+	return syscall.ENOTSUP
+}
+
 func setAllGid(gid int) error {
 	return syscall.Setregid(gid, gid)
 }
 
 func setAllUid(uid int) error {
 	return syscall.Setreuid(uid, uid)
+}
+
+func unshareMountNamespace() error {
+	return syscall.ENOTSUP
 }
