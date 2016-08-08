@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -30,14 +31,14 @@ var (
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr,
-		"Usage: mdbd [flags...] driver0 url0 driver1 url1 ...")
+		"Usage: mdbd [flags...]")
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Drivers:")
 	fmt.Fprintln(os.Stderr,
-		"  aws: Amazon AWS endpoint. url is datacenter like 'us-east-1'.")
+		"  aws: Amazon AWS endpoint. first arg is datacenter like 'us-east-1'.")
 	fmt.Fprintln(os.Stderr,
-		"       This driver requires the file ~/.aws/credentials which")
+		"       second arg is the profile to use out of ~/.aws/credentials which")
 	fmt.Fprintln(os.Stderr,
 		"       contains the amazon aws credentials. For additional")
 	fmt.Fprintln(os.Stderr,
@@ -77,25 +78,34 @@ func getLogger() *log.Logger {
 	return log.New(os.Stderr, "", log.LstdFlags)
 }
 
-func getSource(driverName, url string) generator {
+func getSource(driverAndArgs []string) (
+	result generator, err error) {
+	if len(driverAndArgs) == 0 {
+		return nil, errors.New("At least driver name expected.")
+	}
 	// Special case for aws.
-	if driverName == "aws" {
-		// With aws, we must know the datacentre up front
-		result, err := newAwsGenerator(url)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(2)
+	if driverAndArgs[0] == "aws" {
+		if len(driverAndArgs) != 3 {
+			return nil, errors.New("aws expects 2 args: datacenter and profile.")
 		}
-		return result
+		// [1] is the datacenter and [2] is the profile
+		result, err := newAwsGenerator(driverAndArgs[1], driverAndArgs[2])
+		if err != nil {
+			showErrorAndDie(err)
+		}
+		return result, nil
+	}
+	if len(driverAndArgs) != 2 {
+		return nil, errors.New("1 arg expected: url.")
 	}
 	for _, driver := range drivers {
-		if driverName == driver.name {
-			return source{driver.driverFunc, url}
+		if driverAndArgs[0] == driver.name {
+			return source{driver.driverFunc, driverAndArgs[1]}, nil
 		}
 	}
 	printUsage()
 	os.Exit(2)
-	return source{}
+	return
 }
 
 func gracefulCleanup() {
@@ -129,45 +139,40 @@ func handleSignals(logger *log.Logger) {
 	}()
 }
 
+func showErrorAndDie(err error) {
+	fmt.Fprintln(os.Stderr, err)
+	os.Exit(2)
+}
+
 func main() {
 	flag.Usage = printUsage
 	flag.Parse()
-	if flag.NArg()%2 != 0 {
-		printUsage()
-		os.Exit(2)
-	}
-	// We have to have at least one input.
-	if *sourcesFile == "" && flag.NArg() == 0 {
+	// We have to have inputs.
+	if *sourcesFile == "" {
 		printUsage()
 		os.Exit(2)
 	}
 	logger := getLogger()
 	handleSignals(logger)
-	generators := make([]generator, 0, flag.NArg()/2)
-	if *sourcesFile != "" {
-		file, err := os.Open(*sourcesFile)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(2)
-		}
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			fields := strings.Fields(scanner.Text())
-			if len(fields) == 2 {
-				if fields[0][0] == '#' {
-					continue
-				}
-				generators = append(generators, getSource(fields[0], fields[1]))
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(2)
-		}
+	var generators []generator
+	file, err := os.Open(*sourcesFile)
+	if err != nil {
+		showErrorAndDie(err)
 	}
-	for index := 0; index < flag.NArg(); index += 2 {
-		generators = append(generators,
-			getSource(flag.Arg(index), flag.Arg(index+1)))
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) == 0 || len(fields[0]) == 0 || fields[0][0] == '#' {
+			continue
+		}
+		gen, err := getSource(fields)
+		if err != nil {
+			showErrorAndDie(err)
+		}
+		generators = append(generators, gen)
+	}
+	if err := scanner.Err(); err != nil {
+		showErrorAndDie(err)
 	}
 	runDaemon(generators, *mdbFile, *hostnameRegex, *datacentre, *fetchInterval,
 		logger, *debug)
