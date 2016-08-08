@@ -14,8 +14,7 @@ type awsGeneratorType struct {
 
 func newAwsGenerator(datacentre string) (
 	result *awsGeneratorType, err error) {
-	sess, err := session.NewSession(
-		&aws.Config{Region: aws.String(datacentre)})
+	sess, err := session.NewSession(&aws.Config{Region: aws.String(datacentre)})
 	if err != nil {
 		return
 	}
@@ -48,11 +47,9 @@ func extractMdb(output *ec2.DescribeInstancesOutput) *mdb.Mdb {
 	for _, reservation := range output.Reservations {
 		for _, instance := range reservation.Instances {
 			if instance.PrivateDnsName != nil {
-				machine := mdb.Machine{
-					Hostname: *instance.PrivateDnsName}
+				machine := mdb.Machine{Hostname: *instance.PrivateDnsName}
 				extractTags(instance.Tags, &machine)
-				result.Machines = append(
-					result.Machines, machine)
+				result.Machines = append(result.Machines, machine)
 			}
 		}
 	}

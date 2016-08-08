@@ -19,7 +19,7 @@ type generator interface {
 	Generate(datacentre string, logger *log.Logger) (*mdb.Mdb, error)
 }
 
-// source implements the generator interface and generates an mdb from
+// source implements the generator interface and generates an *mdb.Mdb from
 // either a flat file or a url.
 type source struct {
 	// The function parses the data from url or flat file.
