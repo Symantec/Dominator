@@ -12,9 +12,14 @@ type awsGeneratorType struct {
 	svc *ec2.EC2
 }
 
-func newAwsGenerator(datacentre string) (
+func newAwsGenerator(
+	datacentre, profile string) (
 	result *awsGeneratorType, err error) {
-	sess, err := session.NewSession(&aws.Config{Region: aws.String(datacentre)})
+	sess, err := session.NewSessionWithOptions(
+		session.Options{
+			Config:  aws.Config{Region: aws.String(datacentre)},
+			Profile: profile,
+		})
 	if err != nil {
 		return
 	}
