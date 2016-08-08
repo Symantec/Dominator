@@ -282,7 +282,11 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if !haveImage {
-		sub.status = statusImageNotReady
+		if sub.mdb.RequiredImage == "" {
+			sub.status = statusImageUndefined
+		} else {
+			sub.status = statusImageNotReady
+		}
 		return
 	}
 	if previousStatus == statusFailedToUpdate ||

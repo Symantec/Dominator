@@ -34,6 +34,8 @@ func (status subStatus) string() string {
 		return "poll failed"
 	case statusSubNotReady:
 		return "sub not ready"
+	case statusImageUndefined:
+		return "image undefined"
 	case statusImageNotReady:
 		return "image not ready"
 	case statusFetching:

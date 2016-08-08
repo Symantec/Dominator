@@ -36,6 +36,7 @@ const (
 	statusPollDenied
 	statusFailedToPoll
 	statusSubNotReady
+	statusImageUndefined
 	statusImageNotReady
 	statusFetching
 	statusFetchDenied
