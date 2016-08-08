@@ -123,8 +123,8 @@ func unshareAndBind(workingRootDir string) bool {
 		// randomly. Thus, the namespace can be suddenly switched for running
 		// code. This is an aspect of Go that was not well thought out.
 		runtime.LockOSThread()
-		if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to unshare mount namesace\t%s\n",
+		if err := wsyscall.UnshareMountNamespace(); err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to unshare mount namesace: %s\n",
 				err)
 			return false
 		}
@@ -135,20 +135,14 @@ func unshareAndBind(workingRootDir string) bool {
 		syscall.Setpriority(syscall.PRIO_PROCESS, 0, 1)
 		args := append(os.Args, "-unshare=false")
 		if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to Exec:%s\t%s\n", args[0], err)
+			fmt.Fprintf(os.Stderr, "Unable to Exec:%s: %s\n", args[0], err)
 			return false
 		}
 	}
-	err := syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, "")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to set mount sharing to private\t%s\n",
-			err)
-		return false
-	}
 	syscall.Unmount(workingRootDir, 0)
-	err = wsyscall.Mount(*rootDir, workingRootDir, "", wsyscall.MS_BIND, "")
+	err := wsyscall.Mount(*rootDir, workingRootDir, "", wsyscall.MS_BIND, "")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to bind mount %s to %s\t%s\n",
+		fmt.Fprintf(os.Stderr, "Unable to bind mount %s to %s: %s\n",
 			*rootDir, workingRootDir, err)
 		return false
 	}
