@@ -58,11 +58,11 @@ type driver struct {
 }
 
 var drivers = []driver{
+	// aws driver is handled as a special case for now. See getSource
+	// function in this file.
 	{"cis", loadCis},
 	{"ds.host.fqdn", loadDsHostFqdn},
 	{"text", loadText},
-	// aws driver is handled as a special case for now. See getSource
-	// function in this file.
 }
 
 func getLogger() *log.Logger {
@@ -78,7 +78,7 @@ func getLogger() *log.Logger {
 }
 
 func getSource(driverName, url string) generator {
-	// special case for aws.
+	// Special case for aws.
 	if driverName == "aws" {
 		// With aws, we must know the datacentre up front
 		result, err := newAwsGenerator(url)
@@ -169,5 +169,6 @@ func main() {
 		generators = append(generators,
 			getSource(flag.Arg(index), flag.Arg(index+1)))
 	}
-	runDaemon(generators, *mdbFile, *hostnameRegex, *datacentre, *fetchInterval, logger, *debug)
+	runDaemon(generators, *mdbFile, *hostnameRegex, *datacentre, *fetchInterval,
+		logger, *debug)
 }
