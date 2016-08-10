@@ -87,6 +87,7 @@ type Sub struct {
 	lastPollSucceededTime        time.Time
 	lastShortPollDuration        time.Duration
 	lastFullPollDuration         time.Duration
+	lastScanDuration             time.Duration
 	lastComputeUpdateCpuDuration time.Duration
 	lastUpdateTime               time.Time
 	lastSyncTime                 time.Time
