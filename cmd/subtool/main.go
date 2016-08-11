@@ -56,7 +56,7 @@ var (
 	triggersFile = flag.String("triggersFile", "",
 		"Replacement triggers file to apply when pushing image")
 	triggersString = flag.String("triggersString", "",
-		"Replacement triggers string to apply when pushing image")
+		"Replacement triggers string to apply when pushing image (ignored if triggersFile is set)")
 	wait = flag.Uint("wait", 0, "Seconds to sleep after last Poll")
 )
 
