@@ -37,7 +37,6 @@ func pushImageSubcommand(srpcClient *srpc.Client, args []string) {
 }
 
 func pushImage(srpcClient *srpc.Client, imageName string) error {
-	timeoutTime := time.Now().Add(*timeout)
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	computedInodes := make(map[string]*filesystem.RegularInode)
 	subObj := lib.Sub{
