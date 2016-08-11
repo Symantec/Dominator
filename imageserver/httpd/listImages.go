@@ -62,6 +62,8 @@ func showImage(writer io.Writer, name string, image *image.Image) {
 	}
 	if image.Filter == nil {
 		fmt.Fprintln(writer, "    <td>(sparse filter)</td>")
+	} else if len(image.Filter.FilterLines) < 1 {
+		fmt.Fprintln(writer, "    <td>0</td>")
 	} else {
 		fmt.Fprintf(writer, "    <td><a href=\"listFilter?%s\">%d</a></td>\n",
 			name, len(image.Filter.FilterLines))
