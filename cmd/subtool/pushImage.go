@@ -171,8 +171,8 @@ func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 				&sub.FetchResponse{})
 			if err != nil {
 				showBlankLine()
-				logger.Printf("Error calling %s:Subd.Fetch(): %s\n",
-					subHostname, err)
+				logger.Printf("Error calling %s:Subd.Fetch(%s): %s\n",
+					subObj.Hostname, imageServerAddress, err)
 				return err
 			}
 			showTimeTaken(startTime)
