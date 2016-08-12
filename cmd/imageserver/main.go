@@ -18,6 +18,8 @@ import (
 )
 
 var (
+	archiveExpiringImages = flag.Bool("archiveExpiringImages", false,
+		"If true, replicate expiring images when in archive mode")
 	archiveMode = flag.Bool("archiveMode", false,
 		"If true, disable delete operations and require update server")
 	debug    = flag.Bool("debug", false, "If true, show debugging output")
