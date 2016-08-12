@@ -40,12 +40,10 @@ type FileSystemHistory struct {
 	timeOfLastChange   time.Time
 }
 
-func (fsh *FileSystemHistory) Update(newFS *FileSystem) {
-	fsh.update(newFS)
-}
-
-func (fsh *FileSystemHistory) UpdateObjectCacheOnly() error {
-	return fsh.updateObjectCacheOnly()
+func (fsh *FileSystemHistory) DurationOfLastScan() time.Duration {
+	fsh.rwMutex.RLock()
+	defer fsh.rwMutex.RUnlock()
+	return fsh.durationOfLastScan
 }
 
 func (fsh *FileSystemHistory) FileSystem() *FileSystem {
@@ -54,22 +52,30 @@ func (fsh *FileSystemHistory) FileSystem() *FileSystem {
 	return fsh.fileSystem
 }
 
-func (fsh *FileSystemHistory) ScanCount() uint64 {
-	fsh.rwMutex.RLock()
-	defer fsh.rwMutex.RUnlock()
-	return fsh.scanCount
-}
-
 func (fsh *FileSystemHistory) GenerationCount() uint64 {
 	fsh.rwMutex.RLock()
 	defer fsh.rwMutex.RUnlock()
 	return fsh.generationCount
 }
 
+func (fsh *FileSystemHistory) ScanCount() uint64 {
+	fsh.rwMutex.RLock()
+	defer fsh.rwMutex.RUnlock()
+	return fsh.scanCount
+}
+
 func (fsh FileSystemHistory) String() string {
 	fsh.rwMutex.RLock()
 	defer fsh.rwMutex.RUnlock()
 	return fmt.Sprintf("GenerationCount=%d\n", fsh.generationCount)
+}
+
+func (fsh *FileSystemHistory) Update(newFS *FileSystem) {
+	fsh.update(newFS)
+}
+
+func (fsh *FileSystemHistory) UpdateObjectCacheOnly() error {
+	return fsh.updateObjectCacheOnly()
 }
 
 func (fsh *FileSystemHistory) WriteHtml(writer io.Writer) {

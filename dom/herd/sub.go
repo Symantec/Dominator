@@ -224,6 +224,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.reclaim()
 		sub.generationCount = 0
 	}
+	sub.lastScanDuration = reply.DurationOfLastScan
 	if fs := reply.FileSystem; fs == nil {
 		sub.lastShortPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
@@ -282,7 +283,11 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if !haveImage {
-		sub.status = statusImageNotReady
+		if sub.mdb.RequiredImage == "" {
+			sub.status = statusImageUndefined
+		} else {
+			sub.status = statusImageNotReady
+		}
 		return
 	}
 	if previousStatus == statusFailedToUpdate ||

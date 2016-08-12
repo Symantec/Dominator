@@ -54,6 +54,7 @@ type PollResponse struct {
 	StartTime                    time.Time
 	PollTime                     time.Time
 	ScanCount                    uint64
+	DurationOfLastScan           time.Duration
 	GenerationCount              uint64
 	FileSystem                   *filesystem.FileSystem // Streamed separately.
 	FileSystemFollows            bool
