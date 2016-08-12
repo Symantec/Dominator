@@ -37,7 +37,6 @@ func pushImageSubcommand(srpcClient *srpc.Client, args []string) {
 }
 
 func pushImage(srpcClient *srpc.Client, imageName string) error {
-	timeoutTime := time.Now().Add(*timeout)
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	computedInodes := make(map[string]*filesystem.RegularInode)
 	subObj := lib.Sub{
@@ -171,8 +170,8 @@ func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 				&sub.FetchResponse{})
 			if err != nil {
 				showBlankLine()
-				logger.Printf("Error calling %s:Subd.Fetch(): %s\n",
-					subHostname, err)
+				logger.Printf("Error calling %s:Subd.Fetch(%s): %s\n",
+					subObj.Hostname, imageServerAddress, err)
 				return err
 			}
 			showTimeTaken(startTime)

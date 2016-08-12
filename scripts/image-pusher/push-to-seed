@@ -13,12 +13,18 @@
 
 set -o nounset
 
+if [ "$#" -ne 3 ]; then
+    echo "Usage: push-to-seed sub image image_server"
+    exit 1
+fi
+
 readonly sub="$1"
 readonly image="$2"
 readonly image_server="$3"
 
 subtool -subHostname="$sub" \
         -deleteBeforeFetch=true \
+        -filterFile=/dev/null \
         -imageServerHostname="$image_server" \
         -showTimes=true \
         -triggersString='[{"MatchLines":[".*"],"Service":"make-bootable"}]' \

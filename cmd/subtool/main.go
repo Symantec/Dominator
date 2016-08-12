@@ -56,8 +56,10 @@ var (
 	triggersFile = flag.String("triggersFile", "",
 		"Replacement triggers file to apply when pushing image")
 	triggersString = flag.String("triggersString", "",
-		"Replacement triggers string to apply when pushing image")
+		"Replacement triggers string to apply when pushing image (ignored if triggersFile is set)")
 	wait = flag.Uint("wait", 0, "Seconds to sleep after last Poll")
+
+	timeoutTime time.Time
 )
 
 func init() {
@@ -96,6 +98,23 @@ var subcommands = []subcommand{
 	{"set-config", 0, setConfigSubcommand},
 }
 
+func dialLoop(clientName string, timeoutTime time.Time) (*srpc.Client, error) {
+	var client *srpc.Client
+	var err error
+	for time.Now().Before(timeoutTime) {
+		client, err = srpc.DialHTTP("tcp", clientName, time.Second*5)
+		if err == nil {
+			return client, nil
+		}
+		if err == srpc.ErrorMissingCertificate ||
+			err == srpc.ErrorBadCertificate ||
+			err == srpc.ErrorAccessToMethodDenied {
+			return nil, err // Never going to happen. Bail out.
+		}
+	}
+	return nil, err
+}
+
 func main() {
 	flag.Usage = printUsage
 	flag.Parse()
@@ -112,10 +131,11 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	timeoutTime = time.Now().Add(*timeout)
 	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
-	client, err := srpc.DialHTTP("tcp", clientName, 0)
+	client, err := dialLoop(clientName, timeoutTime)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error dialing: %s\n", err)
 		os.Exit(1)
 	}
 	for _, subcommand := range subcommands {
