@@ -31,5 +31,8 @@ func loadCertificates(directory string) ([]tls.Certificate, error) {
 		}
 		certs = append(certs, cert)
 	}
+	if len(certs) < 1 {
+		return nil, nil
+	}
 	return certs, nil
 }
