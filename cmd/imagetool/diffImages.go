@@ -50,10 +50,12 @@ func getTypedImage(typedName string) (*filesystem.FileSystem, error) {
 	}
 	switch name := typedName[2:]; typedName[0] {
 	case 'f':
-		return readImage(name)
+		return readFileSystem(name)
 	case 'i':
 		imageSClient, _ := getClients()
 		return getFsOfImage(imageSClient, name)
+	case 'l':
+		return readFsOfImage(name)
 	case 's':
 		return pollImage(name)
 	default:
@@ -61,7 +63,7 @@ func getTypedImage(typedName string) (*filesystem.FileSystem, error) {
 	}
 }
 
-func readImage(name string) (*filesystem.FileSystem, error) {
+func readFileSystem(name string) (*filesystem.FileSystem, error) {
 	file, err := os.Open(name)
 	if err != nil {
 		return nil, err
@@ -94,6 +96,20 @@ func getFsOfImage(client *srpc.Client, name string) (
 	} else {
 		return image.FileSystem, nil
 	}
+}
+
+func readFsOfImage(name string) (*filesystem.FileSystem, error) {
+	file, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	var image image.Image
+	if err := gob.NewDecoder(file).Decode(&image); err != nil {
+		return nil, err
+	}
+	image.FileSystem.RebuildInodePointers()
+	return image.FileSystem, nil
 }
 
 func pollImage(name string) (*filesystem.FileSystem, error) {

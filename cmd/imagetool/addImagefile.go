@@ -185,7 +185,11 @@ func buildImageFromRaw(imageSClient *srpc.Client, filter *filter.Filter,
 			} else {
 				args = append(args, sudoPath)
 			}
-			args = append(args, os.Args[0])
+			if myPath, err := exec.LookPath(os.Args[0]); err != nil {
+				return nil, err
+			} else {
+				args = append(args, myPath)
+			}
 			args = append(args, fmt.Sprintf("-certDirectory=%s",
 				setupclient.GetCertDirectory()))
 			args = append(args, os.Args[1:]...)
