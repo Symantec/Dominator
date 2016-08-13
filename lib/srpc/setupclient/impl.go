@@ -3,7 +3,6 @@ package setupclient
 import (
 	"crypto/tls"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"os"
 )
 
 func setupTls(ignoreMissingCerts bool) error {
@@ -12,11 +11,14 @@ func setupTls(ignoreMissingCerts bool) error {
 	}
 	// Load certificates.
 	certs, err := srpc.LoadCertificates(*certDirectory)
-	if ignoreMissingCerts && os.IsNotExist(err) {
-		return nil
-	}
 	if err != nil {
 		return err
+	}
+	if certs == nil {
+		if ignoreMissingCerts {
+			return nil
+		}
+		return srpc.ErrorMissingCertificate
 	}
 	// Setup client.
 	clientConfig := new(tls.Config)

@@ -7,7 +7,10 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"io"
 	"net/http"
+	"time"
 )
+
+var timeFormat string = "02 Jan 2006 15:04:05.99 MST"
 
 func (s state) showImageHandler(w http.ResponseWriter, req *http.Request) {
 	writer := bufio.NewWriter(w)
@@ -34,6 +37,9 @@ func (s state) showImageHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	if image.Filter == nil {
 		fmt.Fprintln(writer, "Image has no filter: sparse image<br>")
+	} else if len(image.Filter.FilterLines) < 1 {
+		fmt.Fprintln(writer,
+			"Filter has 0 lines (empty filter: full coverage)<br>")
 	} else {
 		fmt.Fprintf(writer,
 			"Filter has <a href=\"listFilter?%s\">%d</a> lines<br>\n",
@@ -47,7 +53,8 @@ func (s state) showImageHandler(w http.ResponseWriter, req *http.Request) {
 			imageName, len(image.Triggers.Triggers))
 	}
 	if !image.ExpiresAt.IsZero() {
-		fmt.Fprintf(writer, "Expires at: %s<br>\n", image.ExpiresAt)
+		fmt.Fprintf(writer, "Expires at: %s<br>\n",
+			image.ExpiresAt.In(time.Local).Format(timeFormat))
 	}
 	showAnnotation(writer, image.ReleaseNotes, imageName, "Release notes",
 		"listReleaseNotes")

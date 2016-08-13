@@ -140,7 +140,7 @@ func addImage(address string, imdb *scanner.ImageDataBase,
 		return errors.New(name + ": not found")
 	}
 	logger.Printf("Replicator(%s): downloaded image\n", name)
-	if *archiveMode && !img.ExpiresAt.IsZero() {
+	if *archiveMode && !img.ExpiresAt.IsZero() && !*archiveExpiringImages {
 		logger.Printf(
 			"Replicator(%s): ignoring expiring image in archiver mode\n",
 			name)
