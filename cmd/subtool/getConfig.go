@@ -7,8 +7,8 @@ import (
 	"os"
 )
 
-func getConfigSubcommand(srpcClient *srpc.Client, args []string) {
-	if err := getConfig(srpcClient); err != nil {
+func getConfigSubcommand(getSubClient getSubClientFunc, args []string) {
+	if err := getConfig(getSubClient()); err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting config\t%s\n", err)
 		os.Exit(1)
 	}

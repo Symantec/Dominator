@@ -8,8 +8,8 @@ import (
 	"os"
 )
 
-func setConfigSubcommand(srpcClient *srpc.Client, args []string) {
-	if err := setConfig(srpcClient); err != nil {
+func setConfigSubcommand(getSubClient getSubClientFunc, args []string) {
+	if err := setConfig(getSubClient()); err != nil {
 		fmt.Fprintf(os.Stderr, "Error setting config\t%s\n", err)
 		os.Exit(1)
 	}

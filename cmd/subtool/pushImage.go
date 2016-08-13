@@ -23,22 +23,34 @@ import (
 
 type nullObjectGetterType struct{}
 
+type timedImageFetch struct {
+	image    *image.Image
+	duration time.Duration
+}
+
 func (getter nullObjectGetterType) GetObject(hashVal hash.Hash) (
 	uint64, io.ReadCloser, error) {
 	return 0, nil, errors.New("no computed files")
 }
 
-func pushImageSubcommand(srpcClient *srpc.Client, args []string) {
-	if err := pushImage(srpcClient, args[0]); err != nil {
+func pushImageSubcommand(getSubClient getSubClientFunc, args []string) {
+	if err := pushImage(getSubClient, args[0]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error pushing image: %s: %s\n", args[0], err)
 		os.Exit(2)
 	}
 	os.Exit(0)
 }
 
-func pushImage(srpcClient *srpc.Client, imageName string) error {
+func pushImage(getSubClient getSubClientFunc, imageName string) error {
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	computedInodes := make(map[string]*filesystem.RegularInode)
+	// Start querying the imageserver for the image.
+	imageServerAddress := fmt.Sprintf("%s:%d",
+		*imageServerHostname, *imageServerPortNum)
+	imgChannel := getImageChannel(imageServerAddress, imageName, timeoutTime)
+	startTime := showStart("getSubClient()")
+	srpcClient := getSubClient()
+	showTimeTaken(startTime)
 	subObj := lib.Sub{
 		Hostname:       *subHostname,
 		Client:         srpcClient,
@@ -58,12 +70,13 @@ func pushImage(srpcClient *srpc.Client, imageName string) error {
 			}
 		}
 	}
-	imageServerAddress := fmt.Sprintf("%s:%d",
-		*imageServerHostname, *imageServerPortNum)
-	img, err := getImageRetry(imageServerAddress, imageName, timeoutTime)
-	if err != nil {
-		return err
-	}
+	startTime = showStart("<-imgChannel")
+	imageResult := <-imgChannel
+	showTimeTaken(startTime)
+	fmt.Fprintf(os.Stderr, "Background image fetch took %s\n",
+		format.Duration(imageResult.duration))
+	img := imageResult.image
+	var err error
 	if *filterFile != "" {
 		img.Filter, err = filter.Load(*filterFile)
 		if err != nil {
@@ -87,7 +100,7 @@ func pushImage(srpcClient *srpc.Client, imageName string) error {
 	}
 	var updateRequest sub.UpdateRequest
 	var updateReply sub.UpdateResponse
-	startTime := showStart("lib.BuildUpdateRequest()")
+	startTime = showStart("lib.BuildUpdateRequest()")
 	if lib.BuildUpdateRequest(subObj, img, &updateRequest, true, logger) {
 		showBlankLine()
 		return errors.New("missing computed file(s)")
@@ -105,9 +118,24 @@ func pushImage(srpcClient *srpc.Client, imageName string) error {
 	return nil
 }
 
-func getImageRetry(imageServerAddress, imageName string,
+func getImageChannel(clientName, imageName string,
+	timeoutTime time.Time) <-chan timedImageFetch {
+	resultChannel := make(chan timedImageFetch, 1)
+	go func() {
+		startTime := time.Now()
+		img, err := getImageRetry(clientName, imageName, timeoutTime)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting image: %s\n", err)
+			os.Exit(1)
+		}
+		resultChannel <- timedImageFetch{img, time.Since(startTime)}
+	}()
+	return resultChannel
+}
+
+func getImageRetry(clientName, imageName string,
 	timeoutTime time.Time) (*image.Image, error) {
-	imageSrpcClient, err := srpc.DialHTTP("tcp", imageServerAddress, 0)
+	imageSrpcClient, err := srpc.DialHTTP("tcp", clientName, 0)
 	if err != nil {
 		return nil, err
 	}

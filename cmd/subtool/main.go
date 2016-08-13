@@ -81,38 +81,55 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  set-config")
 }
 
-type commandFunc func(*srpc.Client, []string)
-
-type subcommand struct {
-	command string
-	numArgs int
-	cmdFunc commandFunc
+func getSubClient() *srpc.Client {
+	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
+	client, err := srpc.DialHTTP("tcp", clientName, time.Second*5)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error dialing %s: %s\n", clientName, err)
+		os.Exit(3)
+	}
+	return client
 }
 
-var subcommands = []subcommand{
-	{"fetch", 1, fetchSubcommand},
-	{"get-config", 0, getConfigSubcommand},
-	{"get-file", 2, getFileSubcommand},
-	{"poll", 0, pollSubcommand},
-	{"push-image", 1, pushImageSubcommand},
-	{"set-config", 0, setConfigSubcommand},
-}
-
-func dialLoop(clientName string, timeoutTime time.Time) (*srpc.Client, error) {
+func getSubClientRetry() *srpc.Client {
+	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
 	var client *srpc.Client
 	var err error
 	for time.Now().Before(timeoutTime) {
 		client, err = srpc.DialHTTP("tcp", clientName, time.Second*5)
 		if err == nil {
-			return client, nil
+			return client
 		}
 		if err == srpc.ErrorMissingCertificate ||
 			err == srpc.ErrorBadCertificate ||
 			err == srpc.ErrorAccessToMethodDenied {
-			return nil, err // Never going to happen. Bail out.
+			// Never going to happen. Bail out.
+			fmt.Fprintf(os.Stderr, "Error dialing %s: %s\n", clientName, err)
+			os.Exit(3)
 		}
 	}
-	return nil, err
+	fmt.Fprintf(os.Stderr, "Error dialing %s: %s\n", clientName, err)
+	os.Exit(3)
+	return nil
+}
+
+type getSubClientFunc func() *srpc.Client
+type commandFunc func(getSubClientFunc, []string)
+
+type subcommand struct {
+	command      string
+	numArgs      int
+	getSubClient getSubClientFunc
+	cmdFunc      commandFunc
+}
+
+var subcommands = []subcommand{
+	{"fetch", 1, getSubClient, fetchSubcommand},
+	{"get-config", 0, getSubClient, getConfigSubcommand},
+	{"get-file", 2, getSubClient, getFileSubcommand},
+	{"poll", 0, getSubClient, pollSubcommand},
+	{"push-image", 1, getSubClientRetry, pushImageSubcommand},
+	{"set-config", 0, getSubClient, setConfigSubcommand},
 }
 
 func main() {
@@ -132,19 +149,13 @@ func main() {
 		os.Exit(1)
 	}
 	timeoutTime = time.Now().Add(*timeout)
-	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
-	client, err := dialLoop(clientName, timeoutTime)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error dialing: %s\n", err)
-		os.Exit(1)
-	}
 	for _, subcommand := range subcommands {
 		if flag.Arg(0) == subcommand.command {
 			if flag.NArg()-1 != subcommand.numArgs {
 				printUsage()
 				os.Exit(2)
 			}
-			subcommand.cmdFunc(client, flag.Args()[1:])
+			subcommand.cmdFunc(subcommand.getSubClient, flag.Args()[1:])
 			os.Exit(3)
 		}
 	}
