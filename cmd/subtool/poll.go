@@ -10,19 +10,15 @@ import (
 	"time"
 )
 
-func pollSubcommand(srpcClient *srpc.Client, args []string) {
+func pollSubcommand(getSubClient getSubClientFunc, args []string) {
 	var err error
-	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
+	var srpcClient *srpc.Client
 	for iter := 0; *numPolls < 0 || iter < *numPolls; iter++ {
 		if iter > 0 {
 			time.Sleep(time.Duration(*interval) * time.Second)
 		}
 		if srpcClient == nil {
-			srpcClient, err = srpc.DialHTTP("tcp", clientName, 0)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
-				os.Exit(1)
-			}
+			srpcClient = getSubClient()
 		}
 		var request sub.PollRequest
 		var reply sub.PollResponse

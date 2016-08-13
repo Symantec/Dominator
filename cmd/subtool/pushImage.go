@@ -28,17 +28,18 @@ func (getter nullObjectGetterType) GetObject(hashVal hash.Hash) (
 	return 0, nil, errors.New("no computed files")
 }
 
-func pushImageSubcommand(srpcClient *srpc.Client, args []string) {
-	if err := pushImage(srpcClient, args[0]); err != nil {
+func pushImageSubcommand(getSubClient getSubClientFunc, args []string) {
+	if err := pushImage(getSubClient, args[0]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error pushing image: %s: %s\n", args[0], err)
 		os.Exit(2)
 	}
 	os.Exit(0)
 }
 
-func pushImage(srpcClient *srpc.Client, imageName string) error {
+func pushImage(getSubClient getSubClientFunc, imageName string) error {
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	computedInodes := make(map[string]*filesystem.RegularInode)
+	srpcClient := getSubClient()
 	subObj := lib.Sub{
 		Hostname:       *subHostname,
 		Client:         srpcClient,
