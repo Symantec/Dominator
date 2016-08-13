@@ -7,6 +7,7 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"io"
 	"net/http"
+	"time"
 )
 
 var timeFormat string = "02 Jan 2006 15:04:05.99 MST"
@@ -53,7 +54,7 @@ func (s state) showImageHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	if !image.ExpiresAt.IsZero() {
 		fmt.Fprintf(writer, "Expires at: %s<br>\n",
-			image.ExpiresAt.Format(timeFormat))
+			image.ExpiresAt.In(time.Local).Format(timeFormat))
 	}
 	showAnnotation(writer, image.ReleaseNotes, imageName, "Release notes",
 		"listReleaseNotes")
