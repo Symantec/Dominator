@@ -33,7 +33,9 @@ if [ -x /sbin/grub2-mkconfig ]; then
     grub2-install "$boot_device"
 else
     tmp="$(< /etc/grub.conf)"
-    echo "$tmp" | sed -re 's/UUID=[^[:space:]]+/LABEL=rootfs/g' > /etc/grub.conf
+    echo "$tmp" | sed -r \
+	-e 's/UUID=[^[:space:]]+/LABEL=rootfs/g' \
+	-e 's/quiet$/quiet console=ttyS0/' > /etc/grub.conf
     grub <<-EOF
 	device (hd0) $boot_device
 	root (hd0,0)
