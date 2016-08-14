@@ -24,8 +24,21 @@ mount -n none -t sysfs /sys
 readonly boot_device=$(blkid -L rootfs | sed -re 's/([[:digit:]]+$)//')
 readonly kernel_version=$(ls -v /lib/modules | tail -n 1)
 
-# This section works on CentOS-7. It probably won't work elsewhere.
-# TODO(rgooch): Implement for other OSes.
-dracut --force --kver "$kernel_version"
-grub2-mkconfig -o /boot/grub2/grub.cfg
-grub2-install "$boot_device"
+# Build a new initramfs suited to the machine.
+dracut --force "/boot/initramfs-$kernel_version.img" "$kernel_version"
+
+# Reconfigure GRUB for new root file-system and install on boot device.
+if [ -x /sbin/grub2-mkconfig ]; then
+    grub2-mkconfig -o /boot/grub2/grub.cfg
+    grub2-install "$boot_device"
+else
+    tmp="$(< /etc/grub.conf)"
+    echo "$tmp" | sed -r \
+	-e 's/UUID=[^[:space:]]+/LABEL=rootfs/g' \
+	-e 's/quiet$/quiet console=ttyS0/' > /etc/grub.conf
+    grub <<-EOF
+	device (hd0) $boot_device
+	root (hd0,0)
+	setup (hd0)
+EOF
+fi
