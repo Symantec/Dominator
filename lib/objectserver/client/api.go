@@ -10,11 +10,16 @@ import (
 
 type ObjectClient struct {
 	address      string
+	client       *srpc.Client
 	exclusiveGet bool
 }
 
 func NewObjectClient(address string) *ObjectClient {
-	return &ObjectClient{address, false}
+	return &ObjectClient{address: address}
+}
+
+func AttachObjectClient(client *srpc.Client) *ObjectClient {
+	return &ObjectClient{client: client}
 }
 
 func (objClient *ObjectClient) AddObject(reader io.Reader, length uint64,
@@ -25,6 +30,10 @@ func (objClient *ObjectClient) AddObject(reader io.Reader, length uint64,
 func (objClient *ObjectClient) CheckObjects(hashes []hash.Hash) (
 	[]uint64, error) {
 	return objClient.checkObjects(hashes)
+}
+
+func (objClient *ObjectClient) Close() error {
+	return objClient.close()
 }
 
 func (objClient *ObjectClient) GetObject(hashVal hash.Hash) (

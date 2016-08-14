@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
 )
@@ -18,12 +17,10 @@ func (objClient *ObjectClient) addObject(reader io.Reader, length uint64,
 		return reply.Hash, false, errors.New(
 			"zero length object cannot be added")
 	}
-	srpcClient, err := srpc.DialHTTP("tcp", objClient.address, 0)
+	srpcClient, err := objClient.getClient()
 	if err != nil {
-		return reply.Hash, false, errors.New(
-			fmt.Sprintf("Error dialing\t%s\n", err.Error()))
+		return reply.Hash, false, err
 	}
-	defer srpcClient.Close()
 	conn, err := srpcClient.Call("ObjectServer.AddObjects")
 	if err != nil {
 		return reply.Hash, false, err
