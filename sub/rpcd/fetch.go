@@ -73,6 +73,7 @@ func (t *rpcType) fetchAndUnlock(request sub.FetchRequest) error {
 func (t *rpcType) doFetch(request sub.FetchRequest) error {
 	defer t.clearFetchInProgress()
 	objectServer := objectclient.NewObjectClient(request.ServerAddress)
+	defer objectServer.Close()
 	benchmark := false
 	linkSpeed, haveLinkSpeed := netspeed.GetSpeedToAddress(
 		request.ServerAddress)
