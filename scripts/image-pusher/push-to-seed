@@ -22,10 +22,17 @@ readonly sub="$1"
 readonly image="$2"
 readonly image_server="$3"
 
+echo 'Pushing image content'
 subtool -subHostname="$sub" \
         -deleteBeforeFetch=true \
         -filterFile=/dev/null \
         -imageServerHostname="$image_server" \
         -showTimes=true \
+        -triggersString='[]' \
+  push-image "$image" || exit
+
+echo 'Making bootable'
+subtool -subHostname="$sub" \
+        -showTimes=true \
         -triggersString='[{"MatchLines":[".*"],"Service":"make-bootable"}]' \
-  push-image "$image"
+  push-file "$HOME/etc/make-bootable" /make-bootable

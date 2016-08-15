@@ -77,6 +77,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  get-config")
 	fmt.Fprintln(os.Stderr, "  get-file remoteFile localFile")
 	fmt.Fprintln(os.Stderr, "  poll")
+	fmt.Fprintln(os.Stderr, "  push-file source dest")
 	fmt.Fprintln(os.Stderr, "  push-image image")
 	fmt.Fprintln(os.Stderr, "  set-config")
 }
@@ -128,6 +129,7 @@ var subcommands = []subcommand{
 	{"get-config", 0, getSubClient, getConfigSubcommand},
 	{"get-file", 2, getSubClient, getFileSubcommand},
 	{"poll", 0, getSubClient, pollSubcommand},
+	{"push-file", 2, getSubClient, pushFileSubcommand},
 	{"push-image", 1, getSubClientRetry, pushImageSubcommand},
 	{"set-config", 0, getSubClient, setConfigSubcommand},
 }
