@@ -248,7 +248,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	}
 	sub.startTime = reply.StartTime
 	sub.pollTime = reply.PollTime
-	sub.updateConfiguration(srpcClient, reply.CurrentConfiguration)
+	sub.updateConfiguration(srpcClient, reply)
 	if reply.FetchInProgress {
 		sub.status = statusFetching
 		return
@@ -348,11 +348,14 @@ func (sub *Sub) reclaim() {
 }
 
 func (sub *Sub) updateConfiguration(srpcClient *srpc.Client,
-	oldConf subproto.Configuration) {
+	pollReply subproto.PollResponse) {
+	if pollReply.ScanCount < 1 {
+		return
+	}
 	sub.herd.RLock()
 	newConf := sub.herd.configurationForSubs
 	sub.herd.RUnlock()
-	if compareConfigs(oldConf, newConf) {
+	if compareConfigs(pollReply.CurrentConfiguration, newConf) {
 		return
 	}
 	if err := client.SetConfiguration(srpcClient, newConf); err != nil {
