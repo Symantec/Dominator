@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
 	"io/ioutil"
@@ -13,9 +12,9 @@ import (
 
 func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (
 	*ObjectsReader, error) {
-	client, err := srpc.DialHTTP("tcp", objClient.address, 0)
+	client, err := objClient.getClient()
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error dialing\t%s\n", err))
+		return nil, err
 	}
 	conn, err := client.Call("ObjectServer.GetObjects")
 	if err != nil {

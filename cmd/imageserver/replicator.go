@@ -184,6 +184,7 @@ func getMissingObjects(address string, objSrv *fsdriver.ObjectServer,
 	logger.Printf("Replicator: downloading %d of %d objects\n",
 		len(missingObjects), len(hashes))
 	objClient := objectclient.NewObjectClient(address)
+	defer objClient.Close()
 	objectsReader, err := objClient.GetObjects(missingObjects)
 	if err != nil {
 		return err
