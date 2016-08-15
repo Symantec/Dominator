@@ -27,5 +27,9 @@ subtool -subHostname="$sub" \
         -filterFile=/dev/null \
         -imageServerHostname="$image_server" \
         -showTimes=true \
+        -triggersString='[]' \
+  push-image "$image" || exit
+
+subtool -subHostname="$sub" \
         -triggersString='[{"MatchLines":[".*"],"Service":"make-bootable"}]' \
-  push-image "$image"
+  push-file "$HOME/etc/make-bootable" /make-bootable

@@ -3,9 +3,8 @@
 case "$1" in
   start)
     cp -p /etc/fstab /mnt/etc
-    cp -p "$0" /mnt/tmp/make-bootable
-    chroot /mnt /tmp/make-bootable make-bootable
-    rm /mnt/tmp/make-bootable
+    chroot /mnt /make-bootable make-bootable
+    rm /mnt/make-bootable
     exit 0
     ;;
 
