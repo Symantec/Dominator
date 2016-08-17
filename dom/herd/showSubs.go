@@ -95,7 +95,7 @@ func showSub(writer io.Writer, sub *Sub) {
 	sub.herd.showImage(writer, sub.mdb.RequiredImage)
 	sub.herd.showImage(writer, sub.mdb.PlannedImage)
 	sub.showBusy(writer)
-	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.status)
+	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.publishedStatus)
 	timeNow := time.Now()
 	showSince(writer, sub.pollTime, sub.startTime)
 	showDuration(writer, sub.lastScanDuration)

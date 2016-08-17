@@ -71,7 +71,13 @@ func (sub *Sub) connectAndPoll() {
 		sub.generationCount = 0 // Force a full poll.
 	}
 	previousStatus := sub.status
-	sub.status = statusConnecting
+	timer := time.AfterFunc(time.Second, func() {
+		sub.publishedStatus = sub.status
+	})
+	defer func() {
+		timer.Stop()
+		sub.publishedStatus = sub.status
+	}()
 	hostname := strings.SplitN(sub.mdb.Hostname, "*", 2)[0]
 	address := fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber)
 	sub.lastConnectionStartTime = time.Now()
