@@ -1,6 +1,7 @@
 package herd
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/dom/lib"
@@ -201,6 +202,11 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	// poll.
 	if previousStatus == statusUpdatesDisabled &&
 		sub.herd.updatesDisabledReason == "" && !sub.mdb.DisableUpdates {
+		sub.generationCount = 0 // Force a full poll.
+	}
+	// If the last update was disabled due to a safety check and there is a
+	// pending SafetyClear, force a full poll to re-compute the update.
+	if previousStatus == statusUnsafeUpdate && sub.pendingSafetyClear {
 		sub.generationCount = 0 // Force a full poll.
 	}
 	var request subproto.PollRequest
@@ -456,6 +462,15 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
 // Returns true if no update needs to be performed.
 func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	logger := sub.herd.logger
+	if !sub.pendingSafetyClear {
+		// Perform a cheap safety check.
+		requiredImage := sub.herd.getImageNoError(sub.mdb.RequiredImage)
+		if requiredImage.Filter != nil &&
+			len(sub.fileSystem.InodeTable)>>1 >
+				len(requiredImage.FileSystem.InodeTable) {
+			return false, statusUnsafeUpdate
+		}
+	}
 	var request subproto.UpdateRequest
 	var reply subproto.UpdateResponse
 	if idle, missing := sub.buildUpdateRequest(&request); missing {
@@ -475,6 +490,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 		}
 		return false, statusFailedToUpdate
 	}
+	sub.pendingSafetyClear = false
 	return false, statusUpdating
 }
 
@@ -515,4 +531,12 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 	if err := client.Cleanup(srpcClient, hashes); err != nil {
 		logger.Printf("Error calling %s:Subd.Cleanup()\t%s\n", sub, err)
 	}
+}
+
+func (sub *Sub) clearSafetyShutoff() error {
+	if sub.status != statusUnsafeUpdate {
+		return errors.New("no pending unsafe update")
+	}
+	sub.pendingSafetyClear = true
+	return nil
 }

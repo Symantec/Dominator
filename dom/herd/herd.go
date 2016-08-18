@@ -51,6 +51,16 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	return &herd
 }
 
+func (herd *Herd) clearSafetyShutoff(hostname string) error {
+	herd.Lock()
+	sub, ok := herd.subsByName[hostname]
+	herd.Unlock()
+	if !ok {
+		return errors.New("unknown sub: " + hostname)
+	}
+	return sub.clearSafetyShutoff()
+}
+
 func (herd *Herd) configureSubs(configuration subproto.Configuration) error {
 	herd.Lock()
 	defer herd.Unlock()

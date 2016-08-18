@@ -60,6 +60,8 @@ func (status subStatus) string() string {
 		return "missing computed file"
 	case statusUpdatesDisabled:
 		return "updates disabled"
+	case statusUnsafeUpdate:
+		return "unsafe update"
 	case statusUpdating:
 		return "updating"
 	case statusUpdateDenied:
@@ -72,5 +74,14 @@ func (status subStatus) string() string {
 		return "synced"
 	default:
 		panic(fmt.Sprintf("unknown status: %d", status))
+	}
+}
+
+func (status subStatus) html() string {
+	switch status {
+	case statusUnsafeUpdate:
+		return `<font color="red">` + status.String() + "</font>"
+	default:
+		return status.String()
 	}
 }
