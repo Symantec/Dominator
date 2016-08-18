@@ -35,6 +35,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
+	fmt.Fprintln(os.Stderr, "  clear-safety-shutoff sub")
 	fmt.Fprintln(os.Stderr, "  configure-subs")
 	fmt.Fprintln(os.Stderr, "  disable-updates reason")
 	fmt.Fprintln(os.Stderr, "  enable-updates reason")
@@ -50,6 +51,7 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
+	{"clear-safety-shutoff", 1, clearSafetyShutoffSubcommand},
 	{"configure-subs", 0, configureSubsSubcommand},
 	{"disable-updates", 1, disableUpdatesSubcommand},
 	{"enable-updates", 1, enableUpdatesSubcommand},
