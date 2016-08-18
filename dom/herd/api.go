@@ -79,6 +79,7 @@ type Sub struct {
 	scanCountAtLastUpdateEnd     uint64
 	isInsecure                   bool
 	status                       subStatus
+	publishedStatus              subStatus
 	lastConnectionStartTime      time.Time
 	lastReachableTime            time.Time
 	lastConnectionSucceededTime  time.Time

@@ -71,7 +71,13 @@ func (sub *Sub) connectAndPoll() {
 		sub.generationCount = 0 // Force a full poll.
 	}
 	previousStatus := sub.status
-	sub.status = statusConnecting
+	timer := time.AfterFunc(time.Second, func() {
+		sub.publishedStatus = sub.status
+	})
+	defer func() {
+		timer.Stop()
+		sub.publishedStatus = sub.status
+	}()
 	hostname := strings.SplitN(sub.mdb.Hostname, "*", 2)[0]
 	address := fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber)
 	sub.lastConnectionStartTime = time.Now()
@@ -248,7 +254,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	}
 	sub.startTime = reply.StartTime
 	sub.pollTime = reply.PollTime
-	sub.updateConfiguration(srpcClient, reply.CurrentConfiguration)
+	sub.updateConfiguration(srpcClient, reply)
 	if reply.FetchInProgress {
 		sub.status = statusFetching
 		return
@@ -348,11 +354,14 @@ func (sub *Sub) reclaim() {
 }
 
 func (sub *Sub) updateConfiguration(srpcClient *srpc.Client,
-	oldConf subproto.Configuration) {
+	pollReply subproto.PollResponse) {
+	if pollReply.ScanCount < 1 {
+		return
+	}
 	sub.herd.RLock()
 	newConf := sub.herd.configurationForSubs
 	sub.herd.RUnlock()
-	if compareConfigs(oldConf, newConf) {
+	if compareConfigs(pollReply.CurrentConfiguration, newConf) {
 		return
 	}
 	if err := client.SetConfiguration(srpcClient, newConf); err != nil {

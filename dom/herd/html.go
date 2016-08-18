@@ -97,7 +97,7 @@ func (herd *Herd) writeReachableSubsLink(writer io.Writer,
 }
 
 func selectAliveSub(sub *Sub) bool {
-	switch sub.status {
+	switch sub.publishedStatus {
 	case statusUnknown:
 		return false
 	case statusConnecting:
@@ -115,7 +115,7 @@ func selectAliveSub(sub *Sub) bool {
 }
 
 func selectDeviantSub(sub *Sub) bool {
-	switch sub.status {
+	switch sub.publishedStatus {
 	case statusComputingUpdate:
 		return true
 	case statusSendingUpdate:
@@ -133,7 +133,7 @@ func selectDeviantSub(sub *Sub) bool {
 }
 
 func selectCompliantSub(sub *Sub) bool {
-	if sub.status == statusSynced {
+	if sub.publishedStatus == statusSynced {
 		return true
 	}
 	return false
