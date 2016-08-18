@@ -79,6 +79,7 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int, int) {
 	for name := range herd.imagesByName {
 		unusedImages[name] = struct{}{}
 	}
+	delete(unusedImages, herd.defaultImageName)
 	for _, sub := range herd.subsByName {
 		delete(unusedImages, sub.mdb.RequiredImage)
 		delete(unusedImages, sub.mdb.PlannedImage)

@@ -92,8 +92,8 @@ func showSub(writer io.Writer, sub *Sub) {
 	subURL := fmt.Sprintf("http://%s:%d/",
 		strings.SplitN(sub.String(), "*", 2)[0], constants.SubPortNumber)
 	fmt.Fprintf(writer, "    <td><a href=\"%s\">%s</a></td>\n", subURL, sub)
-	sub.herd.showImage(writer, sub.mdb.RequiredImage)
-	sub.herd.showImage(writer, sub.mdb.PlannedImage)
+	sub.herd.showImage(writer, sub.mdb.RequiredImage, true)
+	sub.herd.showImage(writer, sub.mdb.PlannedImage, false)
 	sub.showBusy(writer)
 	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.publishedStatus.html())
 	timeNow := time.Now()
@@ -109,9 +109,15 @@ func showSub(writer io.Writer, sub *Sub) {
 	fmt.Fprintln(writer, "  </tr>")
 }
 
-func (herd *Herd) showImage(writer io.Writer, name string) {
+func (herd *Herd) showImage(writer io.Writer, name string, showDefault bool) {
 	if name == "" {
-		fmt.Fprintln(writer, "    <td></td>")
+		if showDefault && herd.defaultImageName != "" {
+			fmt.Fprintf(writer,
+				"    <td><a style=\"color: #CCCC00\" href=\"http://%s/showImage?%s\">%s</a></td>\n",
+				herd.imageServerAddress, herd.defaultImageName, herd.defaultImageName)
+		} else {
+			fmt.Fprintln(writer, "    <td></td>")
+		}
 	} else if image, err := herd.getImage(name); err != nil {
 		fmt.Fprintf(writer, "    <td><font color=\"red\">%s</font></td>\n", err)
 	} else if image != nil {

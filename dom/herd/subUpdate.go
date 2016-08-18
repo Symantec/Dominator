@@ -12,8 +12,8 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 	bool, bool) {
 	sub.herd.computeSemaphore <- struct{}{}
 	defer func() { <-sub.herd.computeSemaphore }()
-	requiredImage := sub.herd.getImageNoError(sub.mdb.RequiredImage)
-	request.ImageName = sub.mdb.RequiredImage
+	requiredImage := sub.herd.getImageNoError(sub.getRequiredImageName())
+	request.ImageName = sub.getRequiredImageName()
 	request.Triggers = requiredImage.Triggers
 	var rusageStart, rusageStop syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
@@ -39,7 +39,7 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 		len(request.PathsToDelete) > 0 ||
 		len(request.DirectoriesToMake) > 0 ||
 		len(request.InodesToChange) > 0 ||
-		sub.lastSuccessfulImageName != sub.mdb.RequiredImage {
+		sub.lastSuccessfulImageName != sub.getRequiredImageName() {
 		sub.herd.logger.Printf(
 			"buildUpdateRequest(%s) took: %s user CPU time\n",
 			sub, sub.lastComputeUpdateCpuDuration)

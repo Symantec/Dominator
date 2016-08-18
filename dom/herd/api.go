@@ -116,6 +116,8 @@ type Herd struct {
 	updatesDisabledReason string
 	updatesDisabledBy     string
 	updatesDisabledTime   time.Time
+	defaultImageName      string
+	defaultImage          *image.Image
 	configurationForSubs  subproto.Configuration
 	nextSubToPoll         uint
 	subsByName            map[string]*Sub
@@ -155,6 +157,10 @@ func (herd *Herd) EnableUpdates() error {
 	return herd.enableUpdates()
 }
 
+func (herd *Herd) GetDefaultImage() string {
+	return herd.defaultImageName
+}
+
 func (herd *Herd) GetSubsConfiguration() subproto.Configuration {
 	return herd.getSubsConfiguration()
 }
@@ -165,6 +171,10 @@ func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {
 
 func (herd *Herd) PollNextSub() bool {
 	return herd.pollNextSub()
+}
+
+func (herd *Herd) SetDefaultImage(imageName string) error {
+	return herd.setDefaultImage(imageName)
 }
 
 func (herd *Herd) StartServer(portNum uint, daemon bool) error {
