@@ -2,6 +2,7 @@ package fsutil
 
 import (
 	"os"
+	"syscall"
 )
 
 func forceLink(oldname, newname string) error {
@@ -48,6 +49,10 @@ func forceRename(oldpath, newpath string) error {
 	if os.IsPermission(err) {
 		// Blindly attempt to remove immutable attributes.
 		MakeMutable(oldpath, newpath)
+	} else if err.(*os.LinkError).Err == syscall.EISDIR {
+		if err := ForceRemoveAll(newpath); err != nil {
+			return err
+		}
 	}
 	return os.Rename(oldpath, newpath)
 }

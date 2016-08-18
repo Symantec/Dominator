@@ -42,7 +42,9 @@ func ForceRemoveAll(path string) error {
 }
 
 // ForceRename renames (moves) a file. It first attempts to rename using
-// os.Rename and if that fails, it blindly calls MakeMutable and then retries.
+// os.Rename and if that fails due to a permission error, it blindly calls
+// MakeMutable and then retries. If it fails because newpath is a directory, it
+// calls ForceRemoveAll(newpath) and tries again.
 func ForceRename(oldpath, newpath string) error {
 	return forceRename(oldpath, newpath)
 }
