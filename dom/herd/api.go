@@ -49,6 +49,7 @@ const (
 	statusSendingUpdate
 	statusMissingComputedFile
 	statusUpdatesDisabled
+	statusUnsafeUpdate
 	statusUpdating
 	statusUpdateDenied
 	statusFailedToUpdate
@@ -80,6 +81,7 @@ type Sub struct {
 	isInsecure                   bool
 	status                       subStatus
 	publishedStatus              subStatus
+	pendingSafetyClear           bool
 	lastConnectionStartTime      time.Time
 	lastReachableTime            time.Time
 	lastConnectionSucceededTime  time.Time
@@ -135,6 +137,10 @@ func NewHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 
 func (herd *Herd) AddHtmlWriter(htmlWriter HtmlWriter) {
 	herd.addHtmlWriter(htmlWriter)
+}
+
+func (herd *Herd) ClearSafetyShutoff(hostname string) error {
+	return herd.clearSafetyShutoff(hostname)
 }
 
 func (herd *Herd) ConfigureSubs(configuration subproto.Configuration) error {
