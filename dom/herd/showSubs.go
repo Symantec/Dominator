@@ -98,14 +98,14 @@ func showSub(writer io.Writer, sub *Sub) {
 	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.publishedStatus.html())
 	timeNow := time.Now()
 	showSince(writer, sub.pollTime, sub.startTime)
-	showDuration(writer, sub.lastScanDuration)
+	showDuration(writer, sub.lastScanDuration, false)
 	showSince(writer, timeNow, sub.lastPollSucceededTime)
 	showSince(writer, timeNow, sub.lastUpdateTime)
 	showSince(writer, timeNow, sub.lastSyncTime)
-	showDuration(writer, sub.lastConnectDuration)
-	showDuration(writer, sub.lastShortPollDuration)
-	showDuration(writer, sub.lastFullPollDuration)
-	showDuration(writer, sub.lastComputeUpdateCpuDuration)
+	showDuration(writer, sub.lastConnectDuration, false)
+	showDuration(writer, sub.lastShortPollDuration, !sub.lastPollWasFull)
+	showDuration(writer, sub.lastFullPollDuration, sub.lastPollWasFull)
+	showDuration(writer, sub.lastComputeUpdateCpuDuration, false)
 	fmt.Fprintln(writer, "  </tr>")
 }
 
@@ -152,14 +152,18 @@ func showSince(writer io.Writer, now time.Time, since time.Time) {
 	if now.IsZero() || since.IsZero() {
 		fmt.Fprintln(writer, "    <td></td>")
 	} else {
-		showDuration(writer, now.Sub(since))
+		showDuration(writer, now.Sub(since), false)
 	}
 }
 
-func showDuration(writer io.Writer, duration time.Duration) {
+func showDuration(writer io.Writer, duration time.Duration, highlight bool) {
 	if duration < 1 {
 		fmt.Fprintf(writer, "    <td></td>\n")
 	} else {
-		fmt.Fprintf(writer, "    <td>%s</td>\n", format.Duration(duration))
+		str := format.Duration(duration)
+		if highlight {
+			str = "<b>" + str + "</b>"
+		}
+		fmt.Fprintf(writer, "    <td>%s</td>\n", str)
 	}
 }

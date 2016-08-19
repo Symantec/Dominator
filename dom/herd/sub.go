@@ -245,6 +245,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	}
 	sub.lastScanDuration = reply.DurationOfLastScan
 	if fs := reply.FileSystem; fs == nil {
+		sub.lastPollWasFull = false
 		sub.lastShortPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
 		shortPollDistribution.Add(sub.lastShortPollDuration)
@@ -252,6 +253,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 			sub.generationCount = 0 // Sub has restarted: force a full poll.
 		}
 	} else {
+		sub.lastPollWasFull = true
 		if err := fs.RebuildInodePointers(); err != nil {
 			sub.status = statusFailedToPoll
 			logger.Printf("Error building pointers for: %s %s\n", sub, err)
