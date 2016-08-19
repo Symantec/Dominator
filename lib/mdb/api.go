@@ -11,6 +11,7 @@ import (
 // metadata about the machine.
 type Machine struct {
 	Hostname       string
+	IpAddress      string `json:",omitempty"`
 	RequiredImage  string `json:",omitempty"`
 	PlannedImage   string `json:",omitempty"`
 	DisableUpdates bool   `json:",omitempty"`
