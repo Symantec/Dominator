@@ -20,11 +20,31 @@ import (
 )
 
 var (
-	subConnectTimeout = flag.Uint("subConnectTimeout", 15,
-		"Timeout in seconds for sub connections. If zero, OS timeout is used")
 	logUnknownSubConnectErrors = flag.Bool("logUnknownSubConnectErrors", false,
 		"If true, log unknown sub connection errors")
+	showIP = flag.Bool("showIP", false,
+		"If true, prefer to show IP address from MDB if available")
+	subConnectTimeout = flag.Uint("subConnectTimeout", 15,
+		"Timeout in seconds for sub connections. If zero, OS timeout is used")
+	useIP = flag.Bool("useIP", true,
+		"If true, prefer to use IP address from MDB if available")
+
+	subPortNumber = fmt.Sprintf(":%d", constants.SubPortNumber)
 )
+
+func (sub *Sub) string() string {
+	if *showIP && sub.mdb.IpAddress != "" {
+		return sub.mdb.IpAddress
+	}
+	return sub.mdb.Hostname
+}
+
+func (sub *Sub) address() string {
+	if *useIP && sub.mdb.IpAddress != "" {
+		return sub.mdb.IpAddress + subPortNumber
+	}
+	return strings.SplitN(sub.mdb.Hostname, "*", 2)[0] + subPortNumber
+}
 
 func (sub *Sub) getComputedFiles(im *image.Image) []filegenclient.ComputedFile {
 	if im == nil {
@@ -79,10 +99,8 @@ func (sub *Sub) connectAndPoll() {
 		timer.Stop()
 		sub.publishedStatus = sub.status
 	}()
-	hostname := strings.SplitN(sub.mdb.Hostname, "*", 2)[0]
-	address := fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber)
 	sub.lastConnectionStartTime = time.Now()
-	srpcClient, err := srpc.DialHTTP("tcp", address,
+	srpcClient, err := srpc.DialHTTP("tcp", sub.address(),
 		time.Second*time.Duration(*subConnectTimeout))
 	dialReturnedTime := time.Now()
 	if err != nil {
@@ -134,7 +152,9 @@ func (sub *Sub) connectAndPoll() {
 	sub.lastConnectDuration =
 		sub.lastConnectionSucceededTime.Sub(sub.lastConnectionStartTime)
 	connectDistribution.Add(sub.lastConnectDuration)
+	waitStartTime := time.Now()
 	sub.herd.pollSemaphore <- struct{}{}
+	pollWaitTimeDistribution.Add(time.Since(waitStartTime))
 	sub.status = statusPolling
 	sub.poll(srpcClient, previousStatus)
 	<-sub.herd.pollSemaphore
@@ -219,7 +239,6 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	var request subproto.PollRequest
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
-	sub.lastPollStartTime = time.Now()
 	haveImage := false
 	if sub.herd.getImageNoError(sub.getRequiredImageName()) == nil {
 		request.ShortPollOnly = true
@@ -227,6 +246,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		haveImage = true
 	}
 	logger := sub.herd.logger
+	sub.lastPollStartTime = time.Now()
 	if err := client.CallPoll(srpcClient, request, &reply); err != nil {
 		sub.pollTime = time.Time{}
 		if err == srpc.ErrorAccessToMethodDenied {
@@ -245,6 +265,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	}
 	sub.lastScanDuration = reply.DurationOfLastScan
 	if fs := reply.FileSystem; fs == nil {
+		sub.lastPollWasFull = false
 		sub.lastShortPollDuration =
 			sub.lastPollSucceededTime.Sub(sub.lastPollStartTime)
 		shortPollDistribution.Add(sub.lastShortPollDuration)
@@ -252,6 +273,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 			sub.generationCount = 0 // Sub has restarted: force a full poll.
 		}
 	} else {
+		sub.lastPollWasFull = true
 		if err := fs.RebuildInodePointers(); err != nil {
 			sub.status = statusFailedToPoll
 			logger.Printf("Error building pointers for: %s %s\n", sub, err)

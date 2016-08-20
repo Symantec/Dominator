@@ -90,6 +90,7 @@ type Sub struct {
 	lastPollSucceededTime        time.Time
 	lastShortPollDuration        time.Duration
 	lastFullPollDuration         time.Duration
+	lastPollWasFull              bool
 	lastScanDuration             time.Duration
 	lastComputeUpdateCpuDuration time.Duration
 	lastUpdateTime               time.Time
@@ -98,7 +99,7 @@ type Sub struct {
 }
 
 func (sub *Sub) String() string {
-	return sub.mdb.Hostname
+	return sub.string()
 }
 
 type missingImage struct {
