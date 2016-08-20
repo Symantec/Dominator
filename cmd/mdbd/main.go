@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"log"
 	"log/syslog"
 	"os"
@@ -156,10 +157,12 @@ func main() {
 	logger := getLogger()
 	handleSignals(logger)
 	var generators []generator
+	readerChannel := fsutil.WatchFile(*sourcesFile, logger)
 	file, err := os.Open(*sourcesFile)
 	if err != nil {
 		showErrorAndDie(err)
 	}
+	(<-readerChannel).Close()
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
@@ -175,6 +178,12 @@ func main() {
 	if err := scanner.Err(); err != nil {
 		showErrorAndDie(err)
 	}
-	runDaemon(generators, *mdbFile, *hostnameRegex, *datacentre, *fetchInterval,
-		logger, *debug)
+	file.Close()
+	go runDaemon(generators, *mdbFile, *hostnameRegex, *datacentre,
+		*fetchInterval, logger, *debug)
+	<-readerChannel
+	fsutil.WatchFileStop()
+	if err := syscall.Exec(os.Args[0], os.Args, os.Environ()); err != nil {
+		logger.Printf("Unable to Exec:%s: %s\n", os.Args[0], err)
+	}
 }
