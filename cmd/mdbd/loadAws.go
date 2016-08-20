@@ -53,6 +53,9 @@ func extractMdb(output *ec2.DescribeInstancesOutput) *mdb.Mdb {
 		for _, instance := range reservation.Instances {
 			if instance.PrivateDnsName != nil {
 				machine := mdb.Machine{Hostname: *instance.PrivateDnsName}
+				if instance.PrivateIpAddress != nil {
+					machine.IpAddress = *instance.PrivateIpAddress
+				}
 				extractTags(instance.Tags, &machine)
 				result.Machines = append(result.Machines, machine)
 			}
