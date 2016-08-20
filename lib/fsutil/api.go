@@ -70,6 +70,12 @@ func WatchFile(pathname string, logger *log.Logger) <-chan io.ReadCloser {
 	return watchFile(pathname, logger)
 }
 
+// WatchFileStop stops all file watching and cleans up resources that would
+// otherwise persist across syscall.Exec.
+func WatchFileStop() {
+	watchFileStop()
+}
+
 type ChecksumReader struct {
 	checksummer hash.Hash
 	reader      io.Reader

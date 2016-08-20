@@ -11,3 +11,5 @@ func watchFileWithInotify(pathname string, channel chan<- io.ReadCloser,
 	logger *log.Logger) bool {
 	return false
 }
+
+func watchFileStopWithInotify() bool { return false }
