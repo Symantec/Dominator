@@ -140,10 +140,17 @@ func (sub *Sub) connectAndPoll() {
 	<-sub.herd.pollSemaphore
 }
 
+func (sub *Sub) getRequiredImageName() string {
+	if sub.mdb.RequiredImage != "" {
+		return sub.mdb.RequiredImage
+	}
+	return sub.herd.defaultImageName
+}
+
 func (sub *Sub) processFileUpdates() bool {
 	haveUpdates := false
 	for {
-		image := sub.herd.getImageNoError(sub.mdb.RequiredImage)
+		image := sub.herd.getImageNoError(sub.getRequiredImageName())
 		if image != nil && sub.computedInodes == nil {
 			sub.computedInodes = make(map[string]*filesystem.RegularInode)
 			sub.herd.computedFilesManager.Update(
@@ -214,7 +221,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	var reply subproto.PollResponse
 	sub.lastPollStartTime = time.Now()
 	haveImage := false
-	if sub.herd.getImageNoError(sub.mdb.RequiredImage) == nil {
+	if sub.herd.getImageNoError(sub.getRequiredImageName()) == nil {
 		request.ShortPollOnly = true
 	} else {
 		haveImage = true
@@ -295,7 +302,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if !haveImage {
-		if sub.mdb.RequiredImage == "" {
+		if sub.getRequiredImageName() == "" {
 			sub.status = statusImageUndefined
 		} else {
 			sub.status = statusImageNotReady
@@ -325,7 +332,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(srpcClient,
-		sub.mdb.RequiredImage, true); !idle {
+		sub.getRequiredImageName(), true); !idle {
 		sub.status = status
 		sub.reclaim()
 		return
@@ -464,7 +471,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	logger := sub.herd.logger
 	if !sub.pendingSafetyClear {
 		// Perform a cheap safety check.
-		requiredImage := sub.herd.getImageNoError(sub.mdb.RequiredImage)
+		requiredImage := sub.herd.getImageNoError(sub.getRequiredImageName())
 		if requiredImage.Filter != nil &&
 			len(sub.fileSystem.InodeTable)>>1 >
 				len(requiredImage.FileSystem.InodeTable) {

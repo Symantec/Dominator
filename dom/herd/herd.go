@@ -150,3 +150,25 @@ func (herd *Herd) getReachableSelector(parsedQuery url.ParsedQuery) (
 	}
 	return rDuration(duration).selector, nil
 }
+
+func (herd *Herd) setDefaultImage(imageName string) error {
+	if imageName == "" {
+		herd.defaultImageName = ""
+		return nil
+	}
+	img, err := herd.getImage(imageName)
+	if err != nil {
+		return err
+	}
+	if img == nil {
+		return errors.New("unknown image: " + imageName)
+	}
+	if img.Filter != nil {
+		return errors.New("only sparse images can be set as default")
+	}
+	if len(img.FileSystem.InodeTable) > 100 {
+		return errors.New("cannot set default image with more than 100 inodes")
+	}
+	herd.defaultImageName = imageName
+	return nil
+}

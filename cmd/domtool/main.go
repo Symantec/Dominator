@@ -39,7 +39,9 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  configure-subs")
 	fmt.Fprintln(os.Stderr, "  disable-updates reason")
 	fmt.Fprintln(os.Stderr, "  enable-updates reason")
+	fmt.Fprintln(os.Stderr, "  get-default-image")
 	fmt.Fprintln(os.Stderr, "  get-subs-configuration")
+	fmt.Fprintln(os.Stderr, "  set-default-image image")
 }
 
 type commandFunc func(*srpc.Client, []string)
@@ -55,7 +57,9 @@ var subcommands = []subcommand{
 	{"configure-subs", 0, configureSubsSubcommand},
 	{"disable-updates", 1, disableUpdatesSubcommand},
 	{"enable-updates", 1, enableUpdatesSubcommand},
+	{"get-default-image", 0, getDefaultImageSubcommand},
 	{"get-subs-configuration", 0, getSubsConfigurationSubcommand},
+	{"set-default-image", 1, setDefaultImageSubcommand},
 }
 
 func main() {

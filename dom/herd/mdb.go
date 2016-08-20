@@ -75,16 +75,18 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int, int) {
 		delete(herd.subsByName, subHostname)
 		numDeleted++
 	}
-	imageUseMap := make(map[string]bool) // Unreferenced by default.
+	unusedImages := make(map[string]struct{})
+	for name := range herd.imagesByName {
+		unusedImages[name] = struct{}{}
+	}
+	delete(unusedImages, herd.defaultImageName)
 	for _, sub := range herd.subsByName {
-		imageUseMap[sub.mdb.RequiredImage] = true
-		imageUseMap[sub.mdb.PlannedImage] = true
+		delete(unusedImages, sub.mdb.RequiredImage)
+		delete(unusedImages, sub.mdb.PlannedImage)
 	}
 	// Clean up unreferenced images.
-	for name, used := range imageUseMap {
-		if !used {
-			delete(herd.imagesByName, name)
-		}
+	for name := range unusedImages {
+		delete(herd.imagesByName, name)
 	}
 	mdbUpdateTimeDistribution.Add(time.Since(startTime))
 	return numNew, numDeleted, numChanged

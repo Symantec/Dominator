@@ -26,6 +26,18 @@ type EnableUpdatesRequest struct {
 
 type EnableUpdatesResponse struct{}
 
+type GetDefaultImageRequest struct{}
+
+type GetDefaultImageResponse struct {
+	ImageName string
+}
+
 type GetSubsConfigurationRequest struct{}
 
 type GetSubsConfigurationResponse sub.Configuration
+
+type SetDefaultImageRequest struct {
+	ImageName string
+}
+
+type SetDefaultImageResponse struct{}

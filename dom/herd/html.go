@@ -34,6 +34,12 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 	}
 	fmt.Fprintf(writer, "Image server: <a href=\"http://%s/\">%s</a><br>\n",
 		herd.imageServerAddress, herd.imageServerAddress)
+	if herd.defaultImageName != "" {
+		fmt.Fprintf(writer,
+			"Default image: <a href=\"http://%s/showImage?%s\">%s</a><br>\n",
+			herd.imageServerAddress, herd.defaultImageName,
+			herd.defaultImageName)
+	}
 	fmt.Fprintf(writer,
 		"Number of <a href=\"listSubs\">subs</a>: <a href=\"showAllSubs\">%d</a><br>\n",
 		numSubs)
