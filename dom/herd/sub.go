@@ -20,11 +20,20 @@ import (
 )
 
 var (
-	subConnectTimeout = flag.Uint("subConnectTimeout", 15,
-		"Timeout in seconds for sub connections. If zero, OS timeout is used")
 	logUnknownSubConnectErrors = flag.Bool("logUnknownSubConnectErrors", false,
 		"If true, log unknown sub connection errors")
+	showIP = flag.Bool("showIP", true,
+		"If true, prefer to show IP address if available")
+	subConnectTimeout = flag.Uint("subConnectTimeout", 15,
+		"Timeout in seconds for sub connections. If zero, OS timeout is used")
 )
+
+func (sub *Sub) string() string {
+	if *showIP && sub.mdb.IpAddress != "" {
+		return sub.mdb.IpAddress
+	}
+	return sub.mdb.Hostname
+}
 
 func (sub *Sub) getComputedFiles(im *image.Image) []filegenclient.ComputedFile {
 	if im == nil {

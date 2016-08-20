@@ -99,7 +99,7 @@ type Sub struct {
 }
 
 func (sub *Sub) String() string {
-	return sub.mdb.Hostname
+	return sub.string()
 }
 
 type missingImage struct {
