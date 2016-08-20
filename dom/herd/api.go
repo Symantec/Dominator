@@ -117,7 +117,6 @@ type Herd struct {
 	updatesDisabledBy     string
 	updatesDisabledTime   time.Time
 	defaultImageName      string
-	defaultImage          *image.Image
 	configurationForSubs  subproto.Configuration
 	nextSubToPoll         uint
 	subsByName            map[string]*Sub

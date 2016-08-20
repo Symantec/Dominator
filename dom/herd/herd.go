@@ -170,6 +170,5 @@ func (herd *Herd) setDefaultImage(imageName string) error {
 		return errors.New("cannot set default image with more than 100 inodes")
 	}
 	herd.defaultImageName = imageName
-	herd.defaultImage = img
 	return nil
 }
