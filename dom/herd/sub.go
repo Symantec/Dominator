@@ -152,7 +152,9 @@ func (sub *Sub) connectAndPoll() {
 	sub.lastConnectDuration =
 		sub.lastConnectionSucceededTime.Sub(sub.lastConnectionStartTime)
 	connectDistribution.Add(sub.lastConnectDuration)
+	waitStartTime := time.Now()
 	sub.herd.pollSemaphore <- struct{}{}
+	pollWaitTimeDistribution.Add(time.Since(waitStartTime))
 	sub.status = statusPolling
 	sub.poll(srpcClient, previousStatus)
 	<-sub.herd.pollSemaphore
@@ -237,7 +239,6 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	var request subproto.PollRequest
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
-	sub.lastPollStartTime = time.Now()
 	haveImage := false
 	if sub.herd.getImageNoError(sub.getRequiredImageName()) == nil {
 		request.ShortPollOnly = true
@@ -245,6 +246,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		haveImage = true
 	}
 	logger := sub.herd.logger
+	sub.lastPollStartTime = time.Now()
 	if err := client.CallPoll(srpcClient, request, &reply); err != nil {
 		sub.pollTime = time.Time{}
 		if err == srpc.ErrorAccessToMethodDenied {
