@@ -22,10 +22,14 @@ import (
 var (
 	logUnknownSubConnectErrors = flag.Bool("logUnknownSubConnectErrors", false,
 		"If true, log unknown sub connection errors")
-	showIP = flag.Bool("showIP", true,
-		"If true, prefer to show IP address if available")
+	showIP = flag.Bool("showIP", false,
+		"If true, prefer to show IP address from MDB if available")
 	subConnectTimeout = flag.Uint("subConnectTimeout", 15,
 		"Timeout in seconds for sub connections. If zero, OS timeout is used")
+	useIP = flag.Bool("useIP", true,
+		"If true, prefer to use IP address from MDB if available")
+
+	subPortNumber = fmt.Sprintf(":%d", constants.SubPortNumber)
 )
 
 func (sub *Sub) string() string {
@@ -33,6 +37,13 @@ func (sub *Sub) string() string {
 		return sub.mdb.IpAddress
 	}
 	return sub.mdb.Hostname
+}
+
+func (sub *Sub) address() string {
+	if *useIP && sub.mdb.IpAddress != "" {
+		return sub.mdb.IpAddress + subPortNumber
+	}
+	return strings.SplitN(sub.mdb.Hostname, "*", 2)[0] + subPortNumber
 }
 
 func (sub *Sub) getComputedFiles(im *image.Image) []filegenclient.ComputedFile {
@@ -88,10 +99,8 @@ func (sub *Sub) connectAndPoll() {
 		timer.Stop()
 		sub.publishedStatus = sub.status
 	}()
-	hostname := strings.SplitN(sub.mdb.Hostname, "*", 2)[0]
-	address := fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber)
 	sub.lastConnectionStartTime = time.Now()
-	srpcClient, err := srpc.DialHTTP("tcp", address,
+	srpcClient, err := srpc.DialHTTP("tcp", sub.address(),
 		time.Second*time.Duration(*subConnectTimeout))
 	dialReturnedTime := time.Now()
 	if err != nil {
