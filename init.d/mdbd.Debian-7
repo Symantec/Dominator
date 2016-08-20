@@ -17,9 +17,9 @@ umask 022
 
 DAEMON='/usr/local/sbin/mdbd'
 LOOP_PIDFILE='/var/run/mdbd.loop.pid'
-MDB_FILE='/var/lib/Dominator/mdb'
+MDB_FILE=
 PIDFILE='/var/run/mdbd.pid'
-SOURCES_FILE='/var/lib/Dominator/mdb.sources.list'
+SOURCES_FILE=
 USERNAME='mdbd'
 MDBD_ARGS=
 
@@ -41,12 +41,19 @@ if [ -n "$HOSTNAME_REGEX" ]; then
     MDBD_ARGS="$MDBD_ARGS -hostnameRegex=$HOSTNAME_REGEX"
 fi
 
+if [ -n "$MDB_FILE" ]; then
+    MDBD_ARGS="$MDBD_ARGS -mdbFile=$MDB_FILE"
+fi
+
+if [ -n "$SOURCES_FILE" ]; then
+    MDBD_ARGS="$MDBD_ARGS -sourcesFile=$SOURCES_FILE"
+fi
+
 do_start ()
 {
     start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
 		      --exec "$DAEMON" --chuid "$USERNAME" --make-pidfile -- \
-		      -mdbFile="$MDB_FILE" -sourcesFile="$SOURCES_FILE" \
-		      -syslog $MDBD_ARGS
+		      -syslog=true $MDBD_ARGS
 }
 
 start_loop ()
