@@ -170,7 +170,7 @@ func (sub *Sub) getRequiredImageName() string {
 func (sub *Sub) processFileUpdates() bool {
 	haveUpdates := false
 	for {
-		image := sub.herd.getImageNoError(sub.getRequiredImageName())
+		image := sub.herd.imageManager.GetNoError(sub.getRequiredImageName())
 		if image != nil && sub.computedInodes == nil {
 			sub.computedInodes = make(map[string]*filesystem.RegularInode)
 			sub.herd.computedFilesManager.Update(
@@ -216,7 +216,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	// If the planned image has just become available, force a full poll.
 	if previousStatus == statusSynced &&
 		!sub.havePlannedImage &&
-		sub.herd.getImageNoError(sub.mdb.PlannedImage) != nil {
+		sub.herd.imageManager.GetNoError(sub.mdb.PlannedImage) != nil {
 		sub.havePlannedImage = true
 		sub.generationCount = 0 // Force a full poll.
 	}
@@ -240,7 +240,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
 	haveImage := false
-	if sub.herd.getImageNoError(sub.getRequiredImageName()) == nil {
+	if sub.herd.imageManager.GetNoError(sub.getRequiredImageName()) == nil {
 		request.ShortPollOnly = true
 	} else {
 		haveImage = true
@@ -429,7 +429,7 @@ func compareConfigs(oldConf, newConf subproto.Configuration) bool {
 func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
 	pushComputedFiles bool) (
 	bool, subStatus) {
-	image := sub.herd.getImageNoError(imageName)
+	image := sub.herd.imageManager.GetNoError(imageName)
 	if image == nil {
 		return false, statusImageNotReady
 	}
@@ -451,7 +451,7 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
 	if len(objectsToFetch) > 0 {
 		logger.Printf("Calling %s:Subd.Fetch() for: %d objects\n",
 			sub, len(objectsToFetch))
-		err := client.Fetch(srpcClient, sub.herd.imageServerAddress,
+		err := client.Fetch(srpcClient, sub.herd.imageManager.String(),
 			objectsToFetch)
 		if err != nil {
 			logger.Printf("Error calling %s:Subd.Fetch(): %s\n", sub, err)
@@ -493,7 +493,8 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	logger := sub.herd.logger
 	if !sub.pendingSafetyClear {
 		// Perform a cheap safety check.
-		requiredImage := sub.herd.getImageNoError(sub.getRequiredImageName())
+		requiredImage := sub.herd.imageManager.GetNoError(
+			sub.getRequiredImageName())
 		if requiredImage.Filter != nil &&
 			len(sub.fileSystem.InodeTable)>>1 >
 				len(requiredImage.FileSystem.InodeTable) {
@@ -538,7 +539,7 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 			}
 		}
 	}
-	image := sub.herd.getImageNoError(plannedImageName)
+	image := sub.herd.imageManager.GetNoError(plannedImageName)
 	if image != nil {
 		for _, inode := range image.FileSystem.InodeTable {
 			if inode, ok := inode.(*filesystem.RegularInode); ok {

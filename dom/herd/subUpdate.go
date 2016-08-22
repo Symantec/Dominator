@@ -12,7 +12,8 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 	bool, bool) {
 	sub.herd.computeSemaphore <- struct{}{}
 	defer func() { <-sub.herd.computeSemaphore }()
-	requiredImage := sub.herd.getImageNoError(sub.getRequiredImageName())
+	requiredImage := sub.herd.imageManager.GetNoError(
+		sub.getRequiredImageName())
 	request.ImageName = sub.getRequiredImageName()
 	request.Triggers = requiredImage.Triggers
 	var rusageStart, rusageStop syscall.Rusage
