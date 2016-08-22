@@ -2,6 +2,7 @@ package herd
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/lib/html"
 	"net"
 	"net/http"
 )
@@ -14,11 +15,16 @@ func (herd *Herd) startServer(portNum uint, daemon bool) error {
 	http.HandleFunc("/", herd.statusHandler)
 	http.HandleFunc("/listReachableSubs", herd.listReachableSubsHandler)
 	http.HandleFunc("/listSubs", herd.listSubsHandler)
-	http.HandleFunc("/showAliveSubs", herd.showAliveSubsHandler)
-	http.HandleFunc("/showAllSubs", herd.showAllSubsHandler)
-	http.HandleFunc("/showCompliantSubs", herd.showCompliantSubsHandler)
-	http.HandleFunc("/showDeviantSubs", herd.showDeviantSubsHandler)
-	http.HandleFunc("/showReachableSubs", herd.showReachableSubsHandler)
+	http.HandleFunc("/showAliveSubs",
+		html.BenchmarkedHandler(herd.showAliveSubsHandler))
+	http.HandleFunc("/showAllSubs",
+		html.BenchmarkedHandler(herd.showAllSubsHandler))
+	http.HandleFunc("/showCompliantSubs",
+		html.BenchmarkedHandler(herd.showCompliantSubsHandler))
+	http.HandleFunc("/showDeviantSubs",
+		html.BenchmarkedHandler(herd.showDeviantSubsHandler))
+	http.HandleFunc("/showReachableSubs",
+		html.BenchmarkedHandler(herd.showReachableSubsHandler))
 	if daemon {
 		go http.Serve(listener, nil)
 	} else {

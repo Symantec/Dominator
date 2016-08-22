@@ -1,7 +1,6 @@
 package herd
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/format"
@@ -12,27 +11,23 @@ import (
 	"time"
 )
 
-func (herd *Herd) showAliveSubsHandler(w http.ResponseWriter,
-	req *http.Request) {
+func (herd *Herd) showAliveSubsHandler(w io.Writer, req *http.Request) {
 	herd.showSubs(w, "alive ", selectAliveSub)
 }
 
-func (herd *Herd) showAllSubsHandler(w http.ResponseWriter, req *http.Request) {
+func (herd *Herd) showAllSubsHandler(w io.Writer, req *http.Request) {
 	herd.showSubs(w, "", nil)
 }
 
-func (herd *Herd) showCompliantSubsHandler(w http.ResponseWriter,
-	req *http.Request) {
+func (herd *Herd) showCompliantSubsHandler(w io.Writer, req *http.Request) {
 	herd.showSubs(w, "compliant ", selectCompliantSub)
 }
 
-func (herd *Herd) showDeviantSubsHandler(w http.ResponseWriter,
-	req *http.Request) {
+func (herd *Herd) showDeviantSubsHandler(w io.Writer, req *http.Request) {
 	herd.showSubs(w, "deviant ", selectDeviantSub)
 }
 
-func (herd *Herd) showReachableSubsHandler(w http.ResponseWriter,
-	req *http.Request) {
+func (herd *Herd) showReachableSubsHandler(w io.Writer, req *http.Request) {
 	selector, err := herd.getReachableSelector(url.ParseQuery(req.URL))
 	if err != nil {
 		fmt.Fprintln(w, err)
@@ -41,10 +36,8 @@ func (herd *Herd) showReachableSubsHandler(w http.ResponseWriter,
 	herd.showSubs(w, "reachable ", selector)
 }
 
-func (herd *Herd) showSubs(w io.Writer, subType string,
+func (herd *Herd) showSubs(writer io.Writer, subType string,
 	selectFunc func(*Sub) bool) {
-	writer := bufio.NewWriter(w)
-	defer writer.Flush()
 	fmt.Fprintf(writer, "<title>Dominator %s subs</title>", subType)
 	fmt.Fprintln(writer, `<style>
                           table, th, td {
@@ -52,7 +45,6 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
                           }
                           </style>`)
 	fmt.Fprintln(writer, "<body>")
-	fmt.Fprintln(writer, "<h3>")
 	if herd.updatesDisabledReason != "" {
 		fmt.Fprintf(writer, "<center>")
 		herd.writeDisableStatus(writer)
@@ -80,7 +72,6 @@ func (herd *Herd) showSubs(w io.Writer, subType string,
 		showSub(writer, sub)
 	}
 	fmt.Fprintln(writer, "</table>")
-	fmt.Fprintln(writer, "</body>")
 }
 
 func showSub(writer io.Writer, sub *Sub) {
