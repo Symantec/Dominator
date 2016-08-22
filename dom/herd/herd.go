@@ -2,6 +2,7 @@ package herd
 
 import (
 	"errors"
+	"flag"
 	"github.com/Symantec/Dominator/dom/images"
 	"github.com/Symantec/Dominator/lib/constants"
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
@@ -12,6 +13,11 @@ import (
 	"runtime"
 	"syscall"
 	"time"
+)
+
+var (
+	pollSlotsPerCPU = flag.Uint("pollSlotsPerCPU", 100,
+		"Number of poll slots per CPU")
 )
 
 func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
@@ -42,7 +48,8 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 		maxConnAttempts *= 100
 	}
 	herd.connectionSemaphore = make(chan struct{}, maxConnAttempts)
-	herd.pollSemaphore = make(chan struct{}, runtime.NumCPU()*10)
+	numPollSlots := uint(runtime.NumCPU()) * *pollSlotsPerCPU
+	herd.pollSemaphore = make(chan struct{}, numPollSlots)
 	herd.pushSemaphore = make(chan struct{}, runtime.NumCPU())
 	herd.computeSemaphore = make(chan struct{}, runtime.NumCPU())
 	herd.currentScanStartTime = time.Now()
