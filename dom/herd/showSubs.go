@@ -114,16 +114,16 @@ func (herd *Herd) showImage(writer io.Writer, name string, showDefault bool) {
 		if showDefault && herd.defaultImageName != "" {
 			fmt.Fprintf(writer,
 				"    <td><a style=\"color: #CCCC00\" href=\"http://%s/showImage?%s\">%s</a></td>\n",
-				herd.imageServerAddress, herd.defaultImageName, herd.defaultImageName)
+				herd.imageManager, herd.defaultImageName, herd.defaultImageName)
 		} else {
 			fmt.Fprintln(writer, "    <td></td>")
 		}
-	} else if image, err := herd.getImage(name); err != nil {
+	} else if image, err := herd.imageManager.Get(name, false); err != nil {
 		fmt.Fprintf(writer, "    <td><font color=\"red\">%s</font></td>\n", err)
 	} else if image != nil {
 		fmt.Fprintf(writer,
 			"    <td><a href=\"http://%s/showImage?%s\">%s</a></td>\n",
-			herd.imageServerAddress, name, name)
+			herd.imageManager, name, name)
 	} else {
 		fmt.Fprintf(writer, "    <td><font color=\"grey\">%s</font></td>\n",
 			name)

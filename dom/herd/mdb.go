@@ -7,7 +7,9 @@ import (
 )
 
 func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
-	numNew, numDeleted, numChanged := herd.mdbUpdateNoLogging(mdb)
+	numNew, numDeleted, numChanged, wantedImages := herd.mdbUpdateGetLock(mdb)
+	// Clean up unreferenced images.
+	herd.imageManager.SetImageInterestList(wantedImages, true)
 	pluralNew := "s"
 	if numNew == 1 {
 		pluralNew = ""
@@ -25,7 +27,8 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 		numNew, pluralNew, numDeleted, pluralDeleted, numChanged, pluralChanged)
 }
 
-func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int, int) {
+func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
+	int, int, int, map[string]struct{}) {
 	herd.Lock()
 	defer herd.Unlock()
 	startTime := time.Now()
@@ -38,9 +41,13 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int, int) {
 	for _, sub := range herd.subsByName {
 		subsToDelete[sub.mdb.Hostname] = struct{}{}
 	}
+	wantedImages := make(map[string]struct{})
+	wantedImages[herd.defaultImageName] = struct{}{}
 	for _, machine := range mdb.Machines { // Sorted by Hostname.
 		sub := herd.subsByName[machine.Hostname]
-		img, _ := herd.getImageHaveLock(machine.RequiredImage) // Preload.
+		wantedImages[machine.RequiredImage] = struct{}{}
+		wantedImages[machine.PlannedImage] = struct{}{}
+		img := herd.imageManager.GetNoError(machine.RequiredImage)
 		if sub == nil {
 			sub = new(Sub)
 			sub.herd = herd
@@ -63,31 +70,20 @@ func (herd *Herd) mdbUpdateNoLogging(mdb *mdb.Mdb) (int, int, int) {
 		}
 		delete(subsToDelete, machine.Hostname)
 		herd.subsByIndex = append(herd.subsByIndex, sub)
-		if img, _ = herd.getImageHaveLock(machine.PlannedImage); img == nil {
+		img = herd.imageManager.GetNoError(machine.PlannedImage)
+		if img == nil {
 			sub.havePlannedImage = false
 		} else {
 			sub.havePlannedImage = true
 		}
 	}
+	delete(wantedImages, "")
 	// Delete flagged subs (those not in the new MDB).
 	for subHostname := range subsToDelete {
 		herd.computedFilesManager.Remove(subHostname)
 		delete(herd.subsByName, subHostname)
 		numDeleted++
 	}
-	unusedImages := make(map[string]struct{})
-	for name := range herd.imagesByName {
-		unusedImages[name] = struct{}{}
-	}
-	delete(unusedImages, herd.defaultImageName)
-	for _, sub := range herd.subsByName {
-		delete(unusedImages, sub.mdb.RequiredImage)
-		delete(unusedImages, sub.mdb.PlannedImage)
-	}
-	// Clean up unreferenced images.
-	for name := range unusedImages {
-		delete(herd.imagesByName, name)
-	}
 	mdbUpdateTimeDistribution.Add(time.Since(startTime))
-	return numNew, numDeleted, numChanged
+	return numNew, numDeleted, numChanged, wantedImages
 }

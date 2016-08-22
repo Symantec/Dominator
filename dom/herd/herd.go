@@ -2,9 +2,9 @@ package herd
 
 import (
 	"errors"
+	"github.com/Symantec/Dominator/dom/images"
 	"github.com/Symantec/Dominator/lib/constants"
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
-	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/url"
 	subproto "github.com/Symantec/Dominator/proto/sub"
@@ -17,7 +17,7 @@ import (
 func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	logger *log.Logger) *Herd {
 	var herd Herd
-	herd.imageServerAddress = imageServerAddress
+	herd.imageManager = images.New(imageServerAddress, logger)
 	herd.objectServer = objectServer
 	herd.computedFilesManager = filegenclient.New(objectServer, logger)
 	herd.logger = logger
@@ -28,8 +28,6 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	herd.configurationForSubs.ScanExclusionList =
 		constants.ScanExcludeList
 	herd.subsByName = make(map[string]*Sub)
-	herd.imagesByName = make(map[string]*image.Image)
-	herd.missingImages = make(map[string]missingImage)
 	// Limit concurrent connection attempts so that the file descriptor limit is
 	// not exceeded.
 	var rlim syscall.Rlimit
@@ -156,7 +154,7 @@ func (herd *Herd) setDefaultImage(imageName string) error {
 		herd.defaultImageName = ""
 		return nil
 	}
-	img, err := herd.getImage(imageName)
+	img, err := herd.imageManager.Get(imageName, true)
 	if err != nil {
 		return err
 	}
