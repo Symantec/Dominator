@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"log"
 	"log/syslog"
 	"os"
@@ -23,7 +24,8 @@ var (
 		"A regular expression to match the desired hostnames")
 	mdbFile = flag.String("mdbFile", "/var/lib/Dominator/mdb",
 		"Name of file to write filtered MDB data to")
-	sourcesFile = flag.String("sourcesFile", "",
+	sourcesFile = flag.String("sourcesFile",
+		"/var/lib/Dominator/mdb.sources.list",
 		"Name of file list of driver url pairs")
 	useSyslog = flag.Bool("syslog", false, "If true, log to syslog")
 	pidfile   = flag.String("pidfile", "", "Name of file to write my PID to")
@@ -36,9 +38,9 @@ func printUsage() {
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Drivers:")
 	fmt.Fprintln(os.Stderr,
-		"  aws: Amazon AWS endpoint. first arg is datacenter like 'us-east-1'.")
+		"  aws: Amazon AWS endpoint. First arg is datacenter like 'us-east-1'.")
 	fmt.Fprintln(os.Stderr,
-		"       second arg is the profile to use out of ~/.aws/credentials which")
+		"       Second arg is the profile to use out of ~/.aws/credentials which")
 	fmt.Fprintln(os.Stderr,
 		"       contains the amazon aws credentials. For additional")
 	fmt.Fprintln(os.Stderr,
@@ -155,10 +157,12 @@ func main() {
 	logger := getLogger()
 	handleSignals(logger)
 	var generators []generator
+	readerChannel := fsutil.WatchFile(*sourcesFile, logger)
 	file, err := os.Open(*sourcesFile)
 	if err != nil {
 		showErrorAndDie(err)
 	}
+	(<-readerChannel).Close()
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
@@ -174,6 +178,12 @@ func main() {
 	if err := scanner.Err(); err != nil {
 		showErrorAndDie(err)
 	}
-	runDaemon(generators, *mdbFile, *hostnameRegex, *datacentre, *fetchInterval,
-		logger, *debug)
+	file.Close()
+	go runDaemon(generators, *mdbFile, *hostnameRegex, *datacentre,
+		*fetchInterval, logger, *debug)
+	<-readerChannel
+	fsutil.WatchFileStop()
+	if err := syscall.Exec(os.Args[0], os.Args, os.Environ()); err != nil {
+		logger.Printf("Unable to Exec:%s: %s\n", os.Args[0], err)
+	}
 }

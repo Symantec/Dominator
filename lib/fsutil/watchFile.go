@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+var stopped bool
+
 func watchFile(pathname string, logger *log.Logger) <-chan io.ReadCloser {
 	channel := make(chan io.ReadCloser, 1)
 	if !watchFileWithInotify(pathname, channel, logger) {
@@ -16,11 +18,17 @@ func watchFile(pathname string, logger *log.Logger) <-chan io.ReadCloser {
 	return channel
 }
 
+func watchFileStop() {
+	if !watchFileStopWithInotify() {
+		stopped = true
+	}
+}
+
 func watchFileForever(pathname string, channel chan<- io.ReadCloser,
 	logger *log.Logger) {
 	var lastStat syscall.Stat_t
 	lastFd := -1
-	for ; ; time.Sleep(time.Second) {
+	for ; !stopped; time.Sleep(time.Second) {
 		var stat syscall.Stat_t
 		if err := syscall.Stat(pathname, &stat); err != nil {
 			if logger != nil {
@@ -47,4 +55,8 @@ func watchFileForever(pathname string, channel chan<- io.ReadCloser,
 			}
 		}
 	}
+	if lastFd >= 0 {
+		syscall.Close(lastFd)
+	}
+	close(channel)
 }
