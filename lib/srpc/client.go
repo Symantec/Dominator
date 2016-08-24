@@ -14,6 +14,8 @@ import (
 
 func dialHTTP(network, address string, tlsConfig *tls.Config,
 	timeout time.Duration) (*Client, error) {
+	hostPort := strings.SplitN(address, ":", 2)
+	address = strings.SplitN(hostPort[0], "*", 2)[0] + ":" + hostPort[1]
 	unsecuredConn, err := net.DialTimeout(network, address, timeout)
 	if err != nil {
 		if strings.Contains(err.Error(), ErrorConnectionRefused.Error()) {
@@ -77,6 +79,9 @@ func newClient(conn net.Conn, isEncrypted bool) *Client {
 }
 
 func (client *Client) call(serviceMethod string) (*Conn, error) {
+	if client.free {
+		panic("cannot call Client after Put()")
+	}
 	client.callLock.Lock()
 	conn, err := client.callWithLock(serviceMethod)
 	if err != nil {
@@ -114,6 +119,10 @@ func (client *Client) callWithLock(serviceMethod string) (*Conn, error) {
 
 func (client *Client) close() error {
 	client.bufrw.Flush()
+	if client.isManaged {
+		client.put(true)
+	}
+	client.closed = true
 	return client.conn.Close()
 }
 

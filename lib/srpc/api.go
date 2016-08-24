@@ -73,6 +73,16 @@ func RegisterClientTlsConfig(config *tls.Config) {
 	clientTlsConfig = config
 }
 
+type Client struct {
+	conn        net.Conn
+	isEncrypted bool
+	isManaged   bool
+	free        bool
+	closed      bool
+	bufrw       *bufio.ReadWriter
+	callLock    sync.Mutex
+}
+
 // DialHTTP connects to an HTTP SRPC server at the specified network address
 // listening on the HTTP SRPC path. If timeout is zero or less, the underlying
 // OS timeout is used (typically 3 minutes for TCP).
@@ -92,16 +102,39 @@ func DialTlsHTTP(network, address string, tlsConfig *tls.Config,
 	return dialHTTP(network, address, tlsConfig, timeout)
 }
 
-type Client struct {
-	conn        net.Conn
-	isEncrypted bool
-	bufrw       *bufio.ReadWriter
-	callLock    sync.Mutex
+// GetHTTP is similar to DialHTTP except that the returned Client is part of a
+// managed pool of connection slots (to limit consumption of resources such as
+// file descriptors). Clients can be released with the Put method but the
+// underlying connection may be kept open for later re-use. The Client is placed
+// on an internal list. An attempt to Get a Client with the same
+// (network, address) tuple again without a Put will cause a panic. If wait is
+// true then the function will block if there are no free connection slots
+// available, else it will return (nil, nil).
+// A typical programming pattern is:
+//   c := srpc.GetHttp(...)
+//   defer c.Put()
+//   if err { c.Close() }
+// This pattern ensures Get* and Put are always matched, and if there is a
+// communications error, Close shuts down the client so that a subsequent Get*
+// creates a new connection.
+func GetHTTP(network, address string, timeout time.Duration, wait bool) (
+	*Client, error) {
+	return getHTTP(network, address, clientTlsConfig, timeout, wait)
 }
 
+// GetTlsHTTP is similar to DialTlsHTTP but returns a Client that is part of a
+// managed pool like GetHTTP returns.
+func GetTlsHTTP(network, address string, tlsConfig *tls.Config,
+	timeout time.Duration, wait bool) (*Client, error) {
+	if tlsConfig == nil {
+		tlsConfig = clientTlsConfig
+	}
+	return getHTTP(network, address, tlsConfig, timeout, wait)
+}
+
+// Close will close a client, immediately releasing the internal connection.
 func (client *Client) Close() error {
-	client.bufrw.Flush()
-	return client.conn.Close()
+	return client.close()
 }
 
 // Call opens a buffered connection to the named Service.Method function, and
@@ -124,6 +157,15 @@ func (client *Client) IsEncrypted() bool {
 // progress.
 func (client *Client) Ping() error {
 	return client.ping()
+}
+
+// Put releases a client that was previously created using one of the Get*
+// functions. It may be internally closed later if required to free limited
+// resources (such as file descriptors). No methods may be called after Put is
+// called. If Put is called after Close, no action is taken (this is a safe
+// operation and is commonly used in some programming patterns).
+func (client *Client) Put() {
+	client.put(false)
 }
 
 // RequestReply sends a request message to the named Service.Method function,
