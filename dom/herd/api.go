@@ -117,7 +117,6 @@ type Herd struct {
 	nextSubToPoll         uint
 	subsByName            map[string]*Sub
 	subsByIndex           []*Sub // Sorted by Sub.hostname.
-	connectionSemaphore   chan struct{}
 	pollSemaphore         chan struct{}
 	pushSemaphore         chan struct{}
 	computeSemaphore      chan struct{}

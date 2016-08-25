@@ -11,7 +11,6 @@ import (
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"log"
 	"runtime"
-	"syscall"
 	"time"
 )
 
@@ -34,20 +33,6 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	herd.configurationForSubs.ScanExclusionList =
 		constants.ScanExcludeList
 	herd.subsByName = make(map[string]*Sub)
-	// Limit concurrent connection attempts so that the file descriptor limit is
-	// not exceeded.
-	var rlim syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
-		panic(err)
-	}
-	maxConnAttempts := rlim.Cur - 50
-	maxConnAttempts = (maxConnAttempts / 100)
-	if maxConnAttempts < 1 {
-		maxConnAttempts = 1
-	} else {
-		maxConnAttempts *= 100
-	}
-	herd.connectionSemaphore = make(chan struct{}, maxConnAttempts)
 	numPollSlots := uint(runtime.NumCPU()) * *pollSlotsPerCPU
 	herd.pollSemaphore = make(chan struct{}, numPollSlots)
 	herd.pushSemaphore = make(chan struct{}, runtime.NumCPU())
@@ -108,9 +93,7 @@ func (herd *Herd) pollNextSub() bool {
 	if sub.busy { // Quick lockless check.
 		return false
 	}
-	herd.connectionSemaphore <- struct{}{}
 	go func() {
-		defer func() { <-herd.connectionSemaphore }()
 		if !sub.tryMakeBusy() {
 			return
 		}
