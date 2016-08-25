@@ -81,6 +81,7 @@ func getHTTP(network, address string, tlsConfig *tls.Config,
 	client, err := dialHTTP(network, address, tlsConfig, timeout)
 	lock.Lock()
 	if err != nil {
+		<-connectionSemaphore // Free up a slot for someone else.
 		return nil, err
 	}
 	client.isManaged = true
