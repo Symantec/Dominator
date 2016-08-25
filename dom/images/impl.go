@@ -134,7 +134,8 @@ func (m *Manager) loadImage(imageClient *srpc.Client, name string) (
 		imageClient, err = srpc.DialHTTP("tcp", m.imageServerAddress, 0)
 		if err != nil {
 			if !m.loggedDialFailure {
-				m.logger.Println(err)
+				m.logger.Printf("Error dialing: %s: %s\n",
+					m.imageServerAddress, err)
 				m.loggedDialFailure = true
 			}
 			return nil, nil, err
