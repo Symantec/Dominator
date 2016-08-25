@@ -13,9 +13,10 @@ type clientKey struct {
 }
 
 var (
-	maxConnections      = getConnectionLimit()
-	connectionSemaphore = make(chan struct{}, maxConnections)
+	maxConnections      int
+	connectionSemaphore chan struct{}
 	lock                sync.Mutex
+	limitsSet           bool
 	keyToInUseClients   = make(map[clientKey]*Client)
 	usedClientToKey     = make(map[*Client]clientKey)
 	keyToFreeClients    = make(map[clientKey]*Client)
@@ -38,6 +39,17 @@ func getConnectionLimit() int {
 
 func getHTTP(network, address string, tlsConfig *tls.Config,
 	timeout time.Duration, wait bool) (*Client, error) {
+	// Delay setting of internal limits to allow application code to increase the
+	// limit on file descriptors first.
+	if !limitsSet {
+		lock.Lock()
+		if !limitsSet {
+			maxConnections = getConnectionLimit()
+			connectionSemaphore = make(chan struct{}, maxConnections)
+			limitsSet = true
+		}
+		lock.Unlock()
+	}
 	// Grab a connection slot (the right to create a Client).
 	if wait {
 		connectionSemaphore <- struct{}{}
