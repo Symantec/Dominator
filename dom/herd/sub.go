@@ -16,6 +16,7 @@ import (
 	"io"
 	"net"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -41,6 +42,10 @@ func (sub *Sub) string() string {
 
 func (sub *Sub) address() string {
 	if *useIP && sub.mdb.IpAddress != "" {
+		hostInstance := strings.SplitN(sub.mdb.Hostname, "*", 2)
+		if len(hostInstance) > 1 {
+			return sub.mdb.IpAddress + "*" + hostInstance[1] + subPortNumber
+		}
 		return sub.mdb.IpAddress + subPortNumber
 	}
 	return sub.mdb.Hostname + subPortNumber
