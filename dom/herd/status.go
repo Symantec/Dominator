@@ -15,7 +15,7 @@ func (herd *Herd) statusHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "<center>")
 	fmt.Fprintln(writer, "<h1><b>Dominator</b> status page</h1>")
 	fmt.Fprintln(writer, "</center>")
-	html.WriteHeaderWithRequest(writer, req)
+	html.WriteHeaderWithRequestNoGC(writer, req)
 	fmt.Fprintln(writer, "<h3>")
 	herd.writeHtml(writer)
 	for _, htmlWriter := range herd.htmlWriters {
