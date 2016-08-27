@@ -123,6 +123,18 @@ func writeInodes(inodeTable filesystem.InodeTable, inodesDir string) error {
 			if err := inode.WriteMetadata(filename); err != nil {
 				return err
 			}
+		case *filesystem.ComputedRegularInode:
+			if _, err := os.Create(filename); err != nil {
+				return err
+			}
+			tmpInode := &filesystem.RegularInode{
+				Mode: inode.Mode,
+				Uid:  inode.Uid,
+				Gid:  inode.Gid,
+			}
+			if err := tmpInode.WriteMetadata(filename); err != nil {
+				return err
+			}
 		case *filesystem.SymlinkInode:
 			if err := inode.Write(filename); err != nil {
 				return err
