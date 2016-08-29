@@ -7,6 +7,7 @@ import (
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectserver"
+	"github.com/Symantec/Dominator/lib/srpc"
 	filegenproto "github.com/Symantec/Dominator/proto/filegenerator"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"io"
@@ -64,6 +65,7 @@ type HtmlWriter interface {
 type Sub struct {
 	herd                         *Herd
 	mdb                          mdb.Machine
+	clientResource               *srpc.ClientResource
 	computedInodes               map[string]*filesystem.RegularInode
 	fileUpdateChannel            <-chan []filegenproto.FileInfo
 	busyMutex                    sync.Mutex
@@ -117,7 +119,6 @@ type Herd struct {
 	nextSubToPoll         uint
 	subsByName            map[string]*Sub
 	subsByIndex           []*Sub // Sorted by Sub.hostname.
-	connectionSemaphore   chan struct{}
 	pollSemaphore         chan struct{}
 	pushSemaphore         chan struct{}
 	computeSemaphore      chan struct{}

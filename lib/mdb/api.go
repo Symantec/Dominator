@@ -4,6 +4,7 @@
 package mdb
 
 import (
+	"github.com/Symantec/Dominator/lib/verstr"
 	"io"
 )
 
@@ -40,10 +41,8 @@ func (mdb *Mdb) Len() int {
 
 // Less compares the hostnames of left and right.
 func (mdb *Mdb) Less(left, right int) bool {
-	if mdb.Machines[left].Hostname < mdb.Machines[right].Hostname {
-		return true
-	}
-	return false
+	return verstr.Less(mdb.Machines[left].Hostname,
+		mdb.Machines[right].Hostname)
 }
 
 // Swap swaps two entries in mdb.

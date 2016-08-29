@@ -34,3 +34,7 @@ func WriteHeaderNoGC(writer io.Writer) {
 func WriteHeaderWithRequest(writer io.Writer, req *http.Request) {
 	writeHeader(writer, req, false)
 }
+
+func WriteHeaderWithRequestNoGC(writer io.Writer, req *http.Request) {
+	writeHeader(writer, req, true)
+}

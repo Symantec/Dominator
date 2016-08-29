@@ -67,8 +67,9 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 	showDurationStats(writer, connectDurations, "Connect")
 	showDurationStats(writer, shortPollDurations, "Short poll")
 	showDurationStats(writer, fullPollDurations, "Full poll")
-	fmt.Fprintf(writer, "Connection slots: %d out of %d<br>\n",
-		len(herd.connectionSemaphore), cap(herd.connectionSemaphore))
+	// TODO(rgooch): Figure out a way of restoring this information.
+	//fmt.Fprintf(writer, "Connection slots: %d out of %d<br>\n",
+	//len(herd.connectionSemaphore), cap(herd.connectionSemaphore))
 	fmt.Fprintf(writer, "Poll slots: %d out of %d<br>\n",
 		len(herd.pollSemaphore), cap(herd.pollSemaphore))
 }

@@ -15,6 +15,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"errors"
+	"github.com/Symantec/Dominator/lib/resourcepool"
 	"net"
 	"sync"
 	"time"
@@ -73,6 +74,65 @@ func RegisterClientTlsConfig(config *tls.Config) {
 	clientTlsConfig = config
 }
 
+type ClientResource struct {
+	network    string
+	address    string
+	resource   *resourcepool.Resource
+	client     *Client
+	closeError error
+}
+
+// NewClientResource returns a ClientResource which may be later used to Get*
+// a Client which is part of a managed pool of connection slots (to limit
+// consumption of resources such as file descriptors). Clients can be released
+// with the Put method but the underlying connection may be kept open for later
+// re-use. The Client is placed on an internal list.
+// A typical programming pattern is:
+//   cr := NewClientResource(...)
+//   c := cr.GetHttp(...)
+//   defer c.Put()
+//   if err { c.Close() }
+//   c := cr.GetHttp(...)
+//   defer c.Put()
+//   if err { c.Close() }
+// This pattern ensures Get* and Put are always matched, and if there is a
+// communications error, Close shuts down the client so that a subsequent Get*
+// creates a new connection.
+func NewClientResource(network, address string) *ClientResource {
+	return newClientResource(network, address)
+}
+
+// GetHTTP is similar to DialHTTP except that the returned Client is part of a
+// managed pool of connection slots (to limit consumption of resources such as
+// file descriptors). If wait is true then the method blocks until a connection
+// slot becomes available.
+func (cr *ClientResource) GetHTTP(wait bool, timeout time.Duration) (
+	*Client, error) {
+	return cr.getHTTP(clientTlsConfig, wait, timeout)
+}
+
+// GetTlsHTTP is similar to DialTlsHTTP but returns a Client that is part of a
+// managed pool like the GetHTTP method returns.
+func (cr *ClientResource) GetTlsHTTP(tlsConfig *tls.Config, wait bool,
+	timeout time.Duration) (*Client, error) {
+	if tlsConfig == nil {
+		tlsConfig = clientTlsConfig
+	}
+	return cr.getHTTP(tlsConfig, wait, timeout)
+}
+
+func (cr *ClientResource) ScheduleClose() {
+	cr.resource.ScheduleRelease()
+}
+
+type Client struct {
+	conn        net.Conn
+	isEncrypted bool
+	resource    *ClientResource
+	bufrw       *bufio.ReadWriter
+	callLock    sync.Mutex
+}
+
 // DialHTTP connects to an HTTP SRPC server at the specified network address
 // listening on the HTTP SRPC path. If timeout is zero or less, the underlying
 // OS timeout is used (typically 3 minutes for TCP).
@@ -92,16 +152,9 @@ func DialTlsHTTP(network, address string, tlsConfig *tls.Config,
 	return dialHTTP(network, address, tlsConfig, timeout)
 }
 
-type Client struct {
-	conn        net.Conn
-	isEncrypted bool
-	bufrw       *bufio.ReadWriter
-	callLock    sync.Mutex
-}
-
+// Close will close a client, immediately releasing the internal connection.
 func (client *Client) Close() error {
-	client.bufrw.Flush()
-	return client.conn.Close()
+	return client.close()
 }
 
 // Call opens a buffered connection to the named Service.Method function, and
@@ -124,6 +177,15 @@ func (client *Client) IsEncrypted() bool {
 // progress.
 func (client *Client) Ping() error {
 	return client.ping()
+}
+
+// Put releases a client that was previously created using one of the Get*
+// methods. It may be internally closed later if required to free limited
+// resources (such as file descriptors). No methods may be called after Put is
+// called. If Put is called after Close, no action is taken (this is a safe
+// operation and is commonly used in some programming patterns).
+func (client *Client) Put() {
+	client.put()
 }
 
 // RequestReply sends a request message to the named Service.Method function,

@@ -13,6 +13,7 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
+	"io"
 	"net"
 	"runtime"
 	"strings"
@@ -41,9 +42,13 @@ func (sub *Sub) string() string {
 
 func (sub *Sub) address() string {
 	if *useIP && sub.mdb.IpAddress != "" {
+		hostInstance := strings.SplitN(sub.mdb.Hostname, "*", 2)
+		if len(hostInstance) > 1 {
+			return sub.mdb.IpAddress + "*" + hostInstance[1] + subPortNumber
+		}
 		return sub.mdb.IpAddress + subPortNumber
 	}
-	return strings.SplitN(sub.mdb.Hostname, "*", 2)[0] + subPortNumber
+	return sub.mdb.Hostname + subPortNumber
 }
 
 func (sub *Sub) getComputedFiles(im *image.Image) []filegenclient.ComputedFile {
@@ -100,7 +105,12 @@ func (sub *Sub) connectAndPoll() {
 		sub.publishedStatus = sub.status
 	}()
 	sub.lastConnectionStartTime = time.Now()
-	srpcClient, err := srpc.DialHTTP("tcp", sub.address(),
+	sub.busyMutex.Lock()
+	if sub.clientResource == nil {
+		sub.clientResource = srpc.NewClientResource("tcp", sub.address())
+	}
+	sub.busyMutex.Unlock()
+	srpcClient, err := sub.clientResource.GetHTTP(true,
 		time.Second*time.Duration(*subConnectTimeout))
 	dialReturnedTime := time.Now()
 	if err != nil {
@@ -140,7 +150,7 @@ func (sub *Sub) connectAndPoll() {
 		}
 		return
 	}
-	defer srpcClient.Close()
+	defer srpcClient.Put()
 	sub.status = statusWaitingToPoll
 	if srpcClient.IsEncrypted() {
 		sub.isInsecure = false
@@ -248,13 +258,17 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	logger := sub.herd.logger
 	sub.lastPollStartTime = time.Now()
 	if err := client.CallPoll(srpcClient, request, &reply); err != nil {
+		srpcClient.Close()
+		if err == io.EOF {
+			return
+		}
 		sub.pollTime = time.Time{}
 		if err == srpc.ErrorAccessToMethodDenied {
 			sub.status = statusPollDenied
 		} else {
 			sub.status = statusFailedToPoll
 		}
-		logger.Printf("Error calling %s.Poll()\t%s\n", sub, err)
+		logger.Printf("Error calling %s.Poll(): %s\n", sub, err)
 		return
 	}
 	sub.lastPollSucceededTime = time.Now()
@@ -400,6 +414,7 @@ func (sub *Sub) updateConfiguration(srpcClient *srpc.Client,
 		return
 	}
 	if err := client.SetConfiguration(srpcClient, newConf); err != nil {
+		srpcClient.Close()
 		logger := sub.herd.logger
 		logger.Printf("Error setting configuration for sub: %s: %s\n",
 			sub, err)
@@ -454,6 +469,7 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
 		err := client.Fetch(srpcClient, sub.herd.imageManager.String(),
 			objectsToFetch)
 		if err != nil {
+			srpcClient.Close()
 			logger.Printf("Error calling %s:Subd.Fetch(): %s\n", sub, err)
 			if err == srpc.ErrorAccessToMethodDenied {
 				return false, statusFetchDenied
@@ -514,6 +530,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	sub.status = statusSendingUpdate
 	sub.lastUpdateTime = time.Now()
 	if err := client.CallUpdate(srpcClient, request, &reply); err != nil {
+		srpcClient.Close()
 		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub, err)
 		if err == srpc.ErrorAccessToMethodDenied {
 			return false, statusUpdateDenied
@@ -559,6 +576,7 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 		hashes = append(hashes, hash)
 	}
 	if err := client.Cleanup(srpcClient, hashes); err != nil {
+		srpcClient.Close()
 		logger.Printf("Error calling %s:Subd.Cleanup()\t%s\n", sub, err)
 	}
 }
