@@ -15,6 +15,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"errors"
+	"github.com/Symantec/Dominator/lib/resourcepool"
 	"net"
 	"sync"
 	"time"
@@ -73,12 +74,61 @@ func RegisterClientTlsConfig(config *tls.Config) {
 	clientTlsConfig = config
 }
 
+type ClientResource struct {
+	network    string
+	address    string
+	resource   *resourcepool.Resource
+	client     *Client
+	closeError error
+}
+
+// NewClientResource returns a ClientResource which may be later used to Get*
+// a Client which is part of a managed pool of connection slots (to limit
+// consumption of resources such as file descriptors). Clients can be released
+// with the Put method but the underlying connection may be kept open for later
+// re-use. The Client is placed on an internal list.
+// A typical programming pattern is:
+//   cr := NewClientResource(...)
+//   c := cr.GetHttp(...)
+//   defer c.Put()
+//   if err { c.Close() }
+//   c := cr.GetHttp(...)
+//   defer c.Put()
+//   if err { c.Close() }
+// This pattern ensures Get* and Put are always matched, and if there is a
+// communications error, Close shuts down the client so that a subsequent Get*
+// creates a new connection.
+func NewClientResource(network, address string) *ClientResource {
+	return newClientResource(network, address)
+}
+
+// GetHTTP is similar to DialHTTP except that the returned Client is part of a
+// managed pool of connection slots (to limit consumption of resources such as
+// file descriptors). If wait is true then the method blocks until a connection
+// slot becomes available.
+func (cr *ClientResource) GetHTTP(wait bool, timeout time.Duration) (
+	*Client, error) {
+	return cr.getHTTP(clientTlsConfig, wait, timeout)
+}
+
+// GetTlsHTTP is similar to DialTlsHTTP but returns a Client that is part of a
+// managed pool like the GetHTTP method returns.
+func (cr *ClientResource) GetTlsHTTP(tlsConfig *tls.Config, wait bool,
+	timeout time.Duration) (*Client, error) {
+	if tlsConfig == nil {
+		tlsConfig = clientTlsConfig
+	}
+	return cr.getHTTP(tlsConfig, wait, timeout)
+}
+
+func (cr *ClientResource) ScheduleClose() {
+	cr.resource.ScheduleRelease()
+}
+
 type Client struct {
 	conn        net.Conn
 	isEncrypted bool
-	isManaged   bool
-	free        bool
-	closed      bool
+	resource    *ClientResource
 	bufrw       *bufio.ReadWriter
 	callLock    sync.Mutex
 }
@@ -100,36 +150,6 @@ func DialTlsHTTP(network, address string, tlsConfig *tls.Config,
 		tlsConfig = clientTlsConfig
 	}
 	return dialHTTP(network, address, tlsConfig, timeout)
-}
-
-// GetHTTP is similar to DialHTTP except that the returned Client is part of a
-// managed pool of connection slots (to limit consumption of resources such as
-// file descriptors). Clients can be released with the Put method but the
-// underlying connection may be kept open for later re-use. The Client is placed
-// on an internal list. An attempt to Get a Client with the same
-// (network, address) tuple again without a Put will cause a panic. If wait is
-// true then the function will block if there are no free connection slots
-// available, else it will return (nil, nil).
-// A typical programming pattern is:
-//   c := srpc.GetHttp(...)
-//   defer c.Put()
-//   if err { c.Close() }
-// This pattern ensures Get* and Put are always matched, and if there is a
-// communications error, Close shuts down the client so that a subsequent Get*
-// creates a new connection.
-func GetHTTP(network, address string, timeout time.Duration, wait bool) (
-	*Client, error) {
-	return getHTTP(network, address, clientTlsConfig, timeout, wait)
-}
-
-// GetTlsHTTP is similar to DialTlsHTTP but returns a Client that is part of a
-// managed pool like GetHTTP returns.
-func GetTlsHTTP(network, address string, tlsConfig *tls.Config,
-	timeout time.Duration, wait bool) (*Client, error) {
-	if tlsConfig == nil {
-		tlsConfig = clientTlsConfig
-	}
-	return getHTTP(network, address, tlsConfig, timeout, wait)
 }
 
 // Close will close a client, immediately releasing the internal connection.
@@ -160,12 +180,12 @@ func (client *Client) Ping() error {
 }
 
 // Put releases a client that was previously created using one of the Get*
-// functions. It may be internally closed later if required to free limited
+// methods. It may be internally closed later if required to free limited
 // resources (such as file descriptors). No methods may be called after Put is
 // called. If Put is called after Close, no action is taken (this is a safe
 // operation and is commonly used in some programming patterns).
 func (client *Client) Put() {
-	client.put(false)
+	client.put()
 }
 
 // RequestReply sends a request message to the named Service.Method function,

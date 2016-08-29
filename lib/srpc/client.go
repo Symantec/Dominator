@@ -79,7 +79,7 @@ func newClient(conn net.Conn, isEncrypted bool) *Client {
 }
 
 func (client *Client) call(serviceMethod string) (*Conn, error) {
-	if client.free {
+	if client.conn == nil {
 		panic("cannot call Client after Put()")
 	}
 	client.callLock.Lock()
@@ -119,11 +119,11 @@ func (client *Client) callWithLock(serviceMethod string) (*Conn, error) {
 
 func (client *Client) close() error {
 	client.bufrw.Flush()
-	if client.isManaged {
-		client.put(true)
+	if client.resource == nil {
+		return client.conn.Close()
 	}
-	client.closed = true
-	return client.conn.Close()
+	client.resource.resource.Release()
+	return client.resource.closeError
 }
 
 func (client *Client) ping() error {

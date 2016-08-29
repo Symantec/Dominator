@@ -105,8 +105,13 @@ func (sub *Sub) connectAndPoll() {
 		sub.publishedStatus = sub.status
 	}()
 	sub.lastConnectionStartTime = time.Now()
-	srpcClient, err := srpc.GetHTTP("tcp", sub.address(),
-		time.Second*time.Duration(*subConnectTimeout), true)
+	sub.busyMutex.Lock()
+	if sub.clientResource == nil {
+		sub.clientResource = srpc.NewClientResource("tcp", sub.address())
+	}
+	sub.busyMutex.Unlock()
+	srpcClient, err := sub.clientResource.GetHTTP(true,
+		time.Second*time.Duration(*subConnectTimeout))
 	dialReturnedTime := time.Now()
 	if err != nil {
 		sub.isInsecure = false
