@@ -36,7 +36,7 @@ func (r *ChecksumReader) readByte() (byte, error) {
 
 func (r *ChecksumReader) verifyChecksum() error {
 	buf := make([]byte, r.checksummer.Size())
-	nRead, err := r.reader.Read(buf)
+	nRead, err := io.ReadAtLeast(r.reader, buf, len(buf))
 	if err != nil {
 		return err
 	}
