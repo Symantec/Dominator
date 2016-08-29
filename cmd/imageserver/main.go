@@ -67,12 +67,12 @@ func main() {
 	}
 	objSrv, err := filesystem.NewObjectServer(*objectDir, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot create ObjectServer\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Cannot create ObjectServer: %s\n", err)
 		os.Exit(1)
 	}
 	imdb, err := scanner.LoadImageDataBase(*imageDir, objSrv, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot load image database\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Cannot load image database: %s\n", err)
 		os.Exit(1)
 	}
 	tricorder.RegisterMetric("/image-count",
@@ -91,7 +91,7 @@ func main() {
 			*imageServerPortNum), imdb, objSrv, *archiveMode, logger)
 	}
 	if err = httpd.StartServer(*portNum, imdb, objSrv, false); err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to create http server: %s\n", err)
 		os.Exit(1)
 	}
 }
