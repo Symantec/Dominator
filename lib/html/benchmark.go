@@ -3,6 +3,7 @@ package html
 import (
 	"bufio"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/wsyscall"
 	"io"
 	"net/http"
 	"runtime"
@@ -15,13 +16,20 @@ func benchmarkedHandler(handler func(io.Writer,
 	return func(w http.ResponseWriter, req *http.Request) {
 		runtime.LockOSThread()
 		var startRusage, stopRusage syscall.Rusage
-		syscall.Getrusage(syscall.RUSAGE_THREAD, &startRusage)
+		wsyscall.Getrusage(wsyscall.RUSAGE_THREAD, &startRusage)
 		startTime := time.Now()
 		writer := bufio.NewWriter(w)
 		defer writer.Flush()
+		defer fmt.Fprintln(writer, "</body>")
 		handler(writer, req)
 		durationReal := time.Since(startTime)
-		syscall.Getrusage(syscall.RUSAGE_THREAD, &stopRusage)
+		err := wsyscall.Getrusage(wsyscall.RUSAGE_THREAD, &stopRusage)
+		if err != nil {
+			fmt.Fprintf(writer,
+				"<br><font color=\"grey\">Render time: real: %s  wbuf: %d B</font>\n",
+				durationReal, writer.Buffered())
+			return
+		}
 		var durationUser, durationSys int64
 		durationUser = (stopRusage.Utime.Sec - startRusage.Utime.Sec) * 1000000
 		durationUser += stopRusage.Utime.Usec - startRusage.Utime.Usec
@@ -30,6 +38,5 @@ func benchmarkedHandler(handler func(io.Writer,
 		fmt.Fprintf(writer,
 			"<br><font color=\"grey\">Render time: real: %s, user: %d us, sys: %d us  wbuf: %d B</font>\n",
 			durationReal, durationUser, durationSys, writer.Buffered())
-		fmt.Fprintln(writer, "</body>")
 	}
 }
