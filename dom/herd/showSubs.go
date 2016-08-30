@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/url"
 	"io"
 	"net/http"
@@ -44,7 +45,11 @@ func (herd *Herd) showSubs(writer io.Writer, subType string,
                           border-collapse: collapse;
                           }
                           </style>`)
-	fmt.Fprintln(writer, "<body>")
+	if srpc.CheckTlsRequired() {
+		fmt.Fprintln(writer, "<body>")
+	} else {
+		fmt.Fprintln(writer, "<body bgcolor=\"#ffb0b0\">")
+	}
 	if herd.updatesDisabledReason != "" {
 		fmt.Fprintf(writer, "<center>")
 		herd.writeDisableStatus(writer)
