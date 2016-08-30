@@ -30,6 +30,19 @@ func mount(source string, target string, fstype string, flags uintptr,
 	return syscall.Mount(source, target, fstype, linuxFlags, data)
 }
 
+func getrusage(who int, rusage *syscall.Rusage) error {
+	switch who {
+	case RUSAGE_CHILDREN:
+		return syscall.Getrusage(syscall.RUSAGE_CHILDREN, rusage)
+	case RUSAGE_SELF:
+		return syscall.Getrusage(syscall.RUSAGE_SELF, rusage)
+	case RUSAGE_THREAD:
+		return syscall.Getrusage(syscall.RUSAGE_THREAD, rusage)
+	default:
+		return syscall.ENOTSUP
+	}
+}
+
 func setAllGid(gid int) error {
 	return syscall.Setresgid(gid, gid, gid)
 }

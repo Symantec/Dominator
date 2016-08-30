@@ -4,6 +4,10 @@ import "syscall"
 
 const (
 	MS_BIND = 1 << iota
+
+	RUSAGE_CHILDREN = iota
+	RUSAGE_SELF
+	RUSAGE_THREAD
 )
 
 type Stat_t struct {
@@ -34,6 +38,10 @@ func Lstat(path string, statbuf *Stat_t) error {
 func Mount(source string, target string, fstype string, flags uintptr,
 	data string) error {
 	return mount(source, target, fstype, flags, data)
+}
+
+func Getrusage(who int, rusage *syscall.Rusage) error {
+	return getrusage(who, rusage)
 }
 
 func SetAllGid(gid int) error {
