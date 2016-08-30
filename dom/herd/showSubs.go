@@ -49,6 +49,8 @@ func (herd *Herd) showSubs(writer io.Writer, subType string,
 		fmt.Fprintln(writer, "<body>")
 	} else {
 		fmt.Fprintln(writer, "<body bgcolor=\"#ffb0b0\">")
+		fmt.Fprintln(writer,
+			`<h1><center><font color="red">Running in insecure mode. You can get pwned!!!</center></font></h1>`)
 	}
 	if herd.updatesDisabledReason != "" {
 		fmt.Fprintf(writer, "<center>")
