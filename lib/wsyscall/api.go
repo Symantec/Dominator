@@ -10,6 +10,25 @@ const (
 	RUSAGE_THREAD
 )
 
+type Rusage struct {
+	Utime    Timeval
+	Stime    Timeval
+	Maxrss   int64
+	Ixrss    int64
+	Idrss    int64
+	Isrss    int64
+	Minflt   int64
+	Majflt   int64
+	Nswap    int64
+	Inblock  int64
+	Oublock  int64
+	Msgsnd   int64
+	Msgrcv   int64
+	Nsignals int64
+	Nvcsw    int64
+	Nivcsw   int64
+}
+
 type Stat_t struct {
 	Dev     uint64
 	Ino     uint64
@@ -26,6 +45,11 @@ type Stat_t struct {
 	Ctim    syscall.Timespec
 }
 
+type Timeval struct {
+	Sec  int64
+	Usec int64
+}
+
 func Lstat(path string, statbuf *Stat_t) error {
 	var rawStatbuf syscall.Stat_t
 	if err := syscall.Lstat(path, &rawStatbuf); err != nil {
@@ -40,7 +64,7 @@ func Mount(source string, target string, fstype string, flags uintptr,
 	return mount(source, target, fstype, flags, data)
 }
 
-func Getrusage(who int, rusage *syscall.Rusage) error {
+func Getrusage(who int, rusage *Rusage) error {
 	return getrusage(who, rusage)
 }
 
