@@ -30,6 +30,41 @@ func mount(source string, target string, fstype string, flags uintptr,
 	return syscall.Mount(source, target, fstype, linuxFlags, data)
 }
 
+func getrusage(who int, rusage *Rusage) error {
+	switch who {
+	case RUSAGE_CHILDREN:
+		who = syscall.RUSAGE_CHILDREN
+	case RUSAGE_SELF:
+		who = syscall.RUSAGE_SELF
+	case RUSAGE_THREAD:
+		who = syscall.RUSAGE_THREAD
+	default:
+		return syscall.ENOTSUP
+	}
+	var syscallRusage syscall.Rusage
+	if err := syscall.Getrusage(who, &syscallRusage); err != nil {
+		return err
+	}
+	rusage.Utime.Sec = int64(syscallRusage.Utime.Sec)
+	rusage.Utime.Usec = int64(syscallRusage.Utime.Usec)
+	rusage.Stime.Sec = int64(syscallRusage.Stime.Sec)
+	rusage.Stime.Usec = int64(syscallRusage.Stime.Usec)
+	rusage.Maxrss = int64(syscallRusage.Maxrss)
+	rusage.Ixrss = int64(syscallRusage.Ixrss)
+	rusage.Idrss = int64(syscallRusage.Idrss)
+	rusage.Minflt = int64(syscallRusage.Minflt)
+	rusage.Majflt = int64(syscallRusage.Majflt)
+	rusage.Nswap = int64(syscallRusage.Nswap)
+	rusage.Inblock = int64(syscallRusage.Inblock)
+	rusage.Oublock = int64(syscallRusage.Oublock)
+	rusage.Msgsnd = int64(syscallRusage.Msgsnd)
+	rusage.Msgrcv = int64(syscallRusage.Msgrcv)
+	rusage.Nsignals = int64(syscallRusage.Nsignals)
+	rusage.Nvcsw = int64(syscallRusage.Nvcsw)
+	rusage.Nivcsw = int64(syscallRusage.Nivcsw)
+	return nil
+}
+
 func setAllGid(gid int) error {
 	return syscall.Setresgid(gid, gid, gid)
 }
