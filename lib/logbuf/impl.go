@@ -164,6 +164,10 @@ func (lb *LogBuffer) enforceQuota() error {
 		if err != nil {
 			return err
 		}
+		if !*alsoLogToStderr {
+			syscall.Dup2(int(file.Fd()), int(os.Stdout.Fd()))
+			syscall.Dup2(int(file.Fd()), int(os.Stderr.Fd()))
+		}
 		lb.file = file
 		lb.writer = bufio.NewWriter(file)
 		symlink := path.Join(lb.logDir, "latest")
@@ -218,10 +222,7 @@ func (lb *LogBuffer) dumpSince(writer io.Writer, name string,
 		timeString := line[:minLength-2]
 		timeStamp, err := time.ParseInLocation(timeFormat, timeString,
 			time.Local)
-		if err != nil {
-			continue
-		}
-		if timeStamp.Before(earliestTime) {
+		if err == nil && timeStamp.Before(earliestTime) {
 			continue
 		}
 		if recentFirst {
