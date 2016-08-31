@@ -97,6 +97,14 @@ func (testResource *testResourceType) put() {
 	testResource.resource.Put()
 }
 
+func (testResource *testResourceType) release() {
+	testPool := testResource.testPool
+	testPool.Lock()
+	testPool.numInUse--
+	testPool.Unlock()
+	testResource.resource.Release()
+}
+
 func (testResource *testResourceType) releaseCallback() {
 	testPool := testResource.testPool
 	testPool.Lock()
@@ -142,6 +150,34 @@ func TestGetPut(t *testing.T) {
 	}
 }
 
+func TestGetClosePut(t *testing.T) {
+	testPool := newTestPool(1, 1)
+	testResource := testPool.resources[0]
+	if !testResource.get(false) {
+		t.Errorf("Get(): would have waited")
+	}
+	tmp := testPool.getNumInUse()
+	if tmp != 1 {
+		t.Errorf("numInUse = %v", tmp)
+	}
+	if !testResource.active {
+		t.Errorf("Resource should not have been released")
+	}
+	testResource.release()
+	tmp = testPool.getNumInUse()
+	if tmp != 0 {
+		t.Errorf("numInUse = %v", tmp)
+	}
+	if testResource.active {
+		t.Errorf("Resource should have been released")
+	}
+	tmp = testPool.getNumActive()
+	if tmp != 0 {
+		t.Errorf("numActive = %v", tmp)
+	}
+	testResource.put()
+}
+
 func TestPut(t *testing.T) {
 	testPool := newTestPool(1, 1)
 	testResource := testPool.resources[0]
@@ -166,17 +202,11 @@ func TestGetPutPut(t *testing.T) {
 	testResource.put()
 }
 
-func (testPool *testPoolType) testConcurrent(t *testing.T, numCycles int) {
+func (testPool *testPoolType) testConcurrent(t *testing.T, numCycles int,
+	testFunc func(*testResourceType, int, chan<- struct{})) {
 	finished := make(chan struct{}, len(testPool.resources))
 	for _, resource := range testPool.resources {
-		go func(resource *testResourceType) {
-			for count := 0; count < numCycles; count++ {
-				resource.get(true)
-				time.Sleep(time.Microsecond)
-				resource.put()
-			}
-			finished <- struct{}{}
-		}(resource)
+		go testFunc(resource, numCycles, finished)
 	}
 	for range testPool.resources {
 		<-finished
@@ -203,22 +233,48 @@ func (testPool *testPoolType) testConcurrent(t *testing.T, numCycles int) {
 	}
 }
 
+func testManyGetAndPut(resource *testResourceType, numCycles int,
+	finished chan<- struct{}) {
+	for count := 0; count < numCycles; count++ {
+		resource.get(true)
+		time.Sleep(time.Microsecond)
+		resource.put()
+	}
+	finished <- struct{}{}
+}
+
+func testManyGetCloseAndPut(resource *testResourceType, numCycles int,
+	finished chan<- struct{}) {
+	for count := 0; count < numCycles; count++ {
+		resource.get(true)
+		time.Sleep(time.Microsecond)
+		resource.release()
+		time.Sleep(time.Microsecond)
+		resource.put()
+	}
+	finished <- struct{}{}
+}
+
 func TestOneUnderCapacity(t *testing.T) {
 	testPool := newTestPool(10, 9)
-	testPool.testConcurrent(t, 11)
+	testPool.testConcurrent(t, 11, testManyGetAndPut)
+	testPool.testConcurrent(t, 11, testManyGetCloseAndPut)
 }
 
 func TestAtCapacity(t *testing.T) {
 	testPool := newTestPool(10, 10)
-	testPool.testConcurrent(t, 13)
+	testPool.testConcurrent(t, 13, testManyGetAndPut)
+	testPool.testConcurrent(t, 13, testManyGetCloseAndPut)
 }
 
 func TestOneOverCapacity(t *testing.T) {
 	testPool := newTestPool(10, 11)
-	testPool.testConcurrent(t, 17)
+	testPool.testConcurrent(t, 17, testManyGetAndPut)
+	testPool.testConcurrent(t, 17, testManyGetCloseAndPut)
 }
 
 func TestFarOverCapacity(t *testing.T) {
 	testPool := newTestPool(10, 113)
-	testPool.testConcurrent(t, 19)
+	testPool.testConcurrent(t, 19, testManyGetAndPut)
+	testPool.testConcurrent(t, 19, testManyGetCloseAndPut)
 }
