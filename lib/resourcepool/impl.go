@@ -75,7 +75,7 @@ func (resource *Resource) put() {
 			resource.releaseFunc = nil
 		}
 		resource.allocated = false
-	} else {
+	} else if resource.releaseFunc != nil {
 		pool.unused[resource] = struct{}{}
 	}
 	pool.numUsed--
