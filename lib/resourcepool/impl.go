@@ -1,7 +1,5 @@
 package resourcepool
 
-import ()
-
 func (pool *Pool) getSlot(wait bool) bool {
 	// Grab a slot (the right to have a resource in use).
 	if wait {
@@ -24,15 +22,9 @@ func (resource *Resource) get(wait bool) bool {
 	if !pool.getSlot(wait) {
 		return false
 	}
-	var releaseFunc func()
-	defer func() {
-		if releaseFunc != nil {
-			releaseFunc()
-		}
-	}()
 	pool.lock.Lock()
 	defer pool.lock.Unlock()
-	if resource.releaseFunc != nil {
+	if resource.allocated {
 		delete(pool.unused, resource)
 		resource.inUse = true
 		pool.numUsed++
@@ -48,12 +40,17 @@ func (resource *Resource) get(wait bool) bool {
 		if resourceToRelease == nil {
 			panic("No free resource to release")
 		}
+		if !resourceToRelease.allocated {
+			panic("Resource is not allocated")
+		}
 		delete(pool.unused, resourceToRelease)
-		releaseFunc = resourceToRelease.releaseFunc
+		resourceToRelease.releaseFunc()
 		resourceToRelease.releaseFunc = nil
+		resourceToRelease.allocated = false
 	}
 	resource.inUse = true
 	resource.releaseFunc = nil
+	resource.allocated = true
 	pool.numUsed++
 	return true
 }
@@ -61,7 +58,7 @@ func (resource *Resource) get(wait bool) bool {
 func (resource *Resource) put() {
 	pool := resource.pool
 	pool.lock.Lock()
-	if resource.released {
+	if !resource.allocated {
 		pool.lock.Unlock()
 		return
 	}
@@ -70,17 +67,15 @@ func (resource *Resource) put() {
 		panic("Resource was not gotten")
 	}
 	resource.inUse = false
-	var releaseFunc func()
 	if resource.releaseOnPut {
-		releaseFunc = resource.releaseFunc
-	} else if resource.releaseFunc != nil {
+		resource.releaseFunc()
+		resource.releaseFunc = nil
+		resource.allocated = false
+	} else {
 		pool.unused[resource] = struct{}{}
 	}
 	pool.numUsed--
 	pool.lock.Unlock()
-	if releaseFunc != nil {
-		releaseFunc()
-	}
 	<-pool.semaphore // Free up a slot for someone else.
 }
 
@@ -89,13 +84,13 @@ func (resource *Resource) release(haveLock bool) {
 	if !haveLock {
 		pool.lock.Lock()
 	}
-	if resource.released {
+	if !resource.allocated {
 		pool.lock.Unlock()
 		return
 	}
-	resource.released = true
-	releaseFunc := resource.releaseFunc
+	resource.releaseFunc()
 	resource.releaseFunc = nil
+	resource.allocated = false
 	delete(resource.pool.unused, resource)
 	wasUsed := resource.inUse
 	if resource.inUse {
@@ -103,9 +98,6 @@ func (resource *Resource) release(haveLock bool) {
 		pool.numUsed--
 	}
 	pool.lock.Unlock()
-	if releaseFunc != nil {
-		releaseFunc()
-	}
 	if wasUsed {
 		<-pool.semaphore // Free up a slot for someone else.
 	}
@@ -119,6 +111,9 @@ func (resource *Resource) setReleaseFunc(releaseFunc func()) {
 	defer resource.pool.lock.Unlock()
 	if !resource.inUse {
 		panic("Resource was not gotten")
+	}
+	if resource.releaseFunc != nil {
+		panic("Cannot change releaseFunc once set")
 	}
 	resource.releaseFunc = releaseFunc
 }

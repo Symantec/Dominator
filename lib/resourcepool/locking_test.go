@@ -3,7 +3,6 @@ package resourcepool
 import (
 	"sync"
 	"testing"
-	"time"
 )
 
 type testPoolType struct {
@@ -58,11 +57,9 @@ func (testPool *testPoolType) getMaxNumInUse() int {
 }
 
 type testResourceType struct {
-	sync.Mutex
-	testPool         *testPoolType
-	resource         *Resource
-	active           bool
-	multiplyReleased bool
+	testPool *testPoolType
+	resource *Resource
+	active   bool
 }
 
 func (testResource *testResourceType) get(wait bool) bool {
@@ -70,16 +67,22 @@ func (testResource *testResourceType) get(wait bool) bool {
 		return false
 	}
 	testPool := testResource.testPool
-	testResource.resource.SetReleaseFunc(testResource.releaseCallback)
+	if !testResource.active {
+		testResource.resource.SetReleaseFunc(testResource.releaseCallback)
+	}
 	testPool.Lock()
 	defer testPool.Unlock()
+	if testPool.numInUse >= testPool.max {
+		panic("numInUse exceeding capacity")
+	}
 	testPool.numInUse++
 	if testPool.numInUse > testPool.maxNumInUse {
 		testPool.maxNumInUse = testPool.numInUse
 	}
-	testResource.Lock()
-	defer testResource.Unlock()
 	if !testResource.active {
+		if testPool.numActive >= testPool.max {
+			panic("Capacity exceeded")
+		}
 		testPool.numActive++
 		if testPool.numActive > testPool.maxNumActive {
 			testPool.maxNumActive = testPool.numActive
@@ -92,8 +95,10 @@ func (testResource *testResourceType) get(wait bool) bool {
 func (testResource *testResourceType) put() {
 	testPool := testResource.testPool
 	testPool.Lock()
-	defer testPool.Unlock()
-	testPool.numInUse--
+	if testResource.active {
+		testPool.numInUse--
+	}
+	testPool.Unlock()
 	testResource.resource.Put()
 }
 
@@ -110,12 +115,10 @@ func (testResource *testResourceType) releaseCallback() {
 	testPool.Lock()
 	defer testPool.Unlock()
 	testPool.numActive--
-	testResource.Lock()
-	defer testResource.Unlock()
 	if testResource.active {
 		testResource.active = false
 	} else {
-		testResource.multiplyReleased = true
+		panic("Resource re-released")
 	}
 }
 
@@ -178,17 +181,6 @@ func TestGetClosePut(t *testing.T) {
 	testResource.put()
 }
 
-func TestPut(t *testing.T) {
-	testPool := newTestPool(1, 1)
-	testResource := testPool.resources[0]
-	defer func() {
-		if err := recover(); err == nil {
-			t.Errorf("Put() without Get() did not panic")
-		}
-	}()
-	testResource.put()
-}
-
 func TestGetPutPut(t *testing.T) {
 	testPool := newTestPool(1, 1)
 	testResource := testPool.resources[0]
@@ -203,10 +195,13 @@ func TestGetPutPut(t *testing.T) {
 }
 
 func (testPool *testPoolType) testConcurrent(t *testing.T, numCycles int,
-	testFunc func(*testResourceType, int, chan<- struct{})) {
+	testFunc func(*testResourceType, int)) {
 	finished := make(chan struct{}, len(testPool.resources))
 	for _, resource := range testPool.resources {
-		go testFunc(resource, numCycles, finished)
+		go func(r *testResourceType) {
+			testFunc(r, numCycles)
+			finished <- struct{}{}
+		}(resource)
 	}
 	for range testPool.resources {
 		<-finished
@@ -220,7 +215,7 @@ func (testPool *testPoolType) testConcurrent(t *testing.T, numCycles int,
 	if len(testPool.resources) < expected {
 		expected = len(testPool.resources)
 	}
-	if tmp != expected {
+	if tmp > expected {
 		t.Errorf("maxNumInUse = %v", tmp)
 	}
 	tmp = testPool.getNumActive()
@@ -228,53 +223,77 @@ func (testPool *testPoolType) testConcurrent(t *testing.T, numCycles int,
 		t.Errorf("numActive = %v", tmp)
 	}
 	tmp = testPool.getMaxNumActive()
-	if tmp != expected {
+	if tmp > expected {
 		t.Errorf("maxNumActive = %v", tmp)
 	}
 }
 
-func testManyGetAndPut(resource *testResourceType, numCycles int,
-	finished chan<- struct{}) {
+func testManyGetPut(resource *testResourceType, numCycles int) {
 	for count := 0; count < numCycles; count++ {
 		resource.get(true)
-		time.Sleep(time.Microsecond)
 		resource.put()
 	}
-	finished <- struct{}{}
 }
 
-func testManyGetCloseAndPut(resource *testResourceType, numCycles int,
-	finished chan<- struct{}) {
+func testManyGetClosePut(resource *testResourceType, numCycles int) {
 	for count := 0; count < numCycles; count++ {
 		resource.get(true)
-		time.Sleep(time.Microsecond)
 		resource.release()
-		time.Sleep(time.Microsecond)
 		resource.put()
 	}
-	finished <- struct{}{}
 }
 
-func TestOneUnderCapacity(t *testing.T) {
+func TestLoopOne(t *testing.T) {
+	testPool := newTestPool(10, 1)
+	testManyGetPut(testPool.resources[0], 11)
+	testManyGetClosePut(testPool.resources[0], 11)
+}
+
+func TestOnlyGetClosePutLoopOne(t *testing.T) {
+	testPool := newTestPool(10, 1)
+	testManyGetClosePut(testPool.resources[0], 11)
+}
+
+func TestLoopOneUnderCapacity(t *testing.T) {
 	testPool := newTestPool(10, 9)
-	testPool.testConcurrent(t, 11, testManyGetAndPut)
-	testPool.testConcurrent(t, 11, testManyGetCloseAndPut)
+	testPool.testConcurrent(t, 1001, testManyGetPut)
+	testPool.testConcurrent(t, 1001, testManyGetClosePut)
 }
 
-func TestAtCapacity(t *testing.T) {
+func TestOnlyGetClosePutLoopOneUnderCapacity(t *testing.T) {
+	testPool := newTestPool(10, 9)
+	testPool.testConcurrent(t, 1001, testManyGetClosePut)
+}
+
+func TestLoopAtCapacity(t *testing.T) {
 	testPool := newTestPool(10, 10)
-	testPool.testConcurrent(t, 13, testManyGetAndPut)
-	testPool.testConcurrent(t, 13, testManyGetCloseAndPut)
+	testPool.testConcurrent(t, 1001, testManyGetPut)
+	testPool.testConcurrent(t, 1001, testManyGetClosePut)
 }
 
-func TestOneOverCapacity(t *testing.T) {
+func TestOnlyGetClosePutLoopAtCapacity(t *testing.T) {
+	testPool := newTestPool(10, 10)
+	testPool.testConcurrent(t, 1001, testManyGetClosePut)
+}
+
+func TestLoopOneOverCapacity(t *testing.T) {
 	testPool := newTestPool(10, 11)
-	testPool.testConcurrent(t, 17, testManyGetAndPut)
-	testPool.testConcurrent(t, 17, testManyGetCloseAndPut)
+	testPool.testConcurrent(t, 1001, testManyGetPut)
+	testPool.testConcurrent(t, 1001, testManyGetClosePut)
 }
 
-func TestFarOverCapacity(t *testing.T) {
+func TestOnlyGetClosePutLoopOneOverCapacity(t *testing.T) {
+	testPool := newTestPool(10, 11)
+	testPool.testConcurrent(t, 1001, testManyGetClosePut)
+}
+
+func TestLoopFarOverCapacity(t *testing.T) {
 	testPool := newTestPool(10, 113)
-	testPool.testConcurrent(t, 19, testManyGetAndPut)
-	testPool.testConcurrent(t, 19, testManyGetCloseAndPut)
+	testPool.testConcurrent(t, 1, testManyGetPut)
+	testPool.testConcurrent(t, 1001, testManyGetClosePut)
+}
+
+func TestOnlyGetClosePutLoopFarOverCapacity(t *testing.T) {
+	testPool := newTestPool(10, 113)
+	testPool.testConcurrent(t, 1001, testManyGetClosePut)
 }

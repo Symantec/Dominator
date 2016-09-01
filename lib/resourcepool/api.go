@@ -17,7 +17,7 @@ type Resource struct {
 	inUse        bool
 	releaseFunc  func()
 	releaseOnPut bool
-	released     bool
+	allocated    bool
 }
 
 func New(max uint) *Pool {
