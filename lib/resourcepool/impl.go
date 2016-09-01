@@ -44,8 +44,10 @@ func (resource *Resource) get(wait bool) bool {
 			panic("Resource is not allocated")
 		}
 		delete(pool.unused, resourceToRelease)
-		resourceToRelease.releaseFunc()
-		resourceToRelease.releaseFunc = nil
+		if resourceToRelease.releaseFunc != nil {
+			resourceToRelease.releaseFunc()
+			resourceToRelease.releaseFunc = nil
+		}
 		resourceToRelease.allocated = false
 	}
 	resource.inUse = true
@@ -68,8 +70,10 @@ func (resource *Resource) put() {
 	}
 	resource.inUse = false
 	if resource.releaseOnPut {
-		resource.releaseFunc()
-		resource.releaseFunc = nil
+		if resource.releaseFunc != nil {
+			resource.releaseFunc()
+			resource.releaseFunc = nil
+		}
 		resource.allocated = false
 	} else {
 		pool.unused[resource] = struct{}{}
@@ -88,8 +92,10 @@ func (resource *Resource) release(haveLock bool) {
 		pool.lock.Unlock()
 		return
 	}
-	resource.releaseFunc()
-	resource.releaseFunc = nil
+	if resource.releaseFunc != nil {
+		resource.releaseFunc()
+		resource.releaseFunc = nil
+	}
 	resource.allocated = false
 	delete(resource.pool.unused, resource)
 	wasUsed := resource.inUse
