@@ -26,14 +26,9 @@
 package connpool
 
 import (
-	"errors"
 	"github.com/Symantec/Dominator/lib/resourcepool"
 	"net"
 	"time"
-)
-
-var (
-	ErrorResourceLimitExceeded = errors.New("resource limit exceeded")
 )
 
 // GetResourcePool returns a global resourcepool.Pool which may be used by other
@@ -44,13 +39,18 @@ func GetResourcePool() *resourcepool.Pool {
 	return getResourcePool()
 }
 
+type privateConnResource struct {
+	connResource *ConnResource
+	dialTimeout  time.Duration
+}
+
 // ConnResource manages a single Conn.
 type ConnResource struct {
-	network    string
-	address    string
-	resource   *resourcepool.Resource
-	conn       *Conn
-	closeError error
+	network             string
+	address             string
+	resource            *resourcepool.Resource
+	privateConnResource privateConnResource
+	conn                *Conn
 }
 
 // New returns a ConnResource for the specified network address. It may be used
@@ -64,15 +64,17 @@ func New(network, address string) *ConnResource {
 }
 
 // Get will return a Conn network connection. It implements the net.Conn
-// interface from the standard library. If wait is true then Get will wait for
-// an available resource, otherwise Get will return ErrorResourceLimitExceeded
-// if a resource is not immediately available. The timeout specifies how long
-// to wait (after a resource is available) to make the connection. If timeout is
-// zero or less, the underlying OS timeout is used (typically 3 minutes for
-// TCP).
-// Get will panic if it is called without an intervening Close or Put.
-func (cr *ConnResource) Get(wait bool, timeout time.Duration) (*Conn, error) {
-	return cr.get(wait, timeout)
+// interface from the standard library. Get will wait until a resource is
+// available or a message is received on cancelChannel. If cancelChannel is nil
+// then Get will wait indefinitely until a resource is available. If the wait is
+// cancelled then Get will return ErrorResourceLimitExceeded. The timeout
+// specifies how long to wait (after a resource is available) to make the
+// connection. If timeout is zero or less, the underlying OS timeout is used
+// (typically 3 minutes for TCP).
+// Get will panic if it is called again without an intervening Close or Put.
+func (cr *ConnResource) Get(cancelChannel <-chan struct{},
+	timeout time.Duration) (*Conn, error) {
+	return cr.get(cancelChannel, timeout)
 }
 
 // ScheduleClose will immediatly Close the associated Conn if it is not in use

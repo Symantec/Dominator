@@ -23,10 +23,8 @@ func newTestPool(max uint, numResources uint) *testPoolType {
 		resources: make([]*testResourceType, 0, numResources),
 	}
 	for count := 0; count < int(numResources); count++ {
-		testResource := &testResourceType{
-			testPool: testPool,
-			resource: testPool.pool.Create(),
-		}
+		testResource := &testResourceType{testPool: testPool}
+		testResource.resource = testPool.pool.Create(testResource)
 		testPool.resources = append(testPool.resources, testResource)
 	}
 	return testPool
@@ -62,14 +60,29 @@ type testResourceType struct {
 	active   bool
 }
 
-func (testResource *testResourceType) get(wait bool) bool {
-	if !testResource.resource.Get(wait) {
-		return false
+func (testResource *testResourceType) Allocate() error {
+	testPool := testResource.testPool
+	if testResource.active {
+		panic("resource already allocated")
+	}
+	testPool.Lock()
+	defer testPool.Unlock()
+	if testPool.numActive >= testPool.max {
+		panic("Capacity exceeded")
+	}
+	testPool.numActive++
+	if testPool.numActive > testPool.maxNumActive {
+		testPool.maxNumActive = testPool.numActive
+	}
+	testResource.active = true
+	return nil
+}
+
+func (testResource *testResourceType) get(cancelChannel <-chan struct{}) error {
+	if err := testResource.resource.Get(cancelChannel); err != nil {
+		return err
 	}
 	testPool := testResource.testPool
-	if !testResource.active {
-		testResource.resource.SetReleaseFunc(testResource.releaseCallback)
-	}
 	testPool.Lock()
 	defer testPool.Unlock()
 	if testPool.numInUse >= testPool.max {
@@ -79,17 +92,7 @@ func (testResource *testResourceType) get(wait bool) bool {
 	if testPool.numInUse > testPool.maxNumInUse {
 		testPool.maxNumInUse = testPool.numInUse
 	}
-	if !testResource.active {
-		if testPool.numActive >= testPool.max {
-			panic("Capacity exceeded")
-		}
-		testPool.numActive++
-		if testPool.numActive > testPool.maxNumActive {
-			testPool.maxNumActive = testPool.numActive
-		}
-	}
-	testResource.active = true
-	return true
+	return nil
 }
 
 func (testResource *testResourceType) put() {
@@ -102,15 +105,17 @@ func (testResource *testResourceType) put() {
 	testResource.resource.Put()
 }
 
-func (testResource *testResourceType) release() {
+func (testResource *testResourceType) release() error {
 	testPool := testResource.testPool
 	testPool.Lock()
-	testPool.numInUse--
+	if testResource.active {
+		testPool.numInUse--
+	}
 	testPool.Unlock()
-	testResource.resource.Release()
+	return testResource.resource.Release()
 }
 
-func (testResource *testResourceType) releaseCallback() {
+func (testResource *testResourceType) Release() error {
 	testPool := testResource.testPool
 	testPool.Lock()
 	defer testPool.Unlock()
@@ -120,12 +125,15 @@ func (testResource *testResourceType) releaseCallback() {
 	} else {
 		panic("Resource re-released")
 	}
+	return nil
 }
 
 func TestGetPut(t *testing.T) {
 	testPool := newTestPool(1, 1)
 	testResource := testPool.resources[0]
-	if !testResource.get(false) {
+	cancelChannel := make(chan struct{}, 1)
+	cancelChannel <- struct{}{}
+	if testResource.get(cancelChannel) != nil {
 		t.Errorf("Get(): would have waited")
 	}
 	tmp := testPool.getNumInUse()
@@ -156,7 +164,7 @@ func TestGetPut(t *testing.T) {
 func TestGetClosePut(t *testing.T) {
 	testPool := newTestPool(1, 1)
 	testResource := testPool.resources[0]
-	if !testResource.get(false) {
+	if testResource.get(nil) != nil {
 		t.Errorf("Get(): would have waited")
 	}
 	tmp := testPool.getNumInUse()
@@ -189,7 +197,7 @@ func TestGetPutPut(t *testing.T) {
 			t.Errorf("Multiple Put() did not panic")
 		}
 	}()
-	testResource.get(true)
+	testResource.get(nil)
 	testResource.put()
 	testResource.put()
 }
@@ -230,14 +238,14 @@ func (testPool *testPoolType) testConcurrent(t *testing.T, numCycles int,
 
 func testManyGetPut(resource *testResourceType, numCycles int) {
 	for count := 0; count < numCycles; count++ {
-		resource.get(true)
+		resource.get(nil)
 		resource.put()
 	}
 }
 
 func testManyGetClosePut(resource *testResourceType, numCycles int) {
 	for count := 0; count < numCycles; count++ {
-		resource.get(true)
+		resource.get(nil)
 		resource.release()
 		resource.put()
 	}

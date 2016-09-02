@@ -110,7 +110,7 @@ func (sub *Sub) connectAndPoll() {
 		sub.clientResource = srpc.NewClientResource("tcp", sub.address())
 	}
 	sub.busyMutex.Unlock()
-	srpcClient, err := sub.clientResource.GetHTTP(true,
+	srpcClient, err := sub.clientResource.GetHTTP(nil,
 		time.Second*time.Duration(*subConnectTimeout))
 	dialReturnedTime := time.Now()
 	if err != nil {

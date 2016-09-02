@@ -1,26 +1,27 @@
 package resourcepool
 
-func (pool *Pool) getSlot(wait bool) bool {
+func (pool *Pool) getSlot(cancelChannel <-chan struct{}) bool {
 	// Grab a slot (the right to have a resource in use).
-	if wait {
-		pool.semaphore <- struct{}{}
-	} else {
-		select {
-		case pool.semaphore <- struct{}{}:
-		default:
-			return false
-		}
+	select {
+	case pool.semaphore <- struct{}{}:
+		return true
+	default:
 	}
-	return true
+	select {
+	case pool.semaphore <- struct{}{}:
+		return true
+	case <-cancelChannel:
+		return false
+	}
 }
 
-func (resource *Resource) get(wait bool) bool {
+func (resource *Resource) get(cancelChannel <-chan struct{}) error {
 	pool := resource.pool
 	if resource.inUse {
 		panic("Resource is already in use")
 	}
-	if !pool.getSlot(wait) {
-		return false
+	if !pool.getSlot(cancelChannel) {
+		return ErrorResourceLimitExceeded
 	}
 	pool.lock.Lock()
 	defer pool.lock.Unlock()
@@ -28,7 +29,7 @@ func (resource *Resource) get(wait bool) bool {
 		delete(pool.unused, resource)
 		resource.inUse = true
 		pool.numUsed++
-		return true
+		return nil
 	}
 	if pool.numUsed+uint(len(pool.unused)) >= pool.max {
 		// Need to grab a free resource and release. Be lazy: do a random pick.
@@ -44,17 +45,26 @@ func (resource *Resource) get(wait bool) bool {
 			panic("Resource is not allocated")
 		}
 		delete(pool.unused, resourceToRelease)
-		if resourceToRelease.releaseFunc != nil {
-			resourceToRelease.releaseFunc()
-			resourceToRelease.releaseFunc = nil
-		}
+		resourceToRelease.releaseError =
+			resourceToRelease.allocateReleaser.Release()
 		resourceToRelease.allocated = false
 	}
+	resource.allocating = true
 	resource.inUse = true
-	resource.releaseFunc = nil
 	resource.allocated = true
 	pool.numUsed++
-	return true
+	pool.lock.Unlock()
+	err := resource.allocateReleaser.Allocate()
+	pool.lock.Lock()
+	resource.allocating = false
+	if err != nil {
+		resource.inUse = false
+		resource.allocated = false
+		pool.numUsed--
+		<-pool.semaphore // Free up a slot for someone else.
+		return err
+	}
+	return nil
 }
 
 func (resource *Resource) put() {
@@ -70,12 +80,9 @@ func (resource *Resource) put() {
 	}
 	resource.inUse = false
 	if resource.releaseOnPut {
-		if resource.releaseFunc != nil {
-			resource.releaseFunc()
-			resource.releaseFunc = nil
-		}
+		resource.releaseError = resource.allocateReleaser.Release()
 		resource.allocated = false
-	} else if resource.releaseFunc != nil {
+	} else {
 		pool.unused[resource] = struct{}{}
 	}
 	pool.numUsed--
@@ -83,19 +90,20 @@ func (resource *Resource) put() {
 	<-pool.semaphore // Free up a slot for someone else.
 }
 
-func (resource *Resource) release(haveLock bool) {
+func (resource *Resource) release(haveLock bool) error {
 	pool := resource.pool
 	if !haveLock {
 		pool.lock.Lock()
 	}
+	if resource.allocating {
+		pool.lock.Unlock()
+		panic("Resource is allocating")
+	}
 	if !resource.allocated {
 		pool.lock.Unlock()
-		return
+		return resource.releaseError
 	}
-	if resource.releaseFunc != nil {
-		resource.releaseFunc()
-		resource.releaseFunc = nil
-	}
+	resource.releaseError = resource.allocateReleaser.Release()
 	resource.allocated = false
 	delete(resource.pool.unused, resource)
 	wasUsed := resource.inUse
@@ -107,29 +115,15 @@ func (resource *Resource) release(haveLock bool) {
 	if wasUsed {
 		<-pool.semaphore // Free up a slot for someone else.
 	}
+	return resource.releaseError
 }
 
-func (resource *Resource) setReleaseFunc(releaseFunc func()) {
-	if releaseFunc == nil {
-		panic("Cannot set nil releaseFunc")
-	}
-	resource.pool.lock.Lock()
-	defer resource.pool.lock.Unlock()
-	if !resource.inUse {
-		panic("Resource was not gotten")
-	}
-	if resource.releaseFunc != nil {
-		panic("Cannot change releaseFunc once set")
-	}
-	resource.releaseFunc = releaseFunc
-}
-
-func (resource *Resource) scheduleRelease() {
+func (resource *Resource) scheduleRelease() error {
 	resource.pool.lock.Lock()
 	if resource.inUse {
 		resource.releaseOnPut = true
 		resource.pool.lock.Unlock()
-		return
+		return nil
 	}
-	resource.release(true)
+	return resource.release(true)
 }

@@ -74,12 +74,19 @@ func RegisterClientTlsConfig(config *tls.Config) {
 	clientTlsConfig = config
 }
 
+type privateClientResource struct {
+	clientResource *ClientResource
+	tlsConfig      *tls.Config
+	dialTimeout    time.Duration
+}
+
 type ClientResource struct {
-	network    string
-	address    string
-	resource   *resourcepool.Resource
-	client     *Client
-	closeError error
+	network               string
+	address               string
+	resource              *resourcepool.Resource
+	privateClientResource privateClientResource
+	client                *Client
+	closeError            error
 }
 
 // NewClientResource returns a ClientResource which may be later used to Get*
@@ -104,21 +111,27 @@ func NewClientResource(network, address string) *ClientResource {
 
 // GetHTTP is similar to DialHTTP except that the returned Client is part of a
 // managed pool of connection slots (to limit consumption of resources such as
-// file descriptors). If wait is true then the method blocks until a connection
-// slot becomes available.
-func (cr *ClientResource) GetHTTP(wait bool, timeout time.Duration) (
+// file descriptors). GetHTTP will wait until a resource is available or
+// a message is received on cancelChannel. If cancelChannel is nil then GetHTTP
+// will wait indefinitely until a resource is available. If the wait is
+// cancelled then GetHTTP will return ErrorResourceLimitExceeded. The timeout
+// specifies how long to wait (after a resource is available) to make the
+// connection. If timeout is zero or less, the underlying OS timeout is used
+// (typically 3 minutes for TCP).
+func (cr *ClientResource) GetHTTP(cancelChannel <-chan struct{},
+	timeout time.Duration) (
 	*Client, error) {
-	return cr.getHTTP(clientTlsConfig, wait, timeout)
+	return cr.getHTTP(clientTlsConfig, cancelChannel, timeout)
 }
 
 // GetTlsHTTP is similar to DialTlsHTTP but returns a Client that is part of a
 // managed pool like the GetHTTP method returns.
-func (cr *ClientResource) GetTlsHTTP(tlsConfig *tls.Config, wait bool,
-	timeout time.Duration) (*Client, error) {
+func (cr *ClientResource) GetTlsHTTP(tlsConfig *tls.Config,
+	cancelChannel <-chan struct{}, timeout time.Duration) (*Client, error) {
 	if tlsConfig == nil {
 		tlsConfig = clientTlsConfig
 	}
-	return cr.getHTTP(tlsConfig, wait, timeout)
+	return cr.getHTTP(tlsConfig, cancelChannel, timeout)
 }
 
 func (cr *ClientResource) ScheduleClose() {

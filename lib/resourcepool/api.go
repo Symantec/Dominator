@@ -1,8 +1,18 @@
 package resourcepool
 
 import (
+	"errors"
 	"sync"
 )
+
+var (
+	ErrorResourceLimitExceeded = errors.New("resource limit exceeded")
+)
+
+type AllocateReleaser interface {
+	Allocate() error
+	Release() error
+}
 
 type Pool struct {
 	max       uint
@@ -13,11 +23,13 @@ type Pool struct {
 }
 
 type Resource struct {
-	pool         *Pool
-	inUse        bool
-	releaseFunc  func()
-	releaseOnPut bool
-	allocated    bool
+	pool             *Pool
+	allocateReleaser AllocateReleaser
+	allocating       bool
+	inUse            bool
+	releaseOnPut     bool
+	allocated        bool
+	releaseError     error
 }
 
 func New(max uint) *Pool {
@@ -28,26 +40,22 @@ func New(max uint) *Pool {
 	}
 }
 
-func (pool *Pool) Create() *Resource {
-	return &Resource{pool: pool}
+func (pool *Pool) Create(allocateReleaser AllocateReleaser) *Resource {
+	return &Resource{pool: pool, allocateReleaser: allocateReleaser}
 }
 
-func (resource *Resource) Get(wait bool) bool {
-	return resource.get(wait)
+func (resource *Resource) Get(cancelChannel <-chan struct{}) error {
+	return resource.get(cancelChannel)
 }
 
 func (resource *Resource) Put() {
 	resource.put()
 }
 
-func (resource *Resource) Release() {
-	resource.release(false)
+func (resource *Resource) Release() error {
+	return resource.release(false)
 }
 
-func (resource *Resource) SetReleaseFunc(releaseFunc func()) {
-	resource.setReleaseFunc(releaseFunc)
-}
-
-func (resource *Resource) ScheduleRelease() {
-	resource.scheduleRelease()
+func (resource *Resource) ScheduleRelease() error {
+	return resource.scheduleRelease()
 }
