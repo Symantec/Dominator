@@ -1,3 +1,28 @@
+/*
+	Package connpool provides for managing network connections with a resource
+	pool.
+
+	Package connpool may be used to create and free network connections.
+	The number of concurrent network connections that may be open is limited to
+	fit within the underlying file descriptor limit. Connections may be placed
+	on an internal freelist for later re-use, potentially eliminating connection
+	setup overhead for frequently re-opened connections.
+
+	An application will typically call New once for each network address it
+	expects to later connect to. When the application wants to connect it calls
+	the Get method and calls the Put method to release the connection.
+	A typical programming pattern is:
+		cr := New(...)
+		c := cr.Get(...)
+		defer c.Put()
+		if err { c.Close() }
+		c := cr.Get(...)
+		defer c.Put()
+		if err { c.Close() }
+	This pattern ensures Get and Put are always matched, and if there is a
+	communications error, Close shuts down the connection so that a subsequent
+	Get	creates a new underlying connection.
+*/
 package connpool
 
 import (
@@ -34,17 +59,6 @@ type ConnResource struct {
 // descriptors). Connections can be released with the Put method but the
 // underlying connection may be kept open for later re-use. The Conn is placed
 // on an internal list.
-// A typical programming pattern is:
-//   cr := New(...)
-//   c := cr.Get(...)
-//   defer c.Put()
-//   if err { c.Close() }
-//   c := cr.Get(...)
-//   defer c.Put()
-//   if err { c.Close() }
-// This pattern ensures Get* and Put are always matched, and if there is a
-// communications error, Close shuts down the client so that a subsequent Get*
-// creates a new connection.
 func New(network, address string) *ConnResource {
 	return newConnResource(network, address)
 }
