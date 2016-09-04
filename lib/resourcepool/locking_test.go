@@ -131,9 +131,7 @@ func (testResource *testResourceType) Release() error {
 func TestGetPut(t *testing.T) {
 	testPool := newTestPool(1, 1)
 	testResource := testPool.resources[0]
-	cancelChannel := make(chan struct{}, 1)
-	cancelChannel <- struct{}{}
-	if testResource.get(cancelChannel) != nil {
+	if testResource.get(MakeImmediateCanceler()) != nil {
 		t.Errorf("Get(): would have waited")
 	}
 	tmp := testPool.getNumInUse()
