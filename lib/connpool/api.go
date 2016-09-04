@@ -12,16 +12,28 @@
 	expects to later connect to. When the application wants to connect it calls
 	the Get method and calls the Put method to release the connection.
 	A typical programming pattern is:
-		cr := New(...)
-		c := cr.Get(...)
-		defer c.Put()
-		if err { c.Close() }
-		c := cr.Get(...)
-		defer c.Put()
-		if err { c.Close() }
+		cr0 := New(...)
+		cr1 := New(...)
+		go func() {
+			for ... {
+				c := cr0.Get(...)
+				defer c.Put()
+				if err { c.Close() }
+			}
+		}()
+		go func() {
+			for ... {
+				c := cr1.Get(...)
+				defer c.Put()
+				if err { c.Close() }
+			}
+		}()
 	This pattern ensures Get and Put are always matched, and if there is a
 	communications error, Close shuts down the connection so that a subsequent
 	Get	creates a new underlying connection.
+
+	It is resonable to create one goroutine for each resource, since the Get
+	methods will block, waiting for available resources.
 */
 package connpool
 
