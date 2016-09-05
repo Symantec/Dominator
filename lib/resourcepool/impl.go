@@ -31,7 +31,7 @@ func (resource *Resource) get(cancelChannel <-chan struct{}) error {
 		pool.numUsed++
 		return nil
 	}
-	if pool.numUsed+uint(len(pool.unused)) >= pool.max {
+	if pool.numUsed+uint(len(pool.unused))+pool.numReleasing >= pool.max {
 		// Need to grab a free resource and release. Be lazy: do a random pick.
 		var resourceToRelease *Resource
 		for res := range pool.unused {
@@ -45,21 +45,29 @@ func (resource *Resource) get(cancelChannel <-chan struct{}) error {
 			panic("Resource is not allocated")
 		}
 		delete(pool.unused, resourceToRelease)
+		resourceToRelease.allocated = false
+		pool.numReleasing++
+		resourceToRelease.releasing.Lock()
+		pool.lock.Unlock()
 		resourceToRelease.releaseError =
 			resourceToRelease.allocateReleaser.Release()
-		resourceToRelease.allocated = false
+		pool.lock.Lock()
+		resourceToRelease.releasing.Unlock()
+		pool.numReleasing--
 	}
 	resource.allocating = true
-	resource.inUse = true
 	resource.allocated = true
+	resource.inUse = true
 	pool.numUsed++
 	pool.lock.Unlock()
+	resource.releasing.Lock() // Wait for myself to finish releasing.
+	resource.releasing.Unlock()
 	err := resource.allocateReleaser.Allocate()
 	pool.lock.Lock()
 	resource.allocating = false
 	if err != nil {
-		resource.inUse = false
 		resource.allocated = false
+		resource.inUse = false
 		pool.numUsed--
 		<-pool.semaphore // Free up a slot for someone else.
 		return err
@@ -78,13 +86,12 @@ func (resource *Resource) put() {
 		pool.lock.Unlock()
 		panic("Resource was not gotten")
 	}
-	resource.inUse = false
 	if resource.releaseOnPut {
-		resource.releaseError = resource.allocateReleaser.Release()
-		resource.allocated = false
-	} else {
-		pool.unused[resource] = struct{}{}
+		resource.release(true)
+		return
 	}
+	pool.unused[resource] = struct{}{}
+	resource.inUse = false
 	pool.numUsed--
 	pool.lock.Unlock()
 	<-pool.semaphore // Free up a slot for someone else.
@@ -103,14 +110,18 @@ func (resource *Resource) release(haveLock bool) error {
 		pool.lock.Unlock()
 		return resource.releaseError
 	}
-	resource.releaseError = resource.allocateReleaser.Release()
-	resource.allocated = false
 	delete(resource.pool.unused, resource)
+	resource.allocated = false
 	wasUsed := resource.inUse
-	if resource.inUse {
-		resource.inUse = false
+	resource.inUse = false
+	if wasUsed {
 		pool.numUsed--
 	}
+	pool.numReleasing++
+	pool.lock.Unlock()
+	resource.releaseError = resource.allocateReleaser.Release()
+	pool.lock.Lock()
+	pool.numReleasing--
 	pool.lock.Unlock()
 	if wasUsed {
 		<-pool.semaphore // Free up a slot for someone else.

@@ -57,11 +57,12 @@ type AllocateReleaser interface {
 
 // Pool groups and manages a set of resources.
 type Pool struct {
-	max       uint
-	semaphore chan struct{}
-	lock      sync.Mutex
-	numUsed   uint
-	unused    map[*Resource]struct{}
+	max          uint
+	semaphore    chan struct{}
+	lock         sync.Mutex
+	numUsed      uint
+	unused       map[*Resource]struct{}
+	numReleasing uint
 }
 
 // Resource is a container for an underlying resource.
@@ -70,6 +71,7 @@ type Resource struct {
 	allocateReleaser AllocateReleaser
 	allocating       bool
 	inUse            bool
+	releasing        sync.Mutex
 	releaseOnPut     bool
 	allocated        bool
 	releaseError     error
