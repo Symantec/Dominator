@@ -45,13 +45,13 @@ type receiverType struct {
 }
 
 var (
-	receivers              map[string]receiverType = make(map[string]receiverType)
-	serverMetricsDir       *tricorder.DirectorySpec
-	bucketer               *tricorder.Bucketer
-	mutex                  sync.Mutex
-	numConnections         uint64
-	numOpenConnections     uint64
-	numRejectedConnections uint64
+	receivers                    map[string]receiverType = make(map[string]receiverType)
+	serverMetricsDir             *tricorder.DirectorySpec
+	bucketer                     *tricorder.Bucketer
+	serverMetricsMutex           sync.Mutex
+	numServerConnections         uint64
+	numOpenServerConnections     uint64
+	numRejectedServerConnections uint64
 )
 
 // Precompute some reflect types. Can't use the types directly because Typeof
@@ -63,27 +63,28 @@ func init() {
 	http.HandleFunc(rpcPath, unsecuredHttpHandler)
 	http.HandleFunc(tlsRpcPath, tlsHttpHandler)
 	http.HandleFunc(listMethodsPath, listMethodsHttpHandler)
-	registerMetrics()
+	registerServerMetrics()
 }
 
-func registerMetrics() {
+func registerServerMetrics() {
 	var err error
 	serverMetricsDir, err = tricorder.RegisterDirectory("srpc/server")
 	if err != nil {
 		panic(err)
 	}
-	err = serverMetricsDir.RegisterMetric("num-connections", &numConnections,
-		units.None, "number of connection attempts")
+	err = serverMetricsDir.RegisterMetric("num-connections",
+		&numServerConnections, units.None, "number of connection attempts")
 	if err != nil {
 		panic(err)
 	}
 	err = serverMetricsDir.RegisterMetric("num-open-connections",
-		&numOpenConnections, units.None, "number of open connections")
+		&numOpenServerConnections, units.None, "number of open connections")
 	if err != nil {
 		panic(err)
 	}
 	err = serverMetricsDir.RegisterMetric("num-rejected-connections",
-		&numRejectedConnections, units.None, "number of rejected connections")
+		&numRejectedServerConnections, units.None,
+		"number of rejected connections")
 	if err != nil {
 		panic(err)
 	}
@@ -207,18 +208,18 @@ func tlsHttpHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
-	mutex.Lock()
-	numConnections++
-	mutex.Unlock()
+	serverMetricsMutex.Lock()
+	numServerConnections++
+	serverMetricsMutex.Unlock()
 	if doTls && serverTlsConfig == nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	if (tlsRequired && !doTls) || req.Method != "CONNECT" {
-		mutex.Lock()
-		numRejectedConnections++
-		mutex.Unlock()
+		serverMetricsMutex.Lock()
+		numRejectedServerConnections++
+		serverMetricsMutex.Unlock()
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -248,9 +249,9 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		tlsConn := tls.Server(unsecuredConn, serverTlsConfig)
 		defer tlsConn.Close()
 		if err := tlsConn.Handshake(); err != nil {
-			mutex.Lock()
-			numRejectedConnections++
-			mutex.Unlock()
+			serverMetricsMutex.Lock()
+			numRejectedServerConnections++
+			serverMetricsMutex.Unlock()
 			log.Println(err)
 			return
 		}
@@ -267,13 +268,13 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		defer unsecuredConn.Close()
 		myConn.ReadWriter = bufrw
 	}
-	mutex.Lock()
-	numOpenConnections++
-	mutex.Unlock()
+	serverMetricsMutex.Lock()
+	numOpenServerConnections++
+	serverMetricsMutex.Unlock()
 	handleConnection(myConn)
-	mutex.Lock()
-	numOpenConnections--
-	mutex.Unlock()
+	serverMetricsMutex.Lock()
+	numOpenServerConnections--
+	serverMetricsMutex.Unlock()
 }
 
 func getAuth(state tls.ConnectionState) (string, map[string]struct{}, error) {
