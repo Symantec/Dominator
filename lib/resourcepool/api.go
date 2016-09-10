@@ -79,7 +79,7 @@ type Resource struct {
 
 // New returns a new resource Pool. The maximum number of resources that can be
 // allocated concurrently is specified by max.
-func New(max uint) *Pool {
+func New(max uint, metricsSubDirname string) *Pool {
 	return &Pool{
 		max:       max,
 		semaphore: make(chan struct{}, max),
