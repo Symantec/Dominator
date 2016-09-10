@@ -79,15 +79,25 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 		currentName = path.Base(lb.file.Name())
 	}
 	lb.rwMutex.Unlock()
+	if recentFirst {
+		fmt.Fprintf(writer,
+			"<a href=\"logs/dump?name=latest%s\">current</a><br>\n",
+			recentFirstString)
+	}
 	for _, name := range names {
 		if name == currentName {
 			fmt.Fprintf(writer,
-				"<a href=\"logs/dump?name=latest%s\">%s</a> (current)<br>\n",
-				recentFirstString, name)
+				"<a href=\"logs/dump?name=%s%s\">%s</a> (current)<br>\n",
+				name, recentFirstString, name)
 		} else {
 			fmt.Fprintf(writer, "<a href=\"logs/dump?name=%s%s\">%s</a><br>\n",
 				name, recentFirstString, name)
 		}
+	}
+	if !recentFirst {
+		fmt.Fprintf(writer,
+			"<a href=\"logs/dump?name=latest%s\">current</a><br>\n",
+			recentFirstString)
 	}
 	fmt.Fprintln(writer, "</body>")
 }
