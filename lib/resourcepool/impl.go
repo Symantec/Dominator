@@ -1,5 +1,13 @@
 package resourcepool
 
+func newPool(max uint, metricsSubDirname string) *Pool {
+	return &Pool{
+		max:       max,
+		semaphore: make(chan struct{}, max),
+		unused:    make(map[*Resource]struct{}),
+	}
+}
+
 func (pool *Pool) getSlot(cancelChannel <-chan struct{}) bool {
 	// Grab a slot (the right to have a resource in use).
 	select {
