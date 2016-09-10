@@ -47,6 +47,10 @@ func addReplaceImage(imageSClient *srpc.Client,
 	if err != nil {
 		return err
 	}
+	if !newImage.ExpiresAt.IsZero() {
+		fmt.Fprintf(os.Stderr, "Skipping expiring image: %s\n", baseImageName)
+		return nil
+	}
 	for _, layerImageName := range layerImageNames {
 		fs, err := buildImage(imageSClient, newImage.Filter, layerImageName)
 		if err != nil {
