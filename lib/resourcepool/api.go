@@ -62,6 +62,7 @@ type Pool struct {
 	lock         sync.Mutex
 	numUsed      uint
 	unused       map[*Resource]struct{}
+	numUnused    uint // For metrics.
 	numReleasing uint
 }
 

@@ -1,11 +1,13 @@
 package resourcepool
 
 func newPool(max uint, metricsSubDirname string) *Pool {
-	return &Pool{
+	pool := &Pool{
 		max:       max,
 		semaphore: make(chan struct{}, max),
 		unused:    make(map[*Resource]struct{}),
 	}
+	pool.registerMetrics(metricsSubDirname)
+	return pool
 }
 
 func (pool *Pool) getSlot(cancelChannel <-chan struct{}) bool {
@@ -35,6 +37,7 @@ func (resource *Resource) get(cancelChannel <-chan struct{}) error {
 	defer pool.lock.Unlock()
 	if resource.allocated {
 		delete(pool.unused, resource)
+		pool.numUnused = uint(len(pool.unused))
 		resource.inUse = true
 		pool.numUsed++
 		return nil
@@ -53,6 +56,7 @@ func (resource *Resource) get(cancelChannel <-chan struct{}) error {
 			panic("Resource is not allocated")
 		}
 		delete(pool.unused, resourceToRelease)
+		pool.numUnused = uint(len(pool.unused))
 		resourceToRelease.allocated = false
 		pool.numReleasing++
 		resourceToRelease.releasing.Lock()
@@ -99,6 +103,7 @@ func (resource *Resource) put() {
 		return
 	}
 	pool.unused[resource] = struct{}{}
+	pool.numUnused = uint(len(pool.unused))
 	resource.inUse = false
 	pool.numUsed--
 	pool.lock.Unlock()
@@ -119,6 +124,7 @@ func (resource *Resource) release(haveLock bool) error {
 		return resource.releaseError
 	}
 	delete(resource.pool.unused, resource)
+	pool.numUnused = uint(len(pool.unused))
 	resource.allocated = false
 	wasUsed := resource.inUse
 	resource.inUse = false
