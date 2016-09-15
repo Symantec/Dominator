@@ -1,3 +1,33 @@
+/*
+	Package rpcclientpool wraps net/rpc.Client to manage shared resource pools.
+
+	Package rpcclientpool wraps net/rpc.Client from the standard library so that
+	limited resources (file descriptors used for network connections) may be
+	shared easily with other packages such as lib/connpool and lib/srpc.
+	A typical programming pattern is:
+		cr0 := New(...)
+		cr1 := New(...)
+		go func() {
+			for ... {
+				c := cr0.Get(...)
+				defer c.Put()
+				if err { c.Close() }
+			}
+		}()
+		go func() {
+			for ... {
+				c := cr1.Get(...)
+				defer c.Put()
+				if err { c.Close() }
+			}
+		}()
+	This pattern ensures Get and Put are always matched, and if there is a
+	communications error, Close shuts down the connection so that a subsequent
+	Get	creates a new underlying connection.
+
+	It is resonable to create one goroutine for each resource, since the Get
+	methods will block, waiting for available resources.
+*/
 package rpcclientpool
 
 import (
