@@ -82,7 +82,8 @@ type ClientResource struct {
 
 // New returns a ClientResource for the specified network address. If a RPC over
 // HTTP connection is required then http should be true and the HTTP path should
-// be given by path. If path is empty then the default path is used.
+// be given by path. If path is empty then the default path
+// (net/rpc.DefaultRPCPath) is used. In general, the default path should be used.
 // The ClientResource may be used later to obtain a Client which is part of a
 // managed pool of connection slots (to limit consumption of resources such as
 // file descriptors). Clients can be released with the Put method but the
