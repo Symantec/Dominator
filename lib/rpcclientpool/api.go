@@ -78,6 +78,7 @@ type ClientResource struct {
 	resource              *resourcepool.Resource
 	privateClientResource privateClientResource
 	client                *Client
+	rpcClient             *rpc.Client
 }
 
 // New returns a ClientResource for the specified network address. If a RPC over

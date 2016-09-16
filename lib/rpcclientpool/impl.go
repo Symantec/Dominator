@@ -26,6 +26,7 @@ func (cr *ClientResource) get(cancelChannel <-chan struct{}) (*Client, error) {
 	if err := cr.resource.Get(cancelChannel); err != nil {
 		return nil, err
 	}
+	cr.client.rpcClient = cr.rpcClient
 	return cr.client, nil
 }
 
@@ -43,7 +44,7 @@ func (pcr *privateClientResource) Allocate() error {
 	}
 	client := &Client{rpcClient: rpcClient, resource: cr}
 	cr.client = client
-	client.resource = cr
+	cr.rpcClient = rpcClient
 	return nil
 }
 
@@ -59,5 +60,6 @@ func (client *Client) close() error {
 }
 
 func (client *Client) put() {
+	client.rpcClient = nil
 	client.resource.resource.Put()
 }
