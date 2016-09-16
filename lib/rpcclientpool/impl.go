@@ -5,16 +5,16 @@ import (
 	"net/rpc"
 )
 
-func newClientResource(network, address, path string,
-	http bool) *ClientResource {
+func newClientResource(network, address string, http bool,
+	path string) *ClientResource {
 	if path == "" {
 		path = rpc.DefaultRPCPath
 	}
 	clientResource := &ClientResource{
 		network: network,
 		address: address,
-		path:    path,
 		http:    http,
+		path:    path,
 	}
 	clientResource.privateClientResource.clientResource = clientResource
 	rp := connpool.GetResourcePool()

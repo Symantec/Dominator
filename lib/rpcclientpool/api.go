@@ -73,20 +73,23 @@ type privateClientResource struct {
 type ClientResource struct {
 	network               string
 	address               string
-	path                  string
 	http                  bool
+	path                  string
 	resource              *resourcepool.Resource
 	privateClientResource privateClientResource
 	client                *Client
 }
 
-// New returns a ClientResource for the specified network address. It may be
-// used later to obtain a Client which is part of a managed pool of connection
-// slots (to limit consumption of resources such as file descriptors). Clients
-// can be released with the Put method but the underlying connection may be kept
-// open for later re-use. The Client is placed on an internal list.
-func New(network, address, path string, http bool) *ClientResource {
-	return newClientResource(network, address, path, http)
+// New returns a ClientResource for the specified network address. If a RPC over
+// HTTP connection is required then http should be true and the HTTP path should
+// be given by path. If path is empty then the default path is used.
+// The ClientResource may be used later to obtain a Client which is part of a
+// managed pool of connection slots (to limit consumption of resources such as
+// file descriptors). Clients can be released with the Put method but the
+// underlying connection may be kept open for later re-use. The Client is placed
+// on an internal list.
+func New(network, address string, http bool, path string) *ClientResource {
+	return newClientResource(network, address, http, path)
 }
 
 // Get will return a Client. Get will wait until a resource is available or a
