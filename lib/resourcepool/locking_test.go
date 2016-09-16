@@ -18,7 +18,7 @@ type testPoolType struct {
 
 func newTestPool(max uint, numResources uint) *testPoolType {
 	testPool := &testPoolType{
-		pool:      New(max),
+		pool:      New(max, ""),
 		max:       int(max),
 		resources: make([]*testResourceType, 0, numResources),
 	}

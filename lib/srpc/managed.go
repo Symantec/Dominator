@@ -24,11 +24,21 @@ func (cr *ClientResource) getHTTP(tlsConfig *tls.Config,
 	if err := cr.resource.Get(cancelChannel); err != nil {
 		return nil, err
 	}
+	cr.inUse = true
+	clientMetricsMutex.Lock()
+	numInUseClientConnections++
+	clientMetricsMutex.Unlock()
 	return cr.client, nil
 }
 
 func (client *Client) put() {
 	client.resource.resource.Put()
+	if client.resource.inUse {
+		clientMetricsMutex.Lock()
+		numInUseClientConnections--
+		clientMetricsMutex.Unlock()
+		client.resource.inUse = false
+	}
 }
 
 func (pcr *privateClientResource) Allocate() error {

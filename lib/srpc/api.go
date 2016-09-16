@@ -86,6 +86,7 @@ type ClientResource struct {
 	resource              *resourcepool.Resource
 	privateClientResource privateClientResource
 	client                *Client
+	inUse                 bool
 	closeError            error
 }
 

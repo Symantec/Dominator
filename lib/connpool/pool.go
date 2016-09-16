@@ -32,7 +32,7 @@ func getResourcePool() *resourcepool.Pool {
 	if pool == nil {
 		lock.Lock()
 		if pool == nil {
-			pool = resourcepool.New(getConnectionLimit())
+			pool = resourcepool.New(getConnectionLimit(), "connections")
 		}
 		lock.Unlock()
 	}

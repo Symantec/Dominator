@@ -5,12 +5,45 @@ import (
 	"crypto/tls"
 	"encoding/gob"
 	"errors"
+	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
+
+var (
+	clientMetricsDir          *tricorder.DirectorySpec
+	clientMetricsMutex        sync.Mutex
+	numInUseClientConnections uint64
+	numOpenClientConnections  uint64
+)
+
+func init() {
+	registerClientMetrics()
+}
+
+func registerClientMetrics() {
+	var err error
+	clientMetricsDir, err = tricorder.RegisterDirectory("srpc/client")
+	if err != nil {
+		panic(err)
+	}
+	err = clientMetricsDir.RegisterMetric("num-in-use-connections",
+		&numInUseClientConnections, units.None,
+		"number of connections in use")
+	if err != nil {
+		panic(err)
+	}
+	err = clientMetricsDir.RegisterMetric("num-open-connections",
+		&numOpenClientConnections, units.None, "number of open connections")
+	if err != nil {
+		panic(err)
+	}
+}
 
 func dialHTTP(network, address string, tlsConfig *tls.Config,
 	timeout time.Duration) (*Client, error) {
@@ -71,6 +104,9 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 }
 
 func newClient(conn net.Conn, isEncrypted bool) *Client {
+	clientMetricsMutex.Lock()
+	numOpenClientConnections++
+	clientMetricsMutex.Unlock()
 	return &Client{
 		conn:        conn,
 		isEncrypted: isEncrypted,
@@ -120,9 +156,19 @@ func (client *Client) callWithLock(serviceMethod string) (*Conn, error) {
 func (client *Client) close() error {
 	client.bufrw.Flush()
 	if client.resource == nil {
+		clientMetricsMutex.Lock()
+		numOpenClientConnections--
+		clientMetricsMutex.Unlock()
 		return client.conn.Close()
 	}
 	client.resource.resource.Release()
+	clientMetricsMutex.Lock()
+	if client.resource.inUse {
+		numInUseClientConnections--
+		client.resource.inUse = false
+	}
+	numOpenClientConnections--
+	clientMetricsMutex.Unlock()
 	return client.resource.closeError
 }
 
