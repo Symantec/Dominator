@@ -42,7 +42,7 @@ func (pcr *privateClientResource) Allocate() error {
 	if err != nil {
 		return err
 	}
-	client := &Client{rpcClient: rpcClient, resource: cr}
+	client := &Client{resource: cr}
 	cr.client = client
 	cr.rpcClient = rpcClient
 	return nil
@@ -51,6 +51,7 @@ func (pcr *privateClientResource) Allocate() error {
 func (pcr *privateClientResource) Release() error {
 	cr := pcr.clientResource
 	err := cr.client.rpcClient.Close()
+	cr.client.rpcClient = nil
 	cr.client = nil
 	return err
 }
