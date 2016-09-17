@@ -51,6 +51,7 @@ func (pcr *privateClientResource) Allocate() error {
 func (pcr *privateClientResource) Release() error {
 	cr := pcr.clientResource
 	err := cr.client.rpcClient.Close()
+	cr.client.rpcClient = nil
 	cr.client = nil
 	return err
 }

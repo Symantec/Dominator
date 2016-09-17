@@ -78,3 +78,21 @@ func TestCallAfterPut(t *testing.T) {
 	err = client.Call("Service.Method", request, &reply)
 	t.Error(err)
 }
+
+func TestCallAfterClose(t *testing.T) {
+	cr := New("tcp", serverAddress, true, "")
+	client, err := cr.Get(resourcepool.MakeImmediateCanceler())
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	client.Close()
+	defer func() {
+		if err := recover(); err == nil {
+			t.Errorf("Call() after Close() did not panic")
+		}
+	}()
+	var request, reply int
+	err = client.Call("Service.Method", request, &reply)
+	t.Error(err)
+}
