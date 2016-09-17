@@ -20,13 +20,15 @@ func init() {
 	go http.Serve(listener, nil)
 }
 
-func TestGetPut(t *testing.T) {
+func TestGetCallPut(t *testing.T) {
 	cr := New("tcp", serverAddress, true, "")
 	client, err := cr.Get(resourcepool.MakeImmediateCanceler())
 	if err != nil {
 		t.Error(err)
 		return
 	}
+	var request, reply int
+	client.Call("Service.Method", request, &reply)
 	client.Put()
 }
 
