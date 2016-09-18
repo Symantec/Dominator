@@ -63,6 +63,7 @@ type ConnResource struct {
 	resource            *resourcepool.Resource
 	privateConnResource privateConnResource
 	conn                *Conn
+	netConn             net.Conn
 }
 
 // New returns a ConnResource for the specified network address. It may be used
