@@ -22,6 +22,7 @@ func (cr *ConnResource) get(cancelChannel <-chan struct{},
 	if err := cr.resource.Get(cancelChannel); err != nil {
 		return nil, err
 	}
+	cr.conn.Conn = cr.netConn
 	return cr.conn, nil
 }
 
@@ -30,6 +31,7 @@ func (conn *Conn) close() error {
 }
 
 func (conn *Conn) put() {
+	conn.Conn = nil
 	conn.resource.resource.Put()
 }
 
@@ -39,14 +41,16 @@ func (pcr *privateConnResource) Allocate() error {
 	if err != nil {
 		return err
 	}
-	conn := &Conn{Conn: netConn, resource: cr}
+	conn := &Conn{resource: cr}
 	cr.conn = conn
+	cr.netConn = netConn
 	return nil
 }
 
 func (pcr *privateConnResource) Release() error {
 	cr := pcr.connResource
 	err := cr.conn.Close()
+	cr.conn.Conn = nil
 	cr.conn = nil
 	return err
 }
