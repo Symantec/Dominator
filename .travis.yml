@@ -8,3 +8,5 @@ before_install:
 - export TRAVIS_BUILD_DIR=${SYMANTEC_PROJECT_DIR}
 - cd ${SYMANTEC_PROJECT_DIR}
 - go get ./...
+
+script: make all test
