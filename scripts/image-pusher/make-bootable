@@ -30,8 +30,15 @@ dracut --force "/boot/initramfs-$kernel_version.img" "$kernel_version"
 if [ -x /sbin/grub2-mkconfig ]; then
     grub2-mkconfig -o /boot/grub2/grub.cfg
     grub2-install "$boot_device"
+elif [ -x /usr/sbin/grub-mkconfig ]; then
+    grub-mkconfig -o /boot/grub/grub.cfg
+    grub-install "$boot_device"
 else
-    readonly grub_config_file='/boot/grub/grub.conf'
+    if [ -r /boot/grub/grub.conf ]; then
+	readonly grub_config_file='/boot/grub/grub.conf'
+    else
+	readonly grub_config_file='/boot/grub/grub.cfg'
+    fi
     tmp="$(< "$grub_config_file")"
     echo "$tmp" | sed -r \
 	-e 's/UUID=[^[:space:]]+/LABEL=rootfs/g' \
