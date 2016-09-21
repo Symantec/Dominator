@@ -21,5 +21,6 @@ format:
 
 
 test:
-	@find * -name '*_test.go' -printf 'github.com/Symantec/Dominator/%h\n' \
-	| sort -u | xargs -r go test
+	@find * -name '*_test.go' |\
+	sed -e 's@^@github.com/Symantec/Dominator/@' -e 's@/[^/]*$$@@' |\
+	sort -u | xargs go test
