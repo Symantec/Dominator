@@ -14,18 +14,16 @@ func (inode *DirectoryInode) rebuildInodePointers(fs *FileSystem) error {
 	for _, dirent := range inode.EntryList {
 		tableInode, ok := fs.InodeTable[dirent.InodeNumber]
 		if !ok {
-			return errors.New(fmt.Sprintf(
-				"%s: no entry in inode table for: %d %p",
-				dirent.Name, dirent.InodeNumber, dirent.inode))
+			return fmt.Errorf("%s: no entry in inode table for: %d %p",
+				dirent.Name, dirent.InodeNumber, dirent.inode)
 		}
 		if tableInode == nil {
-			return errors.New(fmt.Sprintf(
-				"%s: nil entry in inode table for: %d %p",
-				dirent.Name, dirent.InodeNumber, dirent.inode))
+			return fmt.Errorf("%s: nil entry in inode table for: %d %p",
+				dirent.Name, dirent.InodeNumber, dirent.inode)
 		} else if dirent.inode != nil && dirent.inode != tableInode {
-			return errors.New(fmt.Sprintf(
+			return fmt.Errorf(
 				"%s: changing inode entry for: %d from: %p to %p\n",
-				dirent.Name, dirent.InodeNumber, dirent.inode, tableInode))
+				dirent.Name, dirent.InodeNumber, dirent.inode, tableInode)
 		}
 		dirent.inode = tableInode
 		if inode, ok := dirent.inode.(*DirectoryInode); ok {
