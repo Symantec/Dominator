@@ -5,9 +5,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/logbuf"
+	"github.com/Symantec/tricorder/go/tricorder"
 	"log"
-	"log/syslog"
 	"os"
 	"os/signal"
 	"strings"
@@ -22,13 +24,16 @@ var (
 		"Interval between fetches from the MDB source, in seconds")
 	hostnameRegex = flag.String("hostnameRegex", ".*",
 		"A regular expression to match the desired hostnames")
+	logbufLines = flag.Uint("logbufLines", 1024,
+		"Number of lines to store in the log buffer")
 	mdbFile = flag.String("mdbFile", "/var/lib/Dominator/mdb",
 		"Name of file to write filtered MDB data to")
+	portNum = flag.Uint("portNum", constants.SimpleMdbServerPortNumber,
+		"Port number to allocate and listen on for HTTP/RPC")
 	sourcesFile = flag.String("sourcesFile",
 		"/var/lib/Dominator/mdb.sources.list",
 		"Name of file list of driver url pairs")
-	useSyslog = flag.Bool("syslog", false, "If true, log to syslog")
-	pidfile   = flag.String("pidfile", "", "Name of file to write my PID to")
+	pidfile = flag.String("pidfile", "", "Name of file to write my PID to")
 )
 
 func printUsage() {
@@ -66,18 +71,6 @@ var drivers = []driver{
 	{"cis", loadCis},
 	{"ds.host.fqdn", loadDsHostFqdn},
 	{"text", loadText},
-}
-
-func getLogger() *log.Logger {
-	if *useSyslog {
-		s, err := syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON, "mdbd")
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		return log.New(s, "", 0)
-	}
-	return log.New(os.Stderr, "", log.LstdFlags)
 }
 
 func getSource(driverAndArgs []string) (
@@ -149,12 +142,14 @@ func showErrorAndDie(err error) {
 func main() {
 	flag.Usage = printUsage
 	flag.Parse()
+	tricorder.RegisterFlags()
+	circularBuffer := logbuf.New(*logbufLines)
+	logger := log.New(circularBuffer, "", log.LstdFlags)
 	// We have to have inputs.
 	if *sourcesFile == "" {
 		printUsage()
 		os.Exit(2)
 	}
-	logger := getLogger()
 	handleSignals(logger)
 	var generators []generator
 	readerChannel := fsutil.WatchFile(*sourcesFile, logger)
@@ -179,6 +174,11 @@ func main() {
 		showErrorAndDie(err)
 	}
 	file.Close()
+	httpSrv, err := startHttpServer(*portNum)
+	if err != nil {
+		showErrorAndDie(err)
+	}
+	httpSrv.AddHtmlWriter(circularBuffer)
 	go runDaemon(generators, *mdbFile, *hostnameRegex, *datacentre,
 		*fetchInterval, logger, *debug)
 	<-readerChannel
