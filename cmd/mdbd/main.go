@@ -179,8 +179,9 @@ func main() {
 		showErrorAndDie(err)
 	}
 	httpSrv.AddHtmlWriter(circularBuffer)
+	updateFunc := startRpcd(logger)
 	go runDaemon(generators, *mdbFile, *hostnameRegex, *datacentre,
-		*fetchInterval, logger, *debug)
+		*fetchInterval, updateFunc, logger, *debug)
 	<-readerChannel
 	fsutil.WatchFileStop()
 	if err := syscall.Exec(os.Args[0], os.Args, os.Environ()); err != nil {
