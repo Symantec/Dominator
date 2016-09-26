@@ -20,7 +20,8 @@ type genericEncoder interface {
 }
 
 func runDaemon(generators []generator, mdbFileName, hostnameRegex string,
-	datacentre string, fetchInterval uint, logger *log.Logger, debug bool) {
+	datacentre string, fetchInterval uint, updateFunc func(old, new *mdb.Mdb),
+	logger *log.Logger, debug bool) {
 	var prevMdb *mdb.Mdb
 	var hostnameRE *regexp.Regexp
 	var err error
@@ -43,6 +44,7 @@ func runDaemon(generators []generator, mdbFileName, hostnameRegex string,
 		newMdb = selectHosts(newMdb, hostnameRE)
 		sort.Sort(newMdb)
 		if newMdbIsDifferent(prevMdb, newMdb) {
+			updateFunc(prevMdb, newMdb)
 			if err := writeMdb(newMdb, mdbFileName); err != nil {
 				logger.Println(err)
 			} else {

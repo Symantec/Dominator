@@ -5,6 +5,7 @@ const (
 	DominatorPortNumber          = 6970
 	ImageServerPortNumber        = 6971
 	BasicFileGenServerPortNumber = 6972
+	SimpleMdbServerPortNumber    = 6973
 
 	DefaultNetworkSpeedPercent = 10
 	DefaultScanSpeedPercent    = 2

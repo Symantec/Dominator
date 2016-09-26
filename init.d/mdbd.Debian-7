@@ -16,6 +16,9 @@
 umask 022
 
 DAEMON='/usr/local/sbin/mdbd'
+LOG_DIR='/var/log/mdbd'
+LOG_QUOTA=
+LOGBUF_LINES=
 LOOP_PIDFILE='/var/run/mdbd.loop.pid'
 MDB_FILE=
 PIDFILE='/var/run/mdbd.pid'
@@ -29,6 +32,9 @@ test -x "$DAEMON" || exit 0
 
 export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
 
+mkdir -m=0755 -p "$LOG_DIR"
+chown "$USERNAME" "$LOG_DIR"
+
 if [ -n "$DATACENTRE" ]; then
     MDBD_ARGS="$MDBD_ARGS -datacentre=$DATACENTRE"
 fi
@@ -39,6 +45,18 @@ fi
 
 if [ -n "$HOSTNAME_REGEX" ]; then
     MDBD_ARGS="$MDBD_ARGS -hostnameRegex=$HOSTNAME_REGEX"
+fi
+
+if [ "$LOG_DIR" != '/var/log/mdbd' ]; then
+    MDBD_ARGS="$MDBD_ARGS -logDir=$LOG_DIR"
+fi
+
+if [ -n "$LOG_QUOTA" ]; then
+    MDBD_ARGS="$MDBD_ARGS -logQuota=$LOG_QUOTA"
+fi
+
+if [ -n "$LOGBUF_LINES" ]; then
+    MDBD_ARGS="$MDBD_ARGS -logbufLines=$LOGBUF_LINES"
 fi
 
 if [ -n "$MDB_FILE" ]; then
@@ -53,7 +71,7 @@ do_start ()
 {
     start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
 		      --exec "$DAEMON" --chuid "$USERNAME" --make-pidfile -- \
-		      -syslog=true $MDBD_ARGS
+		      $MDBD_ARGS
 }
 
 start_loop ()
