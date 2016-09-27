@@ -24,7 +24,7 @@ var (
 // updates. At startup it will read the file named by mdbFileName for MDB data.
 // The default format is JSON, but if the filename extension is ".gob" then GOB
 // format is read. If the file is present and contains MDB data, the MDB data
-// are sent over the returned channel.
+// are sent over the returned channel, otherwise no MDB data are sent initially.
 //
 // By default the file is monitored for updates and if the file is replaced by a
 // different inode, MDB data are read from the new inode. If the MDB data are
