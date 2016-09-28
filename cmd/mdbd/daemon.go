@@ -6,6 +6,8 @@ import (
 	"errors"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
 	"log"
 	"os"
 	"path"
@@ -15,8 +17,21 @@ import (
 	"time"
 )
 
+var (
+	latencyBucketer      = tricorder.NewGeometricBucketer(0.1, 100e3)
+	loadTimeDistribution *tricorder.CumulativeDistribution
+)
+
 type genericEncoder interface {
 	Encode(v interface{}) error
+}
+
+func init() {
+	loadTimeDistribution = latencyBucketer.NewCumulativeDistribution()
+	if err := tricorder.RegisterMetric("/load-time", loadTimeDistribution,
+		units.Millisecond, "load durations"); err != nil {
+		panic(err)
+	}
 }
 
 func runDaemon(generators []generator, mdbFileName, hostnameRegex string,
@@ -73,6 +88,7 @@ func sleepUntil(wakeTime time.Time) {
 func loadFromAll(generators []generator, datacentre string,
 	logger *log.Logger) (*mdb.Mdb, error) {
 	machineMap := make(map[string]mdb.Machine)
+	startTime := time.Now()
 	for _, gen := range generators {
 		mdb, err := gen.Generate(datacentre, logger)
 		if err != nil {
@@ -91,6 +107,7 @@ func loadFromAll(generators []generator, datacentre string,
 	for _, machine := range machineMap {
 		newMdb.Machines = append(newMdb.Machines, machine)
 	}
+	loadTimeDistribution.Add(time.Since(startTime))
 	return &newMdb, nil
 }
 
