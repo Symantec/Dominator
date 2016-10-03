@@ -239,9 +239,7 @@ func (lb *LogBuffer) showRecent(w io.Writer, duration time.Duration,
 	}
 	fmt.Fprintln(writer, "<body>")
 	cWriter := &countingWriter{writer: writer}
-	lb.rwMutex.Lock()
-	lb.writer.Flush()
-	lb.rwMutex.Unlock()
+	lb.flush()
 	for _, name := range names {
 		cWriter.count = 0
 		lb.dumpSince(cWriter, name, earliestTime, "", "<br>\n", recentFirst)
