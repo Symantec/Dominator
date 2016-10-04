@@ -27,7 +27,7 @@ OBJECT_DIR=
 PIDFILE='/var/run/imageserver.pid'
 USERNAME='imageserver'
 
-IMAGESERVER_ARGS=
+PROG_ARGS=
 
 [ -f /etc/default/imageserver ] && . /etc/default/imageserver
 
@@ -39,34 +39,34 @@ mkdir -m 0750 -p "$LOG_DIR"
 chown "$USERNAME" "$LOG_DIR"
 
 if [ "$ARCHIVE_MODE" = "true" ] || [ "$ARCHIVE_MODE" = "1" ]; then
-    IMAGESERVER_ARGS="$IMAGESERVER_ARGS -archiveMode=true"
+    PROG_ARGS="$PROG_ARGS -archiveMode=true"
 fi
 
 if [ -n "$IMAGE_DIR" ]; then
-    IMAGESERVER_ARGS="$IMAGESERVER_ARGS -imageDir=$IMAGE_DIR"
+    PROG_ARGS="$PROG_ARGS -imageDir=$IMAGE_DIR"
 fi
 
 if [ -n "$IMAGE_SERVER_HOSTNAME" ]; then
-    IMAGESERVER_ARGS="$IMAGESERVER_ARGS -imageServerHostname=$IMAGE_SERVER_HOSTNAME"
+    PROG_ARGS="$PROG_ARGS -imageServerHostname=$IMAGE_SERVER_HOSTNAME"
 fi
 
 if [ -n "$LOG_QUOTA" ]; then
-    IMAGESERVER_ARGS="$IMAGESERVER_ARGS -logQuota=$LOG_QUOTA"
+    PROG_ARGS="$PROG_ARGS -logQuota=$LOG_QUOTA"
 fi
 
 if [ -n "$LOGBUF_LINES" ]; then
-    IMAGESERVER_ARGS="$IMAGESERVER_ARGS -logbufLines=$LOGBUF_LINES"
+    PROG_ARGS="$PROG_ARGS -logbufLines=$LOGBUF_LINES"
 fi
 
 if [ -n "$OBJECT_DIR" ]; then
-    IMAGESERVER_ARGS="$IMAGESERVER_ARGS -objectDir=$OBJECT_DIR"
+    PROG_ARGS="$PROG_ARGS -objectDir=$OBJECT_DIR"
 fi
 
 do_start ()
 {
     start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
 		      --exec "$DAEMON" --chuid "$USERNAME" --make-pidfile -- \
-		      -logDir="$LOG_DIR" $IMAGESERVER_ARGS
+		      -logDir="$LOG_DIR" $PROG_ARGS
 }
 
 start_loop ()

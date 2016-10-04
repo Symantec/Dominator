@@ -24,7 +24,8 @@ MDB_FILE=
 PIDFILE='/var/run/mdbd.pid'
 SOURCES_FILE=
 USERNAME='mdbd'
-MDBD_ARGS=
+
+PROG_ARGS=
 
 [ -f /etc/default/mdbd ] && . /etc/default/mdbd
 
@@ -36,42 +37,42 @@ mkdir -m=0755 -p "$LOG_DIR"
 chown "$USERNAME" "$LOG_DIR"
 
 if [ -n "$DATACENTRE" ]; then
-    MDBD_ARGS="$MDBD_ARGS -datacentre=$DATACENTRE"
+    PROG_ARGS="$PROG_ARGS -datacentre=$DATACENTRE"
 fi
 
 if [ -n "$FETCH_INTERVAL" ]; then
-    MDBD_ARGS="$MDBD_ARGS -fetchInterval=$FETCH_INTERVAL"
+    PROG_ARGS="$PROG_ARGS -fetchInterval=$FETCH_INTERVAL"
 fi
 
 if [ -n "$HOSTNAME_REGEX" ]; then
-    MDBD_ARGS="$MDBD_ARGS -hostnameRegex=$HOSTNAME_REGEX"
+    PROG_ARGS="$PROG_ARGS -hostnameRegex=$HOSTNAME_REGEX"
 fi
 
 if [ "$LOG_DIR" != '/var/log/mdbd' ]; then
-    MDBD_ARGS="$MDBD_ARGS -logDir=$LOG_DIR"
+    PROG_ARGS="$PROG_ARGS -logDir=$LOG_DIR"
 fi
 
 if [ -n "$LOG_QUOTA" ]; then
-    MDBD_ARGS="$MDBD_ARGS -logQuota=$LOG_QUOTA"
+    PROG_ARGS="$PROG_ARGS -logQuota=$LOG_QUOTA"
 fi
 
 if [ -n "$LOGBUF_LINES" ]; then
-    MDBD_ARGS="$MDBD_ARGS -logbufLines=$LOGBUF_LINES"
+    PROG_ARGS="$PROG_ARGS -logbufLines=$LOGBUF_LINES"
 fi
 
 if [ -n "$MDB_FILE" ]; then
-    MDBD_ARGS="$MDBD_ARGS -mdbFile=$MDB_FILE"
+    PROG_ARGS="$PROG_ARGS -mdbFile=$MDB_FILE"
 fi
 
 if [ -n "$SOURCES_FILE" ]; then
-    MDBD_ARGS="$MDBD_ARGS -sourcesFile=$SOURCES_FILE"
+    PROG_ARGS="$PROG_ARGS -sourcesFile=$SOURCES_FILE"
 fi
 
 do_start ()
 {
     start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
 		      --exec "$DAEMON" --chuid "$USERNAME" --make-pidfile -- \
-		      $MDBD_ARGS
+		      $PROG_ARGS
 }
 
 start_loop ()
