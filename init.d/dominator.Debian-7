@@ -15,10 +15,12 @@
 
 umask 022
 
+readonly default_log_dir='/var/log/dominator'
+
 DAEMON='/usr/local/sbin/dominator'
 FD_LIMIT=
 IMAGE_SERVER_HOSTNAME=
-LOG_DIR='/var/log/dominator'
+LOG_DIR="$default_log_dir"
 LOG_QUOTA=
 LOGBUF_LINES=
 LOOP_PIDFILE='/var/run/dominator.loop.pid'
@@ -26,7 +28,7 @@ PIDFILE='/var/run/dominator.pid'
 STATE_DIR=
 USERNAME='dominator'
 
-DOMINATOR_ARGS=
+PROG_ARGS=
 
 [ -f /etc/default/dominator ] && . /etc/default/dominator
 
@@ -38,30 +40,34 @@ if [ -n "$FD_LIMIT" ]; then
     ulimit -n "$FD_LIMIT"
 fi
 
-mkdir -m=0755 -p "$LOG_DIR"
+mkdir -m 0755 -p "$LOG_DIR"
 chown "$USERNAME" "$LOG_DIR"
 
 if [ -n "$IMAGE_SERVER_HOSTNAME" ]; then
-    DOMINATOR_ARGS="$DOMINATOR_ARGS -imageServerHostname=$IMAGE_SERVER_HOSTNAME"
+    PROG_ARGS="$PROG_ARGS -imageServerHostname=$IMAGE_SERVER_HOSTNAME"
+fi
+
+if [ -n "$LOG_DIR" ] && [ "$LOG_DIR" != "$default_log_dir" ]; then
+    PROG_ARGS="$PROG_ARGS -logDir=$LOG_DIR"
 fi
 
 if [ -n "$LOG_QUOTA" ]; then
-    DOMINATOR_ARGS="$DOMINATOR_ARGS -logQuota=$LOG_QUOTA"
+    PROG_ARGS="$PROG_ARGS -logQuota=$LOG_QUOTA"
 fi
 
 if [ -n "$LOGBUF_LINES" ]; then
-    DOMINATOR_ARGS="$DOMINATOR_ARGS -logbufLines=$LOGBUF_LINES"
+    PROG_ARGS="$PROG_ARGS -logbufLines=$LOGBUF_LINES"
 fi
 
 if [ -n "$STATE_DIR" ]; then
-    DOMINATOR_ARGS="$DOMINATOR_ARGS -stateDir=$STATE_DIR"
+    PROG_ARGS="$PROG_ARGS -stateDir=$STATE_DIR"
 fi
 
 do_start ()
 {
     start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
 		      --exec "$DAEMON" --chuid "$USERNAME" --make-pidfile -- \
-		      -logDir="$LOG_DIR" $DOMINATOR_ARGS
+		      $PROG_ARGS
 }
 
 start_loop ()

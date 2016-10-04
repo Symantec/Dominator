@@ -112,6 +112,10 @@ func selectAliveSub(sub *Sub) bool {
 		return false
 	case statusConnectionRefused:
 		return false
+	case statusNoRouteToHost:
+		return false
+	case statusConnectTimeout:
+		return false
 	case statusFailedToConnect:
 		return false
 	case statusFailedToPoll:

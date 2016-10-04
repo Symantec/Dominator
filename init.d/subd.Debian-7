@@ -43,7 +43,7 @@ test -x "$DAEMON" || exit 0
 
 export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
 
-mkdir -m 0750 -p "$LOG_DIR"
+mkdir -m 0755 -p "$LOG_DIR"
 
 if [ -n "$LOG_DIR" ] && [ "$LOG_DIR" != "$default_log_dir" ]; then
     PROG_ARGS="$PROG_ARGS -logDir=$LOG_DIR"

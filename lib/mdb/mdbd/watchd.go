@@ -99,10 +99,10 @@ func serverWatchDaemon(mdbServerHostname string, mdbServerPortNum uint,
 					var err error
 					if isGob(mdbFileName) {
 						encoder := gob.NewEncoder(writer)
-						err = encoder.Encode(*lastMdb)
+						err = encoder.Encode(lastMdb.Machines)
 					} else {
 						err = jsonwriter.WriteWithIndent(writer, "    ",
-							*lastMdb)
+							lastMdb.Machines)
 					}
 					if err != nil {
 						logger.Println(err)
