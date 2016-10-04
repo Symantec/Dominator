@@ -20,6 +20,7 @@ type rpcType struct {
 
 func startRpcd(logger *log.Logger) func(old, new *mdb.Mdb) {
 	rpcObj := &rpcType{
+		currentMdb:     &mdb.Mdb{},
 		logger:         logger,
 		updateChannels: make(map[*srpc.Conn]chan<- mdbserver.MdbUpdate),
 	}

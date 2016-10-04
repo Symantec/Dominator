@@ -14,12 +14,14 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"syscall"
 	"time"
 )
 
 var (
-	latencyBucketer      = tricorder.NewGeometricBucketer(0.1, 100e3)
-	loadTimeDistribution *tricorder.CumulativeDistribution
+	latencyBucketer         = tricorder.NewGeometricBucketer(0.1, 100e3)
+	loadCpuTimeDistribution *tricorder.CumulativeDistribution
+	loadTimeDistribution    *tricorder.CumulativeDistribution
 )
 
 type genericEncoder interface {
@@ -27,6 +29,11 @@ type genericEncoder interface {
 }
 
 func init() {
+	loadCpuTimeDistribution = latencyBucketer.NewCumulativeDistribution()
+	if err := tricorder.RegisterMetric("/load-cpu-time", loadCpuTimeDistribution,
+		units.Millisecond, "load CPU time durations"); err != nil {
+		panic(err)
+	}
 	loadTimeDistribution = latencyBucketer.NewCumulativeDistribution()
 	if err := tricorder.RegisterMetric("/load-time", loadTimeDistribution,
 		units.Millisecond, "load durations"); err != nil {
@@ -89,6 +96,8 @@ func loadFromAll(generators []generator, datacentre string,
 	logger *log.Logger) (*mdb.Mdb, error) {
 	machineMap := make(map[string]mdb.Machine)
 	startTime := time.Now()
+	var rusageStart, rusageStop syscall.Rusage
+	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
 	for _, gen := range generators {
 		mdb, err := gen.Generate(datacentre, logger)
 		if err != nil {
@@ -107,7 +116,13 @@ func loadFromAll(generators []generator, datacentre string,
 	for _, machine := range machineMap {
 		newMdb.Machines = append(newMdb.Machines, machine)
 	}
+	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStop)
 	loadTimeDistribution.Add(time.Since(startTime))
+	loadCpuTimeDistribution.Add(time.Duration(
+		rusageStop.Utime.Sec)*time.Second +
+		time.Duration(rusageStop.Utime.Usec)*time.Microsecond -
+		time.Duration(rusageStart.Utime.Sec)*time.Second -
+		time.Duration(rusageStart.Utime.Usec)*time.Microsecond)
 	return &newMdb, nil
 }
 
