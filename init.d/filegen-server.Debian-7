@@ -15,9 +15,11 @@
 
 umask 022
 
+readonly default_log_dir='/var/log/filegen-server'
+
 CONFIG_FILE=
 DAEMON='/usr/local/sbin/filegen-server'
-LOG_DIR='/var/log/filegen-server'
+LOG_DIR="$default_log_dir"
 LOG_QUOTA=
 LOGBUF_LINES=
 LOOP_PIDFILE='/var/run/filegen-server.loop.pid'
@@ -32,11 +34,15 @@ test -x "$DAEMON" || exit 0
 
 export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
 
-mkdir -m 0750 -p "$LOG_DIR"
+mkdir -m 0755 -p "$LOG_DIR"
 chown "$USERNAME" "$LOG_DIR"
 
 if [ -n "$CONFIG_FILE" ]; then
     PROG_ARGS="$PROG_ARGS -configFile=$CONFIG_FILE"
+fi
+
+if [ -n "$LOG_DIR" ] && [ "$LOG_DIR" != "$default_log_dir" ]; then
+    PROG_ARGS="$PROG_ARGS -logDir=$LOG_DIR"
 fi
 
 if [ -n "$LOG_QUOTA" ]; then
@@ -51,7 +57,7 @@ do_start ()
 {
     start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
 		      --exec "$DAEMON" --chuid "$USERNAME" --make-pidfile -- \
-		      -logDir="$LOG_DIR" $PROG_ARGS
+		      $PROG_ARGS
 }
 
 start_loop ()

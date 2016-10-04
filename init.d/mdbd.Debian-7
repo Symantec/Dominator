@@ -15,8 +15,10 @@
 
 umask 022
 
+readonly default_log_dir='/var/log/mdbd'
+
 DAEMON='/usr/local/sbin/mdbd'
-LOG_DIR='/var/log/mdbd'
+LOG_DIR="$default_log_dir"
 LOG_QUOTA=
 LOGBUF_LINES=
 LOOP_PIDFILE='/var/run/mdbd.loop.pid'
@@ -33,7 +35,7 @@ test -x "$DAEMON" || exit 0
 
 export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
 
-mkdir -m=0755 -p "$LOG_DIR"
+mkdir -m 0755 -p "$LOG_DIR"
 chown "$USERNAME" "$LOG_DIR"
 
 if [ -n "$DATACENTRE" ]; then
@@ -48,7 +50,7 @@ if [ -n "$HOSTNAME_REGEX" ]; then
     PROG_ARGS="$PROG_ARGS -hostnameRegex=$HOSTNAME_REGEX"
 fi
 
-if [ "$LOG_DIR" != '/var/log/mdbd' ]; then
+if [ -n "$LOG_DIR" ] && [ "$LOG_DIR" != "$default_log_dir" ]; then
     PROG_ARGS="$PROG_ARGS -logDir=$LOG_DIR"
 fi
 

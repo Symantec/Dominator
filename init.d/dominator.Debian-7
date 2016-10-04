@@ -15,10 +15,12 @@
 
 umask 022
 
+readonly default_log_dir='/var/log/dominator'
+
 DAEMON='/usr/local/sbin/dominator'
 FD_LIMIT=
 IMAGE_SERVER_HOSTNAME=
-LOG_DIR='/var/log/dominator'
+LOG_DIR="$default_log_dir"
 LOG_QUOTA=
 LOGBUF_LINES=
 LOOP_PIDFILE='/var/run/dominator.loop.pid'
@@ -38,11 +40,15 @@ if [ -n "$FD_LIMIT" ]; then
     ulimit -n "$FD_LIMIT"
 fi
 
-mkdir -m=0755 -p "$LOG_DIR"
+mkdir -m 0755 -p "$LOG_DIR"
 chown "$USERNAME" "$LOG_DIR"
 
 if [ -n "$IMAGE_SERVER_HOSTNAME" ]; then
     PROG_ARGS="$PROG_ARGS -imageServerHostname=$IMAGE_SERVER_HOSTNAME"
+fi
+
+if [ -n "$LOG_DIR" ] && [ "$LOG_DIR" != "$default_log_dir" ]; then
+    PROG_ARGS="$PROG_ARGS -logDir=$LOG_DIR"
 fi
 
 if [ -n "$LOG_QUOTA" ]; then
@@ -61,7 +67,7 @@ do_start ()
 {
     start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
 		      --exec "$DAEMON" --chuid "$USERNAME" --make-pidfile -- \
-		      -logDir="$LOG_DIR" $PROG_ARGS
+		      $PROG_ARGS
 }
 
 start_loop ()
