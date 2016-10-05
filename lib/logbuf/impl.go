@@ -84,28 +84,31 @@ func (lb *LogBuffer) write(p []byte) (n int, err error) {
 	if *alsoLogToStderr {
 		os.Stderr.Write(p)
 	}
-	lb.rwMutex.Lock()
-	defer lb.rwMutex.Unlock()
-	lb.writeToLogFile(p)
 	val := make([]byte, len(p))
 	copy(val, p)
+	lb.rwMutex.Lock()
+	sendNotify := lb.writeToLogFile(p)
 	lb.buffer.Value = val
 	lb.buffer = lb.buffer.Next()
+	lb.rwMutex.Unlock()
+	if sendNotify {
+		lb.writeNotifier <- struct{}{}
+	}
 	return len(p), nil
 }
 
 // This should be called with the lock held.
-func (lb *LogBuffer) writeToLogFile(p []byte) {
+func (lb *LogBuffer) writeToLogFile(p []byte) bool {
 	if lb.writer == nil {
-		return
+		return false
 	}
 	lb.writer.Write(p)
-	lb.writeNotifier <- struct{}{}
 	lb.usage += uint64(len(p))
 	if lb.usage <= lb.quota {
-		return
+		return true
 	}
 	lb.enforceQuota()
+	return true
 }
 
 // This should be called with the lock held.
