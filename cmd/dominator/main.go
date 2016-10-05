@@ -36,8 +36,6 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
-	logbufLines = flag.Uint("logbufLines", 1024,
-		"Number of lines to store in the log buffer")
 	mdbFile = flag.String("mdbFile", "mdb",
 		"File to read MDB data from, relative to stateDir (default format is JSON)")
 	minInterval = flag.Uint("minInterval", 1,
@@ -124,7 +122,7 @@ func newObjectServer(objectsDir string, logger *log.Logger) (
 func main() {
 	flag.Parse()
 	tricorder.RegisterFlags()
-	circularBuffer := logbuf.New(*logbufLines)
+	circularBuffer := logbuf.New()
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	if err := setupserver.SetupTls(); err != nil {
 		logger.Println(err)

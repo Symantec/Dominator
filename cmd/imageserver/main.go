@@ -30,8 +30,6 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
-	logbufLines = flag.Uint("logbufLines", 1024,
-		"Number of lines to store in the log buffer")
 	objectDir = flag.String("objectDir", "/var/lib/objectserver",
 		"Name of image server data directory.")
 	permitInsecureMode = flag.Bool("permitInsecureMode", false,
@@ -56,7 +54,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "-imageServerHostname required in archive mode")
 		os.Exit(1)
 	}
-	circularBuffer := logbuf.New(*logbufLines)
+	circularBuffer := logbuf.New()
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	if err := setupserver.SetupTls(); err != nil {
 		logger.Println(err)

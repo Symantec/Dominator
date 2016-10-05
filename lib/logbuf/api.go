@@ -22,6 +22,8 @@ var (
 		"If true, also write logs to stderr")
 	idleMarkTimeout = flag.Duration("idleMarkTimeout", 0,
 		"time after last log before a 'MARK' message is written to logfile")
+	logbufLines = flag.Uint("logbufLines", 1024,
+		"Number of lines to store in the log buffer")
 	logDir = flag.String("logDir", path.Join("/var/log", path.Base(os.Args[0])),
 		"Directory to write log data to. If empty, no logs are written")
 	logQuota = flag.Uint("logQuota", 10,
@@ -46,15 +48,17 @@ type LogBuffer struct {
 // The behaviour of the LogBuffer is controlled by the following command-line
 // flags (registered with the standard flag pacakge):
 //  -alsoLogToStderr: If true, also write logs to stderr
-//  -logDir:          Directory to write log data to. If empty, no logs are written
+//  -logbufLines:     Number of lines to store in the log buffer
+//  -logDir:          Directory to write log data to. If empty, no logs are
+//                    written
 //  -logQuota:        Log quota in MiB. If exceeded, old logs are deleted.
 //                    If zero, the quota will be 16 KiB
-func New(length uint) *LogBuffer {
+func New() *LogBuffer {
 	quota := uint64(*logQuota) << 20
 	if quota < 16384 {
 		quota = 16384
 	}
-	return newLogBuffer(length, *logDir, quota)
+	return newLogBuffer(*logbufLines, *logDir, quota)
 }
 
 // Dump will write the contents of the log buffer to w, with a prefix and

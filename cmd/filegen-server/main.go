@@ -19,8 +19,6 @@ import (
 var (
 	configFile = flag.String("configFile", "/var/lib/filegen-server/config",
 		"Name of file containing the configuration")
-	logbufLines = flag.Uint("logbufLines", 1024,
-		"Number of lines to store in the log buffer")
 	permitInsecureMode = flag.Bool("permitInsecureMode", false,
 		"If true, run in insecure mode. This gives remote access to all")
 	portNum = flag.Uint("portNum", constants.BasicFileGenServerPortNumber,
@@ -43,7 +41,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Do not run the filegen server as root")
 		os.Exit(1)
 	}
-	circularBuffer := logbuf.New(*logbufLines)
+	circularBuffer := logbuf.New()
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	if err := setupserver.SetupTls(); err != nil {
 		logger.Println(err)
