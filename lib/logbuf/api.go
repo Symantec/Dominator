@@ -20,6 +20,8 @@ import (
 var (
 	alsoLogToStderr = flag.Bool("alsoLogToStderr", false,
 		"If true, also write logs to stderr")
+	idleMarkTimeout = flag.Duration("idleMarkTimeout", 0,
+		"time after last log before a 'MARK' message is written to logfile")
 	logDir = flag.String("logDir", path.Join("/var/log", path.Base(os.Args[0])),
 		"Directory to write log data to. If empty, no logs are written")
 	logQuota = flag.Uint("logQuota", 10,

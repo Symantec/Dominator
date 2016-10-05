@@ -180,13 +180,23 @@ func (lb *LogBuffer) enforceQuota() error {
 }
 
 func (lb *LogBuffer) flushWhenIdle(writeNotifier <-chan struct{}) {
-	timer := time.NewTimer(time.Second)
+	flushTimer := time.NewTimer(time.Second)
+	idleMarkDuration := *idleMarkTimeout
+	if idleMarkDuration < 1 {
+		idleMarkDuration = time.Hour * 24 * 365 * 280 // Far in the future.
+	}
+	idleMarkTimer := time.NewTimer(idleMarkDuration)
 	for {
 		select {
 		case <-writeNotifier:
-			timer.Reset(time.Second)
-		case <-timer.C:
+			flushTimer.Reset(time.Second)
+			idleMarkTimer.Reset(idleMarkDuration)
+		case <-flushTimer.C:
 			lb.flush()
+		case <-idleMarkTimer.C:
+			lb.writeMark()
+			flushTimer.Reset(time.Second)
+			idleMarkTimer.Reset(idleMarkDuration)
 		}
 	}
 }
@@ -245,6 +255,17 @@ func (lb *LogBuffer) dumpSince(writer io.Writer, name string,
 		}
 	}
 	return nil
+}
+
+func (lb *LogBuffer) writeMark() {
+	now := time.Now()
+	year, month, day := now.Date()
+	hour, minute, second := now.Clock()
+	str := fmt.Sprintf("%d/%02d/%02d %02d:%02d:%02d MARK\n",
+		year, month, day, hour, minute, second)
+	lb.rwMutex.Lock()
+	defer lb.rwMutex.Unlock()
+	lb.writeToLogFile([]byte(str))
 }
 
 func reverseEntries(entries [][]byte) {
