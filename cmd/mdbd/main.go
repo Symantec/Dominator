@@ -24,8 +24,6 @@ var (
 		"Interval between fetches from the MDB source, in seconds")
 	hostnameRegex = flag.String("hostnameRegex", ".*",
 		"A regular expression to match the desired hostnames")
-	logbufLines = flag.Uint("logbufLines", 1024,
-		"Number of lines to store in the log buffer")
 	mdbFile = flag.String("mdbFile", "/var/lib/Dominator/mdb",
 		"Name of file to write filtered MDB data to")
 	portNum = flag.Uint("portNum", constants.SimpleMdbServerPortNumber,
@@ -143,7 +141,7 @@ func main() {
 	flag.Usage = printUsage
 	flag.Parse()
 	tricorder.RegisterFlags()
-	circularBuffer := logbuf.New(*logbufLines)
+	circularBuffer := logbuf.New()
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	// We have to have inputs.
 	if *sourcesFile == "" {

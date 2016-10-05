@@ -84,28 +84,31 @@ func (lb *LogBuffer) write(p []byte) (n int, err error) {
 	if *alsoLogToStderr {
 		os.Stderr.Write(p)
 	}
-	lb.rwMutex.Lock()
-	defer lb.rwMutex.Unlock()
-	lb.writeToLogFile(p)
 	val := make([]byte, len(p))
 	copy(val, p)
+	lb.rwMutex.Lock()
+	sendNotify := lb.writeToLogFile(p)
 	lb.buffer.Value = val
 	lb.buffer = lb.buffer.Next()
+	lb.rwMutex.Unlock()
+	if sendNotify {
+		lb.writeNotifier <- struct{}{}
+	}
 	return len(p), nil
 }
 
 // This should be called with the lock held.
-func (lb *LogBuffer) writeToLogFile(p []byte) {
+func (lb *LogBuffer) writeToLogFile(p []byte) bool {
 	if lb.writer == nil {
-		return
+		return false
 	}
 	lb.writer.Write(p)
-	lb.writeNotifier <- struct{}{}
 	lb.usage += uint64(len(p))
 	if lb.usage <= lb.quota {
-		return
+		return true
 	}
 	lb.enforceQuota()
+	return true
 }
 
 // This should be called with the lock held.
@@ -180,13 +183,23 @@ func (lb *LogBuffer) enforceQuota() error {
 }
 
 func (lb *LogBuffer) flushWhenIdle(writeNotifier <-chan struct{}) {
-	timer := time.NewTimer(time.Second)
+	flushTimer := time.NewTimer(time.Second)
+	idleMarkDuration := *idleMarkTimeout
+	if idleMarkDuration < 1 {
+		idleMarkDuration = time.Hour * 24 * 365 * 280 // Far in the future.
+	}
+	idleMarkTimer := time.NewTimer(idleMarkDuration)
 	for {
 		select {
 		case <-writeNotifier:
-			timer.Reset(time.Second)
-		case <-timer.C:
+			flushTimer.Reset(time.Second)
+			idleMarkTimer.Reset(idleMarkDuration)
+		case <-flushTimer.C:
 			lb.flush()
+		case <-idleMarkTimer.C:
+			lb.writeMark()
+			flushTimer.Reset(time.Second)
+			idleMarkTimer.Reset(idleMarkDuration)
 		}
 	}
 }
@@ -245,6 +258,17 @@ func (lb *LogBuffer) dumpSince(writer io.Writer, name string,
 		}
 	}
 	return nil
+}
+
+func (lb *LogBuffer) writeMark() {
+	now := time.Now()
+	year, month, day := now.Date()
+	hour, minute, second := now.Clock()
+	str := fmt.Sprintf("%d/%02d/%02d %02d:%02d:%02d MARK\n",
+		year, month, day, hour, minute, second)
+	lb.rwMutex.Lock()
+	defer lb.rwMutex.Unlock()
+	lb.writeToLogFile([]byte(str))
 }
 
 func reverseEntries(entries [][]byte) {

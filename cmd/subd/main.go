@@ -37,8 +37,6 @@ var (
 	defaultScanSpeedPercent = flag.Uint64("defaultScanSpeedPercent",
 		constants.DefaultScanSpeedPercent,
 		"Scan speed as percentage of capacity")
-	logbufLines = flag.Uint("logbufLines", 1024,
-		"Number of lines to store in the log buffer")
 	maxThreads = flag.Uint("maxThreads", 1,
 		"Maximum number of parallel OS threads to use")
 	permitInsecureMode = flag.Bool("permitInsecureMode", false,
@@ -277,7 +275,7 @@ func main() {
 		os.Exit(1)
 	}
 	runtime.GOMAXPROCS(int(*maxThreads))
-	circularBuffer := logbuf.New(*logbufLines)
+	circularBuffer := logbuf.New()
 	logger := log.New(circularBuffer, "", log.LstdFlags)
 	if err := setupserver.SetupTls(); err != nil {
 		logger.Println(err)
