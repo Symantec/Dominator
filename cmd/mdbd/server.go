@@ -78,6 +78,9 @@ func (t *rpcType) pushUpdateToAll(old, new *mdb.Mdb) {
 		return
 	}
 	mdbUpdate := mdbserver.MdbUpdate{}
+	if old == nil {
+		old = &mdb.Mdb{}
+	}
 	oldMachines := make(map[string]mdb.Machine, len(old.Machines))
 	for _, machine := range old.Machines {
 		oldMachines[machine.Hostname] = machine
