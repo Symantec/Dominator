@@ -18,6 +18,10 @@ func (dest *Machine) updateFrom(source Machine) {
 		dest.OwnerGroup = source.OwnerGroup
 	}
 	if source.AwsMetadata != nil {
-		dest.AwsMetadata = source.AwsMetadata
+		if dest.AwsMetadata == nil {
+			dest.AwsMetadata = source.AwsMetadata
+		} else if *dest.AwsMetadata != *source.AwsMetadata {
+			dest.AwsMetadata = source.AwsMetadata
+		}
 	}
 }
