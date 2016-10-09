@@ -14,6 +14,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"reflect"
 	"sort"
 	"time"
 )
@@ -43,7 +44,7 @@ func fileWatchDaemon(mdbFileName string, mdbChannel chan<- *mdb.Mdb,
 			continue
 		}
 		compareStartTime := time.Now()
-		if lastMdb == nil || !compare(lastMdb, mdb) {
+		if lastMdb == nil || !reflect.DeepEqual(lastMdb, mdb) {
 			if lastMdb != nil {
 				mdbCompareTimeDistribution.Add(time.Since(compareStartTime))
 			}
@@ -150,18 +151,6 @@ func getDecoder(reader io.Reader, filename string) genericDecoder {
 	} else {
 		return json.NewDecoder(reader)
 	}
-}
-
-func compare(oldMdb, newMdb *mdb.Mdb) bool {
-	if len(oldMdb.Machines) != len(newMdb.Machines) {
-		return false
-	}
-	for index, oldMachine := range oldMdb.Machines {
-		if oldMachine != newMdb.Machines[index] {
-			return false
-		}
-	}
-	return true
 }
 
 func processUpdate(oldMdb *mdb.Mdb, mdbUpdate mdbserver.MdbUpdate) *mdb.Mdb {
