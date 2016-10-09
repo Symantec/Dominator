@@ -96,6 +96,9 @@ func (sub *Sub) connectAndPoll() {
 	if sub.processFileUpdates() {
 		sub.generationCount = 0 // Force a full poll.
 	}
+	if sub.deleting {
+		return
+	}
 	previousStatus := sub.status
 	timer := time.AfterFunc(time.Second, func() {
 		sub.publishedStatus = sub.status
@@ -183,8 +186,14 @@ func (sub *Sub) processFileUpdates() bool {
 		image := sub.herd.imageManager.GetNoError(sub.getRequiredImageName())
 		if image != nil && sub.computedInodes == nil {
 			sub.computedInodes = make(map[string]*filesystem.RegularInode)
+			sub.busyMutex.Lock()
+			if sub.deleting {
+				sub.busyMutex.Unlock()
+				return false
+			}
 			sub.herd.computedFilesManager.Update(
 				filegenclient.Machine{sub.mdb, sub.getComputedFiles(image)})
+			sub.busyMutex.Unlock()
 		}
 		select {
 		case fileInfos := <-sub.fileUpdateChannel:
