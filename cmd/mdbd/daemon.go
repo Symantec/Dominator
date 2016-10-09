@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"reflect"
 	"regexp"
 	"runtime"
 	"sort"
@@ -140,18 +141,7 @@ func selectHosts(inMdb *mdb.Mdb, hostnameRE *regexp.Regexp) *mdb.Mdb {
 }
 
 func newMdbIsDifferent(prevMdb, newMdb *mdb.Mdb) bool {
-	if prevMdb == nil {
-		return true
-	}
-	if len(prevMdb.Machines) != len(newMdb.Machines) {
-		return true
-	}
-	for index, prevMachine := range prevMdb.Machines {
-		if prevMachine != newMdb.Machines[index] {
-			return true
-		}
-	}
-	return false
+	return !reflect.DeepEqual(prevMdb, newMdb)
 }
 
 func writeMdb(mdb *mdb.Mdb, mdbFileName string) error {
