@@ -1,7 +1,7 @@
 package fsutil
 
 import (
-	"golang.org/x/exp/inotify"
+	"gopkg.in/fsnotify.v0"
 	"io"
 	"log"
 	"os"
@@ -11,12 +11,12 @@ import (
 
 var (
 	lock     sync.RWMutex
-	watchers []*inotify.Watcher
+	watchers []*fsnotify.Watcher
 )
 
-func watchFileWithInotify(pathname string, channel chan<- io.ReadCloser,
+func watchFileWithFsNotify(pathname string, channel chan<- io.ReadCloser,
 	logger *log.Logger) bool {
-	watcher, err := inotify.NewWatcher()
+	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		logger.Println("Error creating watcher:", err)
 		return false
@@ -24,17 +24,19 @@ func watchFileWithInotify(pathname string, channel chan<- io.ReadCloser,
 	lock.Lock()
 	defer lock.Unlock()
 	watchers = append(watchers, watcher)
-	err = watcher.AddWatch(path.Dir(pathname),
-		inotify.IN_CREATE|inotify.IN_MOVED_TO)
-	if err != nil {
+	if err := watcher.Watch(path.Dir(pathname)); err != nil {
 		logger.Println("Error adding watch:", err)
 		return false
 	}
-	go waitForInotifyEvents(watcher, pathname, channel, logger)
+	if err := watcher.WatchFlags(pathname,
+		fsnotify.FSN_CREATE|fsnotify.FSN_RENAME); err != nil {
+		logger.Println("Error setting flags:", err)
+	}
+	go waitForNotifyEvents(watcher, pathname, channel, logger)
 	return true
 }
 
-func watchFileStopWithInotify() bool {
+func watchFileStopWithFsNotify() bool {
 	lock.Lock()
 	defer lock.Unlock()
 	// Send cleanup notification to watchers.
@@ -53,7 +55,7 @@ func watchFileStopWithInotify() bool {
 	return true
 }
 
-func waitForInotifyEvents(watcher *inotify.Watcher, pathname string,
+func waitForNotifyEvents(watcher *fsnotify.Watcher, pathname string,
 	channel chan<- io.ReadCloser, logger *log.Logger) {
 	if file, err := os.Open(pathname); err == nil {
 		channel <- file
@@ -68,6 +70,9 @@ func waitForInotifyEvents(watcher *inotify.Watcher, pathname string,
 				continue
 			}
 			if file, err := os.Open(pathname); err != nil {
+				if os.IsNotExist(err) {
+					continue
+				}
 				if logger != nil {
 					logger.Printf("Error opening file: %s: %s\n", pathname, err)
 				}
