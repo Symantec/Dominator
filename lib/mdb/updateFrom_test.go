@@ -17,6 +17,8 @@ func TestUpdateFrom(t *testing.T) {
 			fieldValue.SetBool(true)
 		case reflect.String:
 			fieldValue.SetString(sourceType.Field(index).Name)
+		case reflect.Ptr:
+			fieldValue.Set(reflect.New(fieldValue.Type().Elem()))
 		default:
 			t.Errorf("Unsupported field type: %s", fieldKind)
 		}

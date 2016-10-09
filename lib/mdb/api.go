@@ -8,15 +8,20 @@ import (
 	"io"
 )
 
+type AwsMetadata struct {
+	InstanceId string
+}
+
 // Machine describes a single machine with a unique Hostname and optional
 // metadata about the machine.
 type Machine struct {
 	Hostname       string
-	IpAddress      string `json:",omitempty"`
-	RequiredImage  string `json:",omitempty"`
-	PlannedImage   string `json:",omitempty"`
-	DisableUpdates bool   `json:",omitempty"`
-	OwnerGroup     string `json:",omitempty"`
+	IpAddress      string       `json:",omitempty"`
+	RequiredImage  string       `json:",omitempty"`
+	PlannedImage   string       `json:",omitempty"`
+	DisableUpdates bool         `json:",omitempty"`
+	OwnerGroup     string       `json:",omitempty"`
+	AwsMetadata    *AwsMetadata `json:",omitempty"`
 }
 
 // UpdateFrom updates dest with data from source.

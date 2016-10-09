@@ -3,6 +3,7 @@ package herd
 import (
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/mdb"
+	"reflect"
 	"time"
 )
 
@@ -49,9 +50,7 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 		wantedImages[machine.PlannedImage] = struct{}{}
 		img := herd.imageManager.GetNoError(machine.RequiredImage)
 		if sub == nil {
-			sub = new(Sub)
-			sub.herd = herd
-			sub.mdb = machine
+			sub = &Sub{herd: herd, mdb: machine}
 			herd.subsByName[machine.Hostname] = sub
 			sub.fileUpdateChannel = herd.computedFilesManager.Add(
 				filegenclient.Machine{machine, sub.getComputedFiles(img)}, 16)
@@ -60,7 +59,7 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 			if sub.mdb.RequiredImage != machine.RequiredImage {
 				sub.computedInodes = nil
 			}
-			if sub.mdb != machine {
+			if !reflect.DeepEqual(sub.mdb, machine) {
 				sub.mdb = machine
 				sub.generationCount = 0 // Force a full poll.
 				herd.computedFilesManager.Update(

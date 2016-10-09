@@ -12,14 +12,14 @@ var stopped bool
 
 func watchFile(pathname string, logger *log.Logger) <-chan io.ReadCloser {
 	channel := make(chan io.ReadCloser, 1)
-	if !watchFileWithInotify(pathname, channel, logger) {
+	if !watchFileWithFsNotify(pathname, channel, logger) {
 		go watchFileForever(pathname, channel, logger)
 	}
 	return channel
 }
 
 func watchFileStop() {
-	if !watchFileStopWithInotify() {
+	if !watchFileStopWithFsNotify() {
 		stopped = true
 	}
 }

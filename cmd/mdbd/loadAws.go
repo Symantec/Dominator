@@ -52,7 +52,12 @@ func extractMdb(output *ec2.DescribeInstancesOutput) *mdb.Mdb {
 	for _, reservation := range output.Reservations {
 		for _, instance := range reservation.Instances {
 			if instance.PrivateDnsName != nil {
-				machine := mdb.Machine{Hostname: *instance.PrivateDnsName}
+				machine := mdb.Machine{
+					Hostname: *instance.PrivateDnsName,
+					AwsMetadata: &mdb.AwsMetadata{
+						InstanceId: *instance.InstanceId,
+					},
+				}
 				if instance.PrivateIpAddress != nil {
 					machine.IpAddress = *instance.PrivateIpAddress
 				}
