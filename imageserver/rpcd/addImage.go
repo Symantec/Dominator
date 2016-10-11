@@ -7,12 +7,14 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
+	"time"
 )
 
 func (t *srpcType) AddImage(conn *srpc.Conn,
 	request imageserver.AddImageRequest,
 	reply *imageserver.AddImageResponse) error {
 	request.Image.CreatedBy = conn.Username() // Must always set this field.
+	request.Image.CreatedOn = time.Now()      // Must always set this field.
 	if err := t.checkMutability(); err != nil {
 		return err
 	}
