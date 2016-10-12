@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/url"
 	"io"
@@ -93,7 +94,8 @@ func showSub(writer io.Writer, sub *Sub) {
 	sub.herd.showImage(writer, sub.mdb.RequiredImage, true)
 	sub.herd.showImage(writer, sub.mdb.PlannedImage, false)
 	sub.showBusy(writer)
-	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.publishedStatus.html())
+	fmt.Fprintf(writer, "    <td><a href=\"showSub?%s\">%s</a></td>\n",
+		sub.mdb.Hostname, sub.publishedStatus.html())
 	timeNow := time.Now()
 	showSince(writer, sub.pollTime, sub.startTime)
 	showDuration(writer, sub.lastScanDuration, false)
@@ -126,6 +128,36 @@ func (herd *Herd) showImage(writer io.Writer, name string, showDefault bool) {
 		fmt.Fprintf(writer, "    <td><font color=\"grey\">%s</font></td>\n",
 			name)
 	}
+}
+
+func (herd *Herd) showSubHandler(w io.Writer, req *http.Request) {
+	subName := req.URL.RawQuery
+	fmt.Fprintf(w, "<title>sub %s</title>", subName)
+	if srpc.CheckTlsRequired() {
+		fmt.Fprintln(w, "<body>")
+	} else {
+		fmt.Fprintln(w, "<body bgcolor=\"#ffb0b0\">")
+		fmt.Fprintln(w,
+			`<h1><center><font color="red">Running in insecure mode. You can get pwned!!!</center></font></h1>`)
+	}
+	if herd.updatesDisabledReason != "" {
+		fmt.Fprintf(w, "<center>")
+		herd.writeDisableStatus(w)
+		fmt.Fprintln(w, "</center>")
+	}
+	fmt.Fprintln(w, "<h3>")
+	sub := herd.getSub(subName)
+	if sub == nil {
+		fmt.Fprintf(w, "Sub: %s UNKNOWN!\n", subName)
+		return
+	}
+	fmt.Fprintf(w, "Information for sub: %s<br>\n", subName)
+	fmt.Fprintln(w, "</h3>")
+	fmt.Fprintf(w, "Status: %s<br>\n", sub.publishedStatus.html())
+	fmt.Fprintln(w, "MDB Data:")
+	fmt.Fprintln(w, "<pre>")
+	json.WriteWithIndent(w, "    ", sub.mdb)
+	fmt.Fprintln(w, "</pre>")
 }
 
 func (sub *Sub) showBusy(writer io.Writer) {

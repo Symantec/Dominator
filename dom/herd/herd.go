@@ -130,6 +130,12 @@ func (herd *Herd) getSelectedSubs(selectFunc func(*Sub) bool) []*Sub {
 	return subs
 }
 
+func (herd *Herd) getSub(name string) *Sub {
+	herd.RLock()
+	defer herd.RUnlock()
+	return herd.subsByName[name]
+}
+
 func (herd *Herd) getReachableSelector(parsedQuery url.ParsedQuery) (
 	func(*Sub) bool, error) {
 	duration, err := parsedQuery.Last()
