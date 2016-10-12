@@ -29,6 +29,7 @@ type Image struct {
 	Triggers     *triggers.Triggers
 	ReleaseNotes *Annotation
 	BuildLog     *Annotation
+	CreatedOn    time.Time
 	ExpiresAt    time.Time
 }
 

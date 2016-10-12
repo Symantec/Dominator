@@ -131,7 +131,9 @@ func buildImageWithHasher(imageSClient *srpc.Client, filter *filter.Filter,
 	}
 	defer imageFile.Close()
 	if partitionTable, err := mbr.Decode(imageFile); err != nil {
-		return nil, err
+		if err != io.EOF {
+			return nil, err
+		} // Else perhaps a tiny tarfile, definitely not a partition table.
 	} else if partitionTable != nil {
 		return buildImageFromRaw(imageSClient, filter, imageFile,
 			partitionTable, h)

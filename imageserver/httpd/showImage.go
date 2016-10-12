@@ -63,6 +63,9 @@ func (s state) showImageHandler(w http.ResponseWriter, req *http.Request) {
 	if image.CreatedBy != "" {
 		fmt.Fprintf(writer, "Created by: %s\n<br>", image.CreatedBy)
 	}
+	if !image.CreatedOn.IsZero() {
+		fmt.Fprintf(writer, "Created on: %s\n<br>", image.CreatedOn)
+	}
 	fmt.Fprintln(writer, "</body>")
 }
 
