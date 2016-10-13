@@ -151,13 +151,53 @@ func (herd *Herd) showSubHandler(w io.Writer, req *http.Request) {
 		fmt.Fprintf(w, "Sub: %s UNKNOWN!\n", subName)
 		return
 	}
-	fmt.Fprintf(w, "Information for sub: %s<br>\n", subName)
+	timeNow := time.Now()
+	subURL := fmt.Sprintf("http://%s:%d/",
+		strings.SplitN(sub.String(), "*", 2)[0], constants.SubPortNumber)
+	fmt.Fprintf(w, "Information for sub: <a href=\"%s\">%s</a><br>\n",
+		subURL, subName)
 	fmt.Fprintln(w, "</h3>")
-	fmt.Fprintf(w, "Status: %s<br>\n", sub.publishedStatus.html())
+	fmt.Fprint(w, "<table border=\"0\">\n")
+	newRow(w, "Required Image", true)
+	sub.herd.showImage(w, sub.mdb.RequiredImage, true)
+	newRow(w, "Planned Image", false)
+	sub.herd.showImage(w, sub.mdb.PlannedImage, false)
+	newRow(w, "Busy time", false)
+	sub.showBusy(w)
+	newRow(w, "Status", false)
+	fmt.Fprintf(w, "    <td>%s</td>\n", sub.publishedStatus.html())
+	newRow(w, "Uptime", false)
+	showSince(w, sub.pollTime, sub.startTime)
+	newRow(w, "Last scan duration", false)
+	showDuration(w, sub.lastScanDuration, false)
+	newRow(w, "Time since last successful poll", false)
+	showSince(w, timeNow, sub.lastPollSucceededTime)
+	newRow(w, "Time since last update", false)
+	showSince(w, timeNow, sub.lastUpdateTime)
+	newRow(w, "Time since last sync", false)
+	showSince(w, timeNow, sub.lastSyncTime)
+	newRow(w, "Last connection duration", false)
+	showDuration(w, sub.lastConnectDuration, false)
+	newRow(w, "Last short poll duration", false)
+	showDuration(w, sub.lastShortPollDuration, !sub.lastPollWasFull)
+	newRow(w, "Last full poll duration", false)
+	showDuration(w, sub.lastFullPollDuration, sub.lastPollWasFull)
+	newRow(w, "Last compute duration", false)
+	showDuration(w, sub.lastComputeUpdateCpuDuration, false)
+	fmt.Fprint(w, "  </tr>\n")
+	fmt.Fprint(w, "</table>\n")
 	fmt.Fprintln(w, "MDB Data:")
 	fmt.Fprintln(w, "<pre>")
 	json.WriteWithIndent(w, "    ", sub.mdb)
 	fmt.Fprintln(w, "</pre>")
+}
+
+func newRow(w io.Writer, row string, first bool) {
+	if !first {
+		fmt.Fprint(w, "  </tr>\n")
+	}
+	fmt.Fprint(w, "  <tr>\n")
+	fmt.Fprintf(w, "    <td>%s:</td>\n", row)
 }
 
 func (sub *Sub) showBusy(writer io.Writer) {
