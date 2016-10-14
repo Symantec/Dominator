@@ -57,6 +57,9 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 			numNew++
 		} else {
 			if sub.mdb.RequiredImage != machine.RequiredImage {
+				if sub.status == statusSynced {
+					sub.status = statusWaitingToPoll
+				}
 				sub.computedInodes = nil
 			}
 			if !reflect.DeepEqual(sub.mdb, machine) {
