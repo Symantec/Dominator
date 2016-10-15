@@ -71,7 +71,9 @@ func (m *Manager) manager(imageInterestChannel <-chan map[string]struct{},
 			}
 			imageClient = m.requestImage(imageClient, name)
 		case name := <-imageExpireChannel:
+			m.Lock()
 			delete(m.imagesByName, name)
+			m.Unlock()
 		case <-timer.C:
 			// Loop over missing (pending) images. First obtain a copy.
 			missingImages := make(map[string]struct{})
@@ -96,12 +98,16 @@ func (m *Manager) setInterest(imageClient *srpc.Client,
 	// Clean up unreferenced images.
 	for name := range m.imagesByName {
 		if _, ok := imageList[name]; !ok {
+			m.Lock()
 			delete(m.imagesByName, name)
+			m.Unlock()
 		}
 	}
 	for name := range m.missingImages {
 		if _, ok := imageList[name]; !ok {
+			m.Lock()
 			delete(m.missingImages, name)
+			m.Unlock()
 		}
 	}
 	return imageClient
