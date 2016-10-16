@@ -129,7 +129,7 @@ func (m *Manager) requestImage(imageClient *srpc.Client,
 		return imageClient
 	}
 	delete(m.imagesByName, name)
-	m.missingImages[name] = nil
+	m.missingImages[name] = err
 	return imageClient
 }
 
