@@ -44,6 +44,7 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 	}
 	wantedImages := make(map[string]struct{})
 	wantedImages[herd.defaultImageName] = struct{}{}
+	wantedImages[herd.nextDefaultImageName] = struct{}{}
 	for _, machine := range mdb.Machines { // Sorted by Hostname.
 		sub := herd.subsByName[machine.Hostname]
 		wantedImages[machine.RequiredImage] = struct{}{}
