@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/url"
 	"io"
@@ -93,7 +94,8 @@ func showSub(writer io.Writer, sub *Sub) {
 	sub.herd.showImage(writer, sub.mdb.RequiredImage, true)
 	sub.herd.showImage(writer, sub.mdb.PlannedImage, false)
 	sub.showBusy(writer)
-	fmt.Fprintf(writer, "    <td>%s</td>\n", sub.publishedStatus.html())
+	fmt.Fprintf(writer, "    <td><a href=\"showSub?%s\">%s</a></td>\n",
+		sub.mdb.Hostname, sub.publishedStatus.html())
 	timeNow := time.Now()
 	showSince(writer, sub.pollTime, sub.startTime)
 	showDuration(writer, sub.lastScanDuration, false)
@@ -126,6 +128,76 @@ func (herd *Herd) showImage(writer io.Writer, name string, showDefault bool) {
 		fmt.Fprintf(writer, "    <td><font color=\"grey\">%s</font></td>\n",
 			name)
 	}
+}
+
+func (herd *Herd) showSubHandler(w io.Writer, req *http.Request) {
+	subName := req.URL.RawQuery
+	fmt.Fprintf(w, "<title>sub %s</title>", subName)
+	if srpc.CheckTlsRequired() {
+		fmt.Fprintln(w, "<body>")
+	} else {
+		fmt.Fprintln(w, "<body bgcolor=\"#ffb0b0\">")
+		fmt.Fprintln(w,
+			`<h1><center><font color="red">Running in insecure mode. You can get pwned!!!</center></font></h1>`)
+	}
+	if herd.updatesDisabledReason != "" {
+		fmt.Fprintf(w, "<center>")
+		herd.writeDisableStatus(w)
+		fmt.Fprintln(w, "</center>")
+	}
+	fmt.Fprintln(w, "<h3>")
+	sub := herd.getSub(subName)
+	if sub == nil {
+		fmt.Fprintf(w, "Sub: %s UNKNOWN!\n", subName)
+		return
+	}
+	timeNow := time.Now()
+	subURL := fmt.Sprintf("http://%s:%d/",
+		strings.SplitN(sub.String(), "*", 2)[0], constants.SubPortNumber)
+	fmt.Fprintf(w, "Information for sub: <a href=\"%s\">%s</a><br>\n",
+		subURL, subName)
+	fmt.Fprintln(w, "</h3>")
+	fmt.Fprint(w, "<table border=\"0\">\n")
+	newRow(w, "Required Image", true)
+	sub.herd.showImage(w, sub.mdb.RequiredImage, true)
+	newRow(w, "Planned Image", false)
+	sub.herd.showImage(w, sub.mdb.PlannedImage, false)
+	newRow(w, "Busy time", false)
+	sub.showBusy(w)
+	newRow(w, "Status", false)
+	fmt.Fprintf(w, "    <td>%s</td>\n", sub.publishedStatus.html())
+	newRow(w, "Uptime", false)
+	showSince(w, sub.pollTime, sub.startTime)
+	newRow(w, "Last scan duration", false)
+	showDuration(w, sub.lastScanDuration, false)
+	newRow(w, "Time since last successful poll", false)
+	showSince(w, timeNow, sub.lastPollSucceededTime)
+	newRow(w, "Time since last update", false)
+	showSince(w, timeNow, sub.lastUpdateTime)
+	newRow(w, "Time since last sync", false)
+	showSince(w, timeNow, sub.lastSyncTime)
+	newRow(w, "Last connection duration", false)
+	showDuration(w, sub.lastConnectDuration, false)
+	newRow(w, "Last short poll duration", false)
+	showDuration(w, sub.lastShortPollDuration, !sub.lastPollWasFull)
+	newRow(w, "Last full poll duration", false)
+	showDuration(w, sub.lastFullPollDuration, sub.lastPollWasFull)
+	newRow(w, "Last compute duration", false)
+	showDuration(w, sub.lastComputeUpdateCpuDuration, false)
+	fmt.Fprint(w, "  </tr>\n")
+	fmt.Fprint(w, "</table>\n")
+	fmt.Fprintln(w, "MDB Data:")
+	fmt.Fprintln(w, "<pre>")
+	json.WriteWithIndent(w, "    ", sub.mdb)
+	fmt.Fprintln(w, "</pre>")
+}
+
+func newRow(w io.Writer, row string, first bool) {
+	if !first {
+		fmt.Fprint(w, "  </tr>\n")
+	}
+	fmt.Fprint(w, "  <tr>\n")
+	fmt.Fprintf(w, "    <td>%s:</td>\n", row)
 }
 
 func (sub *Sub) showBusy(writer io.Writer) {
