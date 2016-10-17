@@ -154,7 +154,6 @@ func (sub *Sub) connectAndPoll() {
 		return
 	}
 	defer srpcClient.Put()
-	sub.status = statusWaitingToPoll
 	if srpcClient.IsEncrypted() {
 		sub.isInsecure = false
 	} else {
