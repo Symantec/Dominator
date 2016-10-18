@@ -150,6 +150,17 @@ func (herd *Herd) setDefaultImage(imageName string) error {
 		herd.defaultImageName = ""
 		return nil
 	}
+	herd.Lock()
+	herd.nextDefaultImageName = imageName
+	herd.Unlock()
+	doLockedCleanup := true
+	defer func() {
+		if doLockedCleanup {
+			herd.Lock()
+			herd.nextDefaultImageName = ""
+			herd.Unlock()
+		}
+	}()
 	img, err := herd.imageManager.Get(imageName, true)
 	if err != nil {
 		return err
@@ -163,6 +174,10 @@ func (herd *Herd) setDefaultImage(imageName string) error {
 	if len(img.FileSystem.InodeTable) > 100 {
 		return errors.New("cannot set default image with more than 100 inodes")
 	}
+	doLockedCleanup = false
+	herd.Lock()
+	defer herd.Unlock()
 	herd.defaultImageName = imageName
+	herd.nextDefaultImageName = ""
 	return nil
 }
