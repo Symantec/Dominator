@@ -150,6 +150,9 @@ func (herd *Herd) setDefaultImage(imageName string) error {
 		herd.defaultImageName = ""
 		return nil
 	}
+	if imageName == herd.defaultImageName {
+		return nil
+	}
 	herd.Lock()
 	herd.nextDefaultImageName = imageName
 	herd.Unlock()
@@ -179,5 +182,13 @@ func (herd *Herd) setDefaultImage(imageName string) error {
 	defer herd.Unlock()
 	herd.defaultImageName = imageName
 	herd.nextDefaultImageName = ""
+	for _, sub := range herd.subsByIndex {
+		if sub.mdb.RequiredImage == "" {
+			if sub.status == statusSynced {
+				sub.status = statusWaitingToPoll
+			}
+			sub.computedInodes = nil
+		}
+	}
 	return nil
 }
