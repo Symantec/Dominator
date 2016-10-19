@@ -184,10 +184,13 @@ func (herd *Herd) setDefaultImage(imageName string) error {
 	herd.nextDefaultImageName = ""
 	for _, sub := range herd.subsByIndex {
 		if sub.mdb.RequiredImage == "" {
-			if sub.status == statusSynced {
+			sub.computedInodes = nil
+			if sub.status == statusSynced { // Synced to previous default image.
 				sub.status = statusWaitingToPoll
 			}
-			sub.computedInodes = nil
+			if sub.status == statusImageUndefined {
+				sub.status = statusWaitingToPoll
+			}
 		}
 	}
 	return nil
