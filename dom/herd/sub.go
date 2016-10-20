@@ -75,19 +75,21 @@ func (sub *Sub) getComputedFiles(im *image.Image) []filegenclient.ComputedFile {
 }
 
 func (sub *Sub) tryMakeBusy() bool {
-	sub.busyMutex.Lock()
-	defer sub.busyMutex.Unlock()
+	sub.busyFlagMutex.Lock()
+	defer sub.busyFlagMutex.Unlock()
 	if sub.busy {
 		return false
 	}
 	sub.busyStartTime = time.Now()
 	sub.busy = true
+	sub.busyMutex.Lock()
 	return true
 }
 
 func (sub *Sub) makeUnbusy() {
-	sub.busyMutex.Lock()
-	defer sub.busyMutex.Unlock()
+	sub.busyMutex.Unlock()
+	sub.busyFlagMutex.Lock()
+	defer sub.busyFlagMutex.Unlock()
 	sub.busyStopTime = time.Now()
 	sub.busy = false
 }
@@ -108,11 +110,11 @@ func (sub *Sub) connectAndPoll() {
 		sub.publishedStatus = sub.status
 	}()
 	sub.lastConnectionStartTime = time.Now()
-	sub.busyMutex.Lock()
+	sub.busyFlagMutex.Lock()
 	if sub.clientResource == nil {
 		sub.clientResource = srpc.NewClientResource("tcp", sub.address())
 	}
-	sub.busyMutex.Unlock()
+	sub.busyFlagMutex.Unlock()
 	srpcClient, err := sub.clientResource.GetHTTP(nil,
 		time.Second*time.Duration(*subConnectTimeout))
 	dialReturnedTime := time.Now()
@@ -185,14 +187,14 @@ func (sub *Sub) processFileUpdates() bool {
 		image := sub.herd.imageManager.GetNoError(sub.getRequiredImageName())
 		if image != nil && sub.computedInodes == nil {
 			sub.computedInodes = make(map[string]*filesystem.RegularInode)
-			sub.busyMutex.Lock()
+			sub.busyFlagMutex.Lock()
 			if sub.deleting {
-				sub.busyMutex.Unlock()
+				sub.busyFlagMutex.Unlock()
 				return false
 			}
 			sub.herd.computedFilesManager.Update(
 				filegenclient.Machine{sub.mdb, sub.getComputedFiles(image)})
-			sub.busyMutex.Unlock()
+			sub.busyFlagMutex.Unlock()
 		}
 		select {
 		case fileInfos := <-sub.fileUpdateChannel:

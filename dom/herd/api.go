@@ -68,8 +68,9 @@ type Sub struct {
 	clientResource               *srpc.ClientResource
 	computedInodes               map[string]*filesystem.RegularInode
 	fileUpdateChannel            <-chan []filegenproto.FileInfo
-	busyMutex                    sync.Mutex
+	busyFlagMutex                sync.Mutex
 	busy                         bool
+	busyMutex                    sync.Mutex
 	deleting                     bool
 	busyStartTime                time.Time
 	busyStopTime                 time.Time
