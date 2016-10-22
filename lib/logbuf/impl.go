@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -54,7 +55,32 @@ func (lb *LogBuffer) createLogDirectory() error {
 	} else if !fi.IsDir() {
 		return errors.New(lb.logDir + ": is not a directory")
 	}
+	lb.scanPreviousForPanic()
 	return lb.enforceQuota()
+}
+
+func (lb *LogBuffer) scanPreviousForPanic() {
+	target, err := os.Readlink(path.Join(lb.logDir, "latest"))
+	if err != nil {
+		return
+	}
+	file, err := os.Open(path.Join(lb.logDir, target))
+	if err != nil {
+		return
+	}
+	go func() {
+		defer file.Close()
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "panic: ") {
+				lb.rwMutex.Lock()
+				lb.panicLogfile = &target
+				lb.rwMutex.Unlock()
+				return
+			}
+		}
+	}()
 }
 
 func (lb *LogBuffer) dump(writer io.Writer, prefix, postfix string,

@@ -36,6 +36,7 @@ func (lb *LogBuffer) addHttpHandlers() {
 	http.HandleFunc("/logs", lb.httpListHandler)
 	http.HandleFunc("/logs/dump", lb.httpDumpHandler)
 	http.HandleFunc("/logs/showLast", lb.httpShowLastHandler)
+	http.HandleFunc("/logs/showPreviousPanic", lb.httpShowPreviousPanicHandler)
 }
 
 func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
@@ -170,7 +171,6 @@ func (lb *LogBuffer) httpDumpHandler(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		fmt.Fprintln(writer, err)
 	}
-	return
 }
 
 func (lb *LogBuffer) httpShowLastHandler(w http.ResponseWriter,
@@ -274,8 +274,45 @@ func (lb *LogBuffer) list(recentFirst bool) ([]string, error) {
 	return names, nil
 }
 
+func (lb *LogBuffer) httpShowPreviousPanicHandler(w http.ResponseWriter,
+	req *http.Request) {
+	writer := bufio.NewWriter(w)
+	defer writer.Flush()
+	panicLogfile := lb.panicLogfile
+	if panicLogfile == nil {
+		fmt.Fprintln(writer, "Last invocation did not panic!")
+		return
+	}
+	if *panicLogfile == "" {
+		fmt.Fprintln(writer, "Logfile for previous invocation has expired")
+		return
+	}
+	file, err := os.Open(path.Join(lb.logDir, *panicLogfile))
+	if err != nil {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	defer file.Close()
+	_, err = io.Copy(writer, bufio.NewReader(file))
+	if err != nil {
+		fmt.Fprintln(writer, err)
+	}
+}
+
 func (lb *LogBuffer) writeHtml(writer io.Writer) {
 	fmt.Fprintln(writer, `<a href="logs">Logs:</a><br>`)
+	panicLogfile := lb.panicLogfile
+	if panicLogfile != nil {
+		fmt.Fprint(writer,
+			"<font color=\"red\">Last invocation paniced</font>, ")
+		if *panicLogfile == "" {
+			fmt.Fprintln(writer, "logfile no longer available<br>")
+		} else {
+			fmt.Fprintln(writer,
+				"<a href=\"logs/showPreviousPanic\">logfile</a><br>")
+		}
+	}
 	fmt.Fprintln(writer, "<pre>")
 	lb.Dump(writer, "", "", false)
 	fmt.Fprintln(writer, "</pre>")
