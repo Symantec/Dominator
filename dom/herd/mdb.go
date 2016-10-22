@@ -84,12 +84,12 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 	// Delete flagged subs (those not in the new MDB).
 	for subHostname := range subsToDelete {
 		sub := herd.subsByName[subHostname]
-		sub.busyMutex.Lock()
+		sub.busyFlagMutex.Lock()
 		sub.deleting = true
 		if sub.clientResource != nil {
 			sub.clientResource.ScheduleClose()
 		}
-		sub.busyMutex.Unlock()
+		sub.busyFlagMutex.Unlock()
 		herd.computedFilesManager.Remove(subHostname)
 		delete(herd.subsByName, subHostname)
 		numDeleted++
