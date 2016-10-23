@@ -261,14 +261,13 @@ func (lb *LogBuffer) dumpSince(writer io.Writer, name string,
 	minLength := len(timeFormat) + 2
 	for scanner.Scan() {
 		line := scanner.Text()
-		if len(line) < minLength {
-			continue
-		}
-		timeString := line[:minLength-2]
-		timeStamp, err := time.ParseInLocation(timeFormat, timeString,
-			time.Local)
-		if err == nil && timeStamp.Before(earliestTime) {
-			continue
+		if len(line) >= minLength {
+			timeString := line[:minLength-2]
+			timeStamp, err := time.ParseInLocation(timeFormat, timeString,
+				time.Local)
+			if err == nil && timeStamp.Before(earliestTime) {
+				continue
+			}
 		}
 		if recentFirst {
 			lines = append(lines, line)
