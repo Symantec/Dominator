@@ -243,6 +243,8 @@ func (lb *LogBuffer) showRecent(w io.Writer, duration time.Duration,
 		reverseStrings(names)
 	}
 	fmt.Fprintln(writer, "<body>")
+	fmt.Fprintln(writer,
+		`<font size=2 style="font-family:'Courier New', monospace">`)
 	cWriter := &countingWriter{writer: writer}
 	lb.flush()
 	for _, name := range names {
