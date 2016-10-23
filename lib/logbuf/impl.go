@@ -64,7 +64,8 @@ func (lb *LogBuffer) scanPreviousForPanic() {
 	if err != nil {
 		return
 	}
-	file, err := os.Open(path.Join(lb.logDir, target))
+	targetPath := path.Join(lb.logDir, target)
+	file, err := os.Open(targetPath)
 	if err != nil {
 		return
 	}
@@ -77,6 +78,11 @@ func (lb *LogBuffer) scanPreviousForPanic() {
 				lb.rwMutex.Lock()
 				lb.panicLogfile = &target
 				lb.rwMutex.Unlock()
+				if fi, err := os.Stat(targetPath); err != nil {
+					return
+				} else {
+					os.Chmod(targetPath, fi.Mode()|os.ModeSticky)
+				}
 				return
 			}
 		}

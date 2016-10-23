@@ -47,7 +47,7 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 	defer writer.Flush()
 	parsedQuery := url.ParseQuery(req.URL)
 	_, recentFirst := parsedQuery.Flags["recentFirst"]
-	names, err := lb.list(recentFirst)
+	names, panicMap, err := lb.list(recentFirst)
 	if err != nil {
 		fmt.Fprintln(writer, err)
 		return
@@ -91,8 +91,13 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 				"<a href=\"logs/dump?name=%s%s\">%s</a> (current)<br>\n",
 				name, recentFirstString, name)
 		} else {
-			fmt.Fprintf(writer, "<a href=\"logs/dump?name=%s%s\">%s</a><br>\n",
-				name, recentFirstString, name)
+			hasPanic := ""
+			if _, ok := panicMap[name]; ok {
+				hasPanic = " (has panic log)"
+			}
+			fmt.Fprintf(writer,
+				"<a href=\"logs/dump?name=%s%s\">%s</a>%s<br>\n",
+				name, recentFirstString, name, hasPanic)
 		}
 	}
 	if !recentFirst {
@@ -215,7 +220,7 @@ func (lb *LogBuffer) showRecent(w io.Writer, duration time.Duration,
 	recentFirst bool) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
-	names, err := lb.list(true)
+	names, _, err := lb.list(true)
 	if err != nil {
 		fmt.Fprintln(writer, err)
 		return
@@ -250,28 +255,32 @@ func (lb *LogBuffer) showRecent(w io.Writer, duration time.Duration,
 	fmt.Fprintln(writer, "</body>")
 }
 
-func (lb *LogBuffer) list(recentFirst bool) ([]string, error) {
+func (lb *LogBuffer) list(recentFirst bool) (
+	[]string, map[string]struct{}, error) {
 	file, err := os.Open(lb.logDir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	names, err := file.Readdirnames(-1)
+	fileInfos, err := file.Readdir(-1)
 	file.Close()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	tmpNames := make([]string, 0, len(names))
-	for _, name := range names {
-		if strings.Count(name, ":") == 3 {
-			tmpNames = append(tmpNames, name)
+	panicMap := make(map[string]struct{})
+	names := make([]string, 0, len(fileInfos))
+	for _, fi := range fileInfos {
+		if strings.Count(fi.Name(), ":") == 3 {
+			names = append(names, fi.Name())
+			if fi.Mode()&os.ModeSticky != 0 {
+				panicMap[fi.Name()] = struct{}{}
+			}
 		}
 	}
-	names = tmpNames
 	sort.Strings(names)
 	if recentFirst {
 		reverseStrings(names)
 	}
-	return names, nil
+	return names, panicMap, nil
 }
 
 func (lb *LogBuffer) httpShowPreviousPanicHandler(w http.ResponseWriter,
