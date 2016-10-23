@@ -46,7 +46,7 @@ func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 				<-disableScanAcknowledge
 				continue
 			}
-			logger.Printf("Error scanning\t%s\n", err)
+			logger.Printf("Error scanning: %s\n", err)
 		} else {
 			oldFS.InodeTable = fs.InodeTable
 			oldFS.DirectoryInode = fs.DirectoryInode

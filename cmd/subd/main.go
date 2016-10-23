@@ -64,14 +64,14 @@ func init() {
 func sanityCheck() bool {
 	r_devnum, err := fsbench.GetDevnumForFile(*rootDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to get device number for: %s\t%s\n",
+		fmt.Fprintf(os.Stderr, "Unable to get device number for: %s: %s\n",
 			*rootDir, err)
 		return false
 	}
 	subdDirPathname := path.Join(*rootDir, *subdDir)
 	s_devnum, err := fsbench.GetDevnumForFile(subdDirPathname)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to get device number for: %s\t%s\n",
+		fmt.Fprintf(os.Stderr, "Unable to get device number for: %s: %s\n",
 			subdDirPathname, err)
 		return false
 	}
@@ -85,7 +85,7 @@ func sanityCheck() bool {
 
 func createDirectory(dirname string) bool {
 	if err := os.MkdirAll(dirname, 0750); err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to create directory: %s\t%s\n",
+		fmt.Fprintf(os.Stderr, "Unable to create directory: %s: %s\n",
 			dirname, err)
 		return false
 	}
@@ -95,7 +95,7 @@ func createDirectory(dirname string) bool {
 func mountTmpfs(dirname string) bool {
 	var statfs syscall.Statfs_t
 	if err := syscall.Statfs(dirname, &statfs); err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to create Statfs: %s\t%s\n",
+		fmt.Fprintf(os.Stderr, "Unable to create Statfs: %s: %s\n",
 			dirname, err)
 		return false
 	}
@@ -105,7 +105,7 @@ func mountTmpfs(dirname string) bool {
 		if err == nil {
 			fmt.Printf("Mounted tmpfs on: %s\n", dirname)
 		} else {
-			fmt.Fprintf(os.Stderr, "Unable to mount tmpfs on: %s\t%s\n",
+			fmt.Fprintf(os.Stderr, "Unable to mount tmpfs on: %s: %s\n",
 				dirname, err)
 			return false
 		}
@@ -161,7 +161,7 @@ func getCachedFsSpeed(workingRootDir string, cacheDirname string) (bytesPerSecon
 	blocksPerSecond = 0
 	devnum, err := fsbench.GetDevnumForFile(workingRootDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to get device number for: %s\t%s\n",
+		fmt.Fprintf(os.Stderr, "Unable to get device number for: %s: %s\n",
 			workingRootDir, err)
 		return 0, 0, false, false
 	}
@@ -180,12 +180,12 @@ func getCachedFsSpeed(workingRootDir string, cacheDirname string) (bytesPerSecon
 	}
 	bytesPerSecond, blocksPerSecond, err = fsbench.GetReadSpeed(workingRootDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to measure read speed\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to measure read speed: %s\n", err)
 		return 0, 0, true, false
 	}
 	file, err = os.Create(cacheFilename)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to open: %s for write\t%s\n",
+		fmt.Fprintf(os.Stderr, "Unable to open: %s for write: %s\n",
 			cacheFilename, err)
 		return 0, 0, true, false
 	}
@@ -294,7 +294,7 @@ func main() {
 	var err error
 	configuration.ScanFilter, err = filter.New(scanExcludeList)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to set default scan exclusions\t%s\n",
+		fmt.Fprintf(os.Stderr, "Unable to set default scan exclusions: %s\n",
 			err)
 		os.Exit(1)
 	}
@@ -327,13 +327,13 @@ func main() {
 		configMetricsDir, err := tricorder.RegisterDirectory("/config")
 		if err != nil {
 			fmt.Fprintf(os.Stderr,
-				"Unable to create /config metrics directory\t%s\n",
+				"Unable to create /config metrics directory: %s\n",
 				err)
 			os.Exit(1)
 		}
 		configuration.RegisterMetrics(configMetricsDir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to create config metrics\t%s\n", err)
+			fmt.Fprintf(os.Stderr, "Unable to create config metrics: %s\n", err)
 			os.Exit(1)
 		}
 		httpd.AddHtmlWriter(rpcdHtmlWriter)
@@ -344,7 +344,7 @@ func main() {
 			"Scanned File System",
 			&DumpableFileSystemHistory{&fsh})
 		if err = httpd.StartServer(*portNum); err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
+			fmt.Fprintf(os.Stderr, "Unable to create http server: %s\n", err)
 			os.Exit(1)
 		}
 		fsh.Update(nil)
@@ -360,7 +360,7 @@ func main() {
 				circularBuffer.Flush()
 				err = syscall.Exec(os.Args[0], os.Args, os.Environ())
 				if err != nil {
-					logger.Printf("Unable to Exec:%s\t%s\n", os.Args[0], err)
+					logger.Printf("Unable to Exec:%s: %s\n", os.Args[0], err)
 				}
 			case <-sigtermChannel:
 				logger.Printf("Caught SIGTERM: performing graceful cleanup\n")
