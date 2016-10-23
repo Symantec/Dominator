@@ -18,7 +18,7 @@ func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (
 	}
 	conn, err := client.Call("ObjectServer.GetObjects")
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error calling\t%s\n", err))
+		return nil, errors.New(fmt.Sprintf("Error calling: %s\n", err))
 	}
 	var request objectserver.GetObjectsRequest
 	var reply objectserver.GetObjectsResponse
