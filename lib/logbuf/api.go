@@ -41,6 +41,7 @@ type LogBuffer struct {
 	usage         uint64
 	quota         uint64
 	writeNotifier chan<- struct{}
+	panicLogfile  *string // Name of last invocation logfile if it has a panic.
 }
 
 // New returns a *LogBuffer with the specified number of lines of buffer.

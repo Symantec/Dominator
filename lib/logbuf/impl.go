@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -54,7 +55,38 @@ func (lb *LogBuffer) createLogDirectory() error {
 	} else if !fi.IsDir() {
 		return errors.New(lb.logDir + ": is not a directory")
 	}
+	lb.scanPreviousForPanic()
 	return lb.enforceQuota()
+}
+
+func (lb *LogBuffer) scanPreviousForPanic() {
+	target, err := os.Readlink(path.Join(lb.logDir, "latest"))
+	if err != nil {
+		return
+	}
+	targetPath := path.Join(lb.logDir, target)
+	file, err := os.Open(targetPath)
+	if err != nil {
+		return
+	}
+	go func() {
+		defer file.Close()
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "panic: ") {
+				lb.rwMutex.Lock()
+				lb.panicLogfile = &target
+				lb.rwMutex.Unlock()
+				if fi, err := os.Stat(targetPath); err != nil {
+					return
+				} else {
+					os.Chmod(targetPath, fi.Mode()|os.ModeSticky)
+				}
+				return
+			}
+		}
+	}()
 }
 
 func (lb *LogBuffer) dump(writer io.Writer, prefix, postfix string,
@@ -229,14 +261,13 @@ func (lb *LogBuffer) dumpSince(writer io.Writer, name string,
 	minLength := len(timeFormat) + 2
 	for scanner.Scan() {
 		line := scanner.Text()
-		if len(line) < minLength {
-			continue
-		}
-		timeString := line[:minLength-2]
-		timeStamp, err := time.ParseInLocation(timeFormat, timeString,
-			time.Local)
-		if err == nil && timeStamp.Before(earliestTime) {
-			continue
+		if len(line) >= minLength {
+			timeString := line[:minLength-2]
+			timeStamp, err := time.ParseInLocation(timeFormat, timeString,
+				time.Local)
+			if err == nil && timeStamp.Before(earliestTime) {
+				continue
+			}
 		}
 		if recentFirst {
 			lines = append(lines, line)

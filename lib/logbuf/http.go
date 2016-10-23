@@ -36,6 +36,7 @@ func (lb *LogBuffer) addHttpHandlers() {
 	http.HandleFunc("/logs", lb.httpListHandler)
 	http.HandleFunc("/logs/dump", lb.httpDumpHandler)
 	http.HandleFunc("/logs/showLast", lb.httpShowLastHandler)
+	http.HandleFunc("/logs/showPreviousPanic", lb.httpShowPreviousPanicHandler)
 }
 
 func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
@@ -46,7 +47,7 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 	defer writer.Flush()
 	parsedQuery := url.ParseQuery(req.URL)
 	_, recentFirst := parsedQuery.Flags["recentFirst"]
-	names, err := lb.list(recentFirst)
+	names, panicMap, err := lb.list(recentFirst)
 	if err != nil {
 		fmt.Fprintln(writer, err)
 		return
@@ -90,8 +91,13 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 				"<a href=\"logs/dump?name=%s%s\">%s</a> (current)<br>\n",
 				name, recentFirstString, name)
 		} else {
-			fmt.Fprintf(writer, "<a href=\"logs/dump?name=%s%s\">%s</a><br>\n",
-				name, recentFirstString, name)
+			hasPanic := ""
+			if _, ok := panicMap[name]; ok {
+				hasPanic = " (has panic log)"
+			}
+			fmt.Fprintf(writer,
+				"<a href=\"logs/dump?name=%s%s\">%s</a>%s<br>\n",
+				name, recentFirstString, name, hasPanic)
 		}
 	}
 	if !recentFirst {
@@ -170,7 +176,6 @@ func (lb *LogBuffer) httpDumpHandler(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		fmt.Fprintln(writer, err)
 	}
-	return
 }
 
 func (lb *LogBuffer) httpShowLastHandler(w http.ResponseWriter,
@@ -215,7 +220,7 @@ func (lb *LogBuffer) showRecent(w io.Writer, duration time.Duration,
 	recentFirst bool) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
-	names, err := lb.list(true)
+	names, _, err := lb.list(true)
 	if err != nil {
 		fmt.Fprintln(writer, err)
 		return
@@ -238,6 +243,8 @@ func (lb *LogBuffer) showRecent(w io.Writer, duration time.Duration,
 		reverseStrings(names)
 	}
 	fmt.Fprintln(writer, "<body>")
+	fmt.Fprintln(writer,
+		`<font size=2 style="font-family:'Courier New', monospace">`)
 	cWriter := &countingWriter{writer: writer}
 	lb.flush()
 	for _, name := range names {
@@ -250,32 +257,73 @@ func (lb *LogBuffer) showRecent(w io.Writer, duration time.Duration,
 	fmt.Fprintln(writer, "</body>")
 }
 
-func (lb *LogBuffer) list(recentFirst bool) ([]string, error) {
+func (lb *LogBuffer) list(recentFirst bool) (
+	[]string, map[string]struct{}, error) {
 	file, err := os.Open(lb.logDir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	names, err := file.Readdirnames(-1)
+	fileInfos, err := file.Readdir(-1)
 	file.Close()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	tmpNames := make([]string, 0, len(names))
-	for _, name := range names {
-		if strings.Count(name, ":") == 3 {
-			tmpNames = append(tmpNames, name)
+	panicMap := make(map[string]struct{})
+	names := make([]string, 0, len(fileInfos))
+	for _, fi := range fileInfos {
+		if strings.Count(fi.Name(), ":") == 3 {
+			names = append(names, fi.Name())
+			if fi.Mode()&os.ModeSticky != 0 {
+				panicMap[fi.Name()] = struct{}{}
+			}
 		}
 	}
-	names = tmpNames
 	sort.Strings(names)
 	if recentFirst {
 		reverseStrings(names)
 	}
-	return names, nil
+	return names, panicMap, nil
+}
+
+func (lb *LogBuffer) httpShowPreviousPanicHandler(w http.ResponseWriter,
+	req *http.Request) {
+	writer := bufio.NewWriter(w)
+	defer writer.Flush()
+	panicLogfile := lb.panicLogfile
+	if panicLogfile == nil {
+		fmt.Fprintln(writer, "Last invocation did not panic!")
+		return
+	}
+	if *panicLogfile == "" {
+		fmt.Fprintln(writer, "Logfile for previous invocation has expired")
+		return
+	}
+	file, err := os.Open(path.Join(lb.logDir, *panicLogfile))
+	if err != nil {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	defer file.Close()
+	_, err = io.Copy(writer, bufio.NewReader(file))
+	if err != nil {
+		fmt.Fprintln(writer, err)
+	}
 }
 
 func (lb *LogBuffer) writeHtml(writer io.Writer) {
 	fmt.Fprintln(writer, `<a href="logs">Logs:</a><br>`)
+	panicLogfile := lb.panicLogfile
+	if panicLogfile != nil {
+		fmt.Fprint(writer,
+			"<font color=\"red\">Last invocation paniced</font>, ")
+		if *panicLogfile == "" {
+			fmt.Fprintln(writer, "logfile no longer available<br>")
+		} else {
+			fmt.Fprintln(writer,
+				"<a href=\"logs/showPreviousPanic\">logfile</a><br>")
+		}
+	}
 	fmt.Fprintln(writer, "<pre>")
 	lb.Dump(writer, "", "", false)
 	fmt.Fprintln(writer, "</pre>")
