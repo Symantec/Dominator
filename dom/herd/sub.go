@@ -541,7 +541,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	sub.lastUpdateTime = time.Now()
 	if err := client.CallUpdate(srpcClient, request, &reply); err != nil {
 		srpcClient.Close()
-		logger.Printf("Error calling %s:Subd.Update()\t%s\n", sub, err)
+		logger.Printf("Error calling %s:Subd.Update(): %s\n", sub, err)
 		if err == srpc.ErrorAccessToMethodDenied {
 			return false, statusUpdateDenied
 		}
@@ -587,7 +587,7 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 	}
 	if err := client.Cleanup(srpcClient, hashes); err != nil {
 		srpcClient.Close()
-		logger.Printf("Error calling %s:Subd.Cleanup()\t%s\n", sub, err)
+		logger.Printf("Error calling %s:Subd.Cleanup(): %s\n", sub, err)
 	}
 }
 

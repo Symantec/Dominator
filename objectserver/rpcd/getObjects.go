@@ -63,7 +63,7 @@ func (objSrv *srpcType) GetObjects(conn *srpc.Conn) error {
 		nCopied, err := io.Copy(conn.Writer, reader)
 		reader.Close()
 		if err != nil {
-			objSrv.logger.Printf("Error copying:\t%s\n", err)
+			objSrv.logger.Printf("Error copying: %s\n", err)
 			return err
 		}
 		if nCopied != int64(length) {

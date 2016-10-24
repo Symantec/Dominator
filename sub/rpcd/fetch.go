@@ -95,7 +95,7 @@ func (t *rpcType) doFetch(request sub.FetchRequest) error {
 	}
 	objectsReader, err := objectServer.GetObjects(request.Hashes)
 	if err != nil {
-		t.logger.Printf("Error getting object reader:\t%s\n", err.Error())
+		t.logger.Printf("Error getting object reader: %s\n", err.Error())
 		return err
 	}
 	defer objectsReader.Close()
