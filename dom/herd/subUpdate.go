@@ -10,13 +10,16 @@ import (
 // Returns (idle, missing), idle=true if no update needs to be performed.
 func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 	bool, bool) {
+	waitStartTime := time.Now()
 	sub.herd.computeSemaphore <- struct{}{}
+	computeSlotWaitTimeDistribution.Add(time.Since(waitStartTime))
 	defer func() { <-sub.herd.computeSemaphore }()
 	requiredImage := sub.herd.imageManager.GetNoError(
 		sub.getRequiredImageName())
 	request.ImageName = sub.getRequiredImageName()
 	request.Triggers = requiredImage.Triggers
 	var rusageStart, rusageStop syscall.Rusage
+	computeStartTime := time.Now()
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
 	subObj := lib.Sub{
 		Hostname:       sub.mdb.Hostname,
@@ -28,6 +31,7 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 		return false, true
 	}
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStop)
+	computeTimeDistribution.Add(time.Since(computeStartTime))
 	sub.lastComputeUpdateCpuDuration = time.Duration(
 		rusageStop.Utime.Sec)*time.Second +
 		time.Duration(rusageStop.Utime.Usec)*time.Microsecond -

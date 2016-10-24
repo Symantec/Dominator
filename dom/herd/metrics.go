@@ -7,6 +7,8 @@ import (
 
 var latencyBucketer *tricorder.Bucketer
 var computeCpuTimeDistribution *tricorder.CumulativeDistribution
+var computeSlotWaitTimeDistribution *tricorder.CumulativeDistribution
+var computeTimeDistribution *tricorder.CumulativeDistribution
 var connectDistribution *tricorder.CumulativeDistribution
 var mdbUpdateTimeDistribution *tricorder.CumulativeDistribution
 var fullPollDistribution *tricorder.CumulativeDistribution
@@ -17,6 +19,10 @@ func init() {
 	latencyBucketer = tricorder.NewGeometricBucketer(0.1, 100e3)
 	computeCpuTimeDistribution = makeMetric(latencyBucketer,
 		"/compute-cputime", "compute CPU time")
+	computeSlotWaitTimeDistribution = makeMetric(latencyBucketer,
+		"/compute-slot-wait-time", "compute slot wait time")
+	computeTimeDistribution = makeMetric(latencyBucketer,
+		"/compute-time", "compute time")
 	connectDistribution = makeMetric(latencyBucketer,
 		"/connect-latency", "connect duration")
 	mdbUpdateTimeDistribution = makeMetric(latencyBucketer,
