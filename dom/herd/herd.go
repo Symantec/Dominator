@@ -36,7 +36,11 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	numPollSlots := uint(runtime.NumCPU()) * *pollSlotsPerCPU
 	herd.pollSemaphore = make(chan struct{}, numPollSlots)
 	herd.pushSemaphore = make(chan struct{}, runtime.NumCPU())
-	herd.computeSemaphore = make(chan struct{}, runtime.NumCPU())
+	numComputeSlots := runtime.NumCPU() - 1
+	if numComputeSlots < 1 {
+		numComputeSlots = 1
+	}
+	herd.computeSemaphore = make(chan struct{}, numComputeSlots)
 	herd.currentScanStartTime = time.Now()
 	return &herd
 }
