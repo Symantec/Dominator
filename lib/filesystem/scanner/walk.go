@@ -312,7 +312,7 @@ func (h simpleHasher) Hash(reader io.Reader, length uint64) (hash.Hash, error) {
 	hasher := sha512.New()
 	var hashVal hash.Hash
 	nCopied, err := io.CopyN(hasher, reader, int64(length))
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return hashVal, err
 	}
 	if nCopied != int64(length) {
