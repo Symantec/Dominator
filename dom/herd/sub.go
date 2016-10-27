@@ -95,6 +95,7 @@ func (sub *Sub) makeUnbusy() {
 }
 
 func (sub *Sub) connectAndPoll() {
+	sub.loadConfiguration()
 	if sub.processFileUpdates() {
 		sub.generationCount = 0 // Force a full poll.
 	}
@@ -174,17 +175,20 @@ func (sub *Sub) connectAndPoll() {
 	<-sub.herd.pollSemaphore
 }
 
-func (sub *Sub) getRequiredImageName() string {
+func (sub *Sub) loadConfiguration() {
+	// Get a stable copy of the configuration.
 	if sub.mdb.RequiredImage != "" {
-		return sub.mdb.RequiredImage
+		sub.requiredImageName = sub.mdb.RequiredImage
+	} else {
+		sub.requiredImageName = sub.herd.defaultImageName
 	}
-	return sub.herd.defaultImageName
+	sub.plannedImageName = sub.mdb.PlannedImage
 }
 
 func (sub *Sub) processFileUpdates() bool {
 	haveUpdates := false
 	for {
-		image := sub.herd.imageManager.GetNoError(sub.getRequiredImageName())
+		image := sub.herd.imageManager.GetNoError(sub.requiredImageName)
 		if image != nil && sub.computedInodes == nil {
 			sub.computedInodes = make(map[string]*filesystem.RegularInode)
 			sub.busyFlagMutex.Lock()
@@ -236,7 +240,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	// If the planned image has just become available, force a full poll.
 	if previousStatus == statusSynced &&
 		!sub.havePlannedImage &&
-		sub.herd.imageManager.GetNoError(sub.mdb.PlannedImage) != nil {
+		sub.herd.imageManager.GetNoError(sub.plannedImageName) != nil {
 		sub.havePlannedImage = true
 		sub.generationCount = 0 // Force a full poll.
 	}
@@ -260,7 +264,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
 	haveImage := false
-	if sub.herd.imageManager.GetNoError(sub.getRequiredImageName()) == nil {
+	if sub.herd.imageManager.GetNoError(sub.requiredImageName) == nil {
 		request.ShortPollOnly = true
 	} else {
 		haveImage = true
@@ -348,7 +352,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if !haveImage {
-		if sub.getRequiredImageName() == "" {
+		if sub.requiredImageName == "" {
 			sub.status = statusImageUndefined
 		} else {
 			sub.status = statusImageNotReady
@@ -378,7 +382,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(srpcClient,
-		sub.getRequiredImageName(), true); !idle {
+		sub.requiredImageName, true); !idle {
 		sub.status = status
 		sub.reclaim()
 		return
@@ -389,8 +393,8 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.reclaim()
 		return
 	}
-	if idle, status := sub.fetchMissingObjects(srpcClient,
-		sub.mdb.PlannedImage, false); !idle {
+	if idle, status := sub.fetchMissingObjects(srpcClient, sub.plannedImageName,
+		false); !idle {
 		if status != statusImageNotReady {
 			sub.status = status
 			sub.reclaim()
@@ -402,7 +406,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.lastSyncTime = time.Now()
 	}
 	sub.status = statusSynced
-	sub.cleanup(srpcClient, sub.mdb.PlannedImage)
+	sub.cleanup(srpcClient)
 	sub.reclaim()
 }
 
@@ -519,8 +523,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	logger := sub.herd.logger
 	if !sub.pendingSafetyClear {
 		// Perform a cheap safety check.
-		requiredImage := sub.herd.imageManager.GetNoError(
-			sub.getRequiredImageName())
+		requiredImage := sub.herd.imageManager.GetNoError(sub.requiredImageName)
 		if requiredImage.Filter != nil &&
 			len(sub.fileSystem.InodeTable)>>1 >
 				len(requiredImage.FileSystem.InodeTable) {
@@ -551,7 +554,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	return false, statusUpdating
 }
 
-func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
+func (sub *Sub) cleanup(srpcClient *srpc.Client) {
 	logger := sub.herd.logger
 	unusedObjects := make(map[hash.Hash]bool)
 	for _, hash := range sub.objectCache {
@@ -566,7 +569,7 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 			}
 		}
 	}
-	image := sub.herd.imageManager.GetNoError(plannedImageName)
+	image := sub.herd.imageManager.GetNoError(sub.plannedImageName)
 	if image != nil {
 		for _, inode := range image.FileSystem.InodeTable {
 			if inode, ok := inode.(*filesystem.RegularInode); ok {

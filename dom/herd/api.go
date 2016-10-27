@@ -65,6 +65,8 @@ type HtmlWriter interface {
 type Sub struct {
 	herd                         *Herd
 	mdb                          mdb.Machine
+	requiredImageName            string // Updated only by sub goroutine.
+	plannedImageName             string // Updated only by sub goroutine.
 	clientResource               *srpc.ClientResource
 	computedInodes               map[string]*filesystem.RegularInode
 	fileUpdateChannel            <-chan []filegenproto.FileInfo
