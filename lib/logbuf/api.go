@@ -54,6 +54,13 @@ type LogBuffer struct {
 //                    written
 //  -logQuota:        Log quota in MiB. If exceeded, old logs are deleted.
 //                    If zero, the quota will be 16 KiB
+//  -logLevel         Log level. A log message must have at least
+//                    this level to be recorded. Must be one of the predefined
+//                    levels out of logbuf/level package such as
+//                    TRACE, DEBUG, INFO, WARN, or ERR.
+//                    If it isn't one of these values, the default is record
+//                    all logs. See logbuf/level package for more details
+//                    on assigning a level to a log message.
 func New() *LogBuffer {
 	quota := uint64(*logQuota) << 20
 	if quota < 16384 {
