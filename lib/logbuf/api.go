@@ -15,19 +15,15 @@ import (
 	"os"
 	"path"
 	"sync"
+	"time"
 )
 
 var (
-	alsoLogToStderr = flag.Bool("alsoLogToStderr", false,
-		"If true, also write logs to stderr")
-	idleMarkTimeout = flag.Duration("idleMarkTimeout", 0,
-		"time after last log before a 'MARK' message is written to logfile")
-	logbufLines = flag.Uint("logbufLines", 1024,
-		"Number of lines to store in the log buffer")
-	logDir = flag.String("logDir", path.Join("/var/log", path.Base(os.Args[0])),
-		"Directory to write log data to. If empty, no logs are written")
-	logQuota = flag.Uint("logQuota", 10,
-		"Log quota in MiB. If exceeded, old logs are deleted")
+	alsoLogToStderr = new(bool)
+	idleMarkTimeout = new(time.Duration)
+	logbufLines     = new(uint)
+	logDir          = new(string)
+	logQuota        = new(uint)
 )
 
 // LogBuffer is a circular buffer suitable for holding logs. It satisfies the
@@ -44,8 +40,30 @@ type LogBuffer struct {
 	panicLogfile  *string // Name of last invocation logfile if it has a panic.
 }
 
-// New returns a *LogBuffer with the specified number of lines of buffer.
-// Only one should be created per application.
+// UseFlagSet instructs this package to read its command-line flags from the
+// given flag set instead of from the command line. Caller must pass the
+// flag set to this method before calling Parse on it.
+func UseFlagSet(set *flag.FlagSet) {
+	set.BoolVar(alsoLogToStderr, "alsoLogToStderr", false,
+		"If true, also write logs to stderr")
+	set.DurationVar(idleMarkTimeout, "idleMarkTimeout", 0,
+		"time after last log before a 'MARK' message is written to logfile")
+	set.UintVar(logbufLines, "logbufLines", 1024,
+		"Number of lines to store in the log buffer")
+	set.StringVar(logDir, "logDir", path.Join("/var/log", path.Base(os.Args[0])),
+		"Directory to write log data to. If empty, no logs are written")
+	set.UintVar(logQuota, "logQuota", 10,
+		"Log quota in MiB. If exceeded, old logs are deleted")
+}
+
+// New is deprecated in favour of Get. New is a synonym for Get.
+func New() *LogBuffer {
+	return Get()
+}
+
+// Get returns a *LogBuffer with the specified number of lines of buffer.
+// Get creates the *LogBuffer the first time it is called. After that, Get
+// simply returns the same *LogBuffer it already created.
 // The behaviour of the LogBuffer is controlled by the following command-line
 // flags (registered with the standard flag pacakge):
 //  -alsoLogToStderr: If true, also write logs to stderr
@@ -54,12 +72,20 @@ type LogBuffer struct {
 //                    written
 //  -logQuota:        Log quota in MiB. If exceeded, old logs are deleted.
 //                    If zero, the quota will be 16 KiB
-func New() *LogBuffer {
-	quota := uint64(*logQuota) << 20
-	if quota < 16384 {
-		quota = 16384
-	}
-	return newLogBuffer(*logbufLines, *logDir, quota)
+// Caller must wait to call Get until after it has parsed the command-line
+// flags.
+func Get() *LogBuffer {
+	// We have to initialise the log buffer like this because it has to
+	// be done after caller parses the flags.
+	kOnce.Do(func() {
+		quota := uint64(*logQuota) << 20
+		if quota < 16384 {
+			quota = 16384
+		}
+		kSoleLogBuffer = newLogBuffer(*logbufLines, *logDir, quota)
+	})
+	return kSoleLogBuffer
+
 }
 
 // Dump will write the contents of the log buffer to w, with a prefix and
