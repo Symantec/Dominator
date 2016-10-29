@@ -12,6 +12,8 @@ type Hasher interface {
 	Hash(reader io.Reader, length uint64) (hash.Hash, error)
 }
 
+type simpleHasher bool // If true, ignore short reads.
+
 type FileSystem struct {
 	rootDirectoryName       string
 	fsScanContext           *fsrateio.ReaderContext
@@ -34,4 +36,8 @@ func ScanFileSystem(rootDirectoryName string,
 func (fs *FileSystem) GetObject(hashVal hash.Hash) (
 	uint64, io.ReadCloser, error) {
 	return fs.getObject(hashVal)
+}
+
+func GetSimpleHasher(ignoreShortReads bool) Hasher {
+	return simpleHasher(ignoreShortReads)
 }

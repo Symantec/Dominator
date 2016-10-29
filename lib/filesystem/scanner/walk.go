@@ -27,8 +27,6 @@ func myGC() {
 	myCountGC++
 }
 
-type defaultHasher bool
-
 func makeRegularInode(stat *wsyscall.Stat_t) *filesystem.RegularInode {
 	var inode filesystem.RegularInode
 	inode.Mode = filesystem.FileMode(stat.Mode)
@@ -68,7 +66,7 @@ func scanFileSystem(rootDirectoryName string,
 	fileSystem.scanFilter = scanFilter
 	fileSystem.checkScanDisableRequest = checkScanDisableRequest
 	if hasher == nil {
-		fileSystem.hasher = new(defaultHasher)
+		fileSystem.hasher = GetSimpleHasher(false)
 	} else {
 		fileSystem.hasher = hasher
 	}
@@ -310,14 +308,20 @@ func addSpecialFile(dirent *filesystem.DirectoryEntry,
 	return nil
 }
 
-func (*defaultHasher) Hash(reader io.Reader, length uint64) (hash.Hash, error) {
+func (h simpleHasher) Hash(reader io.Reader, length uint64) (hash.Hash, error) {
 	hasher := sha512.New()
 	var hashVal hash.Hash
-	nCopied, err := io.Copy(hasher, reader)
-	if err != nil {
+	nCopied, err := io.CopyN(hasher, reader, int64(length))
+	if err != nil && err != io.EOF {
 		return hashVal, err
 	}
 	if nCopied != int64(length) {
+		if h {
+			// File changed length. Don't interrupt the scanning: return the
+			// zero hash and keep going. Hopefully next scan the file will be
+			// stable.
+			return hashVal, nil
+		}
 		return hashVal, fmt.Errorf("read: %d, expected: %d bytes",
 			nCopied, length)
 	}
