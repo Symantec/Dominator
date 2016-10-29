@@ -61,7 +61,6 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 				if sub.status == statusSynced {
 					sub.status = statusWaitingToPoll
 				}
-				sub.computedInodes = nil
 			}
 			if !reflect.DeepEqual(sub.mdb, machine) {
 				sub.mdb = machine

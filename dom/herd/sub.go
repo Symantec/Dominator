@@ -177,11 +177,14 @@ func (sub *Sub) connectAndPoll() {
 
 func (sub *Sub) loadConfiguration() {
 	// Get a stable copy of the configuration.
-	if sub.mdb.RequiredImage != "" {
-		sub.requiredImageName = sub.mdb.RequiredImage
-	} else {
-		sub.requiredImageName = sub.herd.defaultImageName
+	newRequiredImageName := sub.mdb.RequiredImage
+	if newRequiredImageName == "" {
+		newRequiredImageName = sub.herd.defaultImageName
 	}
+	if newRequiredImageName != sub.requiredImageName {
+		sub.computedInodes = nil
+	}
+	sub.requiredImageName = newRequiredImageName
 	sub.plannedImageName = sub.mdb.PlannedImage
 }
 
