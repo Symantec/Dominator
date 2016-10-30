@@ -188,6 +188,7 @@ func (herd *Herd) setDefaultImage(imageName string) error {
 	herd.nextDefaultImageName = ""
 	for _, sub := range herd.subsByIndex {
 		if sub.mdb.RequiredImage == "" {
+			sub.sendCancel()
 			if sub.status == statusSynced { // Synced to previous default image.
 				sub.status = statusWaitingToPoll
 			}

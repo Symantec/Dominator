@@ -71,6 +71,7 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 				sub.generationCount = 0 // Force a full poll.
 				herd.computedFilesManager.Update(
 					filegenclient.Machine{machine, sub.getComputedFiles(img)})
+				sub.sendCancel()
 				numChanged++
 			}
 		}
