@@ -51,7 +51,11 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 		wantedImages[machine.PlannedImage] = struct{}{}
 		img := herd.imageManager.GetNoError(machine.RequiredImage)
 		if sub == nil {
-			sub = &Sub{herd: herd, mdb: machine}
+			sub = &Sub{
+				herd:          herd,
+				mdb:           machine,
+				cancelChannel: make(chan struct{}),
+			}
 			herd.subsByName[machine.Hostname] = sub
 			sub.fileUpdateChannel = herd.computedFilesManager.Add(
 				filegenclient.Machine{machine, sub.getComputedFiles(img)}, 16)

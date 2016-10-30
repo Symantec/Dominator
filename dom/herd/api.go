@@ -76,6 +76,7 @@ type Sub struct {
 	deleting                     bool
 	busyStartTime                time.Time
 	busyStopTime                 time.Time
+	cancelChannel                chan struct{}
 	havePlannedImage             bool
 	startTime                    time.Time
 	pollTime                     time.Time

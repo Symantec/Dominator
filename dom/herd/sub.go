@@ -10,6 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/resourcepool"
 	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
@@ -116,12 +117,15 @@ func (sub *Sub) connectAndPoll() {
 		sub.clientResource = srpc.NewClientResource("tcp", sub.address())
 	}
 	sub.busyFlagMutex.Unlock()
-	srpcClient, err := sub.clientResource.GetHTTP(nil,
+	srpcClient, err := sub.clientResource.GetHTTP(sub.cancelChannel,
 		time.Second*time.Duration(*subConnectTimeout))
 	dialReturnedTime := time.Now()
 	if err != nil {
 		sub.isInsecure = false
 		sub.pollTime = time.Time{}
+		if err == resourcepool.ErrorResourceLimitExceeded {
+			return
+		}
 		if err, ok := err.(*net.OpError); ok {
 			if _, ok := err.Err.(*net.DNSError); ok {
 				sub.status = statusDNSError
@@ -168,7 +172,12 @@ func (sub *Sub) connectAndPoll() {
 		sub.lastConnectionSucceededTime.Sub(sub.lastConnectionStartTime)
 	connectDistribution.Add(sub.lastConnectDuration)
 	waitStartTime := time.Now()
-	sub.herd.pollSemaphore <- struct{}{}
+	select {
+	case sub.herd.pollSemaphore <- struct{}{}:
+		break
+	case <-sub.cancelChannel:
+		return
+	}
 	pollWaitTimeDistribution.Add(time.Since(waitStartTime))
 	sub.status = statusPolling
 	sub.poll(srpcClient, previousStatus)
@@ -352,6 +361,11 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		}
 		sub.scanCountAtLastUpdateEnd = reply.ScanCount
 		sub.reclaim()
+		return
+	}
+	if sub.checkCancel() {
+		// Configuration change pending: skip further processing. Do not reclaim
+		// file-system and objectcache data: it will speed up the next Poll.
 		return
 	}
 	if !haveImage {
@@ -603,4 +617,20 @@ func (sub *Sub) clearSafetyShutoff() error {
 	}
 	sub.pendingSafetyClear = true
 	return nil
+}
+
+func (sub *Sub) checkCancel() bool {
+	select {
+	case <-sub.cancelChannel:
+		return true
+	default:
+		return false
+	}
+}
+
+func (sub *Sub) sendCancel() {
+	select {
+	case sub.cancelChannel <- struct{}{}:
+	default:
+	}
 }
