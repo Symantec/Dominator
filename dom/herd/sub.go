@@ -10,6 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/resourcepool"
 	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
@@ -95,6 +96,7 @@ func (sub *Sub) makeUnbusy() {
 }
 
 func (sub *Sub) connectAndPoll() {
+	sub.loadConfiguration()
 	if sub.processFileUpdates() {
 		sub.generationCount = 0 // Force a full poll.
 	}
@@ -115,12 +117,15 @@ func (sub *Sub) connectAndPoll() {
 		sub.clientResource = srpc.NewClientResource("tcp", sub.address())
 	}
 	sub.busyFlagMutex.Unlock()
-	srpcClient, err := sub.clientResource.GetHTTP(nil,
+	srpcClient, err := sub.clientResource.GetHTTP(sub.cancelChannel,
 		time.Second*time.Duration(*subConnectTimeout))
 	dialReturnedTime := time.Now()
 	if err != nil {
 		sub.isInsecure = false
 		sub.pollTime = time.Time{}
+		if err == resourcepool.ErrorResourceLimitExceeded {
+			return
+		}
 		if err, ok := err.(*net.OpError); ok {
 			if _, ok := err.Err.(*net.DNSError); ok {
 				sub.status = statusDNSError
@@ -167,24 +172,35 @@ func (sub *Sub) connectAndPoll() {
 		sub.lastConnectionSucceededTime.Sub(sub.lastConnectionStartTime)
 	connectDistribution.Add(sub.lastConnectDuration)
 	waitStartTime := time.Now()
-	sub.herd.pollSemaphore <- struct{}{}
+	select {
+	case sub.herd.pollSemaphore <- struct{}{}:
+		break
+	case <-sub.cancelChannel:
+		return
+	}
 	pollWaitTimeDistribution.Add(time.Since(waitStartTime))
 	sub.status = statusPolling
 	sub.poll(srpcClient, previousStatus)
 	<-sub.herd.pollSemaphore
 }
 
-func (sub *Sub) getRequiredImageName() string {
-	if sub.mdb.RequiredImage != "" {
-		return sub.mdb.RequiredImage
+func (sub *Sub) loadConfiguration() {
+	// Get a stable copy of the configuration.
+	newRequiredImageName := sub.mdb.RequiredImage
+	if newRequiredImageName == "" {
+		newRequiredImageName = sub.herd.defaultImageName
 	}
-	return sub.herd.defaultImageName
+	if newRequiredImageName != sub.requiredImageName {
+		sub.computedInodes = nil
+	}
+	sub.requiredImageName = newRequiredImageName
+	sub.plannedImageName = sub.mdb.PlannedImage
 }
 
 func (sub *Sub) processFileUpdates() bool {
 	haveUpdates := false
 	for {
-		image := sub.herd.imageManager.GetNoError(sub.getRequiredImageName())
+		image := sub.herd.imageManager.GetNoError(sub.requiredImageName)
 		if image != nil && sub.computedInodes == nil {
 			sub.computedInodes = make(map[string]*filesystem.RegularInode)
 			sub.busyFlagMutex.Lock()
@@ -236,7 +252,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	// If the planned image has just become available, force a full poll.
 	if previousStatus == statusSynced &&
 		!sub.havePlannedImage &&
-		sub.herd.imageManager.GetNoError(sub.mdb.PlannedImage) != nil {
+		sub.herd.imageManager.GetNoError(sub.plannedImageName) != nil {
 		sub.havePlannedImage = true
 		sub.generationCount = 0 // Force a full poll.
 	}
@@ -260,7 +276,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
 	haveImage := false
-	if sub.herd.imageManager.GetNoError(sub.getRequiredImageName()) == nil {
+	if sub.herd.imageManager.GetNoError(sub.requiredImageName) == nil {
 		request.ShortPollOnly = true
 	} else {
 		haveImage = true
@@ -347,8 +363,13 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.reclaim()
 		return
 	}
+	if sub.checkCancel() {
+		// Configuration change pending: skip further processing. Do not reclaim
+		// file-system and objectcache data: it will speed up the next Poll.
+		return
+	}
 	if !haveImage {
-		if sub.getRequiredImageName() == "" {
+		if sub.requiredImageName == "" {
 			sub.status = statusImageUndefined
 		} else {
 			sub.status = statusImageNotReady
@@ -378,7 +399,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(srpcClient,
-		sub.getRequiredImageName(), true); !idle {
+		sub.requiredImageName, true); !idle {
 		sub.status = status
 		sub.reclaim()
 		return
@@ -389,8 +410,8 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.reclaim()
 		return
 	}
-	if idle, status := sub.fetchMissingObjects(srpcClient,
-		sub.mdb.PlannedImage, false); !idle {
+	if idle, status := sub.fetchMissingObjects(srpcClient, sub.plannedImageName,
+		false); !idle {
 		if status != statusImageNotReady {
 			sub.status = status
 			sub.reclaim()
@@ -402,7 +423,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.lastSyncTime = time.Now()
 	}
 	sub.status = statusSynced
-	sub.cleanup(srpcClient, sub.mdb.PlannedImage)
+	sub.cleanup(srpcClient)
 	sub.reclaim()
 }
 
@@ -519,8 +540,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	logger := sub.herd.logger
 	if !sub.pendingSafetyClear {
 		// Perform a cheap safety check.
-		requiredImage := sub.herd.imageManager.GetNoError(
-			sub.getRequiredImageName())
+		requiredImage := sub.herd.imageManager.GetNoError(sub.requiredImageName)
 		if requiredImage.Filter != nil &&
 			len(sub.fileSystem.InodeTable)>>1 >
 				len(requiredImage.FileSystem.InodeTable) {
@@ -551,7 +571,7 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	return false, statusUpdating
 }
 
-func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
+func (sub *Sub) cleanup(srpcClient *srpc.Client) {
 	logger := sub.herd.logger
 	unusedObjects := make(map[hash.Hash]bool)
 	for _, hash := range sub.objectCache {
@@ -566,7 +586,7 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client, plannedImageName string) {
 			}
 		}
 	}
-	image := sub.herd.imageManager.GetNoError(plannedImageName)
+	image := sub.herd.imageManager.GetNoError(sub.plannedImageName)
 	if image != nil {
 		for _, inode := range image.FileSystem.InodeTable {
 			if inode, ok := inode.(*filesystem.RegularInode); ok {
@@ -597,4 +617,20 @@ func (sub *Sub) clearSafetyShutoff() error {
 	}
 	sub.pendingSafetyClear = true
 	return nil
+}
+
+func (sub *Sub) checkCancel() bool {
+	select {
+	case <-sub.cancelChannel:
+		return true
+	default:
+		return false
+	}
+}
+
+func (sub *Sub) sendCancel() {
+	select {
+	case sub.cancelChannel <- struct{}{}:
+	default:
+	}
 }

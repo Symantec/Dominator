@@ -51,7 +51,11 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 		wantedImages[machine.PlannedImage] = struct{}{}
 		img := herd.imageManager.GetNoError(machine.RequiredImage)
 		if sub == nil {
-			sub = &Sub{herd: herd, mdb: machine}
+			sub = &Sub{
+				herd:          herd,
+				mdb:           machine,
+				cancelChannel: make(chan struct{}),
+			}
 			herd.subsByName[machine.Hostname] = sub
 			sub.fileUpdateChannel = herd.computedFilesManager.Add(
 				filegenclient.Machine{machine, sub.getComputedFiles(img)}, 16)
@@ -61,13 +65,13 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 				if sub.status == statusSynced {
 					sub.status = statusWaitingToPoll
 				}
-				sub.computedInodes = nil
 			}
 			if !reflect.DeepEqual(sub.mdb, machine) {
 				sub.mdb = machine
 				sub.generationCount = 0 // Force a full poll.
 				herd.computedFilesManager.Update(
 					filegenclient.Machine{machine, sub.getComputedFiles(img)})
+				sub.sendCancel()
 				numChanged++
 			}
 		}
