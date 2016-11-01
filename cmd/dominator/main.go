@@ -177,7 +177,6 @@ func main() {
 			if *debug {
 				showMdb(mdb)
 			}
-			runtime.GC() // An opportune time to take out the garbage.
 		case <-scanTokenChannel:
 			// Scan one sub.
 			if herd.PollNextSub() { // We've reached the end of a scan cycle.
@@ -185,11 +184,7 @@ func main() {
 					fmt.Print(".")
 				}
 				go func(sleepDuration time.Duration) {
-					if sleepDuration < 0 { // There was no time to rest.
-						runtime.GC()
-					} else {
-						time.Sleep(sleepDuration)
-					}
+					time.Sleep(sleepDuration)
 					nextCycleStopTime = time.Now().Add(interval)
 					scanTokenChannel <- true
 				}(nextCycleStopTime.Sub(time.Now()))

@@ -16,7 +16,6 @@ import (
 	"github.com/Symantec/Dominator/sub/client"
 	"io"
 	"net"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -430,7 +429,6 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 func (sub *Sub) reclaim() {
 	sub.fileSystem = nil  // Mark memory for reclaim.
 	sub.objectCache = nil // Mark memory for reclaim.
-	runtime.GC()          // Reclaim now.
 }
 
 func (sub *Sub) updateConfiguration(srpcClient *srpc.Client,
