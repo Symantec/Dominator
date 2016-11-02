@@ -216,10 +216,7 @@ func (imdb *ImageDataBase) deletePossiblyUnreferencedObjects(
 		}
 	}
 	for object := range objects {
-		err := imdb.objectServer.DeleteObject(object)
-		if err == nil { // HACK
-			imdb.logger.Printf("Cleaned up: %x\n", object)
-		} else {
+		if err := imdb.objectServer.DeleteObject(object); err != nil {
 			imdb.logger.Printf("Error cleaning up: %x: %s\n", object, err)
 		}
 	}
