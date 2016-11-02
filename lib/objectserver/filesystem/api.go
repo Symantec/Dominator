@@ -29,6 +29,10 @@ func (objSrv *ObjectServer) CheckObjects(hashes []hash.Hash) ([]uint64, error) {
 	return objSrv.checkObjects(hashes)
 }
 
+func (objSrv *ObjectServer) DeleteObject(hashVal hash.Hash) error {
+	return objSrv.deleteObject(hashVal)
+}
+
 func (objSrv *ObjectServer) GetObject(hashVal hash.Hash) (
 	uint64, io.ReadCloser, error) {
 	return objectserver.GetObject(objSrv, hashVal)
