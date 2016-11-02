@@ -6,6 +6,7 @@ import (
 )
 
 type FullObjectServer interface {
+	DeleteObject(hashVal hash.Hash) error
 	ObjectServer
 	ListObjectSizes() map[hash.Hash]uint64
 	ListObjects() []hash.Hash
