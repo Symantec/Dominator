@@ -5,7 +5,9 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"io"
 	"log"
@@ -209,6 +211,22 @@ func (imdb *ImageDataBase) listImages() []string {
 		names = append(names, name)
 	}
 	return names
+}
+
+func (imdb *ImageDataBase) listUnreferencedObjects() map[hash.Hash]uint64 {
+	objectsMap := imdb.objectServer.ListObjectSizes()
+	for _, imageName := range imdb.ListImages() {
+		image := imdb.GetImage(imageName)
+		if image == nil {
+			continue
+		}
+		for _, inode := range image.FileSystem.InodeTable {
+			if inode, ok := inode.(*filesystem.RegularInode); ok {
+				delete(objectsMap, inode.Hash)
+			}
+		}
+	}
+	return objectsMap
 }
 
 func (imdb *ImageDataBase) makeDirectory(directory image.Directory,

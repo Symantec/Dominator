@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func loadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
+func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 	logger *log.Logger) (*ImageDataBase, error) {
 	fi, err := os.Stat(baseDir)
 	if err != nil {
