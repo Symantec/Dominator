@@ -6,6 +6,7 @@ import (
 	imgclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/imageserver/scanner"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/hash"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	fsdriver "github.com/Symantec/Dominator/lib/objectserver/filesystem"
@@ -13,6 +14,7 @@ import (
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"io"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -147,7 +149,7 @@ func addImage(address string, imdb *scanner.ImageDataBase,
 		return nil
 	}
 	img.FileSystem.RebuildInodePointers()
-	if err := getMissingObjects(address, objSrv, img.FileSystem,
+	if err := getMissingObjectsRetry(address, imdb, objSrv, img.FileSystem,
 		logger); err != nil {
 		return err
 	}
@@ -156,6 +158,37 @@ func addImage(address string, imdb *scanner.ImageDataBase,
 	}
 	logger.Printf("Replicator(%s): added image\n", name)
 	return nil
+}
+
+func getMissingObjectsRetry(address string, imdb *scanner.ImageDataBase,
+	objSrv *fsdriver.ObjectServer, fs *filesystem.FileSystem,
+	logger *log.Logger) error {
+	err := getMissingObjects(address, objSrv, fs, logger)
+	if err == nil {
+		return nil
+	}
+	if !strings.Contains(err.Error(), "no space left on device") {
+		return err
+	}
+	logger.Println(err)
+	if !deleteUnreferencedObjects(imdb, objSrv, fs, false, logger) {
+		return err
+	}
+	logger.Println(
+		"Replicator: retrying after deleting 10% of unreferenced objects")
+	err = getMissingObjects(address, objSrv, fs, logger)
+	if err == nil {
+		return nil
+	}
+	if !strings.Contains(err.Error(), "no space left on device") {
+		return err
+	}
+	if !deleteUnreferencedObjects(imdb, objSrv, fs, true, logger) {
+		return err
+	}
+	logger.Println(
+		"Replicator: retrying after deleting remaining unreferenced objects")
+	return getMissingObjects(address, objSrv, fs, logger)
 }
 
 func getMissingObjects(address string, objSrv *fsdriver.ObjectServer,
@@ -202,4 +235,41 @@ func getMissingObjects(address string, objSrv *fsdriver.ObjectServer,
 		}
 	}
 	return nil
+}
+
+func deleteUnreferencedObjects(imdb *scanner.ImageDataBase,
+	objSrv *fsdriver.ObjectServer, fs *filesystem.FileSystem, all bool,
+	logger *log.Logger) bool {
+	objectsMap := imdb.ListUnreferencedObjects()
+	for _, inode := range fs.InodeTable {
+		if inode, ok := inode.(*filesystem.RegularInode); ok {
+			delete(objectsMap, inode.Hash)
+		}
+	}
+	numToDelete := len(objectsMap)
+	if !all {
+		numToDelete = numToDelete / 10
+		if numToDelete < 1 {
+			numToDelete = numToDelete
+		}
+	}
+	if numToDelete < 1 {
+		return false
+	}
+	count := 0
+	var unreferencedBytes uint64
+	for hashVal, size := range objectsMap {
+		if err := objSrv.DeleteObject(hashVal); err != nil {
+			logger.Printf("Error deleting unreferenced object: %x\n", hashVal)
+			return false
+		}
+		unreferencedBytes += size
+		count++
+		if count >= numToDelete {
+			break
+		}
+	}
+	logger.Printf("Deleted %d unreferenced objects consuming %s\n",
+		numToDelete, format.FormatBytes(unreferencedBytes))
+	return true
 }
