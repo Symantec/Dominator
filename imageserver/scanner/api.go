@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"io"
@@ -30,13 +31,16 @@ type ImageDataBase struct {
 	deleteNotifiers notifiers
 	mkdirNotifiers  makeDirectoryNotifiers
 	// Unprotected by lock.
-	objectServer objectserver.ObjectServer
-	logger       *log.Logger
+	objectServer               objectserver.FullObjectServer
+	cleanupUnreferencedObjects bool
+	logger                     *log.Logger
 }
 
-func LoadImageDataBase(baseDir string, objSrv objectserver.ObjectServer,
+func LoadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
+	cleanupUnreferencedObjects bool,
 	logger *log.Logger) (*ImageDataBase, error) {
-	return loadImageDataBase(baseDir, objSrv, logger)
+	return loadImageDataBase(baseDir, objSrv, cleanupUnreferencedObjects,
+		logger)
 }
 
 func (imdb *ImageDataBase) AddImage(image *image.Image, name string,
@@ -74,6 +78,15 @@ func (imdb *ImageDataBase) ListDirectories() []image.Directory {
 
 func (imdb *ImageDataBase) ListImages() []string {
 	return imdb.listImages()
+}
+
+// ListUnreferencedObjects will return a map listing all the objects and their
+// corresponding sizes which are not referenced by an image.
+// Note that some objects may have been recently added and the referencing image
+// may not yet be present (i.e. it may be added after missing objects are
+// uploaded).
+func (imdb *ImageDataBase) ListUnreferencedObjects() map[hash.Hash]uint64 {
+	return imdb.listUnreferencedObjects()
 }
 
 func (imdb *ImageDataBase) MakeDirectory(dirname, username string) error {

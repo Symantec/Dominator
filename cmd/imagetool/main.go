@@ -70,8 +70,10 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  get    name directory")
 	fmt.Fprintln(os.Stderr, "  list")
 	fmt.Fprintln(os.Stderr, "  listdirs")
+	fmt.Fprintln(os.Stderr, "  listunrefobj")
 	fmt.Fprintln(os.Stderr, "  mkdir  name")
 	fmt.Fprintln(os.Stderr, "  show   name")
+	fmt.Fprintln(os.Stderr, "  showunrefobj")
 	fmt.Fprintln(os.Stderr, "Fields:")
 	fmt.Fprintln(os.Stderr, "  m: mode")
 	fmt.Fprintln(os.Stderr, "  l: number of hardlinks")
@@ -105,8 +107,10 @@ var subcommands = []subcommand{
 	{"get", 2, 2, getImageSubcommand},
 	{"list", 0, 0, listImagesSubcommand},
 	{"listdirs", 0, 0, listDirectoriesSubcommand},
+	{"listunrefobj", 0, 0, listUnreferencedObjectsSubcommand},
 	{"mkdir", 1, 1, makeDirectorySubcommand},
 	{"show", 1, 1, showImageSubcommand},
+	{"showunrefobj", 0, 0, showUnreferencedObjectsSubcommand},
 }
 
 var imageSrpcClient *srpc.Client

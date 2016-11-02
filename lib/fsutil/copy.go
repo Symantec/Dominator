@@ -1,7 +1,6 @@
 package fsutil
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -16,10 +15,8 @@ func copyToFile(destFilename string, perm os.FileMode, reader io.Reader,
 	}
 	defer os.Remove(tmpFilename)
 	defer destFile.Close()
-	writer := bufio.NewWriter(destFile)
-	defer writer.Flush()
 	var nCopied int64
-	if nCopied, err = io.Copy(writer, reader); err != nil {
+	if nCopied, err = io.Copy(destFile, reader); err != nil {
 		return fmt.Errorf("error copying: %s", err)
 	}
 	if nCopied != int64(length) {

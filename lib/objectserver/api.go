@@ -5,13 +5,21 @@ import (
 	"io"
 )
 
-type ObjectsReader interface {
-	Close() error
-	NextObject() (uint64, io.ReadCloser, error)
+type FullObjectServer interface {
+	DeleteObject(hashVal hash.Hash) error
+	ObjectServer
+	ListObjectSizes() map[hash.Hash]uint64
+	ListObjects() []hash.Hash
+	NumObjects() uint64
 }
 
 type ObjectGetter interface {
 	GetObject(hashVal hash.Hash) (uint64, io.ReadCloser, error)
+}
+
+type ObjectsReader interface {
+	Close() error
+	NextObject() (uint64, io.ReadCloser, error)
 }
 
 type ObjectServer interface {

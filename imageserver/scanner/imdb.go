@@ -5,7 +5,9 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"io"
 	"log"
@@ -176,11 +178,47 @@ func (imdb *ImageDataBase) deleteImage(name string, username *string) error {
 		if err := os.Truncate(filename, 0); err != nil {
 			return err
 		}
-		delete(imdb.imageMap, name)
+		imdb.deleteImageWithPossibleCleanup(name)
 		imdb.deleteNotifiers.sendPlain(name, "delete", imdb.logger)
 		return nil
 	} else {
 		return errors.New("image: " + name + " does not exist")
+	}
+}
+
+func (imdb *ImageDataBase) deleteImageWithPossibleCleanup(name string) {
+	img := imdb.imageMap[name]
+	delete(imdb.imageMap, name)
+	if imdb.cleanupUnreferencedObjects && img != nil {
+		go imdb.deletePossiblyUnreferencedObjects(img.FileSystem.InodeTable)
+	}
+}
+
+func (imdb *ImageDataBase) deletePossiblyUnreferencedObjects(
+	inodeTable filesystem.InodeTable) {
+	// First get a list of objects in the image being deleted.
+	objects := make(map[hash.Hash]struct{})
+	for _, inode := range inodeTable {
+		if inode, ok := inode.(*filesystem.RegularInode); ok {
+			objects[inode.Hash] = struct{}{}
+		}
+	}
+	// Scan all remaining images and remove their objects from the list.
+	for _, imageName := range imdb.ListImages() {
+		image := imdb.GetImage(imageName)
+		if image == nil {
+			continue
+		}
+		for _, inode := range image.FileSystem.InodeTable {
+			if inode, ok := inode.(*filesystem.RegularInode); ok {
+				delete(objects, inode.Hash)
+			}
+		}
+	}
+	for object := range objects {
+		if err := imdb.objectServer.DeleteObject(object); err != nil {
+			imdb.logger.Printf("Error cleaning up: %x: %s\n", object, err)
+		}
 	}
 }
 
@@ -209,6 +247,22 @@ func (imdb *ImageDataBase) listImages() []string {
 		names = append(names, name)
 	}
 	return names
+}
+
+func (imdb *ImageDataBase) listUnreferencedObjects() map[hash.Hash]uint64 {
+	objectsMap := imdb.objectServer.ListObjectSizes()
+	for _, imageName := range imdb.ListImages() {
+		image := imdb.GetImage(imageName)
+		if image == nil {
+			continue
+		}
+		for _, inode := range image.FileSystem.InodeTable {
+			if inode, ok := inode.(*filesystem.RegularInode); ok {
+				delete(objectsMap, inode.Hash)
+			}
+		}
+	}
+	return objectsMap
 }
 
 func (imdb *ImageDataBase) makeDirectory(directory image.Directory,
