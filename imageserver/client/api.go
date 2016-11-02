@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
 )
@@ -31,6 +32,11 @@ func ListDirectories(client *srpc.Client) ([]image.Directory, error) {
 
 func ListImages(client *srpc.Client) ([]string, error) {
 	return listImages(client)
+}
+
+func ListUnreferencedObjects(client *srpc.Client) (
+	map[hash.Hash]uint64, error) {
+	return listUnreferencedObjects(client)
 }
 
 func MakeDirectory(client *srpc.Client, dirname string) error {
