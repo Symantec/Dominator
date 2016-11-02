@@ -1,6 +1,7 @@
 package imageserver
 
 import (
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 )
 
@@ -65,6 +66,16 @@ type ImageUpdate struct {
 // The client sends no information to the server.
 // The server sends a stream of strings (image names) with an empty string
 // signifying the end of the list.
+
+// The ListUnreferencedObjects() RPC is fully streamed.
+// The client sends no information to the server.
+// The server sends a stream of Object values with a zero Size field signifying
+// the end of the stream.
+
+type Object struct {
+	Hash hash.Hash
+	Size uint64
+}
 
 type MakeDirectoryRequest struct {
 	DirectoryName string
