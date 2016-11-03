@@ -22,6 +22,11 @@ func DeleteImage(client *srpc.Client, name string) error {
 	return deleteImage(client, name)
 }
 
+func DeleteUnreferencedObjects(client *srpc.Client, percentage uint8,
+	bytes uint64) error {
+	return deleteUnreferencedObjects(client, percentage, bytes)
+}
+
 func GetImage(client *srpc.Client, name string) (*image.Image, error) {
 	return getImage(client, name)
 }
