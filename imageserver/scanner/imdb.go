@@ -222,6 +222,25 @@ func (imdb *ImageDataBase) deletePossiblyUnreferencedObjects(
 	}
 }
 
+func (imdb *ImageDataBase) deleteUnreferencedObjects(percentage uint8,
+	bytesThreshold uint64) error {
+	objects := imdb.listUnreferencedObjects()
+	objectsThreshold := uint64(percentage) * uint64(len(objects)) / 100
+	var objectsCount, bytesCount uint64
+	for hashVal, size := range objects {
+		if !(objectsCount < objectsThreshold || bytesCount < bytesThreshold) {
+			break
+		}
+		if err := imdb.objectServer.DeleteObject(hashVal); err != nil {
+			imdb.logger.Printf("Error cleaning up: %x: %s\n", hashVal, err)
+			return fmt.Errorf("error cleaning up: %x: %s\n", hashVal, err)
+		}
+		objectsCount++
+		bytesCount += size
+	}
+	return nil
+}
+
 func (imdb *ImageDataBase) getImage(name string) *image.Image {
 	imdb.RLock()
 	defer imdb.RUnlock()
