@@ -60,6 +60,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  check  name")
 	fmt.Fprintln(os.Stderr, "  chown  dirname ownerGroup")
 	fmt.Fprintln(os.Stderr, "  delete name")
+	fmt.Fprintln(os.Stderr, "  delunrefobj percentage bytes")
 	fmt.Fprintln(os.Stderr, "  diff   tool left right")
 	fmt.Fprintln(os.Stderr, "         left & right are image sources. Format:")
 	fmt.Fprintln(os.Stderr, "         type:name where type is one of:")
@@ -103,6 +104,7 @@ var subcommands = []subcommand{
 	{"check", 1, 1, checkImageSubcommand},
 	{"chown", 2, 2, chownDirectorySubcommand},
 	{"delete", 1, 1, deleteImageSubcommand},
+	{"delunrefobj", 2, 2, deleteUnreferencedObjectsSubcommand},
 	{"diff", 3, 3, diffSubcommand},
 	{"get", 2, 2, getImageSubcommand},
 	{"list", 0, 0, listImagesSubcommand},
