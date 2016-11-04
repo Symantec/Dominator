@@ -268,10 +268,15 @@ func deleteUnneededFiles(srpcClient *srpc.Client, subFS *filesystem.FileSystem,
 	startTime := showStart("compute early files to delete")
 	pathsToDelete := make([]string, 0)
 	imgHashToInodesTable := imgFS.HashToInodesTable()
+	imgFilenameToInodeTable := imgFS.FilenameToInodeTable()
 	for pathname, inum := range subFS.FilenameToInodeTable() {
 		if inode, ok := subFS.InodeTable[inum].(*filesystem.RegularInode); ok {
 			if inode.Size > 0 {
 				if _, ok := imgHashToInodesTable[inode.Hash]; !ok {
+					pathsToDelete = append(pathsToDelete, pathname)
+				}
+			} else {
+				if _, ok := imgFilenameToInodeTable[pathname]; !ok {
 					pathsToDelete = append(pathsToDelete, pathname)
 				}
 			}
