@@ -33,6 +33,13 @@ type DeleteImageRequest struct {
 
 type DeleteImageResponse struct{}
 
+type DeleteUnreferencedObjectsRequest struct {
+	Percentage uint8
+	Bytes      uint64
+}
+
+type DeleteUnreferencedObjectsResponse struct{}
+
 type GetImageRequest struct {
 	ImageName string
 }

@@ -68,6 +68,16 @@ func (imdb *ImageDataBase) DeleteImage(name string, username *string) error {
 	return imdb.deleteImage(name, username)
 }
 
+// DeleteUnreferencedObjects will delete some or all unreferenced objects.
+// Objects are randomly selected for deletion, until both the percentage and
+// bytes thresholds are satisfied.
+// If an image upload/replication is in process this operation is unsafe as it
+// may delete objects that the new image will be using.
+func (imdb *ImageDataBase) DeleteUnreferencedObjects(percentage uint8,
+	bytes uint64) error {
+	return imdb.deleteUnreferencedObjects(percentage, bytes)
+}
+
 func (imdb *ImageDataBase) GetImage(name string) *image.Image {
 	return imdb.getImage(name)
 }
