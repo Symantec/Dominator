@@ -66,8 +66,9 @@ type SetConfigurationRequest Configuration
 type SetConfigurationResponse struct{}
 
 type FileToCopyToCache struct {
-	Name string
-	Hash hash.Hash
+	Name       string
+	Hash       hash.Hash
+	DoHardlink bool
 }
 
 type Hardlink struct {
