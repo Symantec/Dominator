@@ -161,25 +161,33 @@ func (t *rpcType) copyFilesToCache(filesToCopyToCache []sub.FileToCopyToCache,
 		sourcePathname := path.Join(rootDirectoryName, fileToCopy.Name)
 		destPathname := path.Join(t.objectsDir,
 			objectcache.HashToFilename(fileToCopy.Hash))
-		if err := copyFile(destPathname, sourcePathname); err != nil {
+		prefix := "Copied"
+		if fileToCopy.DoHardlink {
+			prefix = "Hardlinked"
+		}
+		if err := copyFile(destPathname, sourcePathname,
+			fileToCopy.DoHardlink); err != nil {
 			t.lastUpdateError = err
 			t.logger.Println(err)
 		} else {
-			t.logger.Printf("Copied: %s to cache\n", sourcePathname)
+			t.logger.Printf("%s: %s to cache\n", prefix, sourcePathname)
 		}
 	}
 }
 
-func copyFile(destPathname, sourcePathname string) error {
+func copyFile(destPathname, sourcePathname string, doHardlink bool) error {
+	dirname := path.Dir(destPathname)
+	if err := os.MkdirAll(dirname, syscall.S_IRWXU); err != nil {
+		return err
+	}
+	if doHardlink {
+		return os.Link(sourcePathname, destPathname)
+	}
 	sourceFile, err := os.Open(sourcePathname)
 	if err != nil {
 		return err
 	}
 	defer sourceFile.Close()
-	dirname := path.Dir(destPathname)
-	if err := os.MkdirAll(dirname, syscall.S_IRWXU); err != nil {
-		return err
-	}
 	destFile, err := os.Create(destPathname)
 	if err != nil {
 		return err
@@ -198,7 +206,8 @@ func (t *rpcType) makeObjectCopies(multiplyUsedObjects map[hash.Hash]uint64) {
 			objectcache.HashToFilename(hash))
 		for numCopies--; numCopies > 0; numCopies-- {
 			ext := fmt.Sprintf("~%d~", numCopies)
-			if err := copyFile(objectPathname+ext, objectPathname); err != nil {
+			if err := copyFile(objectPathname+ext, objectPathname,
+				false); err != nil {
 				t.lastUpdateError = err
 				t.logger.Println(err)
 			} else {
