@@ -2,7 +2,6 @@ package lib
 
 import (
 	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	subproto "github.com/Symantec/Dominator/proto/sub"
@@ -16,7 +15,7 @@ func (sub *Sub) buildUpdateRequest(image *image.Image,
 	request *subproto.UpdateRequest, deleteMissingComputedFiles bool,
 	logger *log.Logger) bool {
 	sub.requiredFS = image.FileSystem
-	filter := image.Filter
+	sub.filter = image.Filter
 	request.Triggers = image.Triggers
 	sub.requiredInodeToSubInode = make(map[uint64]uint64)
 	sub.inodesChanged = make(map[uint64]bool)
@@ -32,7 +31,7 @@ func (sub *Sub) buildUpdateRequest(image *image.Image,
 	}
 	if sub.compareDirectories(request,
 		&sub.FileSystem.DirectoryInode, &sub.requiredFS.DirectoryInode,
-		"/", filter, deleteMissingComputedFiles, logger) {
+		"/", deleteMissingComputedFiles, logger) {
 		return true
 	}
 	// Look for multiply used objects and tell the sub.
@@ -50,13 +49,13 @@ func (sub *Sub) buildUpdateRequest(image *image.Image,
 // Returns true if there is a failure due to missing computed files.
 func (sub *Sub) compareDirectories(request *subproto.UpdateRequest,
 	subDirectory, requiredDirectory *filesystem.DirectoryInode,
-	myPathName string, filter *filter.Filter, deleteMissingComputedFiles bool,
+	myPathName string, deleteMissingComputedFiles bool,
 	logger *log.Logger) bool {
 	// First look for entries that should be deleted.
-	if filter != nil && subDirectory != nil {
+	if sub.filter != nil && subDirectory != nil {
 		for name := range subDirectory.EntriesByName {
 			pathname := path.Join(myPathName, name)
-			if filter.Match(pathname) {
+			if sub.filter.Match(pathname) {
 				continue
 			}
 			if _, ok := requiredDirectory.EntriesByName[name]; !ok {
@@ -66,7 +65,7 @@ func (sub *Sub) compareDirectories(request *subproto.UpdateRequest,
 	}
 	for name, requiredEntry := range requiredDirectory.EntriesByName {
 		pathname := path.Join(myPathName, name)
-		if filter != nil && filter.Match(pathname) {
+		if sub.filter != nil && sub.filter.Match(pathname) {
 			continue
 		}
 		var subEntry *filesystem.DirectoryEntry
@@ -113,7 +112,7 @@ func (sub *Sub) compareDirectories(request *subproto.UpdateRequest,
 				}
 			}
 			sub.compareDirectories(request, subInode, requiredInode, pathname,
-				filter, deleteMissingComputedFiles, logger)
+				deleteMissingComputedFiles, logger)
 		}
 	}
 	return false
@@ -266,17 +265,10 @@ func (sub *Sub) addInode(request *subproto.UpdateRequest,
 				sub.subObjectCacheUsage[inode.Hash]++
 			} else {
 				// Not in object cache: grab it from file-system.
-				if inos, ok := subFS.HashToInodesTable()[inode.Hash]; ok {
-					var fileToCopy subproto.FileToCopyToCache
-					fileToCopy.Name =
-						sub.FileSystem.InodeToFilenamesTable()[inos[0]][0]
-					fileToCopy.Hash = inode.Hash
-					request.FilesToCopyToCache = append(
-						request.FilesToCopyToCache, fileToCopy)
-					sub.subObjectCacheUsage[inode.Hash] = 1
-				} else {
-					panic("No object in cache for: " + myPathName)
-				}
+				request.FilesToCopyToCache = append(
+					request.FilesToCopyToCache,
+					sub.getFileToCopy(myPathName, inode.Hash))
+				sub.subObjectCacheUsage[inode.Hash] = 1
 			}
 		}
 	}
@@ -285,4 +277,38 @@ func (sub *Sub) addInode(request *subproto.UpdateRequest,
 	inode.GenericInode = requiredEntry.Inode()
 	request.InodesToMake = append(request.InodesToMake, inode)
 	sub.inodesCreated[requiredEntry.InodeNumber] = myPathName
+}
+
+func (sub *Sub) getFileToCopy(myPathName string,
+	hashVal hash.Hash) subproto.FileToCopyToCache {
+	subFS := sub.FileSystem
+	requiredFS := sub.requiredFS
+	inos, ok := subFS.HashToInodesTable()[hashVal]
+	if !ok {
+		panic("No object in cache for: " + myPathName)
+	}
+	file := subproto.FileToCopyToCache{
+		Name: subFS.InodeToFilenamesTable()[inos[0]][0],
+		Hash: hashVal,
+	}
+	// Try to find an inode where all its links will be deleted and mark one of
+	// the links (filenames) to be hardlinked instead of copied into the cache.
+	for _, iNum := range inos {
+		filenames := subFS.InodeToFilenamesTable()[iNum]
+		for _, filename := range filenames {
+			if _, ok := requiredFS.FilenameToInodeTable()[filename]; ok {
+				filenames = nil
+				break
+			}
+			if sub.filter == nil || sub.filter.Match(filename) {
+				filenames = nil
+				break
+			}
+		}
+		if filenames != nil {
+			file.DoHardlink = true
+			break
+		}
+	}
+	return file
 }
