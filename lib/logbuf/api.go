@@ -26,6 +26,11 @@ var (
 	logQuota        = new(uint)
 )
 
+var (
+	kSoleLogBuffer *LogBuffer
+	kOnce          sync.Once
+)
+
 // LogBuffer is a circular buffer suitable for holding logs. It satisfies the
 // io.Writer interface. It is usually passed to the log.New function.
 type LogBuffer struct {
@@ -56,14 +61,8 @@ func UseFlagSet(set *flag.FlagSet) {
 		"Log quota in MiB. If exceeded, old logs are deleted")
 }
 
-// New is deprecated in favour of Get. New is a synonym for Get.
-func New() *LogBuffer {
-	return Get()
-}
-
-// Get returns a *LogBuffer with the specified number of lines of buffer.
-// Get creates the *LogBuffer the first time it is called. After that, Get
-// simply returns the same *LogBuffer it already created.
+// New returns a new *LogBuffer with the specified number of lines of buffer.
+// Only one should be created per application.
 // The behaviour of the LogBuffer is controlled by the following command-line
 // flags (registered with the standard flag pacakge):
 //  -alsoLogToStderr: If true, also write logs to stderr
@@ -72,17 +71,19 @@ func New() *LogBuffer {
 //                    written
 //  -logQuota:        Log quota in MiB. If exceeded, old logs are deleted.
 //                    If zero, the quota will be 16 KiB
-// Caller must wait to call Get until after it has parsed the command-line
-// flags.
+func New() *LogBuffer {
+	quota := uint64(*logQuota) << 20
+	if quota < 16384 {
+		quota = 16384
+	}
+	return newLogBuffer(*logbufLines, *logDir, quota)
+}
+
+// Get works like New except that successive calls to Get return the same
+// instance.
 func Get() *LogBuffer {
-	// We have to initialise the log buffer like this because it has to
-	// be done after caller parses the flags.
 	kOnce.Do(func() {
-		quota := uint64(*logQuota) << 20
-		if quota < 16384 {
-			quota = 16384
-		}
-		kSoleLogBuffer = newLogBuffer(*logbufLines, *logDir, quota)
+		kSoleLogBuffer = New()
 	})
 	return kSoleLogBuffer
 

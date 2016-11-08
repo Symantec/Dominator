@@ -11,7 +11,6 @@ import (
 	"path"
 	"sort"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 )
@@ -21,11 +20,6 @@ const (
 	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
 
 	timeLayout = "2006-01-02:15:04:05.999"
-)
-
-var (
-	kSoleLogBuffer *LogBuffer
-	kOnce          sync.Once
 )
 
 func newLogBuffer(length uint, dirname string, quota uint64) *LogBuffer {
