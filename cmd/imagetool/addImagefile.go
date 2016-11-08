@@ -65,6 +65,8 @@ func addImagefile(imageSClient *srpc.Client,
 func addImage(imageSClient *srpc.Client, name string, img *image.Image) error {
 	if *expiresIn > 0 {
 		img.ExpiresAt = time.Now().Add(*expiresIn)
+	} else {
+		img.ExpiresAt = time.Time{}
 	}
 	if err := img.Verify(); err != nil {
 		return err
