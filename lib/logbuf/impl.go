@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"container/ring"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -316,4 +317,8 @@ func reverseStrings(strings []string) {
 		strings[index], strings[length-1-index] =
 			strings[length-1-index], strings[index]
 	}
+}
+
+func init() {
+	UseFlagSet(flag.CommandLine)
 }

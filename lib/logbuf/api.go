@@ -15,19 +15,20 @@ import (
 	"os"
 	"path"
 	"sync"
+	"time"
 )
 
 var (
-	alsoLogToStderr = flag.Bool("alsoLogToStderr", false,
-		"If true, also write logs to stderr")
-	idleMarkTimeout = flag.Duration("idleMarkTimeout", 0,
-		"time after last log before a 'MARK' message is written to logfile")
-	logbufLines = flag.Uint("logbufLines", 1024,
-		"Number of lines to store in the log buffer")
-	logDir = flag.String("logDir", path.Join("/var/log", path.Base(os.Args[0])),
-		"Directory to write log data to. If empty, no logs are written")
-	logQuota = flag.Uint("logQuota", 10,
-		"Log quota in MiB. If exceeded, old logs are deleted")
+	alsoLogToStderr = new(bool)
+	idleMarkTimeout = new(time.Duration)
+	logbufLines     = new(uint)
+	logDir          = new(string)
+	logQuota        = new(uint)
+)
+
+var (
+	kSoleLogBuffer *LogBuffer
+	kOnce          sync.Once
 )
 
 // LogBuffer is a circular buffer suitable for holding logs. It satisfies the
@@ -44,7 +45,23 @@ type LogBuffer struct {
 	panicLogfile  *string // Name of last invocation logfile if it has a panic.
 }
 
-// New returns a *LogBuffer with the specified number of lines of buffer.
+// UseFlagSet instructs this package to read its command-line flags from the
+// given flag set instead of from the command line. Caller must pass the
+// flag set to this method before calling Parse on it.
+func UseFlagSet(set *flag.FlagSet) {
+	set.BoolVar(alsoLogToStderr, "alsoLogToStderr", false,
+		"If true, also write logs to stderr")
+	set.DurationVar(idleMarkTimeout, "idleMarkTimeout", 0,
+		"time after last log before a 'MARK' message is written to logfile")
+	set.UintVar(logbufLines, "logbufLines", 1024,
+		"Number of lines to store in the log buffer")
+	set.StringVar(logDir, "logDir", path.Join("/var/log", path.Base(os.Args[0])),
+		"Directory to write log data to. If empty, no logs are written")
+	set.UintVar(logQuota, "logQuota", 10,
+		"Log quota in MiB. If exceeded, old logs are deleted")
+}
+
+// New returns a new *LogBuffer with the specified number of lines of buffer.
 // Only one should be created per application.
 // The behaviour of the LogBuffer is controlled by the following command-line
 // flags (registered with the standard flag pacakge):
@@ -60,6 +77,16 @@ func New() *LogBuffer {
 		quota = 16384
 	}
 	return newLogBuffer(*logbufLines, *logDir, quota)
+}
+
+// Get works like New except that successive calls to Get return the same
+// instance.
+func Get() *LogBuffer {
+	kOnce.Do(func() {
+		kSoleLogBuffer = New()
+	})
+	return kSoleLogBuffer
+
 }
 
 // Dump will write the contents of the log buffer to w, with a prefix and
