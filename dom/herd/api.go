@@ -4,6 +4,7 @@ import (
 	"github.com/Symantec/Dominator/dom/images"
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectserver"
@@ -65,8 +66,10 @@ type HtmlWriter interface {
 type Sub struct {
 	herd                         *Herd
 	mdb                          mdb.Machine
-	requiredImageName            string // Updated only by sub goroutine.
-	plannedImageName             string // Updated only by sub goroutine.
+	requiredImageName            string       // Updated only by sub goroutine.
+	requiredImage                *image.Image // Updated only by sub goroutine.
+	plannedImageName             string       // Updated only by sub goroutine.
+	plannedImage                 *image.Image // Updated only by sub goroutine.
 	clientResource               *srpc.ClientResource
 	computedInodes               map[string]*filesystem.RegularInode
 	fileUpdateChannel            <-chan []filegenproto.FileInfo

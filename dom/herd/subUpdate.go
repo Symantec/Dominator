@@ -14,9 +14,8 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 	sub.herd.computeSemaphore <- struct{}{}
 	computeSlotWaitTimeDistribution.Add(time.Since(waitStartTime))
 	defer func() { <-sub.herd.computeSemaphore }()
-	requiredImage := sub.herd.imageManager.GetNoError(sub.requiredImageName)
 	request.ImageName = sub.requiredImageName
-	request.Triggers = requiredImage.Triggers
+	request.Triggers = sub.requiredImage.Triggers
 	var rusageStart, rusageStop syscall.Rusage
 	computeStartTime := time.Now()
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
@@ -25,7 +24,7 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 		FileSystem:     sub.fileSystem,
 		ComputedInodes: sub.computedInodes,
 		ObjectCache:    sub.objectCache}
-	if lib.BuildUpdateRequest(subObj, requiredImage, request, false,
+	if lib.BuildUpdateRequest(subObj, sub.requiredImage, request, false,
 		sub.herd.logger) {
 		return false, true
 	}
