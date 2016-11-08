@@ -11,6 +11,7 @@ package lib
 import (
 	"errors"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectcache"
@@ -37,6 +38,7 @@ type Sub struct {
 	inodesCreated           map[uint64]string // Required inode number.
 	subObjectCacheUsage     map[hash.Hash]uint64
 	requiredFS              *filesystem.FileSystem
+	filter                  *filter.Filter
 }
 
 // BuildMissingLists will construct lists of objects to be fetched by the sub
