@@ -151,7 +151,15 @@ func (herd *Herd) getReachableSelector(parsedQuery url.ParsedQuery) (
 
 func (herd *Herd) setDefaultImage(imageName string) error {
 	if imageName == "" {
+		herd.Lock()
+		defer herd.Unlock()
 		herd.defaultImageName = ""
+		// Cancel blocking operations by affected subs.
+		for _, sub := range herd.subsByIndex {
+			if sub.mdb.RequiredImage != "" {
+				sub.sendCancel()
+			}
+		}
 		return nil
 	}
 	if imageName == herd.defaultImageName {
