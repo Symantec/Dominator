@@ -193,13 +193,15 @@ func (sub *Sub) loadConfiguration() {
 		sub.computedInodes = nil
 	}
 	sub.requiredImageName = newRequiredImageName
+	sub.requiredImage = sub.herd.imageManager.GetNoError(sub.requiredImageName)
 	sub.plannedImageName = sub.mdb.PlannedImage
+	sub.plannedImage = sub.herd.imageManager.GetNoError(sub.plannedImageName)
 }
 
 func (sub *Sub) processFileUpdates() bool {
 	haveUpdates := false
 	for {
-		image := sub.herd.imageManager.GetNoError(sub.requiredImageName)
+		image := sub.requiredImage
 		if image != nil && sub.computedInodes == nil {
 			sub.computedInodes = make(map[string]*filesystem.RegularInode)
 			sub.busyFlagMutex.Lock()
@@ -251,7 +253,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	// If the planned image has just become available, force a full poll.
 	if previousStatus == statusSynced &&
 		!sub.havePlannedImage &&
-		sub.herd.imageManager.GetNoError(sub.plannedImageName) != nil {
+		sub.plannedImage != nil {
 		sub.havePlannedImage = true
 		sub.generationCount = 0 // Force a full poll.
 	}
@@ -275,7 +277,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	request.HaveGeneration = sub.generationCount
 	var reply subproto.PollResponse
 	haveImage := false
-	if sub.herd.imageManager.GetNoError(sub.requiredImageName) == nil {
+	if sub.requiredImage == nil {
 		request.ShortPollOnly = true
 	} else {
 		haveImage = true
@@ -397,8 +399,8 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.status = previousStatus
 		return
 	}
-	if idle, status := sub.fetchMissingObjects(srpcClient,
-		sub.requiredImageName, true); !idle {
+	if idle, status := sub.fetchMissingObjects(srpcClient, sub.requiredImage,
+		true); !idle {
 		sub.status = status
 		sub.reclaim()
 		return
@@ -409,7 +411,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		sub.reclaim()
 		return
 	}
-	if idle, status := sub.fetchMissingObjects(srpcClient, sub.plannedImageName,
+	if idle, status := sub.fetchMissingObjects(srpcClient, sub.plannedImage,
 		false); !idle {
 		if status != statusImageNotReady {
 			sub.status = status
@@ -470,10 +472,9 @@ func compareConfigs(oldConf, newConf subproto.Configuration) bool {
 }
 
 // Returns true if all required objects are available.
-func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, imageName string,
+func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, image *image.Image,
 	pushComputedFiles bool) (
 	bool, subStatus) {
-	image := sub.herd.imageManager.GetNoError(imageName)
 	if image == nil {
 		return false, statusImageNotReady
 	}
@@ -538,10 +539,9 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	logger := sub.herd.logger
 	if !sub.pendingSafetyClear {
 		// Perform a cheap safety check.
-		requiredImage := sub.herd.imageManager.GetNoError(sub.requiredImageName)
-		if requiredImage.Filter != nil &&
+		if sub.requiredImage.Filter != nil &&
 			len(sub.fileSystem.InodeTable)>>1 >
-				len(requiredImage.FileSystem.InodeTable) {
+				len(sub.requiredImage.FileSystem.InodeTable) {
 			return false, statusUnsafeUpdate
 		}
 	}
@@ -584,7 +584,7 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client) {
 			}
 		}
 	}
-	image := sub.herd.imageManager.GetNoError(sub.plannedImageName)
+	image := sub.plannedImage
 	if image != nil {
 		for _, inode := range image.FileSystem.InodeTable {
 			if inode, ok := inode.(*filesystem.RegularInode); ok {
