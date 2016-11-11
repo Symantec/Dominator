@@ -1,0 +1,40 @@
+#! /bin/bash --posix
+#
+# push-to-importer sub image image_server
+#
+# Push an image to a sub which is running an importer image designed for
+# importing another image. The importer image should implement the
+# make-bootable-and-unmount service such that
+# the command "service make-bootable-and-unmount start" will make the parent
+# block device of the destination file-system bootable and will stop subd and
+# unmount the file-system.
+# The following parameters are required:
+#   sub:          the hostname of the sub
+#   image:        the image to push
+#   image_server: the hostname of the image server
+
+set -o nounset
+
+if [ "$#" -ne 3 ]; then
+    echo "Usage: push-to-importer sub image image_server"
+    exit 1
+fi
+
+readonly sub="$1"
+readonly image="$2"
+readonly image_server="$3"
+
+echo 'Pushing image content'
+subtool -subHostname="$sub" \
+        -deleteBeforeFetch=true \
+        -filterFile=/dev/null \
+        -imageServerHostname="$image_server" \
+        -showTimes=true \
+        -triggersString='[]' \
+  push-image "$image" || exit
+
+echo 'Making bootable and detaching file-system'
+subtool -subHostname="$sub" \
+        -showTimes=true \
+        -triggersString='[{"MatchLines":[".*"],"Service":"make-bootable"}]' \
+  push-file "$HOME/etc/make-bootable-and-unmount" /make-bootable
