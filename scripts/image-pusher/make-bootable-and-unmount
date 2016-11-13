@@ -1,0 +1,68 @@
+#! /bin/bash --posix
+
+set -o nounset
+
+readonly new_root='/mnt'
+
+detach_volume()
+{
+    sleep 1
+    service subd stop
+    sleep 1
+    umount "$new_root/.subd/tmp"
+    umount "$new_root"
+    sync
+}
+
+case "$1" in
+  start)
+    cp -p /etc/fstab "$new_root/etc"
+    mount -n none -t proc "$new_root/proc"
+    mount -n none -t devtmpfs "$new_root/dev"
+    mount -n none -t sysfs "$new_root/sys"
+    chroot "$new_root" /make-bootable make-bootable
+    umount "$new_root/proc"
+    umount "$new_root/dev"
+    umount "$new_root/sys"
+    rm "$new_root/make-bootable"
+    (detach_volume < /dev/null >& /dev/null &)
+    exit 0
+    ;;
+
+  make-bootable)
+    ;;
+
+  *)
+    echo "Usage: /etc/init.d/make-bootable {start|make-bootable}"
+    exit 1
+esac
+
+readonly boot_device=$(blkid -L rootfs | sed -re 's/([[:digit:]]+$)//')
+readonly kernel_version=$(ls -v /lib/modules | tail -n 1)
+
+# Build a new initramfs suited to the machine.
+dracut --force "/boot/initramfs-$kernel_version.img" "$kernel_version"
+
+# Reconfigure GRUB for new root file-system and install on boot device.
+if [ -x /sbin/grub2-mkconfig ]; then
+    grub2-mkconfig -o /boot/grub2/grub.cfg
+    grub2-install "$boot_device"
+elif [ -x /usr/sbin/grub-mkconfig ]; then
+    grub-mkconfig -o /boot/grub/grub.cfg
+    grub-install "$boot_device"
+else
+    if [ -r /boot/grub/grub.conf ]; then
+	readonly grub_config_file='/boot/grub/grub.conf'
+    else
+	readonly grub_config_file='/boot/grub/grub.cfg'
+    fi
+    tmp="$(< "$grub_config_file")"
+    echo "$tmp" | sed -r \
+	-e 's/UUID=[^[:space:]]+/LABEL=rootfs/g' \
+	-e 's/quiet$/quiet console=ttyS0/' > "$grub_config_file"
+    grub <<-EOF
+	device (hd0) $boot_device
+	root (hd0,0)
+	setup (hd0)
+EOF
+fi
