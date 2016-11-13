@@ -158,6 +158,7 @@ func (herd *Herd) setDefaultImage(imageName string) error {
 		for _, sub := range herd.subsByIndex {
 			if sub.mdb.RequiredImage != "" {
 				sub.sendCancel()
+				sub.status = statusImageUndefined
 			}
 		}
 		return nil
