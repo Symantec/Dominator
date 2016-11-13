@@ -243,15 +243,14 @@ func (lb *LogBuffer) showRecent(w io.Writer, duration time.Duration,
 		reverseStrings(names)
 	}
 	fmt.Fprintln(writer, "<body>")
-	fmt.Fprintln(writer,
-		`<font size=2 style="font-family:'Courier New', monospace">`)
-	cWriter := &countingWriter{writer: writer}
+	cWriter := &countingWriter{writer: writer, prefixLine: "<pre>\n"}
 	lb.flush()
 	for _, name := range names {
 		cWriter.count = 0
-		lb.dumpSince(cWriter, name, earliestTime, "", "<br>\n", recentFirst)
+		lb.dumpSince(cWriter, name, earliestTime, "", "\n", recentFirst)
+		fmt.Fprintln(writer, "</pre>")
 		if cWriter.count > 0 {
-			cWriter.prefixLine = "<hr>\n"
+			cWriter.prefixLine = "<hr>\n<pre>\n"
 		}
 	}
 	fmt.Fprintln(writer, "</body>")
