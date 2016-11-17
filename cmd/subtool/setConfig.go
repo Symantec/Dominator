@@ -10,7 +10,7 @@ import (
 
 func setConfigSubcommand(getSubClient getSubClientFunc, args []string) {
 	if err := setConfig(getSubClient()); err != nil {
-		fmt.Fprintf(os.Stderr, "Error setting config\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error setting config: %s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)

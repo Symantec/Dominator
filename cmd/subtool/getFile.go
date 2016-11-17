@@ -11,7 +11,7 @@ import (
 
 func getFileSubcommand(getSubClient getSubClientFunc, args []string) {
 	if err := getFile(getSubClient(), args[0], args[1]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting file\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error getting file: %s\n", err)
 		os.Exit(2)
 	}
 	os.Exit(0)
