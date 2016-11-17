@@ -46,7 +46,7 @@ func main() {
 	var configuration scanner.Configuration
 	configuration.ScanFilter, err = filter.New(nil)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to create empty filter\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to create empty filter: %s\n", err)
 		os.Exit(1)
 	}
 	configuration.FsScanContext = fsrateio.NewReaderContext(bytesPerSecond,
@@ -96,7 +96,7 @@ func main() {
 		if *gobFile != "" {
 			file, err := os.Create(*gobFile)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating: %s\t%s\n",
+				fmt.Fprintf(os.Stderr, "Error creating: %s: %s\n",
 					*gobFile, err)
 				os.Exit(1)
 			}

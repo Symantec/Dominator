@@ -62,7 +62,7 @@ func main() {
 			<-ch
 			err := syscall.Exec(os.Args[0], os.Args, os.Environ())
 			if err != nil {
-				logger.Printf("Unable to Exec:%s\t%s\n", os.Args[0], err)
+				logger.Printf("Unable to Exec:%s: %s\n", os.Args[0], err)
 			}
 		}()
 	}
@@ -75,7 +75,7 @@ func main() {
 		}
 	}
 	if err := httpd.StartServer(*portNum, manager, false); err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to create http server: %s\n", err)
 		os.Exit(1)
 	}
 }
