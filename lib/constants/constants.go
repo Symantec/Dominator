@@ -6,6 +6,7 @@ const (
 	ImageServerPortNumber        = 6971
 	BasicFileGenServerPortNumber = 6972
 	SimpleMdbServerPortNumber    = 6973
+	ImageUnpackerPortNumber      = 6974
 
 	DefaultNetworkSpeedPercent = 10
 	DefaultScanSpeedPercent    = 2
