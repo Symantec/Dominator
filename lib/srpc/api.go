@@ -244,3 +244,9 @@ func (conn *Conn) Username() string {
 func (conn *Conn) IsEncrypted() bool {
 	return conn.isEncrypted
 }
+
+// RequestReply sends a request message to a connection and waits for a reply.
+// The request and reply messages are GOB encoded and decoded, respectively.
+func (conn *Conn) RequestReply(request interface{}, reply interface{}) error {
+	return conn.requestReply(request, reply)
+}
