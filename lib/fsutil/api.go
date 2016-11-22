@@ -113,3 +113,17 @@ func (w *ChecksumWriter) Write(p []byte) (int, error) {
 func (w *ChecksumWriter) WriteChecksum() error {
 	return w.writeChecksum()
 }
+
+type RenamingWriter struct {
+	*os.File
+	filename string
+}
+
+func CreateRenamingWriter(filename string, perm os.FileMode) (
+	*RenamingWriter, error) {
+	return createRenamingWriter(filename, perm)
+}
+
+func (w *RenamingWriter) Close() error {
+	return w.close()
+}
