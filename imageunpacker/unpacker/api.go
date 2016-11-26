@@ -18,15 +18,20 @@ type deviceInfo struct {
 	StreamName string
 }
 
+type requestType struct {
+	moveToStatus proto.StreamStatus
+	errorChannel chan<- error
+}
+
 type imageStreamInfo struct {
-	DeviceId     string
-	status       proto.StreamStatus
-	moveToStatus chan<- proto.StreamStatus
+	DeviceId       string
+	status         proto.StreamStatus
+	requestChannel chan<- requestType
 }
 
 type persistentState struct {
-	Devices      map[string]deviceInfo      // Key: DeviceId.
-	ImageStreams map[string]imageStreamInfo // Key: StreamName.
+	Devices      map[string]deviceInfo       // Key: DeviceId.
+	ImageStreams map[string]*imageStreamInfo // Key: StreamName.
 }
 
 type Unpacker struct {

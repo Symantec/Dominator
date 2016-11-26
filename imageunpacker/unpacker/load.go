@@ -29,7 +29,7 @@ func load(baseDir string, imageServerAddress string, logger *log.Logger) (
 	if err != nil {
 		if os.IsNotExist(err) {
 			u.pState.Devices = make(map[string]deviceInfo)
-			u.pState.ImageStreams = make(map[string]imageStreamInfo)
+			u.pState.ImageStreams = make(map[string]*imageStreamInfo)
 			return u, nil
 		}
 		return nil, err
@@ -45,6 +45,12 @@ func load(baseDir string, imageServerAddress string, logger *log.Logger) (
 			return nil, err
 		}
 		u.pState.Devices[deviceName] = device
+	}
+	// Set up streams.
+	for streamName := range u.pState.ImageStreams {
+		if _, err := u.setupStream(streamName); err != nil {
+			return nil, err
+		}
 	}
 	return u, nil
 }
