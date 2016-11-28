@@ -24,6 +24,8 @@ func printUsage() {
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  add-device DeviceId command ...")
+	fmt.Fprintln(os.Stderr, "  get-status")
+	fmt.Fprintln(os.Stderr, "  prepare-for-unpack stream-name")
 }
 
 type commandFunc func(*srpc.Client, []string)
@@ -37,6 +39,8 @@ type subcommand struct {
 
 var subcommands = []subcommand{
 	{"add-device", 2, -1, addDeviceSubcommand},
+	{"get-status", 0, 0, getStatusSubcommand},
+	{"prepare-for-unpack", 1, 1, prepareForUnpackSubcommand},
 }
 
 func main() {
