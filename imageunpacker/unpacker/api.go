@@ -1,6 +1,7 @@
 package unpacker
 
 import (
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"io"
@@ -20,6 +21,8 @@ type deviceInfo struct {
 
 type requestType struct {
 	moveToStatus proto.StreamStatus
+	desiredFS    *filesystem.FileSystem
+	imageName    string
 	errorChannel chan<- error
 }
 
@@ -66,6 +69,10 @@ func (u *Unpacker) PrepareForUnpack(streamName string) error {
 
 func (u *Unpacker) PrepareForAddDevice() error {
 	return u.prepareForAddDevice()
+}
+
+func (u *Unpacker) UnpackImage(streamName string, imageLeafName string) error {
+	return u.unpackImage(streamName, imageLeafName)
 }
 
 func (u *Unpacker) WriteHtml(writer io.Writer) {

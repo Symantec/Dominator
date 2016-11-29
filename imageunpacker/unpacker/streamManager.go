@@ -52,6 +52,7 @@ func (u *Unpacker) streamManager(streamName string,
 			case proto.StatusStreamScanning:
 				err = stream.scan()
 			case proto.StatusStreamFetching:
+				err = stream.unpack(request.imageName, request.desiredFS)
 			case proto.StatusStreamPreparing:
 			default:
 				panic("cannot move to status: " + request.moveToStatus.String())
@@ -59,4 +60,10 @@ func (u *Unpacker) streamManager(streamName string,
 			request.errorChannel <- err
 		}
 	}
+}
+
+func (u *Unpacker) getStream(streamName string) *imageStreamInfo {
+	u.rwMutex.RLock()
+	defer u.rwMutex.RUnlock()
+	return u.pState.ImageStreams[streamName]
 }
