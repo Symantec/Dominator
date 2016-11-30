@@ -54,6 +54,7 @@ func (u *Unpacker) streamManager(streamName string,
 			case proto.StatusStreamFetching:
 				err = stream.unpack(request.imageName, request.desiredFS)
 			case proto.StatusStreamPreparing:
+				err = stream.prepareForCapture()
 			default:
 				panic("cannot move to status: " + request.moveToStatus.String())
 			}
