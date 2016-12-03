@@ -80,6 +80,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  push-file source dest")
 	fmt.Fprintln(os.Stderr, "  push-image image")
 	fmt.Fprintln(os.Stderr, "  set-config")
+	fmt.Fprintln(os.Stderr, "  show-update-request image")
 }
 
 func getSubClient() *srpc.Client {
@@ -132,6 +133,7 @@ var subcommands = []subcommand{
 	{"push-file", 2, getSubClient, pushFileSubcommand},
 	{"push-image", 1, getSubClientRetry, pushImageSubcommand},
 	{"set-config", 0, getSubClient, setConfigSubcommand},
+	{"show-update-request", 1, getSubClientRetry, showUpdateRequestSubcommand},
 }
 
 func main() {
