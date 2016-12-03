@@ -1,0 +1,108 @@
+#! /bin/bash --posix
+
+### BEGIN INIT INFO
+# Provides:		image-unpacker
+# Required-Start:	$local_fs $network $syslog
+# Required-Stop:	$local_fs $network $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 6
+# Short-Description:	Dominator image unpacker server
+### END INIT INFO
+
+# /etc/init.d/image-unpacker: start and stop the Dominator image unpacker
+
+. /lib/lsb/init-functions
+
+umask 022
+
+readonly default_log_dir='/var/log/image-unpacker'
+
+DAEMON='/usr/local/sbin/image-unpacker'
+IMAGE_SERVER_HOSTNAME=
+LOG_DIR="$default_log_dir"
+LOG_QUOTA=
+LOGBUF_LINES=
+LOOP_PIDFILE='/var/run/image-unpacker.loop.pid'
+MAKE_BOOTABLE_TOOL=
+PIDFILE='/var/run/image-unpacker.pid'
+STATE_DIR=
+
+PROG_ARGS=
+
+[ -f /etc/default/image-unpacker ] && . /etc/default/image-unpacker
+
+test -x "$DAEMON" || exit 0
+
+export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
+
+mkdir -m 0755 -p "$LOG_DIR"
+
+if [ -n "$IMAGE_SERVER_HOSTNAME" ]; then
+    PROG_ARGS="$PROG_ARGS -imageServerHostname=$IMAGE_SERVER_HOSTNAME"
+fi
+
+if [ -n "$LOG_DIR" ] && [ "$LOG_DIR" != "$default_log_dir" ]; then
+    PROG_ARGS="$PROG_ARGS -logDir=$LOG_DIR"
+fi
+
+if [ -n "$LOG_QUOTA" ]; then
+    PROG_ARGS="$PROG_ARGS -logQuota=$LOG_QUOTA"
+fi
+
+if [ -n "$LOGBUF_LINES" ]; then
+    PROG_ARGS="$PROG_ARGS -logbufLines=$LOGBUF_LINES"
+fi
+
+if [ -n "$MAKE_BOOTABLE_TOOL" ]; then
+    PROG_ARGS="$PROG_ARGS -makeBootableTool=$MAKE_BOOTABLE_TOOL"
+fi
+
+if [ -n "$STATE_DIR" ]; then
+    PROG_ARGS="$PROG_ARGS -stateDir=$STATE_DIR"
+fi
+
+do_start ()
+{
+    start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
+		      --exec "$DAEMON" --make-pidfile -- \
+		      $PROG_ARGS
+}
+
+start_loop ()
+{
+    echo "$BASHPID" > "$LOOP_PIDFILE"
+    while true; do
+	do_start
+	rm -f "$PIDFILE"
+	sleep 1
+    done
+}
+
+case "$1" in
+  start)
+	log_daemon_msg "Starting image-unpacker daemon" "image-unpacker" || true
+	(start_loop < /dev/null &> /dev/null &)
+	;;
+  stop)
+	log_daemon_msg "Stopping image-unpacker daemon" "image-unpacker" || true
+	[ -s "$LOOP_PIDFILE" ] && kill -KILL $(cat "$LOOP_PIDFILE")
+	[ -s "$PIDFILE" ]      && kill -TERM $(cat "$PIDFILE")
+	rm -f "$LOOP_PIDFILE" "$PIDFILE"
+	;;
+
+  reload|force-reload)
+	$0 stop
+	$0 start
+	;;
+
+  restart)
+	$0 stop
+	$0 start
+	;;
+
+  *)
+	log_action_msg "Usage: /etc/init.d/image-unpacker {start|stop|reload|force-reload|restart}" || true
+	exit 1
+esac
+
+exit 0
