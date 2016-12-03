@@ -27,6 +27,7 @@ var (
 	ErrorMissingCertificate   = errors.New("missing certificate")
 	ErrorBadCertificate       = errors.New("bad certificate")
 	ErrorAccessToMethodDenied = errors.New("access to method denied")
+	ErrorMethodBlocked        = errors.New("method blocked")
 )
 
 var serverTlsConfig *tls.Config
@@ -47,6 +48,12 @@ func CheckTlsRequired() bool {
 // certificate pair then processing stops and the error is returned.
 func LoadCertificates(directory string) ([]tls.Certificate, error) {
 	return loadCertificates(directory)
+}
+
+// MethodBlocker defines an interface to block method calls (after possible
+// authentication) for a receiver (passed to RegisterName).
+type MethodBlocker interface {
+	BlockMethod(methodName string) bool // Return true to block method.
 }
 
 // RegisterName publishes in the server the set of methods of the receiver
@@ -236,4 +243,10 @@ func (conn *Conn) Username() string {
 // IsEncrypted will return true if the underlying connection is TLS-encrypted.
 func (conn *Conn) IsEncrypted() bool {
 	return conn.isEncrypted
+}
+
+// RequestReply sends a request message to a connection and waits for a reply.
+// The request and reply messages are GOB encoded and decoded, respectively.
+func (conn *Conn) RequestReply(request interface{}, reply interface{}) error {
+	return conn.requestReply(request, reply)
 }

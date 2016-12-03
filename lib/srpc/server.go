@@ -41,7 +41,8 @@ type methodWrapper struct {
 }
 
 type receiverType struct {
-	methods map[string]*methodWrapper
+	methods     map[string]*methodWrapper
+	blockMethod func(methodName string) bool
 }
 
 var (
@@ -91,6 +92,10 @@ func registerServerMetrics() {
 	bucketer = tricorder.NewGeometricBucketer(0.1, 1e5)
 }
 
+func defaultMethodBlocker(methodName string) bool {
+	return false
+}
+
 func registerName(name string, rcvr interface{}) error {
 	var receiver receiverType
 	receiver.methods = make(map[string]*methodWrapper)
@@ -118,6 +123,11 @@ func registerName(name string, rcvr interface{}) error {
 		if err := mVal.registerMetrics(dir); err != nil {
 			return err
 		}
+	}
+	if blocker, ok := rcvr.(MethodBlocker); ok {
+		receiver.blockMethod = blocker.BlockMethod
+	} else {
+		receiver.blockMethod = defaultMethodBlocker
 	}
 	receivers[name] = receiver
 	return nil
@@ -325,7 +335,7 @@ func handleConnection(conn *Conn) {
 			continue
 		}
 		serviceMethod = serviceMethod[:len(serviceMethod)-1]
-		method, err := findMethod(serviceMethod)
+		method, err := conn.findMethod(serviceMethod)
 		if err != nil {
 			if _, err := conn.WriteString(err.Error() + "\n"); err != nil {
 				log.Println(err)
@@ -333,19 +343,10 @@ func handleConnection(conn *Conn) {
 			}
 			continue
 		}
-		if !conn.checkPermitted(serviceMethod) {
-			method.numDeniedCalls++
-			if _, e := conn.WriteString(
-				ErrorAccessToMethodDenied.Error() + "\n"); e != nil {
-				log.Println(e)
-				return
-			}
-			continue
-		} else {
-			if _, err := conn.WriteString("\n"); err != nil {
-				log.Println(err)
-				return
-			}
+		// Method is OK to call. Tell client and then call method handler.
+		if _, err := conn.WriteString("\n"); err != nil {
+			log.Println(err)
+			return
 		}
 		if err := conn.Flush(); err != nil {
 			log.Println(err)
@@ -358,20 +359,7 @@ func handleConnection(conn *Conn) {
 	}
 }
 
-// Returns true if the method is permitted, else false if denied.
-func (conn *Conn) checkPermitted(serviceMethod string) bool {
-	if conn.permittedMethods == nil {
-		return true
-	}
-	for sm := range conn.permittedMethods {
-		if matched, _ := filepath.Match(sm, serviceMethod); matched {
-			return true
-		}
-	}
-	return false
-}
-
-func findMethod(serviceMethod string) (*methodWrapper, error) {
+func (conn *Conn) findMethod(serviceMethod string) (*methodWrapper, error) {
 	splitServiceMethod := strings.Split(serviceMethod, ".")
 	if len(splitServiceMethod) != 2 {
 		return nil, errors.New("malformed Service.Method: " + serviceMethod)
@@ -386,7 +374,27 @@ func findMethod(serviceMethod string) (*methodWrapper, error) {
 	if !ok {
 		return nil, errors.New(serviceName + ": unknown method: " + methodName)
 	}
+	if !conn.checkPermitted(serviceMethod) {
+		method.numDeniedCalls++
+		return nil, ErrorAccessToMethodDenied
+	}
+	if receiver.blockMethod(methodName) {
+		return nil, ErrorMethodBlocked
+	}
 	return method, nil
+}
+
+// Returns true if the method is permitted, else false if denied.
+func (conn *Conn) checkPermitted(serviceMethod string) bool {
+	if conn.permittedMethods == nil {
+		return true
+	}
+	for sm := range conn.permittedMethods {
+		if matched, _ := filepath.Match(sm, serviceMethod); matched {
+			return true
+		}
+	}
+	return false
 }
 
 func listMethodsHttpHandler(w http.ResponseWriter, req *http.Request) {

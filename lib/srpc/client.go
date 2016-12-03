@@ -188,11 +188,17 @@ func (client *Client) requestReply(serviceMethod string, request interface{},
 		return err
 	}
 	defer conn.Close()
+	return conn.requestReply(request, reply)
+}
+
+func (conn *Conn) requestReply(request interface{}, reply interface{}) error {
 	encoder := gob.NewEncoder(conn)
 	if err := encoder.Encode(request); err != nil {
 		return err
 	}
-	conn.Flush()
+	if err := conn.Flush(); err != nil {
+		return err
+	}
 	str, err := conn.ReadString('\n')
 	if err != nil {
 		return err
