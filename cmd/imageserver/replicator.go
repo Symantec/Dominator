@@ -57,6 +57,7 @@ func replicator(address string, imdb *scanner.ImageDataBase,
 func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 	objSrv *fsdriver.ObjectServer, archiveMode bool, logger *log.Logger) error {
 	logger.Printf("Image replicator: connected to: %s\n", address)
+	replicationStartTime := time.Now()
 	decoder := gob.NewDecoder(conn)
 	initialImages := make(map[string]struct{})
 	if archiveMode {
@@ -77,6 +78,8 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 					deleteMissingImages(imdb, initialImages, logger)
 					initialImages = nil
 				}
+				logger.Printf("Replicated all current images in %s\n",
+					format.Duration(time.Since(replicationStartTime)))
 				continue
 			}
 			if initialImages != nil {
