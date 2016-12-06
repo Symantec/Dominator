@@ -47,7 +47,8 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string,
 			filePerms)
 		if err != nil {
 			if os.IsExist(err) {
-				return errors.New("cannot add a previously deleted image")
+				return errors.New("cannot add previously deleted image: " +
+					name)
 			}
 			return err
 		}
