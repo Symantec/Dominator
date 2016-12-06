@@ -219,6 +219,7 @@ func getMissingObjects(address string, objSrv *fsdriver.ObjectServer,
 	}
 	logger.Printf("Replicator: downloading %d of %d objects\n",
 		len(missingObjects), len(hashes))
+	startTime := time.Now()
 	objClient := objectclient.NewObjectClient(address)
 	defer objClient.Close()
 	objectsReader, err := objClient.GetObjects(missingObjects)
@@ -226,6 +227,7 @@ func getMissingObjects(address string, objSrv *fsdriver.ObjectServer,
 		return err
 	}
 	defer objectsReader.Close()
+	var totalBytes uint64
 	for _, hash := range missingObjects {
 		length, reader, err := objectsReader.NextObject()
 		if err != nil {
@@ -236,7 +238,12 @@ func getMissingObjects(address string, objSrv *fsdriver.ObjectServer,
 		if err != nil {
 			return err
 		}
+		totalBytes += length
 	}
+	timeTaken := time.Since(startTime)
+	logger.Printf("Replicator: downloaded %d objects, %s in %s (%s/s)\n",
+		len(missingObjects), format.FormatBytes(totalBytes), timeTaken,
+		format.FormatBytes(uint64(float64(totalBytes)/timeTaken.Seconds())))
 	return nil
 }
 
