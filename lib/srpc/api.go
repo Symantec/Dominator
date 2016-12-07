@@ -222,6 +222,7 @@ type Conn struct {
 	parent      *Client // nil: server-side connection.
 	isEncrypted bool
 	*bufio.ReadWriter
+	remoteAddr       string
 	username         string              // Empty string for unauthenticated.
 	permittedMethods map[string]struct{} // nil: all, empty: none permitted.
 }
@@ -232,21 +233,27 @@ func (conn *Conn) Close() error {
 	return conn.close()
 }
 
-// Username will return the username of the client who holds the certificate
-// used to authenticate the connection to the server. If the connection was not
-// authenticated the emtpy string is returned. If the connection is a client
-// connection, then Username will panic.
-func (conn *Conn) Username() string {
-	return conn.getUsername()
-}
-
 // IsEncrypted will return true if the underlying connection is TLS-encrypted.
 func (conn *Conn) IsEncrypted() bool {
 	return conn.isEncrypted
+}
+
+// RemoteAddr returns the remote network address. This is currently only
+// implemented for server-side connections.
+func (conn *Conn) RemoteAddr() string {
+	return conn.remoteAddr
 }
 
 // RequestReply sends a request message to a connection and waits for a reply.
 // The request and reply messages are GOB encoded and decoded, respectively.
 func (conn *Conn) RequestReply(request interface{}, reply interface{}) error {
 	return conn.requestReply(request, reply)
+}
+
+// Username will return the username of the client who holds the certificate
+// used to authenticate the connection to the server. If the connection was not
+// authenticated the emtpy string is returned. If the connection is a client
+// connection, then Username will panic.
+func (conn *Conn) Username() string {
+	return conn.getUsername()
 }
