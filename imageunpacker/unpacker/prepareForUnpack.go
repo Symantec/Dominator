@@ -23,7 +23,7 @@ func (u *Unpacker) prepareForUnpack(streamName string) error {
 	}
 	errorChannel := make(chan error)
 	request := requestType{
-		moveToStatus: proto.StatusStreamScanning,
+		request:      requestScan,
 		errorChannel: errorChannel,
 	}
 	streamInfo.requestChannel <- request

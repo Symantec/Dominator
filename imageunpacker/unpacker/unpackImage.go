@@ -36,7 +36,7 @@ func (u *Unpacker) unpackImage(streamName string, imageLeafName string) error {
 	fs.BuildEntryMap()
 	errorChannel := make(chan error)
 	request := requestType{
-		moveToStatus: unpackproto.StatusStreamFetching,
+		request:      requestUnpack,
 		desiredFS:    fs,
 		imageName:    path.Join(streamName, imageLeafName),
 		errorChannel: errorChannel,

@@ -2,11 +2,19 @@ package unpacker
 
 import (
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"io"
 	"log"
 	"sync"
+)
+
+const (
+	requestAssociateWithDevice = iota
+	requestScan
+	requestUnpack
+	requestPrepareForCapture
 )
 
 var (
@@ -20,9 +28,10 @@ type deviceInfo struct {
 }
 
 type requestType struct {
-	moveToStatus proto.StreamStatus
+	request      int
 	desiredFS    *filesystem.FileSystem
 	imageName    string
+	deviceId     string
 	errorChannel chan<- error
 }
 
@@ -35,6 +44,15 @@ type imageStreamInfo struct {
 type persistentState struct {
 	Devices      map[string]deviceInfo       // Key: DeviceId.
 	ImageStreams map[string]*imageStreamInfo // Key: StreamName.
+}
+
+type streamManagerState struct {
+	unpacker    *Unpacker
+	streamName  string
+	streamInfo  *imageStreamInfo
+	mounted     bool
+	fileSystem  *filesystem.FileSystem
+	objectCache objectcache.ObjectCache
 }
 
 type Unpacker struct {
@@ -53,6 +71,11 @@ func Load(baseDir string, imageServerAddress string, logger *log.Logger) (
 
 func (u *Unpacker) AddDevice(deviceId string) error {
 	return u.addDevice(deviceId)
+}
+
+func (u *Unpacker) AssociateStreamWithDevice(streamName string,
+	deviceId string) error {
+	return u.associateStreamWithDevice(streamName, deviceId)
 }
 
 func (u *Unpacker) GetStatus() proto.GetStatusResponse {

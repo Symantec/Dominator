@@ -27,7 +27,7 @@ func (u *Unpacker) prepareForCapture(streamName string) error {
 	}
 	errorChannel := make(chan error)
 	request := requestType{
-		moveToStatus: proto.StatusStreamPreparing,
+		request:      requestPrepareForCapture,
 		errorChannel: errorChannel,
 	}
 	streamInfo.requestChannel <- request
