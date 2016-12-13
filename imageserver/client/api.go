@@ -4,6 +4,7 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"time"
 )
 
 func AddImage(client *srpc.Client, name string, img *image.Image) error {
@@ -28,7 +29,12 @@ func DeleteUnreferencedObjects(client *srpc.Client, percentage uint8,
 }
 
 func GetImage(client *srpc.Client, name string) (*image.Image, error) {
-	return getImage(client, name)
+	return getImage(client, name, 0)
+}
+
+func GetImageWithTimeout(client *srpc.Client, name string,
+	timeout time.Duration) (*image.Image, error) {
+	return getImage(client, name, timeout)
 }
 
 func ListDirectories(client *srpc.Client) ([]image.Directory, error) {
