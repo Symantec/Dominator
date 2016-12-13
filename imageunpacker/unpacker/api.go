@@ -28,11 +28,12 @@ type deviceInfo struct {
 }
 
 type requestType struct {
-	request      int
-	desiredFS    *filesystem.FileSystem
-	imageName    string
-	deviceId     string
-	errorChannel chan<- error
+	request        int
+	desiredFS      *filesystem.FileSystem
+	imageName      string
+	deviceId       string
+	skipIfPrepared bool
+	errorChannel   chan<- error
 }
 
 type imageStreamInfo struct {
@@ -86,8 +87,9 @@ func (u *Unpacker) PrepareForCapture(streamName string) error {
 	return u.prepareForCapture(streamName)
 }
 
-func (u *Unpacker) PrepareForUnpack(streamName string) error {
-	return u.prepareForUnpack(streamName)
+func (u *Unpacker) PrepareForUnpack(streamName string, skipIfPrepared bool,
+	doNotWaitForResult bool) error {
+	return u.prepareForUnpack(streamName, skipIfPrepared, doNotWaitForResult)
 }
 
 func (u *Unpacker) PrepareForAddDevice() error {

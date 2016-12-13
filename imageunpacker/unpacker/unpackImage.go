@@ -83,6 +83,7 @@ func (stream *streamManagerState) unpack(imageName string,
 		FileSystem:  stream.fileSystem,
 		ObjectCache: stream.objectCache,
 	}
+	stream.fileSystem = nil
 	desiredImage := &image.Image{FileSystem: desiredFS}
 	objectsToFetch, _ := domlib.BuildMissingLists(subObj, desiredImage, false,
 		true, stream.unpacker.logger)

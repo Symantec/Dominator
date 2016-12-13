@@ -41,7 +41,7 @@ func (u *Unpacker) streamManager(streamName string,
 			case requestAssociateWithDevice:
 				err = stream.associateWithDevice(request.deviceId)
 			case requestScan:
-				err = stream.scan()
+				err = stream.scan(request.skipIfPrepared)
 			case requestUnpack:
 				err = stream.unpack(request.imageName, request.desiredFS)
 			case requestPrepareForCapture:
