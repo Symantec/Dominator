@@ -16,7 +16,7 @@ func prepareForUnpackSubcommand(client *srpc.Client, args []string) {
 }
 
 func prepareForUnpack(client *srpc.Client, streamName string) error {
-	request := proto.PrepareForUnpackRequest{streamName}
+	request := proto.PrepareForUnpackRequest{StreamName: streamName}
 	var reply proto.PrepareForUnpackResponse
 	return client.RequestReply("ImageUnpacker.PrepareForUnpack", request,
 		&reply)
