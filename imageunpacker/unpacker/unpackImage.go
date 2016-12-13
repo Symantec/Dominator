@@ -54,7 +54,8 @@ func (u *Unpacker) getImage(imageName string) *image.Image {
 			u.logger.Printf("Error connecting to image server: %s\n", err)
 			continue
 		}
-		image, err := imageclient.GetImage(srpcClient, imageName)
+		image, err := imageclient.GetImageWithTimeout(srpcClient, imageName,
+			time.Minute)
 		if err != nil {
 			srpcClient.Close()
 			u.logger.Printf("Error getting image: %s\n", err)
