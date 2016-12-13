@@ -43,11 +43,17 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string,
 			return err
 		}
 		filename := path.Join(imdb.baseDir, name)
-		file, err := os.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_RDWR,
-			filePerms)
+		flags := os.O_CREATE | os.O_RDWR
+		if imdb.masterMode {
+			flags |= os.O_EXCL
+		} else {
+			flags |= os.O_TRUNC
+		}
+		file, err := os.OpenFile(filename, flags, filePerms)
 		if err != nil {
 			if os.IsExist(err) {
-				return errors.New("cannot add a previously deleted image")
+				return errors.New("cannot add previously deleted image: " +
+					name)
 			}
 			return err
 		}
@@ -189,7 +195,7 @@ func (imdb *ImageDataBase) deleteImage(name string, username *string) error {
 func (imdb *ImageDataBase) deleteImageWithPossibleCleanup(name string) {
 	img := imdb.imageMap[name]
 	delete(imdb.imageMap, name)
-	if imdb.cleanupUnreferencedObjects && img != nil {
+	if imdb.masterMode && img != nil {
 		go imdb.deletePossiblyUnreferencedObjects(img.FileSystem.InodeTable)
 	}
 }

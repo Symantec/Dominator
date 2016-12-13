@@ -10,7 +10,8 @@ import (
 
 func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 	defer conn.Flush()
-	t.logger.Println("New image replication client connected")
+	t.logger.Printf("New image replication client connected from: %s\n",
+		conn.RemoteAddr())
 	t.incrementNumReplicationClients(true)
 	defer t.incrementNumReplicationClients(false)
 	addChannel := t.imageDataBase.RegisterAddNotifier()
@@ -72,7 +73,8 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 			}
 		case err := <-closeChannel:
 			if err == io.EOF {
-				t.logger.Println("Image replication client disconnected")
+				t.logger.Printf("Image replication client disconnected: %s\n",
+					conn.RemoteAddr())
 				return nil
 			}
 			t.logger.Println(err)

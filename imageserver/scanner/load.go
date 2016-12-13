@@ -17,8 +17,7 @@ import (
 )
 
 func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
-	cleanupUnreferencedObjects bool,
-	logger *log.Logger) (*ImageDataBase, error) {
+	masterMode bool, logger *log.Logger) (*ImageDataBase, error) {
 	fi, err := os.Stat(baseDir)
 	if err != nil {
 		return nil, errors.New(
@@ -28,15 +27,15 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 		return nil, errors.New(fmt.Sprintf("%s is not a directory\n", baseDir))
 	}
 	imdb := &ImageDataBase{
-		baseDir:                    baseDir,
-		directoryMap:               make(map[string]image.DirectoryMetadata),
-		imageMap:                   make(map[string]*image.Image),
-		addNotifiers:               make(notifiers),
-		deleteNotifiers:            make(notifiers),
-		mkdirNotifiers:             make(makeDirectoryNotifiers),
-		objectServer:               objSrv,
-		cleanupUnreferencedObjects: cleanupUnreferencedObjects,
-		logger: logger,
+		baseDir:         baseDir,
+		directoryMap:    make(map[string]image.DirectoryMetadata),
+		imageMap:        make(map[string]*image.Image),
+		addNotifiers:    make(notifiers),
+		deleteNotifiers: make(notifiers),
+		mkdirNotifiers:  make(makeDirectoryNotifiers),
+		objectServer:    objSrv,
+		masterMode:      masterMode,
+		logger:          logger,
 	}
 	state := concurrent.NewState(0)
 	startTime := time.Now()

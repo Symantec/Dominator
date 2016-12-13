@@ -254,7 +254,7 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		log.Println("error writing connect message: ", err.Error())
 		return
 	}
-	myConn := new(Conn)
+	myConn := &Conn{remoteAddr: req.RemoteAddr}
 	if doTls {
 		tlsConn := tls.Server(unsecuredConn, serverTlsConfig)
 		defer tlsConn.Close()

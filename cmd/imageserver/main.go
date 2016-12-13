@@ -68,12 +68,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Cannot create ObjectServer: %s\n", err)
 		os.Exit(1)
 	}
-	cleanupUnreferencedObjects := true
+	masterMode := true
 	if *imageServerHostname != "" {
-		cleanupUnreferencedObjects = false
+		masterMode = false
 	}
-	imdb, err := scanner.LoadImageDataBase(*imageDir, objSrv,
-		cleanupUnreferencedObjects, logger)
+	imdb, err := scanner.LoadImageDataBase(*imageDir, objSrv, masterMode,
+		logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot load image database: %s\n", err)
 		os.Exit(1)

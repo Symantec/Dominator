@@ -31,16 +31,14 @@ type ImageDataBase struct {
 	deleteNotifiers notifiers
 	mkdirNotifiers  makeDirectoryNotifiers
 	// Unprotected by lock.
-	objectServer               objectserver.FullObjectServer
-	cleanupUnreferencedObjects bool
-	logger                     *log.Logger
+	objectServer objectserver.FullObjectServer
+	masterMode   bool
+	logger       *log.Logger
 }
 
 func LoadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
-	cleanupUnreferencedObjects bool,
-	logger *log.Logger) (*ImageDataBase, error) {
-	return loadImageDataBase(baseDir, objSrv, cleanupUnreferencedObjects,
-		logger)
+	masterMode bool, logger *log.Logger) (*ImageDataBase, error) {
+	return loadImageDataBase(baseDir, objSrv, masterMode, logger)
 }
 
 func (imdb *ImageDataBase) AddImage(image *image.Image, name string,
