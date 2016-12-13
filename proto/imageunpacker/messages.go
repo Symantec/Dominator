@@ -48,7 +48,9 @@ type PrepareForCaptureRequest struct {
 type PrepareForCaptureResponse struct{}
 
 type PrepareForUnpackRequest struct {
-	StreamName string
+	StreamName         string
+	SkipIfPrepared     bool
+	DoNotWaitForResult bool
 }
 
 type PrepareForUnpackResponse struct{}
