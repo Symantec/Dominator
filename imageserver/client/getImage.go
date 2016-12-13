@@ -7,7 +7,7 @@ import (
 )
 
 func getImage(client *srpc.Client, name string) (*image.Image, error) {
-	request := imageserver.GetImageRequest{name}
+	request := imageserver.GetImageRequest{ImageName: name}
 	var reply imageserver.GetImageResponse
 	err := client.RequestReply("ImageServer.GetImage", request, &reply)
 	if err != nil {
