@@ -3,6 +3,7 @@ package imageserver
 import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"time"
 )
 
 type AddImageRequest struct {
@@ -42,6 +43,7 @@ type DeleteUnreferencedObjectsResponse struct{}
 
 type GetImageRequest struct {
 	ImageName string
+	Timeout   time.Duration
 }
 
 type GetImageResponse struct {
