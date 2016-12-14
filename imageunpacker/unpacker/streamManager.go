@@ -1,20 +1,9 @@
 package unpacker
 
 import (
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/wsyscall"
-	proto "github.com/Symantec/Dominator/proto/imageunpacker"
+	"strconv"
 )
-
-type streamManagerState struct {
-	unpacker    *Unpacker
-	streamName  string
-	streamInfo  *imageStreamInfo
-	mounted     bool
-	fileSystem  *filesystem.FileSystem
-	objectCache objectcache.ObjectCache
-}
 
 // This must be called with the lock held.
 func (u *Unpacker) setupStream(streamName string) (*imageStreamInfo, error) {
@@ -48,15 +37,17 @@ func (u *Unpacker) streamManager(streamName string,
 		select {
 		case request := <-requestChannel:
 			var err error
-			switch request.moveToStatus {
-			case proto.StatusStreamScanning:
-				err = stream.scan()
-			case proto.StatusStreamFetching:
+			switch request.request {
+			case requestAssociateWithDevice:
+				err = stream.associateWithDevice(request.deviceId)
+			case requestScan:
+				err = stream.scan(request.skipIfPrepared)
+			case requestUnpack:
 				err = stream.unpack(request.imageName, request.desiredFS)
-			case proto.StatusStreamPreparing:
+			case requestPrepareForCapture:
 				err = stream.prepareForCapture()
 			default:
-				panic("cannot move to status: " + request.moveToStatus.String())
+				panic("unknown request: " + strconv.Itoa(request.request))
 			}
 			request.errorChannel <- err
 		}

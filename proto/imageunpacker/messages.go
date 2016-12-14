@@ -22,6 +22,13 @@ type DeviceInfo struct {
 // - Server sends "\n" if device was found, else an error message.
 // - End of transaction. Method completes.
 
+type AssociateStreamWithDeviceRequest struct {
+	StreamName string
+	DeviceId   string
+}
+
+type AssociateStreamWithDeviceResponse struct{}
+
 type GetStatusRequest struct{}
 
 type GetStatusResponse struct {
@@ -41,7 +48,9 @@ type PrepareForCaptureRequest struct {
 type PrepareForCaptureResponse struct{}
 
 type PrepareForUnpackRequest struct {
-	StreamName string
+	StreamName         string
+	SkipIfPrepared     bool
+	DoNotWaitForResult bool
 }
 
 type PrepareForUnpackResponse struct{}

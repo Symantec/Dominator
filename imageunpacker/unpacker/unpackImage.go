@@ -36,7 +36,7 @@ func (u *Unpacker) unpackImage(streamName string, imageLeafName string) error {
 	fs.BuildEntryMap()
 	errorChannel := make(chan error)
 	request := requestType{
-		moveToStatus: unpackproto.StatusStreamFetching,
+		request:      requestUnpack,
 		desiredFS:    fs,
 		imageName:    path.Join(streamName, imageLeafName),
 		errorChannel: errorChannel,
@@ -54,7 +54,8 @@ func (u *Unpacker) getImage(imageName string) *image.Image {
 			u.logger.Printf("Error connecting to image server: %s\n", err)
 			continue
 		}
-		image, err := imageclient.GetImage(srpcClient, imageName)
+		image, err := imageclient.GetImageWithTimeout(srpcClient, imageName,
+			time.Minute)
 		if err != nil {
 			srpcClient.Close()
 			u.logger.Printf("Error getting image: %s\n", err)
@@ -83,6 +84,7 @@ func (stream *streamManagerState) unpack(imageName string,
 		FileSystem:  stream.fileSystem,
 		ObjectCache: stream.objectCache,
 	}
+	stream.fileSystem = nil
 	desiredImage := &image.Image{FileSystem: desiredFS}
 	objectsToFetch, _ := domlib.BuildMissingLists(subObj, desiredImage, false,
 		true, stream.unpacker.logger)

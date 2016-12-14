@@ -14,7 +14,8 @@ import (
 	"time"
 )
 
-func (u *Unpacker) prepareForUnpack(streamName string) error {
+func (u *Unpacker) prepareForUnpack(streamName string, skipIfPrepared bool,
+	doNotWaitForResult bool) error {
 	u.rwMutex.Lock()
 	streamInfo, err := u.setupStream(streamName)
 	u.rwMutex.Unlock()
@@ -23,14 +24,21 @@ func (u *Unpacker) prepareForUnpack(streamName string) error {
 	}
 	errorChannel := make(chan error)
 	request := requestType{
-		moveToStatus: proto.StatusStreamScanning,
-		errorChannel: errorChannel,
+		request:        requestScan,
+		skipIfPrepared: skipIfPrepared,
+		errorChannel:   errorChannel,
 	}
 	streamInfo.requestChannel <- request
+	if doNotWaitForResult {
+		go func() {
+			<-errorChannel
+		}()
+		return nil
+	}
 	return <-errorChannel
 }
 
-func (stream *streamManagerState) scan() error {
+func (stream *streamManagerState) scan(skipIfPrepared bool) error {
 	if err := stream.getDevice(); err != nil {
 		return err
 	}
@@ -45,6 +53,9 @@ func (stream *streamManagerState) scan() error {
 	case proto.StatusStreamScanning:
 		return errors.New("stream scan in progress")
 	case proto.StatusStreamScanned:
+		if skipIfPrepared {
+			return nil
+		}
 		// Start scanning.
 	case proto.StatusStreamFetching:
 		return errors.New("fetch in progress")

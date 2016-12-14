@@ -37,6 +37,7 @@ var (
 	requiredPaths = flagutil.StringToRuneMap(constants.RequiredPaths)
 	skipFields    = flag.String("skipFields", "",
 		"Fields to skip when showing or diffing images")
+	timeout = flag.Duration("timeout", 0, "Timeout for get subcommand")
 
 	minimumExpiration = 15 * time.Minute
 )
