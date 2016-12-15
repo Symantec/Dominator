@@ -2,8 +2,12 @@ package imageunpacker
 
 func (status StreamStatus) string() string {
 	switch status {
-	case StatusStreamIdle:
-		return "idle"
+	case StatusStreamNoDevice:
+		return "no device"
+	case StatusStreamNotMounted:
+		return "not mounted"
+	case StatusStreamMounted:
+		return "mounted"
 	case StatusStreamScanning:
 		return "scanning"
 	case StatusStreamScanned:

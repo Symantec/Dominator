@@ -48,7 +48,11 @@ func (stream *streamManagerState) scan(skipIfPrepared bool) error {
 	}
 	streamInfo := stream.streamInfo
 	switch streamInfo.status {
-	case proto.StatusStreamIdle:
+	case proto.StatusStreamNoDevice:
+		return errors.New("no device")
+	case proto.StatusStreamNotMounted:
+		return errors.New("not mounted")
+	case proto.StatusStreamMounted:
 		// Start scanning.
 	case proto.StatusStreamScanning:
 		return errors.New("stream scan in progress")
@@ -67,6 +71,7 @@ func (stream *streamManagerState) scan(skipIfPrepared bool) error {
 		panic("invalid status")
 	}
 	streamInfo.status = proto.StatusStreamScanning
+	stream.unpacker.logger.Printf("Initiating scan(%s)\n", stream.streamName)
 	startTime := time.Now()
 	var err error
 	stream.fileSystem, err = stream.scanFS(mountPoint)
@@ -113,6 +118,7 @@ func (stream *streamManagerState) getDevice() error {
 			deviceInfo.StreamName = stream.streamName
 			u.pState.Devices[deviceId] = deviceInfo
 			streamInfo.DeviceId = deviceId
+			streamInfo.status = proto.StatusStreamNotMounted
 			if err := u.writeStateWithLock(); err != nil {
 				return err
 			}
@@ -126,7 +132,14 @@ func (stream *streamManagerState) getDevice() error {
 }
 
 func (stream *streamManagerState) mount(mountPoint string) error {
-	if stream.mounted {
+	streamInfo := stream.streamInfo
+	switch streamInfo.status {
+	case proto.StatusStreamNoDevice:
+		panic("no device")
+	case proto.StatusStreamNotMounted:
+		// Not mounted: go ahead and mount.
+	default:
+		// Already mounted.
 		return nil
 	}
 	stream.unpacker.rwMutex.RLock()
@@ -142,6 +155,8 @@ func (stream *streamManagerState) mount(mountPoint string) error {
 	if err != nil {
 		return err
 	}
-	stream.mounted = true
+	streamInfo.status = proto.StatusStreamMounted
+	stream.unpacker.logger.Printf("Mounted(%s) %s\n",
+		stream.streamName, deviceNode)
 	return nil
 }

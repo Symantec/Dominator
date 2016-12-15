@@ -90,7 +90,7 @@ func (stream *streamManagerState) unpack(imageName string,
 		true, stream.unpacker.logger)
 	objectsDir := path.Join(mountPoint, ".subd", "objects")
 	if err := stream.fetch(imageName, objectsToFetch, objectsDir); err != nil {
-		streamInfo.status = unpackproto.StatusStreamIdle
+		streamInfo.status = unpackproto.StatusStreamMounted
 		return err
 	}
 	subObj.ObjectCache = append(subObj.ObjectCache, objectsToFetch...)
@@ -102,7 +102,7 @@ func (stream *streamManagerState) unpack(imageName string,
 		stream.unpacker.logger)
 	_, _, err := sublib.Update(request, mountPoint, objectsDir, nil, nil, nil,
 		stream.unpacker.logger)
-	streamInfo.status = unpackproto.StatusStreamIdle
+	streamInfo.status = unpackproto.StatusStreamMounted
 	stream.unpacker.logger.Printf("Update(%s) completed in %s\n",
 		imageName, format.Duration(time.Since(startTime)))
 	return err
@@ -121,7 +121,7 @@ func (stream *streamManagerState) fetch(imageName string,
 	defer objectServer.Close()
 	objectsReader, err := objectServer.GetObjects(objectsToFetch)
 	if err != nil {
-		stream.streamInfo.status = unpackproto.StatusStreamIdle
+		stream.streamInfo.status = unpackproto.StatusStreamMounted
 		return err
 	}
 	defer objectsReader.Close()
@@ -131,14 +131,14 @@ func (stream *streamManagerState) fetch(imageName string,
 		length, reader, err := objectsReader.NextObject()
 		if err != nil {
 			stream.unpacker.logger.Println(err)
-			stream.streamInfo.status = unpackproto.StatusStreamIdle
+			stream.streamInfo.status = unpackproto.StatusStreamMounted
 			return err
 		}
 		err = readOne(destDirname, hashVal, length, reader)
 		reader.Close()
 		if err != nil {
 			stream.unpacker.logger.Println(err)
-			stream.streamInfo.status = unpackproto.StatusStreamIdle
+			stream.streamInfo.status = unpackproto.StatusStreamMounted
 			return err
 		}
 	}

@@ -2,6 +2,7 @@ package unpacker
 
 import (
 	"github.com/Symantec/Dominator/lib/wsyscall"
+	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"strconv"
 )
 
@@ -16,6 +17,9 @@ func (u *Unpacker) setupStream(streamName string) (*imageStreamInfo, error) {
 		}
 	}
 	if streamInfo.requestChannel == nil {
+		if streamInfo.DeviceId != "" {
+			streamInfo.status = proto.StatusStreamNotMounted
+		}
 		requestChannel := make(chan requestType)
 		streamInfo.requestChannel = requestChannel
 		go u.streamManager(streamName, streamInfo, requestChannel)

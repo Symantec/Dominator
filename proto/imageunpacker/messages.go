@@ -1,12 +1,14 @@
 package imageunpacker
 
 const (
-	StatusStreamIdle      = 0
-	StatusStreamScanning  = 1
-	StatusStreamScanned   = 2
-	StatusStreamFetching  = 3
-	StatusStreamUpdating  = 4
-	StatusStreamPreparing = 5
+	StatusStreamNoDevice   = 0
+	StatusStreamNotMounted = 1
+	StatusStreamMounted    = 2
+	StatusStreamScanning   = 3
+	StatusStreamScanned    = 4
+	StatusStreamFetching   = 5
+	StatusStreamUpdating   = 6
+	StatusStreamPreparing  = 7
 )
 
 type DeviceInfo struct {

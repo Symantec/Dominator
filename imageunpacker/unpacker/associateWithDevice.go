@@ -28,7 +28,11 @@ func (u *Unpacker) associateStreamWithDevice(streamName string,
 func (stream *streamManagerState) associateWithDevice(deviceId string) error {
 	streamInfo := stream.streamInfo
 	switch streamInfo.status {
-	case proto.StatusStreamIdle:
+	case proto.StatusStreamNoDevice:
+		// OK to (re)associate.
+	case proto.StatusStreamNotMounted:
+		// OK to (re)associate.
+	case proto.StatusStreamMounted:
 		// OK to (re)associate.
 	case proto.StatusStreamScanning:
 		return errors.New("stream scan in progress")
@@ -54,12 +58,18 @@ func (stream *streamManagerState) selectDevice(deviceId string) error {
 	if streamInfo.DeviceId == deviceId {
 		return nil
 	}
-	if stream.mounted {
+	switch streamInfo.status {
+	case proto.StatusStreamNoDevice:
+		// Nothing to unmount.
+	case proto.StatusStreamNotMounted:
+		// Not mounted.
+	default:
+		// Mounted: unmount it.
 		mountPoint := path.Join(stream.unpacker.baseDir, "mnt")
 		if err := syscall.Unmount(mountPoint, 0); err != nil {
 			return err
 		}
-		stream.mounted = false
+		streamInfo.status = proto.StatusStreamNotMounted
 	}
 	if deviceId == "" {
 		return stream.getDevice()

@@ -51,7 +51,6 @@ type streamManagerState struct {
 	unpacker    *Unpacker
 	streamName  string
 	streamInfo  *imageStreamInfo
-	mounted     bool
 	fileSystem  *filesystem.FileSystem
 	objectCache objectcache.ObjectCache
 }
