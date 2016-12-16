@@ -106,13 +106,18 @@ func (stream *streamManagerState) scanFS(mountPoint string) (
 
 func (stream *streamManagerState) getDevice() error {
 	u := stream.unpacker
+	u.rwMutex.Lock()
+	defer u.rwMutex.Unlock()
+	return stream.getDeviceWithLock()
+}
+
+func (stream *streamManagerState) getDeviceWithLock() error {
+	u := stream.unpacker
 	streamInfo := stream.streamInfo
 	if streamInfo.DeviceId != "" {
 		return nil
 	}
 	// Search for unused device.
-	u.rwMutex.Lock()
-	defer u.rwMutex.Unlock()
 	for deviceId, deviceInfo := range u.pState.Devices {
 		if deviceInfo.StreamName == "" {
 			deviceInfo.StreamName = stream.streamName

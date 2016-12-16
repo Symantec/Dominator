@@ -29,7 +29,7 @@ func (stream *streamManagerState) associateWithDevice(deviceId string) error {
 	streamInfo := stream.streamInfo
 	switch streamInfo.status {
 	case proto.StatusStreamNoDevice:
-		// OK to (re)associate.
+		// OK to associate.
 	case proto.StatusStreamNotMounted:
 		// OK to (re)associate.
 	case proto.StatusStreamMounted:
@@ -72,10 +72,11 @@ func (stream *streamManagerState) selectDevice(deviceId string) error {
 		streamInfo.status = proto.StatusStreamNotMounted
 	}
 	if deviceId == "" {
-		return stream.getDevice()
+		return stream.getDeviceWithLock()
 	}
 	if streamInfo.DeviceId != "" {
-		return nil
+		return errors.New("stream: " + stream.streamName +
+			" is already associated with: " + streamInfo.DeviceId)
 	}
 	if device, ok := u.pState.Devices[deviceId]; !ok {
 		return errors.New("unknown device ID: " + deviceId)
@@ -87,6 +88,7 @@ func (stream *streamManagerState) selectDevice(deviceId string) error {
 		device.StreamName = stream.streamName
 		u.pState.Devices[deviceId] = device
 		streamInfo.DeviceId = deviceId
+		streamInfo.status = proto.StatusStreamNotMounted
 		return u.writeStateWithLock()
 	}
 }

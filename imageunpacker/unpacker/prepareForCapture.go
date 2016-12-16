@@ -67,8 +67,10 @@ func (stream *streamManagerState) prepareForCapture() error {
 	startTime := time.Now()
 	err := stream.capture()
 	if err != nil {
+		stream.streamInfo.status = proto.StatusStreamMounted
 		return err
 	}
+	stream.streamInfo.status = proto.StatusStreamNotMounted
 	stream.unpacker.logger.Printf("Prepared for capture(%s) in %s\n",
 		stream.streamName, format.Duration(time.Since(startTime)))
 	return nil
@@ -114,11 +116,9 @@ func (stream *streamManagerState) capture() error {
 		return fmt.Errorf("error preparing: %s: %s", err, output)
 	}
 	os.Remove(tool)
-	stream.streamInfo.status = proto.StatusStreamMounted
 	if err := syscall.Unmount(mountPoint, 0); err != nil {
 		return err
 	}
-	stream.streamInfo.status = proto.StatusStreamNotMounted
 	syscall.Sync()
 	return nil
 }
