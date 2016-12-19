@@ -9,6 +9,10 @@ func (sl *StringList) String() string {
 }
 
 func (sl *StringList) Set(value string) error {
-	*sl = strings.Split(value, ",")
+	if value == "" {
+		*sl = make(StringList, 0)
+	} else {
+		*sl = strings.Split(value, ",")
+	}
 	return nil
 }
