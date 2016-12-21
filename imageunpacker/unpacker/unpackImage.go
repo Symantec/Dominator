@@ -80,6 +80,11 @@ func (stream *streamManagerState) unpack(imageName string,
 	if streamInfo.status != unpackproto.StatusStreamScanned {
 		return errors.New("not yet scanned")
 	}
+	err := stream.deleteUnneededFiles(imageName, stream.fileSystem, desiredFS,
+		mountPoint)
+	if err != nil {
+		return err
+	}
 	subObj := domlib.Sub{
 		FileSystem:  stream.fileSystem,
 		ObjectCache: stream.objectCache,
@@ -100,12 +105,42 @@ func (stream *streamManagerState) unpack(imageName string,
 	var request subproto.UpdateRequest
 	domlib.BuildUpdateRequest(subObj, desiredImage, &request, true,
 		stream.unpacker.logger)
-	_, _, err := sublib.Update(request, mountPoint, objectsDir, nil, nil, nil,
+	_, _, err = sublib.Update(request, mountPoint, objectsDir, nil, nil, nil,
 		stream.unpacker.logger)
 	streamInfo.status = unpackproto.StatusStreamMounted
 	stream.unpacker.logger.Printf("Update(%s) completed in %s\n",
 		imageName, format.Duration(time.Since(startTime)))
 	return err
+}
+
+func (stream *streamManagerState) deleteUnneededFiles(imageName string,
+	subFS, imgFS *filesystem.FileSystem, mountPoint string) error {
+	pathsToDelete := make([]string, 0)
+	imgHashToInodesTable := imgFS.HashToInodesTable()
+	imgFilenameToInodeTable := imgFS.FilenameToInodeTable()
+	for pathname, inum := range subFS.FilenameToInodeTable() {
+		if inode, ok := subFS.InodeTable[inum].(*filesystem.RegularInode); ok {
+			if inode.Size > 0 {
+				if _, ok := imgHashToInodesTable[inode.Hash]; !ok {
+					pathsToDelete = append(pathsToDelete, pathname)
+				}
+			} else {
+				if _, ok := imgFilenameToInodeTable[pathname]; !ok {
+					pathsToDelete = append(pathsToDelete, pathname)
+				}
+			}
+		}
+	}
+	if len(pathsToDelete) < 1 {
+		return nil
+	}
+	stream.unpacker.logger.Printf("Deleting(%s): %d unneeded files\n",
+		imageName, len(pathsToDelete))
+	for _, pathname := range pathsToDelete {
+		stream.unpacker.logger.Printf("Delete(%s): %s\n", imageName, pathname)
+		os.Remove(path.Join(mountPoint, pathname))
+	}
+	return nil
 }
 
 func (stream *streamManagerState) fetch(imageName string,
