@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"path"
 	"strconv"
+	"time"
 )
 
 type accountResult struct {
@@ -99,26 +100,31 @@ func (pData *publishData) publishToAccount(awsSession *session.Session,
 		}
 	}
 	// Start manager for each region.
+	numRegions := 0
 	for _, region := range regions {
+		logger := prefixlogger.New(accountProfileName+": "+region+": ", logger)
+		if _, ok := pData.skipTargets[Target{accountProfileName, region}]; ok {
+			logger.Println("skipping target")
+			continue
+		}
 		var awsService *ec2.EC2
 		if region == aRegionName && aAwsService != nil {
 			awsService = aAwsService
 		} else {
 			awsService = createService(awsSession, region)
 		}
-		logger := prefixlogger.New(accountProfileName+": "+region+": ", logger)
+		numRegions++
 		go pData.publishToTargetWrapper(accountProfileName, region, awsService,
 			resultsChannel, logger)
 	}
-	accountResultsChannel <- accountResult{len(regions), nil}
+	accountResultsChannel <- accountResult{numRegions, nil}
 }
 
 func (pData *publishData) publishToTargetWrapper(accountProfileName string,
 	region string, awsService *ec2.EC2, channel chan<- TargetResult,
 	logger log.Logger) {
 	resultMsg := TargetResult{
-		AccountName: accountProfileName,
-		Region:      region,
+		Target: Target{AccountName: accountProfileName, Region: region},
 	}
 	if snap, ami, err := pData.publishToTarget(awsService, logger); err != nil {
 		resultMsg.Error = err
@@ -147,7 +153,7 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 		strconv.Itoa(constants.ImageUnpackerPortNumber)
 	logger.Printf("Discovered unpacker: %s at %s\n",
 		*unpackerInstance.InstanceId, address)
-	srpcClient, err := srpc.DialHTTP("tcp", address, 0)
+	srpcClient, err := srpc.DialHTTP("tcp", address, time.Second*15)
 	if err != nil {
 		return "", "", err
 	}

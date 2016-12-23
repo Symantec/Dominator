@@ -12,16 +12,21 @@ type publishData struct {
 	minFreeBytes       uint64
 	amiName            string
 	tags               map[string]string
+	skipTargets        map[Target]struct{}
 	// Computed data follow.
 	fileSystem *filesystem.FileSystem
 }
 
-type TargetResult struct {
+type Target struct {
 	AccountName string
 	Region      string
-	SnapshotId  string
-	AmiId       string
-	Error       error
+}
+
+type TargetResult struct {
+	Target
+	SnapshotId string
+	AmiId      string
+	Error      error
 }
 
 func (v TargetResult) MarshalJSON() ([]byte, error) {
@@ -33,7 +38,11 @@ type Results []TargetResult
 func Publish(imageServerAddress string, streamName string, imageLeafName string,
 	minFreeBytes uint64, amiName string, tags map[string]string,
 	targetAccountNames []string, targetRegionNames []string,
-	logger log.Logger) (Results, error) {
+	skipList []Target, logger log.Logger) (Results, error) {
+	skipTargets := make(map[Target]struct{})
+	for _, target := range skipList {
+		skipTargets[Target{target.AccountName, target.Region}] = struct{}{}
+	}
 	pData := &publishData{
 		imageServerAddress: imageServerAddress,
 		streamName:         streamName,
@@ -41,6 +50,7 @@ func Publish(imageServerAddress string, streamName string, imageLeafName string,
 		minFreeBytes:       minFreeBytes,
 		amiName:            amiName,
 		tags:               tags,
+		skipTargets:        skipTargets,
 	}
 	return pData.publish(targetAccountNames, targetRegionNames, logger)
 }
