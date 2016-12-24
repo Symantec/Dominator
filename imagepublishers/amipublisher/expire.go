@@ -13,6 +13,7 @@ const expiresAtFormat = "2006-01-02:15:04:05"
 
 func expireResources(accountNames []string, logger log.Logger) error {
 	waitGroup := &sync.WaitGroup{}
+	currentTime := time.Now() // Need a common "now" time.
 	for _, accountName := range accountNames {
 		awsSession, err := createSession(accountName)
 		if err != nil {
@@ -31,7 +32,8 @@ func expireResources(accountNames []string, logger log.Logger) error {
 			}
 			logger := prefixlogger.New(accountName+": "+region+": ", logger)
 			waitGroup.Add(1)
-			go expireRegionResources(awsService, waitGroup, logger)
+			go expireRegionResources(awsService, waitGroup, currentTime,
+				logger)
 		}
 
 	}
@@ -40,7 +42,7 @@ func expireResources(accountNames []string, logger log.Logger) error {
 }
 
 func expireRegionResources(awsService *ec2.EC2, waitGroup *sync.WaitGroup,
-	logger log.Logger) {
+	currentTime time.Time, logger log.Logger) {
 	defer waitGroup.Done()
 	filters := make([]*ec2.Filter, 1)
 	values := make([]string, 1)
@@ -54,7 +56,7 @@ func expireRegionResources(awsService *ec2.EC2, waitGroup *sync.WaitGroup,
 	})
 	if err == nil {
 		for _, image := range images.Images {
-			expireImage(awsService, image, logger)
+			expireImage(awsService, image, currentTime, logger)
 		}
 	}
 	snapshots, err := awsService.DescribeSnapshots(&ec2.DescribeSnapshotsInput{
@@ -62,13 +64,14 @@ func expireRegionResources(awsService *ec2.EC2, waitGroup *sync.WaitGroup,
 	})
 	if err == nil {
 		for _, snapshot := range snapshots.Snapshots {
-			expireSnapshot(awsService, snapshot, logger)
+			expireSnapshot(awsService, snapshot, currentTime, logger)
 		}
 	}
 }
 
-func expireImage(awsService *ec2.EC2, image *ec2.Image, logger log.Logger) {
-	if hasExpired(image.Tags) {
+func expireImage(awsService *ec2.EC2, image *ec2.Image, currentTime time.Time,
+	logger log.Logger) {
+	if hasExpired(image.Tags, currentTime) {
 		err := deregisterAmi(awsService, aws.StringValue(image.ImageId))
 		if err != nil {
 			logger.Printf("error deleting: %s: %s\n", *image.ImageId, err)
@@ -79,8 +82,8 @@ func expireImage(awsService *ec2.EC2, image *ec2.Image, logger log.Logger) {
 }
 
 func expireSnapshot(awsService *ec2.EC2, snapshot *ec2.Snapshot,
-	logger log.Logger) {
-	if hasExpired(snapshot.Tags) {
+	currentTime time.Time, logger log.Logger) {
+	if hasExpired(snapshot.Tags, currentTime) {
 		err := deleteSnapshot(awsService, aws.StringValue(snapshot.SnapshotId))
 		if err != nil {
 			logger.Printf("error deleting: %s: %s\n", *snapshot.SnapshotId, err)
@@ -90,7 +93,7 @@ func expireSnapshot(awsService *ec2.EC2, snapshot *ec2.Snapshot,
 	}
 }
 
-func hasExpired(tags []*ec2.Tag) bool {
+func hasExpired(tags []*ec2.Tag, currentTime time.Time) bool {
 	for _, tag := range tags {
 		if *tag.Key != "ExpiresAt" {
 			continue
@@ -99,7 +102,7 @@ func hasExpired(tags []*ec2.Tag) bool {
 		if err != nil {
 			continue
 		}
-		return time.Now().After(expirationTime)
+		return currentTime.After(expirationTime)
 	}
 	return false
 }
