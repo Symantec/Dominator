@@ -190,8 +190,8 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 		return "", "", err
 	}
 	logger.Println("Registering AMI...")
-	amiId, err := registerAmi(awsService, snapshotId, imageName, pData.tags,
-		logger)
+	amiId, err := registerAmi(awsService, snapshotId, pData.amiName, imageName,
+		pData.tags, logger)
 	return snapshotId, amiId, nil
 }
 

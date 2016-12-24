@@ -113,8 +113,8 @@ func createSnapshot(awsService *ec2.EC2, volumeId string,
 	return *snapshot.SnapshotId, nil
 }
 
-func registerAmi(awsService *ec2.EC2, snapshotId string, imageName string,
-	tags map[string]string, logger log.Logger) (
+func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
+	imageName string, tags map[string]string, logger log.Logger) (
 	string, error) {
 	rootDevName := "/dev/sda1"
 	blkDevMaps := make([]*ec2.BlockDeviceMapping, 1)
@@ -126,7 +126,10 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, imageName string,
 			VolumeType:          aws.String("gp2"),
 		},
 	}
-	amiName := strings.Replace(imageName, ":", ".", -1)
+	if amiName == "" {
+		amiName = imageName
+	}
+	amiName = strings.Replace(amiName, ":", ".", -1)
 	ami, err := awsService.RegisterImage(&ec2.RegisterImageInput{
 		Architecture:        aws.String("x86_64"),
 		BlockDeviceMappings: blkDevMaps,
