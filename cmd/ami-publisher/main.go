@@ -45,6 +45,7 @@ func printUsage() {
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  delete results-file...")
+	fmt.Fprintln(os.Stderr, "  expire")
 	fmt.Fprintln(os.Stderr, "  publish stream-name image-leaf-name")
 }
 
@@ -59,6 +60,7 @@ type subcommand struct {
 
 var subcommands = []subcommand{
 	{"delete", 1, -1, deleteSubcommand},
+	{"expire", 0, 0, expireSubcommand},
 	{"publish", 2, 2, publishSubcommand},
 }
 
