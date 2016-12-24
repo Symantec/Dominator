@@ -17,6 +17,14 @@ type publishData struct {
 	fileSystem *filesystem.FileSystem
 }
 
+type Resource struct {
+	Target
+	SnapshotId string
+	AmiId      string
+}
+
+type Results []TargetResult
+
 type Target struct {
 	AccountName string
 	Region      string
@@ -33,7 +41,9 @@ func (v TargetResult) MarshalJSON() ([]byte, error) {
 	return v.marshalJSON()
 }
 
-type Results []TargetResult
+func DeleteResources(resources []Resource, logger log.Logger) error {
+	return deleteResources(resources, logger)
+}
 
 func Publish(imageServerAddress string, streamName string, imageLeafName string,
 	minFreeBytes uint64, amiName string, tags map[string]string,

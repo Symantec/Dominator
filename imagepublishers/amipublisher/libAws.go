@@ -11,185 +11,6 @@ import (
 	"time"
 )
 
-func createSession(accountProfileName string) (*session.Session, error) {
-	return session.NewSessionWithOptions(session.Options{
-		Profile:           accountProfileName,
-		SharedConfigState: session.SharedConfigEnable})
-}
-
-func createService(awsSession *session.Session, regionName string) *ec2.EC2 {
-	return ec2.New(awsSession, &aws.Config{Region: aws.String(regionName)})
-}
-
-func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
-	tags map[string]string, logger log.Logger) (string, error) {
-	// Strip out possible ExpiresAt tag.
-	newTags := make(map[string]string)
-	for key, value := range tags {
-		switch key {
-		case "ExpiresAt":
-		case "Name":
-		default:
-			newTags[key] = value
-		}
-	}
-	newTags["Name"] = "image unpacker"
-	tags = newTags
-	sizeInGiB := int64(size) >> 30
-	if sizeInGiB<<30 < int64(size) {
-		sizeInGiB++
-	}
-	volume, err := awsService.CreateVolume(&ec2.CreateVolumeInput{
-		AvailabilityZone: availabilityZone,
-		Encrypted:        aws.Bool(true),
-		Size:             aws.Int64(sizeInGiB),
-		VolumeType:       aws.String("gp2"),
-	})
-	if err != nil {
-		return "", err
-	}
-	volumeIds := make([]string, 1)
-	volumeIds[0] = *volume.VolumeId
-	logger.Printf("Created: %s\n", *volume.VolumeId)
-	if err := createTags(awsService, *volume.VolumeId, tags); err != nil {
-		return "", err
-	}
-	logger.Printf("Tagged: %s, waiting...\n", *volume.VolumeId)
-	for ; true; time.Sleep(time.Second) {
-		desc, err := awsService.DescribeVolumes(&ec2.DescribeVolumesInput{
-			VolumeIds: aws.StringSlice(volumeIds),
-		})
-		if err != nil {
-			return "", err
-		}
-		logger.Printf("state: \"%s\"\n", *desc.Volumes[0].State)
-		if *desc.Volumes[0].State == ec2.VolumeStateAvailable {
-			break
-		}
-	}
-	return *volume.VolumeId, nil
-}
-
-func createSnapshot(awsService *ec2.EC2, volumeId string,
-	description string, tags map[string]string, logger log.Logger) (
-	string, error) {
-	snapshot, err := awsService.CreateSnapshot(&ec2.CreateSnapshotInput{
-		VolumeId:    aws.String(volumeId),
-		Description: aws.String(description),
-	})
-	if err != nil {
-		return "", err
-	}
-	snapshotIds := make([]string, 1)
-	snapshotIds[0] = *snapshot.SnapshotId
-	logger.Printf("Created: %s\n", *snapshot.SnapshotId)
-	// Strip out possible Name tag.
-	newTags := make(map[string]string)
-	for key, value := range tags {
-		switch key {
-		case "Name":
-		default:
-			newTags[key] = value
-		}
-	}
-	newTags["Name"] = description
-	tags = newTags
-	if err := createTags(awsService, *snapshot.SnapshotId, tags); err != nil {
-		return "", err
-	}
-	logger.Printf("Tagged: %s, waiting...\n", *snapshot.SnapshotId)
-	for ; true; time.Sleep(time.Second * 15) {
-		desc, err := awsService.DescribeSnapshots(&ec2.DescribeSnapshotsInput{
-			SnapshotIds: aws.StringSlice(snapshotIds),
-		})
-		if err != nil {
-			return "", err
-		}
-		logger.Printf("state: \"%s\"\n", *desc.Snapshots[0].State)
-		if *desc.Snapshots[0].State == ec2.SnapshotStateCompleted {
-			break
-		}
-	}
-	return *snapshot.SnapshotId, nil
-}
-
-func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
-	imageName string, tags map[string]string, logger log.Logger) (
-	string, error) {
-	rootDevName := "/dev/sda1"
-	blkDevMaps := make([]*ec2.BlockDeviceMapping, 1)
-	blkDevMaps[0] = &ec2.BlockDeviceMapping{
-		DeviceName: aws.String(rootDevName),
-		Ebs: &ec2.EbsBlockDevice{
-			DeleteOnTermination: aws.Bool(true),
-			SnapshotId:          aws.String(snapshotId),
-			VolumeType:          aws.String("gp2"),
-		},
-	}
-	if amiName == "" {
-		amiName = imageName
-	}
-	amiName = strings.Replace(amiName, ":", ".", -1)
-	ami, err := awsService.RegisterImage(&ec2.RegisterImageInput{
-		Architecture:        aws.String("x86_64"),
-		BlockDeviceMappings: blkDevMaps,
-		Description:         aws.String(imageName),
-		Name:                aws.String(amiName),
-		RootDeviceName:      aws.String(rootDevName),
-		VirtualizationType:  aws.String("hvm"),
-	})
-	if err != nil {
-		return "", err
-	}
-	logger.Printf("Created: %s\n", *ami.ImageId)
-	imageIds := make([]string, 1)
-	imageIds[0] = *ami.ImageId
-	// Strip out possible Name tag.
-	newTags := make(map[string]string)
-	for key, value := range tags {
-		switch key {
-		case "Name":
-		default:
-			newTags[key] = value
-		}
-	}
-	newTags["Name"] = path.Dir(imageName)
-	tags = newTags
-	if err := createTags(awsService, *ami.ImageId, tags); err != nil {
-		return "", err
-	}
-	logger.Printf("Tagged: %s, waiting...\n", *ami.ImageId)
-	for ; true; time.Sleep(time.Second) {
-		desc, err := awsService.DescribeImages(&ec2.DescribeImagesInput{
-			ImageIds: aws.StringSlice(imageIds),
-		})
-		if err != nil {
-			return "", err
-		}
-		logger.Printf("state: \"%s\"\n", *desc.Images[0].State)
-		if *desc.Images[0].State == ec2.ImageStateAvailable {
-			break
-		}
-	}
-	return *ami.ImageId, nil
-}
-
-func createTags(awsService *ec2.EC2, resourceId string,
-	tags map[string]string) error {
-	resourceIds := make([]string, 1)
-	resourceIds[0] = resourceId
-	awsTags := make([]*ec2.Tag, 0, len(tags))
-	for key, value := range tags {
-		awsTags = append(awsTags,
-			&ec2.Tag{Key: aws.String(key), Value: aws.String(value)})
-	}
-	_, err := awsService.CreateTags(&ec2.CreateTagsInput{
-		Resources: aws.StringSlice(resourceIds),
-		Tags:      awsTags,
-	})
-	return err
-}
-
 func attachVolume(awsService *ec2.EC2, instanceId string, volumeId string,
 	logger log.Logger) error {
 	instanceIds := make([]string, 1)
@@ -261,16 +82,136 @@ func attachVolume(awsService *ec2.EC2, instanceId string, volumeId string,
 	return nil
 }
 
-func listRegions(awsService *ec2.EC2) ([]string, error) {
-	out, err := awsService.DescribeRegions(&ec2.DescribeRegionsInput{})
+func createService(awsSession *session.Session, regionName string) *ec2.EC2 {
+	return ec2.New(awsSession, &aws.Config{Region: aws.String(regionName)})
+}
+
+func createSession(accountProfileName string) (*session.Session, error) {
+	return session.NewSessionWithOptions(session.Options{
+		Profile:           accountProfileName,
+		SharedConfigState: session.SharedConfigEnable})
+}
+
+func createSnapshot(awsService *ec2.EC2, volumeId string,
+	description string, tags map[string]string, logger log.Logger) (
+	string, error) {
+	snapshot, err := awsService.CreateSnapshot(&ec2.CreateSnapshotInput{
+		VolumeId:    aws.String(volumeId),
+		Description: aws.String(description),
+	})
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	regionNames := make([]string, 0, len(out.Regions))
-	for _, region := range out.Regions {
-		regionNames = append(regionNames, aws.StringValue(region.RegionName))
+	snapshotIds := make([]string, 1)
+	snapshotIds[0] = *snapshot.SnapshotId
+	logger.Printf("Created: %s\n", *snapshot.SnapshotId)
+	// Strip out possible Name tag.
+	newTags := make(map[string]string)
+	for key, value := range tags {
+		switch key {
+		case "Name":
+		default:
+			newTags[key] = value
+		}
 	}
-	return regionNames, nil
+	newTags["Name"] = description
+	tags = newTags
+	if err := createTags(awsService, *snapshot.SnapshotId, tags); err != nil {
+		return "", err
+	}
+	logger.Printf("Tagged: %s, waiting...\n", *snapshot.SnapshotId)
+	for ; true; time.Sleep(time.Second * 15) {
+		desc, err := awsService.DescribeSnapshots(&ec2.DescribeSnapshotsInput{
+			SnapshotIds: aws.StringSlice(snapshotIds),
+		})
+		if err != nil {
+			return "", err
+		}
+		logger.Printf("state: \"%s\"\n", *desc.Snapshots[0].State)
+		if *desc.Snapshots[0].State == ec2.SnapshotStateCompleted {
+			break
+		}
+	}
+	return *snapshot.SnapshotId, nil
+}
+
+func createTags(awsService *ec2.EC2, resourceId string,
+	tags map[string]string) error {
+	resourceIds := make([]string, 1)
+	resourceIds[0] = resourceId
+	awsTags := make([]*ec2.Tag, 0, len(tags))
+	for key, value := range tags {
+		awsTags = append(awsTags,
+			&ec2.Tag{Key: aws.String(key), Value: aws.String(value)})
+	}
+	_, err := awsService.CreateTags(&ec2.CreateTagsInput{
+		Resources: aws.StringSlice(resourceIds),
+		Tags:      awsTags,
+	})
+	return err
+}
+
+func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
+	tags map[string]string, logger log.Logger) (string, error) {
+	// Strip out possible ExpiresAt tag.
+	newTags := make(map[string]string)
+	for key, value := range tags {
+		switch key {
+		case "ExpiresAt":
+		case "Name":
+		default:
+			newTags[key] = value
+		}
+	}
+	newTags["Name"] = "image unpacker"
+	tags = newTags
+	sizeInGiB := int64(size) >> 30
+	if sizeInGiB<<30 < int64(size) {
+		sizeInGiB++
+	}
+	volume, err := awsService.CreateVolume(&ec2.CreateVolumeInput{
+		AvailabilityZone: availabilityZone,
+		Encrypted:        aws.Bool(true),
+		Size:             aws.Int64(sizeInGiB),
+		VolumeType:       aws.String("gp2"),
+	})
+	if err != nil {
+		return "", err
+	}
+	volumeIds := make([]string, 1)
+	volumeIds[0] = *volume.VolumeId
+	logger.Printf("Created: %s\n", *volume.VolumeId)
+	if err := createTags(awsService, *volume.VolumeId, tags); err != nil {
+		return "", err
+	}
+	logger.Printf("Tagged: %s, waiting...\n", *volume.VolumeId)
+	for ; true; time.Sleep(time.Second) {
+		desc, err := awsService.DescribeVolumes(&ec2.DescribeVolumesInput{
+			VolumeIds: aws.StringSlice(volumeIds),
+		})
+		if err != nil {
+			return "", err
+		}
+		logger.Printf("state: \"%s\"\n", *desc.Volumes[0].State)
+		if *desc.Volumes[0].State == ec2.VolumeStateAvailable {
+			break
+		}
+	}
+	return *volume.VolumeId, nil
+}
+
+func deleteSnapshot(awsService *ec2.EC2, snapshotId string) error {
+	_, err := awsService.DeleteSnapshot(&ec2.DeleteSnapshotInput{
+		SnapshotId: aws.String(snapshotId),
+	})
+	return err
+}
+
+func deregisterAmi(awsService *ec2.EC2, amiId string) error {
+	_, err := awsService.DeregisterImage(&ec2.DeregisterImageInput{
+		ImageId: aws.String(amiId),
+	})
+	return err
 }
 
 func getInstances(awsService *ec2.EC2, nameTag string) (
@@ -295,4 +236,77 @@ func getInstances(awsService *ec2.EC2, nameTag string) (
 		}
 	}
 	return instances, nil
+}
+
+func listRegions(awsService *ec2.EC2) ([]string, error) {
+	out, err := awsService.DescribeRegions(&ec2.DescribeRegionsInput{})
+	if err != nil {
+		return nil, err
+	}
+	regionNames := make([]string, 0, len(out.Regions))
+	for _, region := range out.Regions {
+		regionNames = append(regionNames, aws.StringValue(region.RegionName))
+	}
+	return regionNames, nil
+}
+
+func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
+	imageName string, tags map[string]string, logger log.Logger) (
+	string, error) {
+	rootDevName := "/dev/sda1"
+	blkDevMaps := make([]*ec2.BlockDeviceMapping, 1)
+	blkDevMaps[0] = &ec2.BlockDeviceMapping{
+		DeviceName: aws.String(rootDevName),
+		Ebs: &ec2.EbsBlockDevice{
+			DeleteOnTermination: aws.Bool(true),
+			SnapshotId:          aws.String(snapshotId),
+			VolumeType:          aws.String("gp2"),
+		},
+	}
+	if amiName == "" {
+		amiName = imageName
+	}
+	amiName = strings.Replace(amiName, ":", ".", -1)
+	ami, err := awsService.RegisterImage(&ec2.RegisterImageInput{
+		Architecture:        aws.String("x86_64"),
+		BlockDeviceMappings: blkDevMaps,
+		Description:         aws.String(imageName),
+		Name:                aws.String(amiName),
+		RootDeviceName:      aws.String(rootDevName),
+		VirtualizationType:  aws.String("hvm"),
+	})
+	if err != nil {
+		return "", err
+	}
+	logger.Printf("Created: %s\n", *ami.ImageId)
+	imageIds := make([]string, 1)
+	imageIds[0] = *ami.ImageId
+	// Strip out possible Name tag.
+	newTags := make(map[string]string)
+	for key, value := range tags {
+		switch key {
+		case "Name":
+		default:
+			newTags[key] = value
+		}
+	}
+	newTags["Name"] = path.Dir(imageName)
+	tags = newTags
+	if err := createTags(awsService, *ami.ImageId, tags); err != nil {
+		return "", err
+	}
+	logger.Printf("Tagged: %s, waiting...\n", *ami.ImageId)
+	for ; true; time.Sleep(time.Second) {
+		desc, err := awsService.DescribeImages(&ec2.DescribeImagesInput{
+			ImageIds: aws.StringSlice(imageIds),
+		})
+		if err != nil {
+			return "", err
+		}
+		logger.Printf("state: \"%s\"\n", *desc.Images[0].State)
+		if *desc.Images[0].State == ec2.ImageStateAvailable {
+			break
+		}
+	}
+	return *ami.ImageId, nil
 }
