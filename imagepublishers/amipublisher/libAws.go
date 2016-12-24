@@ -120,17 +120,11 @@ func createSnapshot(awsService *ec2.EC2, volumeId string,
 		return "", err
 	}
 	logger.Printf("Tagged: %s, waiting...\n", *snapshot.SnapshotId)
-	for ; true; time.Sleep(time.Second * 15) {
-		desc, err := awsService.DescribeSnapshots(&ec2.DescribeSnapshotsInput{
-			SnapshotIds: aws.StringSlice(snapshotIds),
-		})
-		if err != nil {
-			return "", err
-		}
-		logger.Printf("state: \"%s\"\n", *desc.Snapshots[0].State)
-		if *desc.Snapshots[0].State == ec2.SnapshotStateCompleted {
-			break
-		}
+	err = awsService.WaitUntilSnapshotCompleted(&ec2.DescribeSnapshotsInput{
+		SnapshotIds: aws.StringSlice(snapshotIds),
+	})
+	if err != nil {
+		return "", err
 	}
 	return *snapshot.SnapshotId, nil
 }
@@ -185,17 +179,11 @@ func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
 		return "", err
 	}
 	logger.Printf("Tagged: %s, waiting...\n", *volume.VolumeId)
-	for ; true; time.Sleep(time.Second) {
-		desc, err := awsService.DescribeVolumes(&ec2.DescribeVolumesInput{
-			VolumeIds: aws.StringSlice(volumeIds),
-		})
-		if err != nil {
-			return "", err
-		}
-		logger.Printf("state: \"%s\"\n", *desc.Volumes[0].State)
-		if *desc.Volumes[0].State == ec2.VolumeStateAvailable {
-			break
-		}
+	err = awsService.WaitUntilVolumeAvailable(&ec2.DescribeVolumesInput{
+		VolumeIds: aws.StringSlice(volumeIds),
+	})
+	if err != nil {
+		return "", err
 	}
 	return *volume.VolumeId, nil
 }
@@ -296,17 +284,11 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
 		return "", err
 	}
 	logger.Printf("Tagged: %s, waiting...\n", *ami.ImageId)
-	for ; true; time.Sleep(time.Second) {
-		desc, err := awsService.DescribeImages(&ec2.DescribeImagesInput{
-			ImageIds: aws.StringSlice(imageIds),
-		})
-		if err != nil {
-			return "", err
-		}
-		logger.Printf("state: \"%s\"\n", *desc.Images[0].State)
-		if *desc.Images[0].State == ec2.ImageStateAvailable {
-			break
-		}
+	err = awsService.WaitUntilImageAvailable(&ec2.DescribeImagesInput{
+		ImageIds: aws.StringSlice(imageIds),
+	})
+	if err != nil {
+		return "", err
 	}
 	return *ami.ImageId, nil
 }
