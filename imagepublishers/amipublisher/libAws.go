@@ -189,17 +189,43 @@ func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
 }
 
 func deleteSnapshot(awsService *ec2.EC2, snapshotId string) error {
-	_, err := awsService.DeleteSnapshot(&ec2.DeleteSnapshotInput{
-		SnapshotId: aws.String(snapshotId),
-	})
-	return err
+	for i := 0; i < 5; i++ {
+		_, err := awsService.DeleteSnapshot(&ec2.DeleteSnapshotInput{
+			SnapshotId: aws.String(snapshotId),
+		})
+		if err == nil {
+			return nil
+		}
+		if !strings.Contains(err.Error(), "in use by ami") {
+			return err
+		}
+		time.Sleep(time.Second)
+	}
+	return errors.New("timed out waiting for delete: " + snapshotId)
 }
 
 func deregisterAmi(awsService *ec2.EC2, amiId string) error {
 	_, err := awsService.DeregisterImage(&ec2.DeregisterImageInput{
 		ImageId: aws.String(amiId),
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	imageIds := make([]*string, 1)
+	imageIds[0] = aws.String(amiId)
+	for i := 0; i < 60; i++ {
+		out, err := awsService.DescribeImages(&ec2.DescribeImagesInput{
+			ImageIds: imageIds,
+		})
+		if err != nil {
+			return err
+		}
+		if len(out.Images) < 1 {
+			return nil
+		}
+		time.Sleep(time.Second)
+	}
+	return errors.New("timed out waiting for deregister: " + amiId)
 }
 
 func getInstances(awsService *ec2.EC2, nameTag string) (
