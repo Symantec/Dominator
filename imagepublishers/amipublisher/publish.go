@@ -158,6 +158,7 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 		return "", "", err
 	}
 	defer srpcClient.Close()
+	logger.Printf("Preparing to unpack: %s\n", pData.streamName)
 	prepareForUnpack(srpcClient, pData.streamName)
 	minBytes := pData.fileSystem.TotalDataBytes + pData.minFreeBytes
 	status, err := selectVolume(srpcClient, awsService, pData.streamName,
@@ -166,9 +167,12 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 		return "", "", err
 	}
 	volumeId := status.ImageStreams[pData.streamName].DeviceId
-	logger.Printf("Preparing to unpack: %s\n", pData.streamName)
-	if err := prepareForUnpack(srpcClient, pData.streamName); err != nil {
-		return "", "", err
+	if status.ImageStreams[pData.streamName].Status !=
+		proto.StatusStreamScanned {
+		logger.Printf("Preparing to unpack again: %s\n", pData.streamName)
+		if err := prepareForUnpack(srpcClient, pData.streamName); err != nil {
+			return "", "", err
+		}
 	}
 	logger.Printf("Unpacking: %s\n", pData.streamName)
 	err = unpack(srpcClient, pData.streamName, pData.imageLeafName)
