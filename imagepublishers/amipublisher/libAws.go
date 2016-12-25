@@ -204,6 +204,25 @@ func deleteSnapshot(awsService *ec2.EC2, snapshotId string) error {
 	return errors.New("timed out waiting for delete: " + snapshotId)
 }
 
+func deleteTagsFromResources(awsService *ec2.EC2, tagKeys []string,
+	resourceId ...string) error {
+	resourceIds := make([]string, 0)
+	for _, id := range resourceId {
+		if id != "" {
+			resourceIds = append(resourceIds, id)
+		}
+	}
+	tags := make([]*ec2.Tag, 0, len(tagKeys))
+	for _, tagKey := range tagKeys {
+		tags = append(tags, &ec2.Tag{Key: aws.String(tagKey)})
+	}
+	_, err := awsService.DeleteTags(&ec2.DeleteTagsInput{
+		Resources: aws.StringSlice(resourceIds),
+		Tags:      tags,
+	})
+	return err
+}
+
 func deregisterAmi(awsService *ec2.EC2, amiId string) error {
 	_, err := awsService.DeregisterImage(&ec2.DeregisterImageInput{
 		ImageId: aws.String(amiId),

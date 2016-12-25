@@ -45,6 +45,11 @@ func DeleteResources(resources []Resource, logger log.Logger) error {
 	return deleteResources(resources, logger)
 }
 
+func DeleteTags(resources []Resource, tagKeys []string,
+	logger log.Logger) error {
+	return deleteTags(resources, tagKeys, logger)
+}
+
 func ExpireResources(accountNames []string, logger log.Logger) error {
 	return expireResources(accountNames, logger)
 }
