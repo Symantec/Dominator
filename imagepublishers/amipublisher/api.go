@@ -54,6 +54,12 @@ func ExpireResources(accountNames []string, logger log.Logger) error {
 	return expireResources(accountNames, logger)
 }
 
+func PrepareUnpackers(streamName string, targetAccountNames []string,
+	targetRegionNames []string, logger log.Logger) error {
+	return prepareUnpackers(streamName, targetAccountNames, targetRegionNames,
+		logger)
+}
+
 func Publish(imageServerAddress string, streamName string, imageLeafName string,
 	minFreeBytes uint64, amiName string, tags map[string]string,
 	targetAccountNames []string, targetRegionNames []string,
