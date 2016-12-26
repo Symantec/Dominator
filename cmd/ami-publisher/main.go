@@ -48,6 +48,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  delete-tags tag-key results-file...")
 	fmt.Fprintln(os.Stderr, "  expire")
 	fmt.Fprintln(os.Stderr, "  publish stream-name image-leaf-name")
+	fmt.Fprintln(os.Stderr, "  set-exclusive-tags key value results-file...")
 }
 
 type commandFunc func([]string, *log.Logger)
@@ -64,6 +65,7 @@ var subcommands = []subcommand{
 	{"delete-tags", 2, -1, deleteTagsSubcommand},
 	{"expire", 0, 0, expireSubcommand},
 	{"publish", 2, 2, publishSubcommand},
+	{"set-exclusive-tags", 2, -1, setExclusiveTagsSubcommand},
 }
 
 func main() {
