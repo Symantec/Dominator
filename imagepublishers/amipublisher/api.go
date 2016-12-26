@@ -73,3 +73,8 @@ func Publish(imageServerAddress string, streamName string, imageLeafName string,
 	}
 	return pData.publish(targetAccountNames, targetRegionNames, logger)
 }
+
+func SetExclusiveTags(resources []Resource, tagKey string, tagValue string,
+	logger log.Logger) error {
+	return setExclusiveTags(resources, tagKey, tagValue, logger)
+}
