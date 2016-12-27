@@ -306,6 +306,7 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
 		Description:         aws.String(imageName),
 		Name:                aws.String(amiName),
 		RootDeviceName:      aws.String(rootDevName),
+		SriovNetSupport:     aws.String("simple"),
 		VirtualizationType:  aws.String("hvm"),
 	})
 	if err != nil {
