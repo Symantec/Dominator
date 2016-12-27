@@ -2,6 +2,7 @@ package amipublisher
 
 import (
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
@@ -15,6 +16,8 @@ func deleteResources(resources []Resource, logger log.Logger) error {
 		if resource.SnapshotId == "" && resource.AmiId == "" {
 			continue
 		}
+		logger := prefixlogger.New(
+			resource.AccountName+": "+resource.Region+": ", logger)
 		session := sessions[resource.AccountName]
 		if session == nil {
 			var err error
@@ -31,9 +34,12 @@ func deleteResources(resources []Resource, logger log.Logger) error {
 		}
 		if resource.AmiId != "" {
 			if err := deregisterAmi(service, resource.AmiId); err != nil {
+				logger.Printf("error deleting: %s: %s\n", resource.AmiId, err)
 				if firstError == nil {
 					firstError = err
 				}
+			} else {
+				logger.Printf("deleted: %s\n", resource.AmiId)
 			}
 		}
 	}
@@ -44,9 +50,12 @@ func deleteResources(resources []Resource, logger log.Logger) error {
 		}
 		service := services[Target{resource.AccountName, resource.Region}]
 		if err := deleteSnapshot(service, resource.SnapshotId); err != nil {
+			logger.Printf("error deleting: %s: %s\n", resource.SnapshotId, err)
 			if firstError == nil {
 				firstError = err
 			}
+		} else {
+			logger.Printf("deleted: %s\n", resource.SnapshotId)
 		}
 	}
 	return firstError
