@@ -2,6 +2,7 @@ package amipublisher
 
 import (
 	"errors"
+	uclient "github.com/Symantec/Dominator/imageunpacker/client"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
@@ -110,5 +111,5 @@ func prepareUnpacker(awsService *ec2.EC2, streamName string,
 		return err
 	}
 	defer srpcClient.Close()
-	return prepareForUnpack(srpcClient, streamName)
+	return uclient.PrepareForUnpack(srpcClient, streamName, true, false)
 }

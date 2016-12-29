@@ -159,7 +159,7 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	}
 	defer srpcClient.Close()
 	logger.Printf("Preparing to unpack: %s\n", pData.streamName)
-	prepareForUnpack(srpcClient, pData.streamName)
+	uclient.PrepareForUnpack(srpcClient, pData.streamName, true, false)
 	minBytes := pData.fileSystem.TotalDataBytes + pData.minFreeBytes
 	status, err := selectVolume(srpcClient, awsService, pData.streamName,
 		minBytes, pData.tags, unpackerInstance, logger)
@@ -170,17 +170,20 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	if status.ImageStreams[pData.streamName].Status !=
 		proto.StatusStreamScanned {
 		logger.Printf("Preparing to unpack again: %s\n", pData.streamName)
-		if err := prepareForUnpack(srpcClient, pData.streamName); err != nil {
+		err := uclient.PrepareForUnpack(srpcClient, pData.streamName, true,
+			false)
+		if err != nil {
 			return "", "", err
 		}
 	}
 	logger.Printf("Unpacking: %s\n", pData.streamName)
-	err = unpack(srpcClient, pData.streamName, pData.imageLeafName)
+	err = uclient.UnpackImage(srpcClient, pData.streamName, pData.imageLeafName)
 	if err != nil {
 		return "", "", err
 	}
 	logger.Printf("Capturing: %s\n", pData.streamName)
-	if err := prepareForCapture(srpcClient, pData.streamName); err != nil {
+	err = uclient.PrepareForCapture(srpcClient, pData.streamName)
+	if err != nil {
 		return "", "", err
 	}
 	imageName := path.Join(pData.streamName, path.Base(pData.imageLeafName))
@@ -190,7 +193,8 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 		return "", "", err
 	}
 	// Kick off scan for next time.
-	if err := startScan(srpcClient, pData.streamName); err != nil {
+	err = uclient.PrepareForUnpack(srpcClient, pData.streamName, false, true)
+	if err != nil {
 		return "", "", err
 	}
 	logger.Println("Registering AMI...")
@@ -224,7 +228,7 @@ func selectVolume(srpcClient *srpc.Client, awsService *ec2.EC2,
 	streamName string, minBytes uint64, tags map[string]string,
 	instance *ec2.Instance, logger log.Logger) (
 	proto.GetStatusResponse, error) {
-	status, err := getStatus(srpcClient)
+	status, err := uclient.GetStatus(srpcClient)
 	if err != nil {
 		return proto.GetStatusResponse{}, err
 	}
@@ -239,11 +243,12 @@ func selectVolume(srpcClient *srpc.Client, awsService *ec2.EC2,
 	// Search for an unassociated device which is large enough.
 	for deviceId, deviceInfo := range status.Devices {
 		if deviceInfo.StreamName == "" && minBytes <= deviceInfo.Size {
-			err := associateStreamWithDevice(srpcClient, streamName, deviceId)
+			err := uclient.AssociateStreamWithDevice(srpcClient, streamName,
+				deviceId)
 			if err != nil {
 				return proto.GetStatusResponse{}, err
 			}
-			return getStatus(srpcClient)
+			return uclient.GetStatus(srpcClient)
 		}
 	}
 	// Need to attach another volume.
@@ -252,11 +257,11 @@ func selectVolume(srpcClient *srpc.Client, awsService *ec2.EC2,
 	if err != nil {
 		return proto.GetStatusResponse{}, err
 	}
-	err = associateStreamWithDevice(srpcClient, streamName, volumeId)
+	err = uclient.AssociateStreamWithDevice(srpcClient, streamName, volumeId)
 	if err != nil {
 		return proto.GetStatusResponse{}, err
 	}
-	return getStatus(srpcClient)
+	return uclient.GetStatus(srpcClient)
 }
 
 func addVolume(srpcClient *srpc.Client, awsService *ec2.EC2,
