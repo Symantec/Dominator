@@ -3,47 +3,25 @@ package amipublisher
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 func setExclusiveTags(resources []Resource, tagKey string, tagValue string,
 	logger log.Logger) error {
-	sessions := make(map[string]*session.Session)
-	services := make(map[Target]*ec2.EC2)
-	for _, resource := range resources {
-		if resource.AmiId == "" {
-			continue
-		}
-		session := sessions[resource.AccountName]
-		if session == nil {
-			var err error
-			if session, err = createSession(resource.AccountName); err != nil {
-				return err
-			}
-			sessions[resource.AccountName] = session
-		}
-		target := Target{resource.AccountName, resource.Region}
-		service := services[target]
-		if service == nil {
-			service = createService(session, resource.Region)
-			services[target] = service
-		}
-		err := setExclusiveTagsForTarget(service, resource.AmiId, tagKey,
-			tagValue,
-			prefixlogger.New(resource.AccountName+": "+resource.Region+": ",
-				logger))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return forEachResource(resources, true,
+		func(awsService *ec2.EC2, resource Resource, logger log.Logger) error {
+			return setExclusiveTagsForTarget(awsService, resource.AmiId,
+				tagKey, tagValue, logger)
+		},
+		logger)
 }
 
 func setExclusiveTagsForTarget(awsService *ec2.EC2, amiId string,
 	tagKey string, tagValue string, logger log.Logger) error {
+	if amiId == "" {
+		return nil
+	}
 	// First extract the value of the Name tag which is common to this stream.
 	imageIds := make([]string, 1)
 	imageIds[0] = amiId

@@ -206,11 +206,17 @@ func deleteSnapshot(awsService *ec2.EC2, snapshotId string) error {
 
 func deleteTagsFromResources(awsService *ec2.EC2, tagKeys []string,
 	resourceId ...string) error {
+	if len(tagKeys) < 1 {
+		return nil
+	}
 	resourceIds := make([]string, 0)
 	for _, id := range resourceId {
 		if id != "" {
 			resourceIds = append(resourceIds, id)
 		}
+	}
+	if len(resourceIds) < 1 {
+		return nil
 	}
 	tags := make([]*ec2.Tag, 0, len(tagKeys))
 	for _, tagKey := range tagKeys {
