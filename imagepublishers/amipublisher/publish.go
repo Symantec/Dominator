@@ -7,61 +7,39 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"path"
 	"strconv"
 	"time"
 )
 
-type accountResult struct {
-	numRegions int
-	err        error
-}
-
 func (pData *publishData) publish(accountProfileNames []string,
 	regions []string, logger log.Logger) (Results, error) {
-	if len(accountProfileNames) < 1 {
-		return nil, errors.New("no account names")
-	}
 	fs, err := pData.getFileSystem(logger)
 	if err != nil {
 		return nil, err
 	}
 	fs.TotalDataBytes = estimateFsUsage(fs)
 	pData.fileSystem = fs
-	logger.Println("Creating sessions...")
-	accountResultsChannel := make(chan accountResult, 1)
 	resultsChannel := make(chan TargetResult, 1)
-	for _, accountProfileName := range accountProfileNames {
-		awsSession, err := createSession(accountProfileName)
-		if err != nil {
-			return nil, err
-		}
-		go pData.publishToAccount(awsSession, accountProfileName, regions,
-			accountResultsChannel, resultsChannel, logger)
-		if err != nil {
-			return nil, err
-		}
-	}
-	var numTargets int
-	// Collect account results.
-	for range accountProfileNames {
-		result := <-accountResultsChannel
-		if result.err != nil {
-			return nil, result.err
-		}
-		numTargets += result.numRegions
-	}
+	numTargets, err := forEachAccountAndRegion(accountProfileNames, regions,
+		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
+			pData.publishToTargetWrapper(awsService, account, region,
+				resultsChannel, logger)
+		},
+		logger)
 	// Collect results.
 	results := make(Results, 0, numTargets)
 	for i := 0; i < numTargets; i++ {
-		results = append(results, <-resultsChannel)
+		result := <-resultsChannel
+		if result.AccountName == "" || result.Region == "" {
+			continue
+		}
+		results = append(results, result)
 	}
-	return results, nil
+	return results, err
 }
 
 func (pData *publishData) getFileSystem(logger log.Logger) (
@@ -84,48 +62,17 @@ func (pData *publishData) getFileSystem(logger log.Logger) (
 	return image.FileSystem, nil
 }
 
-func (pData *publishData) publishToAccount(awsSession *session.Session,
-	accountProfileName string, regions []string,
-	accountResultsChannel chan<- accountResult,
-	resultsChannel chan<- TargetResult, logger log.Logger) {
-	aRegionName := "us-east-1"
-	var aAwsService *ec2.EC2
-	if len(regions) < 1 {
-		var err error
-		aAwsService := createService(awsSession, aRegionName)
-		regions, err = listRegions(aAwsService)
-		if err != nil {
-			accountResultsChannel <- accountResult{0, err}
-			return
-		}
-	}
-	// Start manager for each region.
-	numRegions := 0
-	for _, region := range regions {
-		logger := prefixlogger.New(accountProfileName+": "+region+": ", logger)
-		if _, ok := pData.skipTargets[Target{accountProfileName, region}]; ok {
-			logger.Println("skipping target")
-			continue
-		}
-		var awsService *ec2.EC2
-		if region == aRegionName && aAwsService != nil {
-			awsService = aAwsService
-		} else {
-			awsService = createService(awsSession, region)
-		}
-		numRegions++
-		go pData.publishToTargetWrapper(accountProfileName, region, awsService,
-			resultsChannel, logger)
-	}
-	accountResultsChannel <- accountResult{numRegions, nil}
-}
-
-func (pData *publishData) publishToTargetWrapper(accountProfileName string,
-	region string, awsService *ec2.EC2, channel chan<- TargetResult,
+func (pData *publishData) publishToTargetWrapper(awsService *ec2.EC2,
+	accountProfileName string, region string, channel chan<- TargetResult,
 	logger log.Logger) {
-	resultMsg := TargetResult{
-		Target: Target{AccountName: accountProfileName, Region: region},
+	target := Target{AccountName: accountProfileName, Region: region}
+	// TODO(rgooch): Move this skip logic to forEachAccountAndRegion().
+	if _, ok := pData.skipTargets[target]; ok {
+		logger.Println("skipping target")
+		channel <- TargetResult{}
+		return
 	}
+	resultMsg := TargetResult{Target: target}
 	if snap, ami, err := pData.publishToTarget(awsService, logger); err != nil {
 		resultMsg.Error = err
 		channel <- resultMsg
