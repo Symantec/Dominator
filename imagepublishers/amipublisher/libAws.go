@@ -231,6 +231,13 @@ func deleteTagsFromResources(awsService *ec2.EC2, tagKeys []string,
 	return err
 }
 
+func deleteVolume(awsService *ec2.EC2, volumeId string) error {
+	_, err := awsService.DeleteVolume(&ec2.DeleteVolumeInput{
+		VolumeId: aws.String(volumeId),
+	})
+	return err
+}
+
 func deregisterAmi(awsService *ec2.EC2, amiId string) error {
 	_, err := awsService.DeregisterImage(&ec2.DeregisterImageInput{
 		ImageId: aws.String(amiId),
@@ -389,4 +396,13 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
 		return "", err
 	}
 	return *ami.ImageId, nil
+}
+
+func terminateInstance(awsService *ec2.EC2, instanceId string) error {
+	instanceIds := make([]string, 1)
+	instanceIds[0] = instanceId
+	_, err := awsService.TerminateInstances(&ec2.TerminateInstancesInput{
+		InstanceIds: aws.StringSlice(instanceIds),
+	})
+	return err
 }
