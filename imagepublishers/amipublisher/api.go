@@ -54,6 +54,10 @@ func ExpireResources(accountNames []string, logger log.Logger) error {
 	return expireResources(accountNames, logger)
 }
 
+func ListAccountNames() ([]string, error) {
+	return listAccountNames()
+}
+
 func PrepareUnpackers(streamName string, targetAccountNames []string,
 	targetRegionNames []string, logger log.Logger) error {
 	return prepareUnpackers(streamName, targetAccountNames, targetRegionNames,

@@ -1,7 +1,6 @@
 package amipublisher
 
 import (
-	"errors"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -59,7 +58,11 @@ func forEachAccountAndRegion(accountProfileNames []string, regions []string,
 	targetFunc func(*ec2.EC2, string, string, log.Logger),
 	logger log.Logger) (int, error) {
 	if len(accountProfileNames) < 1 {
-		return 0, errors.New("no account names")
+		var err error
+		accountProfileNames, err = ListAccountNames()
+		if err != nil {
+			return 0, err
+		}
 	}
 	logger.Println("Creating sessions...")
 	awsSessions := make(map[string]*session.Session, len(accountProfileNames))
