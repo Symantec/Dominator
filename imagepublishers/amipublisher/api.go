@@ -34,6 +34,7 @@ type TargetResult struct {
 	Target
 	SnapshotId string
 	AmiId      string
+	Size       uint // Size in GiB.
 	Error      error
 }
 

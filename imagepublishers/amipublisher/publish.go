@@ -73,28 +73,23 @@ func (pData *publishData) publishToTargetWrapper(awsService *ec2.EC2,
 		return
 	}
 	resultMsg := TargetResult{Target: target}
-	if snap, ami, err := pData.publishToTarget(awsService, logger); err != nil {
-		resultMsg.Error = err
-		channel <- resultMsg
-	} else {
-		resultMsg.SnapshotId = snap
-		resultMsg.AmiId = ami
-		channel <- resultMsg
-	}
+	resultMsg.SnapshotId, resultMsg.AmiId, resultMsg.Size, resultMsg.Error =
+		pData.publishToTarget(awsService, logger)
+	channel <- resultMsg
 }
 
 func (pData *publishData) publishToTarget(awsService *ec2.EC2,
-	logger log.Logger) (string, string, error) {
+	logger log.Logger) (string, string, uint, error) {
 	unpackerInstances, err := getInstances(awsService, "ImageUnpacker")
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 	var unpackerInstance *ec2.Instance
 	for _, instance := range unpackerInstances {
 		unpackerInstance = instance
 	}
 	if unpackerInstance == nil {
-		return "", "", errors.New("no ImageUnpacker instances found")
+		return "", "", 0, errors.New("no ImageUnpacker instances found")
 	}
 	address := *unpackerInstance.PrivateIpAddress + ":" +
 		strconv.Itoa(constants.ImageUnpackerPortNumber)
@@ -102,7 +97,7 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 		*unpackerInstance.InstanceId, address)
 	srpcClient, err := srpc.DialHTTP("tcp", address, time.Second*15)
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 	defer srpcClient.Close()
 	logger.Printf("Preparing to unpack: %s\n", pData.streamName)
@@ -111,7 +106,7 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	status, err := selectVolume(srpcClient, awsService, pData.streamName,
 		minBytes, pData.tags, unpackerInstance, logger)
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 	volumeId := status.ImageStreams[pData.streamName].DeviceId
 	if status.ImageStreams[pData.streamName].Status !=
@@ -120,34 +115,35 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 		err := uclient.PrepareForUnpack(srpcClient, pData.streamName, true,
 			false)
 		if err != nil {
-			return "", "", err
+			return "", "", 0, err
 		}
 	}
 	logger.Printf("Unpacking: %s\n", pData.streamName)
 	err = uclient.UnpackImage(srpcClient, pData.streamName, pData.imageLeafName)
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 	logger.Printf("Capturing: %s\n", pData.streamName)
 	err = uclient.PrepareForCapture(srpcClient, pData.streamName)
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 	imageName := path.Join(pData.streamName, path.Base(pData.imageLeafName))
 	snapshotId, err := createSnapshot(awsService, volumeId, imageName,
 		pData.tags, logger)
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 	// Kick off scan for next time.
 	err = uclient.PrepareForUnpack(srpcClient, pData.streamName, false, true)
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 	logger.Println("Registering AMI...")
+	volumeSize := status.Devices[volumeId].Size
 	amiId, err := registerAmi(awsService, snapshotId, pData.amiName, imageName,
 		pData.tags, logger)
-	return snapshotId, amiId, nil
+	return snapshotId, amiId, uint(volumeSize >> 30), nil
 }
 
 func estimateFsUsage(fs *filesystem.FileSystem) uint64 {
