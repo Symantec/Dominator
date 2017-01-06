@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 	"time"
 )
 
@@ -61,12 +62,24 @@ func publish(imageServerAddress string, streamName string, imageLeafName string,
 	if err != nil {
 		return err
 	}
+	if *ignoreMissingUnpackers {
+		newResults := make(amipublisher.Results, 0, len(results))
+		for _, result := range results {
+			if result.Error != nil &&
+				strings.Contains(result.Error.Error(),
+					"no ImageUnpacker instances found") {
+				continue
+			}
+			newResults = append(newResults, result)
+		}
+		results = newResults
+	}
 	if err := libjson.WriteWithIndent(os.Stdout, "    ", results); err != nil {
 		return err
 	}
 	for _, result := range results {
 		if result.Error != nil {
-			os.Exit(2)
+			return result.Error
 		}
 	}
 	return nil

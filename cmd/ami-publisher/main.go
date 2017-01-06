@@ -15,6 +15,8 @@ var (
 	amiName   = flag.String("amiName", "", "AMI Name property")
 	expiresIn = flag.Duration("expiresIn", time.Hour,
 		"Date to set for the ExpiresAt tag")
+	ignoreMissingUnpackers = flag.Bool("ignoreMissingUnpackers", false,
+		"If true, do not generate an error for missing unpackers")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
 		"Hostname of imageserver")
 	imageServerPortNum = flag.Uint("imageServerPortNum",
