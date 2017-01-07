@@ -20,5 +20,5 @@ func prepareUnpackersSubcommand(args []string, logger *log.Logger) {
 func prepareUnpackers(streamName string, logger *log.Logger) error {
 	streamName = path.Clean(streamName)
 	return amipublisher.PrepareUnpackers(streamName, targetAccounts,
-		targetRegions, logger)
+		targetRegions, *unpackerName, logger)
 }

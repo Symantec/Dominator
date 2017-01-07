@@ -264,6 +264,9 @@ func deregisterAmi(awsService *ec2.EC2, amiId string) error {
 
 func getInstances(awsService *ec2.EC2, nameTag string) (
 	[]*ec2.Instance, error) {
+	if nameTag == "" {
+		return nil, errors.New("no name given")
+	}
 	tagValues := make([]string, 1)
 	tagValues[0] = nameTag
 	filters := make([]*ec2.Filter, 1)

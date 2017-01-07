@@ -13,6 +13,7 @@ type publishData struct {
 	amiName            string
 	tags               map[string]string
 	skipTargets        map[Target]struct{}
+	unpackerName       string
 	// Computed data follow.
 	fileSystem *filesystem.FileSystem
 }
@@ -60,15 +61,16 @@ func ListAccountNames() ([]string, error) {
 }
 
 func PrepareUnpackers(streamName string, targetAccountNames []string,
-	targetRegionNames []string, logger log.Logger) error {
+	targetRegionNames []string, name string, logger log.Logger) error {
 	return prepareUnpackers(streamName, targetAccountNames, targetRegionNames,
-		logger)
+		name, logger)
 }
 
 func Publish(imageServerAddress string, streamName string, imageLeafName string,
 	minFreeBytes uint64, amiName string, tags map[string]string,
 	targetAccountNames []string, targetRegionNames []string,
-	skipList []Target, logger log.Logger) (Results, error) {
+	skipList []Target, unpackerName string, logger log.Logger) (
+	Results, error) {
 	skipTargets := make(map[Target]struct{})
 	for _, target := range skipList {
 		skipTargets[Target{target.AccountName, target.Region}] = struct{}{}
@@ -81,6 +83,7 @@ func Publish(imageServerAddress string, streamName string, imageLeafName string,
 		amiName:            amiName,
 		tags:               tags,
 		skipTargets:        skipTargets,
+		unpackerName:       unpackerName,
 	}
 	return pData.publish(targetAccountNames, targetRegionNames, logger)
 }

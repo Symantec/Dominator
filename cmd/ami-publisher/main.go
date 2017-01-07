@@ -31,6 +31,8 @@ var (
 		"JSON encoded file containing tags to apply to AMIs")
 	targetAccounts flagutil.StringList
 	targetRegions  flagutil.StringList
+	unpackerName   = flag.String("unpackerName", "ImageUnpacker",
+		"The Name tag value for image unpacker instances")
 )
 
 func init() {

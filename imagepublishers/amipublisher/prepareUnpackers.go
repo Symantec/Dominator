@@ -12,11 +12,11 @@ import (
 )
 
 func prepareUnpackers(streamName string, accountProfileNames []string,
-	regions []string, logger log.Logger) error {
+	regions []string, name string, logger log.Logger) error {
 	resultsChannel := make(chan error, 1)
 	numTargets, err := forEachAccountAndRegion(accountProfileNames, regions,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
-			err := prepareUnpacker(awsService, streamName, logger)
+			err := prepareUnpacker(awsService, streamName, name, logger)
 			if err != nil {
 				logger.Println(err)
 			}
@@ -34,9 +34,9 @@ func prepareUnpackers(streamName string, accountProfileNames []string,
 	return firstError
 }
 
-func prepareUnpacker(awsService *ec2.EC2, streamName string,
+func prepareUnpacker(awsService *ec2.EC2, streamName string, name string,
 	logger log.Logger) error {
-	unpackerInstances, err := getInstances(awsService, "ImageUnpacker")
+	unpackerInstances, err := getInstances(awsService, name)
 	if err != nil {
 		return err
 	}

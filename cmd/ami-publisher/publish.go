@@ -58,7 +58,7 @@ func publish(imageServerAddress string, streamName string, imageLeafName string,
 	}
 	results, err := amipublisher.Publish(imageServerAddress, streamName,
 		imageLeafName, *minFreeBytes, *amiName, tags, targetAccounts,
-		targetRegions, skipTargets, logger)
+		targetRegions, skipTargets, *unpackerName, logger)
 	if err != nil {
 		return err
 	}

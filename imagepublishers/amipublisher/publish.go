@@ -83,7 +83,7 @@ func (pData *publishData) publishToTargetWrapper(awsService *ec2.EC2,
 
 func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	logger log.Logger) (string, string, uint, error) {
-	unpackerInstances, err := getInstances(awsService, "ImageUnpacker")
+	unpackerInstances, err := getInstances(awsService, pData.unpackerName)
 	if err != nil {
 		return "", "", 0, err
 	}
