@@ -75,6 +75,9 @@ func (pData *publishData) publishToTargetWrapper(awsService *ec2.EC2,
 	resultMsg := TargetResult{Target: target}
 	resultMsg.SnapshotId, resultMsg.AmiId, resultMsg.Size, resultMsg.Error =
 		pData.publishToTarget(awsService, logger)
+	if resultMsg.Error != nil {
+		logger.Println(resultMsg.Error)
+	}
 	channel <- resultMsg
 }
 
