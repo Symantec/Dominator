@@ -6,6 +6,7 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"strconv"
 	"time"
@@ -36,25 +37,63 @@ func prepareUnpackers(streamName string, accountProfileNames []string,
 
 func prepareUnpacker(awsService *ec2.EC2, streamName string, name string,
 	logger log.Logger) error {
-	unpackerInstances, err := getInstances(awsService, name)
+	_, srpcClient, err := getWorkingUnpacker(awsService, name, logger)
 	if err != nil {
 		return err
 	}
-	var unpackerInstance *ec2.Instance
-	for _, instance := range unpackerInstances {
-		unpackerInstance = instance
+	defer srpcClient.Close()
+	logger.Println("preparing unpacker")
+	err = uclient.PrepareForUnpack(srpcClient, streamName, true, false)
+	if err != nil {
+		return err
+	}
+	logger.Println("prepared unpacker")
+	return nil
+}
+
+func getWorkingUnpacker(awsService *ec2.EC2, name string, logger log.Logger) (
+	*ec2.Instance, *srpc.Client, error) {
+	unpackerInstances, err := getInstances(awsService, name)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(unpackerInstances) < 1 {
+		return nil, nil, errors.New("no ImageUnpacker instances found")
+	}
+	unpackerInstance, err := getRunningInstance(awsService, unpackerInstances,
+		logger)
+	if err != nil {
+		return nil, nil, err
 	}
 	if unpackerInstance == nil {
-		return errors.New("no ImageUnpacker instances found")
+		return nil, nil, errors.New("no running ImageUnpacker instances found")
+	}
+	launchTime := aws.TimeValue(unpackerInstance.LaunchTime)
+	if launchTime.After(time.Now()) {
+		launchTime = time.Now()
 	}
 	address := *unpackerInstance.PrivateIpAddress + ":" +
 		strconv.Itoa(constants.ImageUnpackerPortNumber)
 	logger.Printf("discovered unpacker: %s at %s\n",
 		*unpackerInstance.InstanceId, address)
-	srpcClient, err := srpc.DialHTTP("tcp", address, time.Second*15)
+	srpcClient, err := connectToUnpacker(address,
+		launchTime.Add(time.Minute*10), logger)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	defer srpcClient.Close()
-	return uclient.PrepareForUnpack(srpcClient, streamName, true, false)
+	return unpackerInstance, srpcClient, nil
+}
+
+func connectToUnpacker(address string, retryUntil time.Time,
+	logger log.Logger) (*srpc.Client, error) {
+	for {
+		srpcClient, err := srpc.DialHTTP("tcp", address, time.Second*15)
+		if err == nil {
+			return srpcClient, nil
+		}
+		if time.Now().After(retryUntil) {
+			return nil, errors.New("timed out waiting for unpacker to start")
+		}
+		logger.Println(err)
+	}
 }

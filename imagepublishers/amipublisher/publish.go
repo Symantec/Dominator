@@ -4,15 +4,12 @@ import (
 	"errors"
 	iclient "github.com/Symantec/Dominator/imageserver/client"
 	uclient "github.com/Symantec/Dominator/imageunpacker/client"
-	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"path"
-	"strconv"
-	"time"
 )
 
 func (pData *publishData) publish(accountProfileNames []string,
@@ -83,22 +80,8 @@ func (pData *publishData) publishToTargetWrapper(awsService *ec2.EC2,
 
 func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	logger log.Logger) (string, string, uint, error) {
-	unpackerInstances, err := getInstances(awsService, pData.unpackerName)
-	if err != nil {
-		return "", "", 0, err
-	}
-	var unpackerInstance *ec2.Instance
-	for _, instance := range unpackerInstances {
-		unpackerInstance = instance
-	}
-	if unpackerInstance == nil {
-		return "", "", 0, errors.New("no ImageUnpacker instances found")
-	}
-	address := *unpackerInstance.PrivateIpAddress + ":" +
-		strconv.Itoa(constants.ImageUnpackerPortNumber)
-	logger.Printf("Discovered unpacker: %s at %s\n",
-		*unpackerInstance.InstanceId, address)
-	srpcClient, err := srpc.DialHTTP("tcp", address, time.Second*15)
+	unpackerInstance, srpcClient, err := getWorkingUnpacker(awsService,
+		pData.unpackerName, logger)
 	if err != nil {
 		return "", "", 0, err
 	}

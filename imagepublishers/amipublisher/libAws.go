@@ -289,6 +289,55 @@ func getInstances(awsService *ec2.EC2, nameTag string) (
 	return instances, nil
 }
 
+func getRunningInstance(awsService *ec2.EC2, instances []*ec2.Instance,
+	logger log.Logger) (*ec2.Instance, error) {
+	for _, instance := range instances {
+		if aws.StringValue(instance.State.Name) ==
+			ec2.InstanceStateNameRunning {
+			return instance, nil
+		}
+	}
+	var stoppedInstance *ec2.Instance
+	isStopped := false
+	for _, instance := range instances {
+		if stoppedInstance != nil {
+			break
+		}
+		switch aws.StringValue(instance.State.Name) {
+		case ec2.InstanceStateNameStopped:
+			stoppedInstance = instance
+			isStopped = true
+		case ec2.InstanceStateNamePending:
+			stoppedInstance = instance
+		}
+	}
+	if stoppedInstance == nil {
+		return nil, nil
+	}
+	instanceIds := make([]*string, 1)
+	instanceIds[0] = stoppedInstance.InstanceId
+	if isStopped {
+		logger.Printf("starting instance: %s\n",
+			aws.StringValue(instanceIds[0]))
+		_, err := awsService.StartInstances(&ec2.StartInstancesInput{
+			InstanceIds: instanceIds,
+		})
+		if err != nil {
+			return nil, err
+		}
+		stoppedInstance.LaunchTime = aws.Time(time.Now())
+	}
+	logger.Printf("waiting for pending instance: %s\n",
+		aws.StringValue(instanceIds[0]))
+	err := awsService.WaitUntilInstanceRunning(&ec2.DescribeInstancesInput{
+		InstanceIds: instanceIds,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return stoppedInstance, nil
+}
+
 func listAccountNames() ([]string, error) {
 	filename := path.Join(os.Getenv("HOME"), ".aws", "credentials")
 	file, err := os.Open(filename)
