@@ -76,16 +76,18 @@ func (stream *streamManagerState) selectDevice(deviceId string) error {
 	if deviceId == "" {
 		return stream.getDeviceWithLock()
 	}
-	if streamInfo.DeviceId != "" {
-		return errors.New("stream: " + stream.streamName +
-			" is already associated with: " + streamInfo.DeviceId)
-	}
 	if device, ok := u.pState.Devices[deviceId]; !ok {
 		return errors.New("unknown device ID: " + deviceId)
 	} else {
 		if device.StreamName != "" {
 			return errors.New(
 				"device ID: " + deviceId + " used by: " + device.StreamName)
+		}
+		if streamInfo.DeviceId != "" { // Disassociate with existing device.
+			if device, ok := u.pState.Devices[streamInfo.DeviceId]; ok {
+				device.StreamName = ""
+				u.pState.Devices[streamInfo.DeviceId] = device
+			}
 		}
 		device.StreamName = stream.streamName
 		u.pState.Devices[deviceId] = device
