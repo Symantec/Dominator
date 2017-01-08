@@ -21,6 +21,8 @@ import (
 )
 
 func (u *Unpacker) unpackImage(streamName string, imageLeafName string) error {
+	u.updateUsageTime()
+	defer u.updateUsageTime()
 	streamInfo := u.getStream(streamName)
 	if streamInfo == nil {
 		return errors.New("unknown stream")

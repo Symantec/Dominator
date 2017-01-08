@@ -11,12 +11,14 @@ import (
 var sysfsDirectory = "/sys/block"
 
 func (u *Unpacker) addDevice(deviceId string) error {
+	u.updateUsageTime()
 	scannedDevices, err := scanDevices()
 	if err != nil {
 		return err
 	}
 	u.rwMutex.Lock()
 	defer u.rwMutex.Unlock()
+	defer u.updateUsageTimeWithLock()
 	for device := range u.scannedDevices {
 		delete(scannedDevices, device)
 	}

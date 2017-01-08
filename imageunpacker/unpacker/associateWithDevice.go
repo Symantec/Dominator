@@ -9,7 +9,9 @@ import (
 
 func (u *Unpacker) associateStreamWithDevice(streamName string,
 	deviceId string) error {
+	defer u.updateUsageTime()
 	u.rwMutex.Lock()
+	u.updateUsageTimeWithLock()
 	streamInfo, err := u.setupStream(streamName)
 	u.rwMutex.Unlock()
 	if err != nil {
