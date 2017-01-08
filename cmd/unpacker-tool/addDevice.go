@@ -1,8 +1,8 @@
 package main
 
 import (
-	"errors"
 	"fmt"
+	uclient "github.com/Symantec/Dominator/imageunpacker/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"io"
 	"os"
@@ -19,18 +19,11 @@ func addDeviceSubcommand(client *srpc.Client, args []string) {
 
 func addDevice(client *srpc.Client, deviceId, command string,
 	args []string) error {
-	conn, err := client.Call("ImageUnpacker.AddDevice")
-	if err != nil {
-		return err
-	}
-	response, err := conn.ReadString('\n')
-	if err != nil {
-		return err
-	}
-	response = response[:len(response)-1]
-	if response != "" {
-		return errors.New(response)
-	}
+	return uclient.AddDevice(client, deviceId,
+		func() error { return adder(command, args) })
+}
+
+func adder(command string, args []string) error {
 	cmd := exec.Command(command, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -39,20 +32,6 @@ func addDevice(client *srpc.Client, deviceId, command string,
 		if err != io.EOF {
 			return err
 		}
-	}
-	if _, err := conn.WriteString(deviceId + "\n"); err != nil {
-		return err
-	}
-	if err := conn.Flush(); err != nil {
-		return err
-	}
-	response, err = conn.ReadString('\n')
-	if err != nil {
-		return err
-	}
-	response = response[:len(response)-1]
-	if response != "" {
-		return errors.New(response)
 	}
 	return nil
 }

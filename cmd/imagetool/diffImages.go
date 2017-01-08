@@ -78,7 +78,7 @@ func readFileSystem(name string) (*filesystem.FileSystem, error) {
 }
 
 func getImage(client *srpc.Client, name string) (*image.Image, error) {
-	img, err := imgclient.GetImage(client, name)
+	img, err := imgclient.GetImageWithTimeout(client, name, *timeout)
 	if err != nil {
 		return nil, err
 	}

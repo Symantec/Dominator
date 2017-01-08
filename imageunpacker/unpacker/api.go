@@ -2,11 +2,19 @@ package unpacker
 
 import (
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"io"
 	"log"
 	"sync"
+)
+
+const (
+	requestAssociateWithDevice = iota
+	requestScan
+	requestUnpack
+	requestPrepareForCapture
 )
 
 var (
@@ -20,10 +28,12 @@ type deviceInfo struct {
 }
 
 type requestType struct {
-	moveToStatus proto.StreamStatus
-	desiredFS    *filesystem.FileSystem
-	imageName    string
-	errorChannel chan<- error
+	request        int
+	desiredFS      *filesystem.FileSystem
+	imageName      string
+	deviceId       string
+	skipIfPrepared bool
+	errorChannel   chan<- error
 }
 
 type imageStreamInfo struct {
@@ -35,6 +45,14 @@ type imageStreamInfo struct {
 type persistentState struct {
 	Devices      map[string]deviceInfo       // Key: DeviceId.
 	ImageStreams map[string]*imageStreamInfo // Key: StreamName.
+}
+
+type streamManagerState struct {
+	unpacker    *Unpacker
+	streamName  string
+	streamInfo  *imageStreamInfo
+	fileSystem  *filesystem.FileSystem
+	objectCache objectcache.ObjectCache
 }
 
 type Unpacker struct {
@@ -55,6 +73,11 @@ func (u *Unpacker) AddDevice(deviceId string) error {
 	return u.addDevice(deviceId)
 }
 
+func (u *Unpacker) AssociateStreamWithDevice(streamName string,
+	deviceId string) error {
+	return u.associateStreamWithDevice(streamName, deviceId)
+}
+
 func (u *Unpacker) GetStatus() proto.GetStatusResponse {
 	return u.getStatus()
 }
@@ -63,8 +86,9 @@ func (u *Unpacker) PrepareForCapture(streamName string) error {
 	return u.prepareForCapture(streamName)
 }
 
-func (u *Unpacker) PrepareForUnpack(streamName string) error {
-	return u.prepareForUnpack(streamName)
+func (u *Unpacker) PrepareForUnpack(streamName string, skipIfPrepared bool,
+	doNotWaitForResult bool) error {
+	return u.prepareForUnpack(streamName, skipIfPrepared, doNotWaitForResult)
 }
 
 func (u *Unpacker) PrepareForAddDevice() error {

@@ -1,12 +1,14 @@
 package imageunpacker
 
 const (
-	StatusStreamIdle      = 0
-	StatusStreamScanning  = 1
-	StatusStreamScanned   = 2
-	StatusStreamFetching  = 3
-	StatusStreamUpdating  = 4
-	StatusStreamPreparing = 5
+	StatusStreamNoDevice   = 0
+	StatusStreamNotMounted = 1
+	StatusStreamMounted    = 2
+	StatusStreamScanning   = 3
+	StatusStreamScanned    = 4
+	StatusStreamFetching   = 5
+	StatusStreamUpdating   = 6
+	StatusStreamPreparing  = 7
 )
 
 type DeviceInfo struct {
@@ -21,6 +23,13 @@ type DeviceInfo struct {
 // - Client sends string containing the DeviceID that was just attached
 // - Server sends "\n" if device was found, else an error message.
 // - End of transaction. Method completes.
+
+type AssociateStreamWithDeviceRequest struct {
+	StreamName string
+	DeviceId   string
+}
+
+type AssociateStreamWithDeviceResponse struct{}
 
 type GetStatusRequest struct{}
 
@@ -41,7 +50,9 @@ type PrepareForCaptureRequest struct {
 type PrepareForCaptureResponse struct{}
 
 type PrepareForUnpackRequest struct {
-	StreamName string
+	StreamName         string
+	SkipIfPrepared     bool
+	DoNotWaitForResult bool
 }
 
 type PrepareForUnpackResponse struct{}

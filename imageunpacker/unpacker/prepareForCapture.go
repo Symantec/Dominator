@@ -27,7 +27,7 @@ func (u *Unpacker) prepareForCapture(streamName string) error {
 	}
 	errorChannel := make(chan error)
 	request := requestType{
-		moveToStatus: proto.StatusStreamPreparing,
+		request:      requestPrepareForCapture,
 		errorChannel: errorChannel,
 	}
 	streamInfo.requestChannel <- request
@@ -44,7 +44,11 @@ func (stream *streamManagerState) prepareForCapture() error {
 	}
 	streamInfo := stream.streamInfo
 	switch streamInfo.status {
-	case proto.StatusStreamIdle:
+	case proto.StatusStreamNoDevice:
+		return errors.New("no device")
+	case proto.StatusStreamNotMounted:
+		return errors.New("not mounted")
+	case proto.StatusStreamMounted:
 		// Start preparing.
 	case proto.StatusStreamScanning:
 		return errors.New("stream scan in progress")
@@ -62,10 +66,11 @@ func (stream *streamManagerState) prepareForCapture() error {
 	streamInfo.status = proto.StatusStreamPreparing
 	startTime := time.Now()
 	err := stream.capture()
-	streamInfo.status = proto.StatusStreamIdle
 	if err != nil {
+		stream.streamInfo.status = proto.StatusStreamMounted
 		return err
 	}
+	stream.streamInfo.status = proto.StatusStreamNotMounted
 	stream.unpacker.logger.Printf("Prepared for capture(%s) in %s\n",
 		stream.streamName, format.Duration(time.Since(startTime)))
 	return nil
@@ -114,7 +119,6 @@ func (stream *streamManagerState) capture() error {
 	if err := syscall.Unmount(mountPoint, 0); err != nil {
 		return err
 	}
-	stream.mounted = false
 	syscall.Sync()
 	return nil
 }

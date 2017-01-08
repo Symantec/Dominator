@@ -36,7 +36,7 @@ func (u *Unpacker) unpackImage(streamName string, imageLeafName string) error {
 	fs.BuildEntryMap()
 	errorChannel := make(chan error)
 	request := requestType{
-		moveToStatus: unpackproto.StatusStreamFetching,
+		request:      requestUnpack,
 		desiredFS:    fs,
 		imageName:    path.Join(streamName, imageLeafName),
 		errorChannel: errorChannel,
@@ -54,7 +54,8 @@ func (u *Unpacker) getImage(imageName string) *image.Image {
 			u.logger.Printf("Error connecting to image server: %s\n", err)
 			continue
 		}
-		image, err := imageclient.GetImage(srpcClient, imageName)
+		image, err := imageclient.GetImageWithTimeout(srpcClient, imageName,
+			time.Minute)
 		if err != nil {
 			srpcClient.Close()
 			u.logger.Printf("Error getting image: %s\n", err)
@@ -79,16 +80,22 @@ func (stream *streamManagerState) unpack(imageName string,
 	if streamInfo.status != unpackproto.StatusStreamScanned {
 		return errors.New("not yet scanned")
 	}
+	err := stream.deleteUnneededFiles(imageName, stream.fileSystem, desiredFS,
+		mountPoint)
+	if err != nil {
+		return err
+	}
 	subObj := domlib.Sub{
 		FileSystem:  stream.fileSystem,
 		ObjectCache: stream.objectCache,
 	}
+	stream.fileSystem = nil
 	desiredImage := &image.Image{FileSystem: desiredFS}
 	objectsToFetch, _ := domlib.BuildMissingLists(subObj, desiredImage, false,
 		true, stream.unpacker.logger)
 	objectsDir := path.Join(mountPoint, ".subd", "objects")
 	if err := stream.fetch(imageName, objectsToFetch, objectsDir); err != nil {
-		streamInfo.status = unpackproto.StatusStreamIdle
+		streamInfo.status = unpackproto.StatusStreamMounted
 		return err
 	}
 	subObj.ObjectCache = append(subObj.ObjectCache, objectsToFetch...)
@@ -98,12 +105,42 @@ func (stream *streamManagerState) unpack(imageName string,
 	var request subproto.UpdateRequest
 	domlib.BuildUpdateRequest(subObj, desiredImage, &request, true,
 		stream.unpacker.logger)
-	_, _, err := sublib.Update(request, mountPoint, objectsDir, nil, nil, nil,
+	_, _, err = sublib.Update(request, mountPoint, objectsDir, nil, nil, nil,
 		stream.unpacker.logger)
-	streamInfo.status = unpackproto.StatusStreamIdle
+	streamInfo.status = unpackproto.StatusStreamMounted
 	stream.unpacker.logger.Printf("Update(%s) completed in %s\n",
 		imageName, format.Duration(time.Since(startTime)))
 	return err
+}
+
+func (stream *streamManagerState) deleteUnneededFiles(imageName string,
+	subFS, imgFS *filesystem.FileSystem, mountPoint string) error {
+	pathsToDelete := make([]string, 0)
+	imgHashToInodesTable := imgFS.HashToInodesTable()
+	imgFilenameToInodeTable := imgFS.FilenameToInodeTable()
+	for pathname, inum := range subFS.FilenameToInodeTable() {
+		if inode, ok := subFS.InodeTable[inum].(*filesystem.RegularInode); ok {
+			if inode.Size > 0 {
+				if _, ok := imgHashToInodesTable[inode.Hash]; !ok {
+					pathsToDelete = append(pathsToDelete, pathname)
+				}
+			} else {
+				if _, ok := imgFilenameToInodeTable[pathname]; !ok {
+					pathsToDelete = append(pathsToDelete, pathname)
+				}
+			}
+		}
+	}
+	if len(pathsToDelete) < 1 {
+		return nil
+	}
+	stream.unpacker.logger.Printf("Deleting(%s): %d unneeded files\n",
+		imageName, len(pathsToDelete))
+	for _, pathname := range pathsToDelete {
+		stream.unpacker.logger.Printf("Delete(%s): %s\n", imageName, pathname)
+		os.Remove(path.Join(mountPoint, pathname))
+	}
+	return nil
 }
 
 func (stream *streamManagerState) fetch(imageName string,
@@ -119,7 +156,7 @@ func (stream *streamManagerState) fetch(imageName string,
 	defer objectServer.Close()
 	objectsReader, err := objectServer.GetObjects(objectsToFetch)
 	if err != nil {
-		stream.streamInfo.status = unpackproto.StatusStreamIdle
+		stream.streamInfo.status = unpackproto.StatusStreamMounted
 		return err
 	}
 	defer objectsReader.Close()
@@ -129,14 +166,14 @@ func (stream *streamManagerState) fetch(imageName string,
 		length, reader, err := objectsReader.NextObject()
 		if err != nil {
 			stream.unpacker.logger.Println(err)
-			stream.streamInfo.status = unpackproto.StatusStreamIdle
+			stream.streamInfo.status = unpackproto.StatusStreamMounted
 			return err
 		}
 		err = readOne(destDirname, hashVal, length, reader)
 		reader.Close()
 		if err != nil {
 			stream.unpacker.logger.Println(err)
-			stream.streamInfo.status = unpackproto.StatusStreamIdle
+			stream.streamInfo.status = unpackproto.StatusStreamMounted
 			return err
 		}
 	}
