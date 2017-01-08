@@ -39,6 +39,17 @@ type TargetResult struct {
 	Error      error
 }
 
+type TargetUnpackers struct {
+	Target
+	Unpackers []Unpacker
+}
+
+type Unpacker struct {
+	InstanceId string
+	IpAddress  string
+	State      string
+}
+
 func (v TargetResult) MarshalJSON() ([]byte, error) {
 	return v.marshalJSON()
 }
@@ -58,6 +69,11 @@ func ExpireResources(accountNames []string, logger log.Logger) error {
 
 func ListAccountNames() ([]string, error) {
 	return listAccountNames()
+}
+
+func ListUnpackers(targetAccountNames []string, targetRegionNames []string,
+	name string, logger log.Logger) ([]TargetUnpackers, error) {
+	return listUnpackers(targetAccountNames, targetRegionNames, name, logger)
 }
 
 func PrepareUnpackers(streamName string, targetAccountNames []string,
