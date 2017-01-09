@@ -27,16 +27,16 @@ func publish(imageServerAddress string, streamName string, imageLeafName string,
 	logger *log.Logger) error {
 	streamName = path.Clean(streamName)
 	imageLeafName = path.Clean(imageLeafName)
-	skipTargets := make([]amipublisher.Target, 0)
+	skipTargets := make(amipublisher.TargetList, 0)
 	if *skipFile != "" {
-		var skip []amipublisher.Target
+		var skip amipublisher.TargetList
 		if err := libjson.ReadFromFile(*skipFile, &skip); err != nil {
 			return fmt.Errorf("error skipTargets file: %s", err)
 		}
 		skipTargets = append(skipTargets, skip...)
 	}
 	if *skipString != "" {
-		var skip []amipublisher.Target
+		var skip amipublisher.TargetList
 		if err := json.Unmarshal([]byte(*skipString), &skip); err != nil {
 			return fmt.Errorf("error decoding skipString file: %s", err)
 		}
