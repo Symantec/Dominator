@@ -93,7 +93,7 @@ func PrepareUnpackers(streamName string, targets TargetList, name string,
 
 func Publish(imageServerAddress string, streamName string, imageLeafName string,
 	minFreeBytes uint64, amiName string, tags map[string]string,
-	targets TargetList, skipList []Target, unpackerName string,
+	targets TargetList, skipList TargetList, unpackerName string,
 	logger log.Logger) (
 	Results, error) {
 	skipTargets := make(map[Target]struct{})
