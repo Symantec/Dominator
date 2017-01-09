@@ -6,10 +6,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-func listUnpackers(accountProfileNames []string, regions []string, name string,
-	logger log.Logger) ([]TargetUnpackers, error) {
+func listUnpackers(targets TargetList, name string, logger log.Logger) (
+	[]TargetUnpackers, error) {
 	resultsChannel := make(chan TargetUnpackers, 1)
-	numTargets, err := forEachAccountAndRegion(accountProfileNames, regions,
+	numTargets, err := forEachTarget(targets,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			unpackers, err := listTargetUnpackers(awsService, name, logger)
 			if err != nil {

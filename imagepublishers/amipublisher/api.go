@@ -31,6 +31,16 @@ type Target struct {
 	Region      string
 }
 
+type TargetList []Target
+
+func (list *TargetList) String() string {
+	return list.string()
+}
+
+func (list *TargetList) Set(value string) error {
+	return list.set(value)
+}
+
 type TargetResult struct {
 	Target
 	SnapshotId string
@@ -63,29 +73,28 @@ func DeleteTags(resources []Resource, tagKeys []string,
 	return deleteTags(resources, tagKeys, logger)
 }
 
-func ExpireResources(accountNames []string, logger log.Logger) error {
-	return expireResources(accountNames, logger)
+func ExpireResources(targets TargetList, logger log.Logger) error {
+	return expireResources(targets, logger)
 }
 
 func ListAccountNames() ([]string, error) {
 	return listAccountNames()
 }
 
-func ListUnpackers(targetAccountNames []string, targetRegionNames []string,
-	name string, logger log.Logger) ([]TargetUnpackers, error) {
-	return listUnpackers(targetAccountNames, targetRegionNames, name, logger)
+func ListUnpackers(targets TargetList, name string, logger log.Logger) (
+	[]TargetUnpackers, error) {
+	return listUnpackers(targets, name, logger)
 }
 
-func PrepareUnpackers(streamName string, targetAccountNames []string,
-	targetRegionNames []string, name string, logger log.Logger) error {
-	return prepareUnpackers(streamName, targetAccountNames, targetRegionNames,
-		name, logger)
+func PrepareUnpackers(streamName string, targets TargetList, name string,
+	logger log.Logger) error {
+	return prepareUnpackers(streamName, targets, name, logger)
 }
 
 func Publish(imageServerAddress string, streamName string, imageLeafName string,
 	minFreeBytes uint64, amiName string, tags map[string]string,
-	targetAccountNames []string, targetRegionNames []string,
-	skipList []Target, unpackerName string, logger log.Logger) (
+	targets TargetList, skipList []Target, unpackerName string,
+	logger log.Logger) (
 	Results, error) {
 	skipTargets := make(map[Target]struct{})
 	for _, target := range skipList {
@@ -101,7 +110,7 @@ func Publish(imageServerAddress string, streamName string, imageLeafName string,
 		skipTargets:        skipTargets,
 		unpackerName:       unpackerName,
 	}
-	return pData.publish(targetAccountNames, targetRegionNames, logger)
+	return pData.publish(targets, logger)
 }
 
 func SetExclusiveTags(resources []Resource, tagKey string, tagValue string,

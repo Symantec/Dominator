@@ -8,7 +8,7 @@ import (
 )
 
 func expireSubcommand(args []string, logger *log.Logger) {
-	err := amipublisher.ExpireResources(targetAccounts, logger)
+	err := amipublisher.ExpireResources(targets, logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error expiring resources: %s\n", err)
 		os.Exit(1)

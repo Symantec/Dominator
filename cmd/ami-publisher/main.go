@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
 	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"log"
 	"os"
@@ -29,17 +29,14 @@ var (
 		"JSON encoded string containing targets to skip")
 	tagsFile = flag.String("tagsFile", "",
 		"JSON encoded file containing tags to apply to AMIs")
-	targetAccounts flagutil.StringList
-	targetRegions  flagutil.StringList
-	unpackerName   = flag.String("unpackerName", "ImageUnpacker",
+	targets      amipublisher.TargetList
+	unpackerName = flag.String("unpackerName", "ImageUnpacker",
 		"The Name tag value for image unpacker instances")
 )
 
 func init() {
-	flag.Var(&targetAccounts, "targetAccounts",
-		"List of target account profile names")
-	flag.Var(&targetRegions, "targetRegions",
-		"List of target regions (default all regions)")
+	flag.Var(&targets, "targets",
+		"List of targets (default all accounts and regions)")
 }
 
 func printUsage() {

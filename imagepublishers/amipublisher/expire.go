@@ -9,10 +9,10 @@ import (
 
 const expiresAtFormat = "2006-01-02:15:04:05"
 
-func expireResources(accountNames []string, logger log.Logger) error {
+func expireResources(targets TargetList, logger log.Logger) error {
 	currentTime := time.Now() // Need a common "now" time.
 	waitChannel := make(chan struct{})
-	numTargets, err := forEachAccountAndRegion(accountNames, nil,
+	numTargets, err := forEachTarget(targets,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			expireRegionResources(awsService, currentTime, logger)
 			waitChannel <- struct{}{}

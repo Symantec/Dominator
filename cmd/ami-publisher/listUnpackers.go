@@ -18,8 +18,7 @@ func listUnpackersSubcommand(args []string, logger *log.Logger) {
 }
 
 func listUnpackers(logger *log.Logger) error {
-	results, err := amipublisher.ListUnpackers(targetAccounts, targetRegions,
-		*unpackerName, logger)
+	results, err := amipublisher.ListUnpackers(targets, *unpackerName, logger)
 	if err != nil {
 		return err
 	}

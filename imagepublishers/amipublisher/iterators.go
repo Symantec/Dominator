@@ -54,36 +54,68 @@ func forEachResource(resources []Resource, stopOnError bool,
 	return firstError
 }
 
-func forEachAccountAndRegion(accountProfileNames []string, regions []string,
+func forEachTarget(targets TargetList,
 	targetFunc func(*ec2.EC2, string, string, log.Logger),
 	logger log.Logger) (int, error) {
-	if len(accountProfileNames) < 1 {
-		var err error
-		accountProfileNames, err = ListAccountNames()
-		if err != nil {
-			return 0, err
+	if len(targets) < 1 { // Full wildcard.
+		targets = make(TargetList, 1)
+	}
+	accountMap := make(map[string][]string) // Key: accountName, value: regions.
+	var allAccountNames []string
+	// Expand any wildcard account names.
+	for _, target := range targets {
+		if target.AccountName == "" {
+			if allAccountNames == nil {
+				var err error
+				allAccountNames, err = ListAccountNames()
+				if err != nil {
+					return 0, err
+				}
+			}
+			for _, accountName := range allAccountNames {
+				regions := accountMap[accountName]
+				regions = append(regions, target.Region)
+				accountMap[accountName] = regions
+			}
+		} else {
+			regions := accountMap[target.AccountName]
+			regions = append(regions, target.Region)
+			accountMap[target.AccountName] = regions
 		}
 	}
 	logger.Println("Creating sessions...")
-	awsSessions := make(map[string]*session.Session, len(accountProfileNames))
-	for _, accountProfileName := range accountProfileNames {
-		awsSession, err := createSession(accountProfileName)
+	awsSessions := make(map[string]*session.Session, len(accountMap))
+	for accountName := range accountMap {
+		awsSession, err := createSession(accountName)
 		if err != nil {
 			return 0, err
 		}
-		awsSessions[accountProfileName] = awsSession
+		awsSessions[accountName] = awsSession
 	}
 	logger.Println("Starting goroutines...")
 	accountResultsChannel := make(chan resultsType, 1)
 	var numTargets int
-	for _, accountProfileName := range accountProfileNames {
-		go forEachRegionInAccount(awsSessions[accountProfileName],
-			accountProfileName, regions, accountResultsChannel, targetFunc,
+	for accountName, regions := range accountMap {
+		// Remove duplicate/redundant regions.
+		regionMap := make(map[string]struct{})
+		for _, region := range regions {
+			if region == "" {
+				regionMap = nil
+				break
+			}
+			regionMap[region] = struct{}{}
+		}
+		regionList := make([]string, 0, len(regionMap))
+		for region := range regionMap {
+			regionList = append(regionList, region)
+		}
+		go forEachRegionInAccount(awsSessions[accountName],
+			accountName, regionList, accountResultsChannel, targetFunc,
 			logger)
 	}
 	var firstError error
 	// Collect account results.
-	for range accountProfileNames {
+	for range accountMap {
 		result := <-accountResultsChannel
 		if result.err != nil && firstError == nil {
 			firstError = result.err

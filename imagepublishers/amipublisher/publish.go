@@ -12,8 +12,8 @@ import (
 	"path"
 )
 
-func (pData *publishData) publish(accountProfileNames []string,
-	regions []string, logger log.Logger) (Results, error) {
+func (pData *publishData) publish(targets TargetList, logger log.Logger) (
+	Results, error) {
 	fs, err := pData.getFileSystem(logger)
 	if err != nil {
 		return nil, err
@@ -21,7 +21,7 @@ func (pData *publishData) publish(accountProfileNames []string,
 	fs.TotalDataBytes = estimateFsUsage(fs)
 	pData.fileSystem = fs
 	resultsChannel := make(chan TargetResult, 1)
-	numTargets, err := forEachAccountAndRegion(accountProfileNames, regions,
+	numTargets, err := forEachTarget(targets,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			pData.publishToTargetWrapper(awsService, account, region,
 				resultsChannel, logger)

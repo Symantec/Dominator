@@ -57,8 +57,8 @@ func publish(imageServerAddress string, streamName string, imageLeafName string,
 		tags["ExpiresAt"] = expirationTime.UTC().Format("2006-01-02:15:04:05")
 	}
 	results, err := amipublisher.Publish(imageServerAddress, streamName,
-		imageLeafName, *minFreeBytes, *amiName, tags, targetAccounts,
-		targetRegions, skipTargets, *unpackerName, logger)
+		imageLeafName, *minFreeBytes, *amiName, tags, targets, skipTargets,
+		*unpackerName, logger)
 	if err != nil {
 		return err
 	}
