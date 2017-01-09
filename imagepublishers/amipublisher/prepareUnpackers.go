@@ -12,10 +12,10 @@ import (
 	"time"
 )
 
-func prepareUnpackers(streamName string, targets TargetList, name string,
-	logger log.Logger) error {
+func prepareUnpackers(streamName string, targets TargetList,
+	skipList TargetList, name string, logger log.Logger) error {
 	resultsChannel := make(chan error, 1)
-	numTargets, err := forEachTarget(targets,
+	numTargets, err := forEachTarget(targets, skipList,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			err := prepareUnpacker(awsService, streamName, name, logger)
 			if err != nil {

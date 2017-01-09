@@ -12,7 +12,8 @@ import (
 	"path"
 )
 
-func (pData *publishData) publish(targets TargetList, logger log.Logger) (
+func (pData *publishData) publish(targets TargetList, skipList TargetList,
+	logger log.Logger) (
 	Results, error) {
 	fs, err := pData.getFileSystem(logger)
 	if err != nil {
@@ -21,7 +22,7 @@ func (pData *publishData) publish(targets TargetList, logger log.Logger) (
 	fs.TotalDataBytes = estimateFsUsage(fs)
 	pData.fileSystem = fs
 	resultsChannel := make(chan TargetResult, 1)
-	numTargets, err := forEachTarget(targets,
+	numTargets, err := forEachTarget(targets, skipList,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			pData.publishToTargetWrapper(awsService, account, region,
 				resultsChannel, logger)
@@ -63,12 +64,6 @@ func (pData *publishData) publishToTargetWrapper(awsService *ec2.EC2,
 	accountProfileName string, region string, channel chan<- TargetResult,
 	logger log.Logger) {
 	target := Target{AccountName: accountProfileName, Region: region}
-	// TODO(rgooch): Move this skip logic to forEachAccountAndRegion().
-	if _, ok := pData.skipTargets[target]; ok {
-		logger.Println("skipping target")
-		channel <- TargetResult{}
-		return
-	}
 	resultMsg := TargetResult{Target: target}
 	resultMsg.SnapshotId, resultMsg.AmiId, resultMsg.Size, resultMsg.Error =
 		pData.publishToTarget(awsService, logger)

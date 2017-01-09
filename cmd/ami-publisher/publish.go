@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
 	libjson "github.com/Symantec/Dominator/lib/json"
@@ -27,22 +26,6 @@ func publish(imageServerAddress string, streamName string, imageLeafName string,
 	logger *log.Logger) error {
 	streamName = path.Clean(streamName)
 	imageLeafName = path.Clean(imageLeafName)
-	skipTargets := make(amipublisher.TargetList, 0)
-	if *skipFile != "" {
-		var skip amipublisher.TargetList
-		if err := libjson.ReadFromFile(*skipFile, &skip); err != nil {
-			return fmt.Errorf("error skipTargets file: %s", err)
-		}
-		skipTargets = append(skipTargets, skip...)
-	}
-	if *skipString != "" {
-		var skip amipublisher.TargetList
-		if err := json.Unmarshal([]byte(*skipString), &skip); err != nil {
-			return fmt.Errorf("error decoding skipString file: %s", err)
-		}
-		skipTargets = append(skipTargets, skip...)
-	}
-
 	var tags map[string]string
 	if *tagsFile != "" {
 		if err := libjson.ReadFromFile(*tagsFile, &tags); err != nil {

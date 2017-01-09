@@ -54,7 +54,7 @@ func forEachResource(resources []Resource, stopOnError bool,
 	return firstError
 }
 
-func forEachTarget(targets TargetList,
+func forEachTarget(targets TargetList, skipList TargetList,
 	targetFunc func(*ec2.EC2, string, string, log.Logger),
 	logger log.Logger) (int, error) {
 	if len(targets) < 1 { // Full wildcard.
@@ -62,6 +62,12 @@ func forEachTarget(targets TargetList,
 	}
 	accountMap := make(map[string][]string) // Key: accountName, value: regions.
 	var allAccountNames []string
+	skipTargets := make(map[Target]struct{})
+	for _, target := range skipList {
+		if target.AccountName != "" || target.Region != "" {
+			skipTargets[Target{target.AccountName, target.Region}] = struct{}{}
+		}
+	}
 	// Expand any wildcard account names.
 	for _, target := range targets {
 		if target.AccountName == "" {
@@ -110,8 +116,8 @@ func forEachTarget(targets TargetList,
 			regionList = append(regionList, region)
 		}
 		go forEachRegionInAccount(awsSessions[accountName],
-			accountName, regionList, accountResultsChannel, targetFunc,
-			logger)
+			accountName, regionList, accountResultsChannel, skipTargets,
+			targetFunc, logger)
 	}
 	var firstError error
 	// Collect account results.
@@ -126,8 +132,8 @@ func forEachTarget(targets TargetList,
 }
 
 func forEachRegionInAccount(awsSession *session.Session,
-	accountProfileName string, regions []string,
-	resultsChannel chan<- resultsType,
+	accountName string, regions []string,
+	resultsChannel chan<- resultsType, skipTargets map[Target]struct{},
 	targetFunc func(*ec2.EC2, string, string, log.Logger),
 	logger log.Logger) {
 	aRegionName := "us-east-1"
@@ -142,15 +148,21 @@ func forEachRegionInAccount(awsSession *session.Session,
 		}
 	}
 	// Start goroutine for each target ((account,region) tuple).
+	numRegions := 0
 	for _, region := range regions {
-		logger := prefixlogger.New(accountProfileName+": "+region+": ", logger)
+		logger := prefixlogger.New(accountName+": "+region+": ", logger)
+		if _, ok := skipTargets[Target{accountName, region}]; ok {
+			logger.Println("skipping target")
+			continue
+		}
 		var awsService *ec2.EC2
 		if region == aRegionName && aAwsService != nil {
 			awsService = aAwsService
 		} else {
 			awsService = createService(awsSession, region)
 		}
-		go targetFunc(awsService, accountProfileName, region, logger)
+		go targetFunc(awsService, accountName, region, logger)
+		numRegions++
 	}
-	resultsChannel <- resultsType{len(regions), nil}
+	resultsChannel <- resultsType{numRegions, nil}
 }

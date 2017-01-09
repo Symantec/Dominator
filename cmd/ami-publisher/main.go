@@ -23,11 +23,8 @@ var (
 		constants.ImageServerPortNumber, "Port number of imageserver")
 	minFreeBytes = flag.Uint64("minFreeBytes", 1<<28,
 		"minimum number of free bytes in image")
-	skipFile = flag.String("skipFile", "",
-		"JSON encoded file containing targets to skip")
-	skipString = flag.String("skipString", "",
-		"JSON encoded string containing targets to skip")
-	tagsFile = flag.String("tagsFile", "",
+	skipTargets amipublisher.TargetList
+	tagsFile    = flag.String("tagsFile", "",
 		"JSON encoded file containing tags to apply to AMIs")
 	targets      amipublisher.TargetList
 	unpackerName = flag.String("unpackerName", "ImageUnpacker",
@@ -35,6 +32,8 @@ var (
 )
 
 func init() {
+	flag.Var(&skipTargets, "skipTargets",
+		"List of targets to skip (default none). No wildcards permitted")
 	flag.Var(&targets, "targets",
 		"List of targets (default all accounts and regions)")
 }

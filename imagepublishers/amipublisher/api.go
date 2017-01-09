@@ -12,7 +12,6 @@ type publishData struct {
 	minFreeBytes       uint64
 	amiName            string
 	tags               map[string]string
-	skipTargets        map[Target]struct{}
 	unpackerName       string
 	// Computed data follow.
 	fileSystem *filesystem.FileSystem
@@ -73,22 +72,24 @@ func DeleteTags(resources []Resource, tagKeys []string,
 	return deleteTags(resources, tagKeys, logger)
 }
 
-func ExpireResources(targets TargetList, logger log.Logger) error {
-	return expireResources(targets, logger)
+func ExpireResources(targets TargetList, skipList TargetList,
+	logger log.Logger) error {
+	return expireResources(targets, skipList, logger)
 }
 
 func ListAccountNames() ([]string, error) {
 	return listAccountNames()
 }
 
-func ListUnpackers(targets TargetList, name string, logger log.Logger) (
+func ListUnpackers(targets TargetList, skipList TargetList, name string,
+	logger log.Logger) (
 	[]TargetUnpackers, error) {
-	return listUnpackers(targets, name, logger)
+	return listUnpackers(targets, skipList, name, logger)
 }
 
-func PrepareUnpackers(streamName string, targets TargetList, name string,
-	logger log.Logger) error {
-	return prepareUnpackers(streamName, targets, name, logger)
+func PrepareUnpackers(streamName string, targets TargetList,
+	skipList TargetList, name string, logger log.Logger) error {
+	return prepareUnpackers(streamName, targets, skipList, name, logger)
 }
 
 func Publish(imageServerAddress string, streamName string, imageLeafName string,
@@ -96,10 +97,6 @@ func Publish(imageServerAddress string, streamName string, imageLeafName string,
 	targets TargetList, skipList TargetList, unpackerName string,
 	logger log.Logger) (
 	Results, error) {
-	skipTargets := make(map[Target]struct{})
-	for _, target := range skipList {
-		skipTargets[Target{target.AccountName, target.Region}] = struct{}{}
-	}
 	pData := &publishData{
 		imageServerAddress: imageServerAddress,
 		streamName:         streamName,
@@ -107,10 +104,9 @@ func Publish(imageServerAddress string, streamName string, imageLeafName string,
 		minFreeBytes:       minFreeBytes,
 		amiName:            amiName,
 		tags:               tags,
-		skipTargets:        skipTargets,
 		unpackerName:       unpackerName,
 	}
-	return pData.publish(targets, logger)
+	return pData.publish(targets, skipList, logger)
 }
 
 func SetExclusiveTags(resources []Resource, tagKey string, tagValue string,
