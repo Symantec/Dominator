@@ -17,8 +17,10 @@ import (
 func (u *Unpacker) prepareForUnpack(streamName string, skipIfPrepared bool,
 	doNotWaitForResult bool) error {
 	u.rwMutex.Lock()
+	u.updateUsageTimeWithLock()
 	streamInfo, err := u.setupStream(streamName)
 	u.rwMutex.Unlock()
+	defer u.updateUsageTime()
 	if err != nil {
 		return err
 	}

@@ -16,8 +16,10 @@ import (
 )
 
 const (
-	dirPerms  = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP
-	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
+	dirPerms = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP |
+		syscall.S_IXOTH
+	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP |
+		syscall.S_IROTH
 
 	timeLayout = "2006-01-02:15:04:05.999"
 )
