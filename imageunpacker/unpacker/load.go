@@ -26,6 +26,7 @@ func load(baseDir string, imageServerAddress string, logger *log.Logger) (
 		imageServerResource: srpc.NewClientResource("tcp", imageServerAddress),
 		logger:              logger,
 	}
+	u.updateUsageTimeWithLock()
 	file, err := os.Open(path.Join(baseDir, stateFile))
 	if err != nil {
 		if os.IsNotExist(err) {
