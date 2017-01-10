@@ -87,7 +87,7 @@ func getWorkingUnpacker(awsService *ec2.EC2, name string, logger log.Logger) (
 func connectToUnpacker(address string, retryUntil time.Time,
 	logger log.Logger) (*srpc.Client, error) {
 	for {
-		srpcClient, err := srpc.DialHTTP("tcp", address, time.Second*15)
+		srpcClient, err := srpc.DialHTTP("tcp", address, time.Second*10)
 		if err == nil {
 			return srpcClient, nil
 		}
@@ -95,5 +95,6 @@ func connectToUnpacker(address string, retryUntil time.Time,
 			return nil, errors.New("timed out waiting for unpacker to start")
 		}
 		logger.Println(err)
+		time.Sleep(time.Second * 5)
 	}
 }
