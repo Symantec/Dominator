@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"syscall"
+	"time"
 )
 
 const (
@@ -52,5 +53,16 @@ func load(baseDir string, imageServerAddress string, logger *log.Logger) (
 			return nil, err
 		}
 	}
+	u.updateUsageTimeWithLock()
 	return u, nil
+}
+
+func (u *Unpacker) updateUsageTime() {
+	u.rwMutex.Lock()
+	defer u.rwMutex.Unlock()
+	u.updateUsageTimeWithLock()
+}
+
+func (u *Unpacker) updateUsageTimeWithLock() {
+	u.lastUsedTime = time.Now()
 }

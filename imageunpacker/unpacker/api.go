@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"sync"
+	"time"
 )
 
 const (
@@ -62,6 +63,7 @@ type Unpacker struct {
 	rwMutex             sync.RWMutex // Protect below.
 	pState              persistentState
 	scannedDevices      map[string]struct{}
+	lastUsedTime        time.Time
 }
 
 func Load(baseDir string, imageServerAddress string, logger *log.Logger) (

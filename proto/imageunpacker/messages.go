@@ -1,5 +1,7 @@
 package imageunpacker
 
+import "time"
+
 const (
 	StatusStreamNoDevice   = 0
 	StatusStreamNotMounted = 1
@@ -34,8 +36,9 @@ type AssociateStreamWithDeviceResponse struct{}
 type GetStatusRequest struct{}
 
 type GetStatusResponse struct {
-	Devices      map[string]DeviceInfo      // Key: DeviceId.
-	ImageStreams map[string]ImageStreamInfo // Key: StreamName.
+	Devices           map[string]DeviceInfo      // Key: DeviceId.
+	ImageStreams      map[string]ImageStreamInfo // Key: StreamName.
+	TimeSinceLastUsed time.Duration
 }
 
 type ImageStreamInfo struct {

@@ -21,6 +21,8 @@ var (
 )
 
 func (u *Unpacker) prepareForCapture(streamName string) error {
+	u.updateUsageTime()
+	defer u.updateUsageTime()
 	streamInfo := u.getStream(streamName)
 	if streamInfo == nil {
 		return errors.New("unknown stream")

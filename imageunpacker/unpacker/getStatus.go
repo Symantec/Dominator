@@ -2,6 +2,7 @@ package unpacker
 
 import (
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
+	"time"
 )
 
 func (u *Unpacker) getStatus() proto.GetStatusResponse {
@@ -18,5 +19,6 @@ func (u *Unpacker) getStatus() proto.GetStatusResponse {
 		imageStreams[name] = proto.ImageStreamInfo{
 			stream.DeviceId, stream.status}
 	}
-	return proto.GetStatusResponse{devices, imageStreams}
+	return proto.GetStatusResponse{devices, imageStreams,
+		time.Since(u.lastUsedTime)}
 }
