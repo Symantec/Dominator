@@ -11,7 +11,7 @@ import (
 func listUnpackersSubcommand(args []string, logger *log.Logger) {
 	err := listUnpackers(logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error preparing unpackers: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error listing unpackers: %s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
