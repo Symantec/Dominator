@@ -1,9 +1,15 @@
 package amipublisher
 
 import (
+	uclient "github.com/Symantec/Dominator/imageunpacker/client"
+	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"strconv"
+	"time"
 )
 
 func listUnpackers(targets TargetList, skipList TargetList, name string,
@@ -46,7 +52,26 @@ func listTargetUnpackers(awsService *ec2.EC2, name string, logger log.Logger) (
 			aws.StringValue(instance.InstanceId),
 			aws.StringValue(instance.PrivateIpAddress),
 			aws.StringValue(instance.State.Name),
+			timeSinceLastUsed(instance),
 		})
 	}
 	return unpackers, nil
+}
+
+func timeSinceLastUsed(instance *ec2.Instance) string {
+	if aws.StringValue(instance.State.Name) != ec2.InstanceStateNameRunning {
+		return ""
+	}
+	address := *instance.PrivateIpAddress + ":" +
+		strconv.Itoa(constants.ImageUnpackerPortNumber)
+	srpcClient, err := srpc.DialHTTP("tcp", address, time.Second*5)
+	if err != nil {
+		return ""
+	}
+	defer srpcClient.Close()
+	status, err := uclient.GetStatus(srpcClient)
+	if err != nil {
+		return ""
+	}
+	return format.Duration(status.TimeSinceLastUsed)
 }

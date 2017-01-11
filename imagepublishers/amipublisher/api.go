@@ -3,6 +3,7 @@ package amipublisher
 import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
+	"time"
 )
 
 type publishData struct {
@@ -54,9 +55,10 @@ type TargetUnpackers struct {
 }
 
 type Unpacker struct {
-	InstanceId string
-	IpAddress  string
-	State      string
+	InstanceId        string
+	IpAddress         string
+	State             string
+	TimeSinceLastUsed string `json:",omitempty"`
 }
 
 func (v TargetResult) MarshalJSON() ([]byte, error) {
@@ -112,4 +114,9 @@ func Publish(imageServerAddress string, streamName string, imageLeafName string,
 func SetExclusiveTags(resources []Resource, tagKey string, tagValue string,
 	logger log.Logger) error {
 	return setExclusiveTags(resources, tagKey, tagValue, logger)
+}
+
+func StopIdleUnpackers(targets TargetList, skipList TargetList, name string,
+	idleTimeout time.Duration, logger log.Logger) error {
+	return stopIdleUnpackers(targets, skipList, name, idleTimeout, logger)
 }
