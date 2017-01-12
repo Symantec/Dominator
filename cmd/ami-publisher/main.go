@@ -21,6 +21,8 @@ var (
 		"Hostname of imageserver")
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber, "Port number of imageserver")
+	maxIdleTime = flag.Duration("maxIdleTime", time.Minute*50,
+		"Maximum idle time for image unpacker instances")
 	minFreeBytes = flag.Uint64("minFreeBytes", 1<<28,
 		"minimum number of free bytes in image")
 	skipTargets amipublisher.TargetList
@@ -51,6 +53,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  prepare-unpackers stream-name")
 	fmt.Fprintln(os.Stderr, "  publish stream-name image-leaf-name")
 	fmt.Fprintln(os.Stderr, "  set-exclusive-tags key value results-file...")
+	fmt.Fprintln(os.Stderr, "  stop-idle-unpackers")
 }
 
 type commandFunc func([]string, *log.Logger)
@@ -70,6 +73,7 @@ var subcommands = []subcommand{
 	{"prepare-unpackers", 1, 1, prepareUnpackersSubcommand},
 	{"publish", 2, 2, publishSubcommand},
 	{"set-exclusive-tags", 2, -1, setExclusiveTagsSubcommand},
+	{"stop-idle-unpackers", 0, 0, stopIdleUnpackersSubcommand},
 }
 
 func main() {

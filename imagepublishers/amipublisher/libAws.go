@@ -450,6 +450,15 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
 	return *ami.ImageId, nil
 }
 
+func stopInstance(awsService *ec2.EC2, instanceId string) error {
+	instanceIds := make([]string, 1)
+	instanceIds[0] = instanceId
+	_, err := awsService.StopInstances(&ec2.StopInstancesInput{
+		InstanceIds: aws.StringSlice(instanceIds),
+	})
+	return err
+}
+
 func terminateInstance(awsService *ec2.EC2, instanceId string) error {
 	instanceIds := make([]string, 1)
 	instanceIds[0] = instanceId
