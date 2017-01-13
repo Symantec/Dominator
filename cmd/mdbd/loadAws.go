@@ -51,7 +51,9 @@ func extractMdb(output *ec2.DescribeInstancesOutput) *mdb.Mdb {
 	var result mdb.Mdb
 	for _, reservation := range output.Reservations {
 		for _, instance := range reservation.Instances {
-			if instance.PrivateDnsName != nil {
+			if aws.StringValue(instance.State.Name) ==
+				ec2.InstanceStateNameRunning &&
+				instance.PrivateDnsName != nil {
 				machine := mdb.Machine{
 					Hostname: *instance.PrivateDnsName,
 					AwsMetadata: &mdb.AwsMetadata{
