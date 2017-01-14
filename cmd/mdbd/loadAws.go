@@ -35,7 +35,7 @@ func (g *awsGeneratorType) Generate(
 		Filters: []*ec2.Filter{
 			{
 				Name:   aws.String("instance-state-name"),
-				Values: []*string{aws.String("running")},
+				Values: []*string{aws.String(ec2.InstanceStateNameRunning)},
 			},
 		},
 	}
@@ -51,9 +51,7 @@ func extractMdb(output *ec2.DescribeInstancesOutput) *mdb.Mdb {
 	var result mdb.Mdb
 	for _, reservation := range output.Reservations {
 		for _, instance := range reservation.Instances {
-			if aws.StringValue(instance.State.Name) ==
-				ec2.InstanceStateNameRunning &&
-				instance.PrivateDnsName != nil {
+			if instance.PrivateDnsName != nil {
 				machine := mdb.Machine{
 					Hostname: *instance.PrivateDnsName,
 					AwsMetadata: &mdb.AwsMetadata{
