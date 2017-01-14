@@ -35,7 +35,7 @@ func (g *awsGeneratorType) Generate(
 		Filters: []*ec2.Filter{
 			{
 				Name:   aws.String("instance-state-name"),
-				Values: []*string{aws.String("running")},
+				Values: []*string{aws.String(ec2.InstanceStateNameRunning)},
 			},
 		},
 	}
@@ -56,6 +56,7 @@ func extractMdb(output *ec2.DescribeInstancesOutput) *mdb.Mdb {
 					Hostname: *instance.PrivateDnsName,
 					AwsMetadata: &mdb.AwsMetadata{
 						InstanceId: *instance.InstanceId,
+						Tags:       make(map[string]string),
 					},
 				}
 				if instance.PrivateIpAddress != nil {
@@ -71,23 +72,19 @@ func extractMdb(output *ec2.DescribeInstancesOutput) *mdb.Mdb {
 
 func extractTags(tags []*ec2.Tag, machine *mdb.Machine) {
 	for _, tag := range tags {
+		if tag.Key == nil || tag.Value == nil {
+			continue
+		}
+		machine.AwsMetadata.Tags[*tag.Key] = *tag.Value
 		switch *tag.Key {
 		case "RequiredImage":
-			if tag.Value != nil {
-				machine.RequiredImage = *tag.Value
-			}
+			machine.RequiredImage = *tag.Value
 		case "PlannedImage":
-			if tag.Value != nil {
-				machine.PlannedImage = *tag.Value
-			}
+			machine.PlannedImage = *tag.Value
 		case "DisableUpdates":
-			if tag.Value != nil {
-				machine.DisableUpdates = true
-			}
+			machine.DisableUpdates = true
 		case "OwnerGroup":
-			if tag.Value != nil {
-				machine.OwnerGroup = *tag.Value
-			}
+			machine.OwnerGroup = *tag.Value
 		}
 	}
 }

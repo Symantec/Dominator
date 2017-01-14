@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/html"
+	"github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/mdb"
 	"io"
 	"net"
 	"net/http"
@@ -15,6 +17,7 @@ type HtmlWriter interface {
 
 type httpServer struct {
 	htmlWriters []HtmlWriter
+	mdb         *mdb.Mdb
 }
 
 func startHttpServer(portNum uint) (*httpServer, error) {
@@ -22,8 +25,9 @@ func startHttpServer(portNum uint) (*httpServer, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &httpServer{}
+	s := &httpServer{mdb: &mdb.Mdb{}}
 	http.HandleFunc("/", s.statusHandler)
+	http.HandleFunc("/showMdb", s.showMdbHandler)
 	go http.Serve(listener, nil)
 	return s, nil
 }
@@ -38,6 +42,8 @@ func (s *httpServer) statusHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "</center>")
 	html.WriteHeaderWithRequestNoGC(writer, req)
 	fmt.Fprintln(writer, "<h3>")
+	fmt.Fprintf(writer, "Number of machines: <a href=\"showMdb\">%d</a><br>\n",
+		len(s.mdb.Machines))
 	for _, htmlWriter := range s.htmlWriters {
 		htmlWriter.WriteHtml(writer)
 	}
@@ -49,4 +55,17 @@ func (s *httpServer) statusHandler(w http.ResponseWriter, req *http.Request) {
 
 func (s *httpServer) AddHtmlWriter(htmlWriter HtmlWriter) {
 	s.htmlWriters = append(s.htmlWriters, htmlWriter)
+}
+
+func (s *httpServer) showMdbHandler(w http.ResponseWriter, req *http.Request) {
+	writer := bufio.NewWriter(w)
+	defer writer.Flush()
+	json.WriteWithIndent(writer, "    ", s.mdb)
+}
+
+func (s *httpServer) UpdateMdb(new *mdb.Mdb) {
+	if new == nil {
+		new = &mdb.Mdb{}
+	}
+	s.mdb = new
 }

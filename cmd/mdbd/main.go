@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/logbuf"
+	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"log"
 	"os"
@@ -177,9 +178,13 @@ func main() {
 		showErrorAndDie(err)
 	}
 	httpSrv.AddHtmlWriter(circularBuffer)
-	updateFunc := startRpcd(logger)
+	rpcd := startRpcd(logger)
 	go runDaemon(generators, *mdbFile, *hostnameRegex, *datacentre,
-		*fetchInterval, updateFunc, logger, *debug)
+		*fetchInterval, func(old, new *mdb.Mdb) {
+			rpcd.pushUpdateToAll(old, new)
+			httpSrv.UpdateMdb(new)
+		},
+		logger, *debug)
 	<-readerChannel
 	fsutil.WatchFileStop()
 	if err := syscall.Exec(os.Args[0], os.Args, os.Environ()); err != nil {
