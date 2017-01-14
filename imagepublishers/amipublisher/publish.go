@@ -197,7 +197,7 @@ func addVolume(srpcClient *srpc.Client, awsService *ec2.EC2,
 		return "", err
 	}
 	err = uclient.AddDevice(srpcClient, volumeId, func() error {
-		return attachVolume(awsService, *instance.InstanceId, volumeId, logger)
+		return attachVolume(awsService, instance, volumeId, logger)
 	})
 	if err != nil {
 		return "", err

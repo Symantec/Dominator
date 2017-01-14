@@ -13,18 +13,9 @@ import (
 	"time"
 )
 
-func attachVolume(awsService *ec2.EC2, instanceId string, volumeId string,
+func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 	logger log.Logger) error {
-	instanceIds := make([]string, 1)
-	instanceIds[0] = instanceId
-	desc, err := awsService.DescribeInstances(&ec2.DescribeInstancesInput{
-		InstanceIds: aws.StringSlice(instanceIds),
-	})
-	if err != nil {
-		return err
-	}
 	usedBlockDevices := make(map[string]struct{})
-	instance := desc.Reservations[0].Instances[0]
 	for _, device := range instance.BlockDeviceMappings {
 		usedBlockDevices[aws.StringValue(device.DeviceName)] = struct{}{}
 	}
@@ -39,9 +30,9 @@ func attachVolume(awsService *ec2.EC2, instanceId string, volumeId string,
 	if blockDeviceName == "" {
 		return errors.New("no space for new block device")
 	}
-	_, err = awsService.AttachVolume(&ec2.AttachVolumeInput{
+	_, err := awsService.AttachVolume(&ec2.AttachVolumeInput{
 		Device:     aws.String(blockDeviceName),
-		InstanceId: aws.String(instanceId),
+		InstanceId: instance.InstanceId,
 		VolumeId:   aws.String(volumeId),
 	})
 	if err != nil {
@@ -58,13 +49,13 @@ func attachVolume(awsService *ec2.EC2, instanceId string, volumeId string,
 	_, err = awsService.ModifyInstanceAttribute(
 		&ec2.ModifyInstanceAttributeInput{
 			BlockDeviceMappings: blockDevMappings,
-			InstanceId:          aws.String(instanceId),
+			InstanceId:          instance.InstanceId,
 		})
 	if err != nil {
 		return err
 	}
 	logger.Printf("Requested attach(%s): %s on %s, waiting...\n",
-		instanceId, volumeId, blockDeviceName)
+		aws.StringValue(instance.InstanceId), volumeId, blockDeviceName)
 	volumeIds := make([]string, 1)
 	volumeIds[0] = volumeId
 	for ; true; time.Sleep(time.Second) {
