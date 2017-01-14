@@ -20,8 +20,23 @@ func (dest *Machine) updateFrom(source Machine) {
 	if source.AwsMetadata != nil {
 		if dest.AwsMetadata == nil {
 			dest.AwsMetadata = source.AwsMetadata
-		} else if *dest.AwsMetadata != *source.AwsMetadata {
+		} else if !compareAwsMetadata(dest.AwsMetadata, source.AwsMetadata) {
 			dest.AwsMetadata = source.AwsMetadata
 		}
 	}
+}
+
+func compareAwsMetadata(left, right *AwsMetadata) bool {
+	if left.InstanceId != right.InstanceId {
+		return false
+	}
+	if len(left.Tags) != len(right.Tags) {
+		return false
+	}
+	for key, value := range left.Tags {
+		if right.Tags[key] != value {
+			return false
+		}
+	}
+	return true
 }
