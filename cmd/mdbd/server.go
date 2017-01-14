@@ -18,14 +18,14 @@ type rpcType struct {
 	updateChannels map[*srpc.Conn]chan<- mdbserver.MdbUpdate
 }
 
-func startRpcd(logger *log.Logger) func(old, new *mdb.Mdb) {
+func startRpcd(logger *log.Logger) *rpcType {
 	rpcObj := &rpcType{
 		currentMdb:     &mdb.Mdb{},
 		logger:         logger,
 		updateChannels: make(map[*srpc.Conn]chan<- mdbserver.MdbUpdate),
 	}
 	srpc.RegisterName("MdbServer", rpcObj)
-	return rpcObj.pushUpdateToAll
+	return rpcObj
 }
 
 func (t *rpcType) GetMdbUpdates(conn *srpc.Conn) error {
