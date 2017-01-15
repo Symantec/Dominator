@@ -3,12 +3,16 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"io"
-	"log"
 )
 
-func loadCis(reader io.Reader, datacentre string, logger *log.Logger) (
+func newCisGenerator(args []string) (generator, error) {
+	return sourceGenerator{loadCis, args[0]}, nil
+}
+
+func loadCis(reader io.Reader, datacentre string, logger log.Logger) (
 	*mdb.Mdb, error) {
 
 	type instanceMetadataType struct {

@@ -3,12 +3,16 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"io"
-	"log"
 )
 
-func loadDsHostFqdn(reader io.Reader, datacentre string, logger *log.Logger) (
+func newDsHostFqdnGenerator(args []string) (generator, error) {
+	return sourceGenerator{loadDsHostFqdn, args[0]}, nil
+}
+
+func loadDsHostFqdn(reader io.Reader, datacentre string, logger log.Logger) (
 	*mdb.Mdb, error) {
 	type machineType struct {
 		Fqdn string

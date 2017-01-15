@@ -1,36 +1,31 @@
 package main
 
 import (
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"log"
 )
 
 type awsGeneratorType struct {
 	svc *ec2.EC2
 }
 
-func newAwsGenerator(
-	datacentre, profile string) (
-	result *awsGeneratorType, err error) {
+func newAwsGenerator(args []string) (generator, error) {
 	sess, err := session.NewSessionWithOptions(
 		session.Options{
-			Config:  aws.Config{Region: aws.String(datacentre)},
-			Profile: profile,
+			Config:  aws.Config{Region: aws.String(args[0])},
+			Profile: args[1],
 		})
 	if err != nil {
-		return
+		return nil, err
 	}
-	svc := ec2.New(sess)
-	result = &awsGeneratorType{svc: svc}
-	return
+	return &awsGeneratorType{svc: ec2.New(sess)}, nil
 }
 
-func (g *awsGeneratorType) Generate(
-	unused_datacentre string, unused_logger *log.Logger) (
-	result *mdb.Mdb, err error) {
+func (g *awsGeneratorType) Generate(unused_datacentre string,
+	unused_logger log.Logger) (*mdb.Mdb, error) {
 	params := &ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
 			{
@@ -41,10 +36,9 @@ func (g *awsGeneratorType) Generate(
 	}
 	resp, err := g.svc.DescribeInstances(params)
 	if err != nil {
-		return
+		return nil, err
 	}
-	result = extractMdb(resp)
-	return
+	return extractMdb(resp), nil
 }
 
 func extractMdb(output *ec2.DescribeInstancesOutput) *mdb.Mdb {
