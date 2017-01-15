@@ -3,6 +3,7 @@ package amipublisher
 import (
 	"errors"
 	uclient "github.com/Symantec/Dominator/imageunpacker/client"
+	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -12,10 +13,10 @@ import (
 	"time"
 )
 
-func prepareUnpackers(streamName string, targets TargetList,
-	skipList TargetList, name string, logger log.Logger) error {
+func prepareUnpackers(streamName string, targets awsutil.TargetList,
+	skipList awsutil.TargetList, name string, logger log.Logger) error {
 	resultsChannel := make(chan error, 1)
-	numTargets, err := forEachTarget(targets, skipList,
+	numTargets, err := awsutil.ForEachTarget(targets, skipList,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			err := prepareUnpacker(awsService, streamName, name, logger)
 			if err != nil {

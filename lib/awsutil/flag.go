@@ -1,4 +1,4 @@
-package amipublisher
+package awsutil
 
 import (
 	"errors"

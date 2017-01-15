@@ -2,6 +2,7 @@ package amipublisher
 
 import (
 	uclient "github.com/Symantec/Dominator/imageunpacker/client"
+	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/log"
@@ -12,18 +13,18 @@ import (
 	"time"
 )
 
-func listUnpackers(targets TargetList, skipList TargetList, name string,
-	logger log.Logger) (
+func listUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
+	name string, logger log.Logger) (
 	[]TargetUnpackers, error) {
 	resultsChannel := make(chan TargetUnpackers, 1)
-	numTargets, err := forEachTarget(targets, skipList,
+	numTargets, err := awsutil.ForEachTarget(targets, skipList,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			unpackers, err := listTargetUnpackers(awsService, name, logger)
 			if err != nil {
 				logger.Println(err)
 			}
 			resultsChannel <- TargetUnpackers{
-				Target{account, region}, unpackers}
+				awsutil.Target{account, region}, unpackers}
 		},
 		logger)
 	// Collect results.
