@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
-	"log"
+	"github.com/Symantec/Dominator/lib/log"
 	"os"
 	"path"
 )
 
-func prepareUnpackersSubcommand(args []string, logger *log.Logger) {
+func prepareUnpackersSubcommand(args []string, logger log.Logger) {
 	err := prepareUnpackers(args[0], logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error preparing unpackers: %s\n", err)
@@ -17,7 +17,7 @@ func prepareUnpackersSubcommand(args []string, logger *log.Logger) {
 	os.Exit(0)
 }
 
-func prepareUnpackers(streamName string, logger *log.Logger) error {
+func prepareUnpackers(streamName string, logger log.Logger) error {
 	streamName = path.Clean(streamName)
 	return amipublisher.PrepareUnpackers(streamName, targets, skipTargets,
 		*unpackerName, logger)
