@@ -2,13 +2,17 @@ package main
 
 import (
 	"bufio"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"io"
-	"log"
 	"strings"
 )
 
-func loadText(reader io.Reader, datacentre string, logger *log.Logger) (
+func newTextGenerator(args []string) (generator, error) {
+	return sourceGenerator{loadText, args[0]}, nil
+}
+
+func loadText(reader io.Reader, datacentre string, logger log.Logger) (
 	*mdb.Mdb, error) {
 	scanner := bufio.NewScanner(reader)
 	var newMdb mdb.Mdb

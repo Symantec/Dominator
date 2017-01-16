@@ -1,6 +1,7 @@
 package amipublisher
 
 import (
+	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
 	"time"
@@ -19,30 +20,15 @@ type publishData struct {
 }
 
 type Resource struct {
-	Target
+	awsutil.Target
 	SnapshotId string
 	AmiId      string
 }
 
 type Results []TargetResult
 
-type Target struct {
-	AccountName string
-	Region      string
-}
-
-type TargetList []Target
-
-func (list *TargetList) String() string {
-	return list.string()
-}
-
-func (list *TargetList) Set(value string) error {
-	return list.set(value)
-}
-
 type TargetResult struct {
-	Target
+	awsutil.Target
 	SnapshotId string
 	AmiId      string
 	Size       uint // Size in GiB.
@@ -50,7 +36,7 @@ type TargetResult struct {
 }
 
 type TargetUnpackers struct {
-	Target
+	awsutil.Target
 	Unpackers []Unpacker
 }
 
@@ -74,30 +60,26 @@ func DeleteTags(resources []Resource, tagKeys []string,
 	return deleteTags(resources, tagKeys, logger)
 }
 
-func ExpireResources(targets TargetList, skipList TargetList,
+func ExpireResources(targets awsutil.TargetList, skipList awsutil.TargetList,
 	logger log.Logger) error {
 	return expireResources(targets, skipList, logger)
 }
 
-func ListAccountNames() ([]string, error) {
-	return listAccountNames()
-}
-
-func ListUnpackers(targets TargetList, skipList TargetList, name string,
-	logger log.Logger) (
+func ListUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
+	name string, logger log.Logger) (
 	[]TargetUnpackers, error) {
 	return listUnpackers(targets, skipList, name, logger)
 }
 
-func PrepareUnpackers(streamName string, targets TargetList,
-	skipList TargetList, name string, logger log.Logger) error {
+func PrepareUnpackers(streamName string, targets awsutil.TargetList,
+	skipList awsutil.TargetList, name string, logger log.Logger) error {
 	return prepareUnpackers(streamName, targets, skipList, name, logger)
 }
 
 func Publish(imageServerAddress string, streamName string, imageLeafName string,
 	minFreeBytes uint64, amiName string, tags map[string]string,
-	targets TargetList, skipList TargetList, unpackerName string,
-	logger log.Logger) (
+	targets awsutil.TargetList, skipList awsutil.TargetList,
+	unpackerName string, logger log.Logger) (
 	Results, error) {
 	pData := &publishData{
 		imageServerAddress: imageServerAddress,
@@ -116,7 +98,7 @@ func SetExclusiveTags(resources []Resource, tagKey string, tagValue string,
 	return setExclusiveTags(resources, tagKey, tagValue, logger)
 }
 
-func StopIdleUnpackers(targets TargetList, skipList TargetList, name string,
-	idleTimeout time.Duration, logger log.Logger) error {
+func StopIdleUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
+	name string, idleTimeout time.Duration, logger log.Logger) error {
 	return stopIdleUnpackers(targets, skipList, name, idleTimeout, logger)
 }

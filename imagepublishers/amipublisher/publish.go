@@ -4,6 +4,7 @@ import (
 	"errors"
 	iclient "github.com/Symantec/Dominator/imageserver/client"
 	uclient "github.com/Symantec/Dominator/imageunpacker/client"
+	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -12,8 +13,8 @@ import (
 	"path"
 )
 
-func (pData *publishData) publish(targets TargetList, skipList TargetList,
-	logger log.Logger) (
+func (pData *publishData) publish(targets awsutil.TargetList,
+	skipList awsutil.TargetList, logger log.Logger) (
 	Results, error) {
 	fs, err := pData.getFileSystem(logger)
 	if err != nil {
@@ -22,7 +23,7 @@ func (pData *publishData) publish(targets TargetList, skipList TargetList,
 	fs.TotalDataBytes = estimateFsUsage(fs)
 	pData.fileSystem = fs
 	resultsChannel := make(chan TargetResult, 1)
-	numTargets, err := forEachTarget(targets, skipList,
+	numTargets, err := awsutil.ForEachTarget(targets, skipList,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			pData.publishToTargetWrapper(awsService, account, region,
 				resultsChannel, logger)
@@ -63,7 +64,7 @@ func (pData *publishData) getFileSystem(logger log.Logger) (
 func (pData *publishData) publishToTargetWrapper(awsService *ec2.EC2,
 	accountProfileName string, region string, channel chan<- TargetResult,
 	logger log.Logger) {
-	target := Target{AccountName: accountProfileName, Region: region}
+	target := awsutil.Target{AccountName: accountProfileName, Region: region}
 	resultMsg := TargetResult{Target: target}
 	resultMsg.SnapshotId, resultMsg.AmiId, resultMsg.Size, resultMsg.Error =
 		pData.publishToTarget(awsService, logger)
@@ -197,7 +198,7 @@ func addVolume(srpcClient *srpc.Client, awsService *ec2.EC2,
 		return "", err
 	}
 	err = uclient.AddDevice(srpcClient, volumeId, func() error {
-		return attachVolume(awsService, *instance.InstanceId, volumeId, logger)
+		return attachVolume(awsService, instance, volumeId, logger)
 	})
 	if err != nil {
 		return "", err

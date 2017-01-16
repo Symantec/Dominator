@@ -2,6 +2,7 @@ package amipublisher
 
 import (
 	uclient "github.com/Symantec/Dominator/imageunpacker/client"
+	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -11,10 +12,10 @@ import (
 	"time"
 )
 
-func stopIdleUnpackers(targets TargetList, skipList TargetList, name string,
-	idleTimeout time.Duration, logger log.Logger) error {
+func stopIdleUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
+	name string, idleTimeout time.Duration, logger log.Logger) error {
 	resultsChannel := make(chan error, 1)
-	numTargets, err := forEachTarget(targets, skipList,
+	numTargets, err := awsutil.ForEachTarget(targets, skipList,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			err := stopIdleUnpackersInTarget(awsService, name, idleTimeout,
 				logger)

@@ -1,50 +1,112 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+	"github.com/Symantec/Dominator/lib/awsutil"
+	libjson "github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"log"
 )
 
 type awsGeneratorType struct {
-	svc *ec2.EC2
+	targets        awsutil.TargetList
+	filterTagsFile string
 }
 
-func newAwsGenerator(
-	datacentre, profile string) (
-	result *awsGeneratorType, err error) {
-	sess, err := session.NewSessionWithOptions(
-		session.Options{
-			Config:  aws.Config{Region: aws.String(datacentre)},
-			Profile: profile,
-		})
-	if err != nil {
-		return
+type resultType struct {
+	mdb *mdb.Mdb
+	err error
+}
+
+type tagFilterType struct {
+	Key    string
+	Values []string
+}
+
+func newAwsGenerator(args []string) (generator, error) {
+	return &awsGeneratorType{
+			targets: awsutil.TargetList{awsutil.Target{args[1], args[0]}}},
+		nil
+}
+
+func newAwsFilteredGenerator(args []string) (generator, error) {
+	gen := awsGeneratorType{
+		filterTagsFile: args[1],
 	}
-	svc := ec2.New(sess)
-	result = &awsGeneratorType{svc: svc}
-	return
+	if err := gen.targets.Set(args[0]); err != nil {
+		return nil, err
+	}
+	return &gen, nil
 }
 
-func (g *awsGeneratorType) Generate(
-	unused_datacentre string, unused_logger *log.Logger) (
-	result *mdb.Mdb, err error) {
-	params := &ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
-			{
-				Name:   aws.String("instance-state-name"),
-				Values: []*string{aws.String(ec2.InstanceStateNameRunning)},
-			},
+func (g *awsGeneratorType) Generate(unused_datacentre string,
+	logger log.Logger) (*mdb.Mdb, error) {
+	resultsChannel := make(chan resultType, 1)
+	numTargets, err := awsutil.ForEachTarget(g.targets, nil,
+		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
+			var result resultType
+			result.mdb, result.err = g.generateForTarget(awsService, logger)
+			resultsChannel <- result
 		},
+		logger)
+	// Collect results.
+	var newMdb mdb.Mdb
+	hostnames := make(map[string]struct{})
+	for i := 0; i < numTargets; i++ {
+		result := <-resultsChannel
+		for _, machine := range result.mdb.Machines {
+			if _, ok := hostnames[machine.Hostname]; ok {
+				txt := "duplicate hostname: " + machine.Hostname
+				logger.Println(txt)
+				if err == nil {
+					err = errors.New(txt)
+				}
+				break
+			}
+			newMdb.Machines = append(newMdb.Machines, machine)
+		}
 	}
-	resp, err := g.svc.DescribeInstances(params)
+	return &newMdb, err
+}
+
+func (g *awsGeneratorType) generateForTarget(svc *ec2.EC2, logger log.Logger) (
+	*mdb.Mdb, error) {
+	filters, err := g.makeFilters()
 	if err != nil {
-		return
+		return nil, err
 	}
-	result = extractMdb(resp)
-	return
+	resp, err := svc.DescribeInstances(&ec2.DescribeInstancesInput{
+		Filters: filters,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return extractMdb(resp), nil
+}
+
+func (g *awsGeneratorType) makeFilters() ([]*ec2.Filter, error) {
+	filters := make([]*ec2.Filter, 1, 1)
+	filters[0] = &ec2.Filter{
+		Name:   aws.String("instance-state-name"),
+		Values: []*string{aws.String(ec2.InstanceStateNameRunning)},
+	}
+	if g.filterTagsFile == "" {
+		return filters, nil
+	}
+	var tags []tagFilterType
+	if err := libjson.ReadFromFile(g.filterTagsFile, &tags); err != nil {
+		return nil, fmt.Errorf("error loading tags file: %s", err)
+	}
+	for _, tag := range tags {
+		filters = append(filters, &ec2.Filter{
+			Name:   aws.String("tag:" + tag.Key),
+			Values: aws.StringSlice(tag.Values),
+		})
+	}
+	return filters, nil
 }
 
 func extractMdb(output *ec2.DescribeInstancesOutput) *mdb.Mdb {

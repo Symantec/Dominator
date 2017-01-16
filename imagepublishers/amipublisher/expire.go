@@ -1,6 +1,7 @@
 package amipublisher
 
 import (
+	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -9,11 +10,11 @@ import (
 
 const expiresAtFormat = "2006-01-02:15:04:05"
 
-func expireResources(targets TargetList, skipList TargetList,
+func expireResources(targets awsutil.TargetList, skipList awsutil.TargetList,
 	logger log.Logger) error {
 	currentTime := time.Now() // Need a common "now" time.
 	waitChannel := make(chan struct{})
-	numTargets, err := forEachTarget(targets, skipList,
+	numTargets, err := awsutil.ForEachTarget(targets, skipList,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			expireRegionResources(awsService, currentTime, logger)
 			waitChannel <- struct{}{}

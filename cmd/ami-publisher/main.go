@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
+	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"log"
@@ -25,10 +25,10 @@ var (
 		"Maximum idle time for image unpacker instances")
 	minFreeBytes = flag.Uint64("minFreeBytes", 1<<28,
 		"minimum number of free bytes in image")
-	skipTargets amipublisher.TargetList
+	skipTargets awsutil.TargetList
 	tagsFile    = flag.String("tagsFile", "",
 		"JSON encoded file containing tags to apply to AMIs")
-	targets      amipublisher.TargetList
+	targets      awsutil.TargetList
 	unpackerName = flag.String("unpackerName", "ImageUnpacker",
 		"The Name tag value for image unpacker instances")
 )

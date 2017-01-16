@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bufio"
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
@@ -13,7 +11,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 )
 
@@ -60,46 +57,18 @@ func printUsage() {
 }
 
 type driver struct {
-	name       string
-	driverFunc driverFunc
+	name      string
+	minArgs   int
+	maxArgs   int
+	setupFunc makeGeneratorFunc
 }
 
 var drivers = []driver{
-	// aws driver is handled as a special case for now. See getSource
-	// function in this file.
-	{"cis", loadCis},
-	{"ds.host.fqdn", loadDsHostFqdn},
-	{"text", loadText},
-}
-
-func getSource(driverAndArgs []string) (
-	result generator, err error) {
-	if len(driverAndArgs) == 0 {
-		return nil, errors.New("At least driver name expected.")
-	}
-	// Special case for aws.
-	if driverAndArgs[0] == "aws" {
-		if len(driverAndArgs) != 3 {
-			return nil, errors.New("aws expects 2 args: datacenter and profile.")
-		}
-		// [1] is the datacenter and [2] is the profile
-		result, err := newAwsGenerator(driverAndArgs[1], driverAndArgs[2])
-		if err != nil {
-			showErrorAndDie(err)
-		}
-		return result, nil
-	}
-	if len(driverAndArgs) != 2 {
-		return nil, errors.New("1 arg expected: url.")
-	}
-	for _, driver := range drivers {
-		if driverAndArgs[0] == driver.name {
-			return source{driver.driverFunc, driverAndArgs[1]}, nil
-		}
-	}
-	printUsage()
-	os.Exit(2)
-	return
+	{"aws", 2, 2, newAwsGenerator},
+	{"aws-filtered", 2, 2, newAwsFilteredGenerator},
+	{"cis", 1, 1, newCisGenerator},
+	{"ds.host.fqdn", 1, 1, newDsHostFqdnGenerator},
+	{"text", 1, 1, newTextGenerator},
 }
 
 func gracefulCleanup() {
@@ -150,29 +119,17 @@ func main() {
 		os.Exit(2)
 	}
 	handleSignals(logger)
-	var generators []generator
 	readerChannel := fsutil.WatchFile(*sourcesFile, logger)
 	file, err := os.Open(*sourcesFile)
 	if err != nil {
 		showErrorAndDie(err)
 	}
 	(<-readerChannel).Close()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		fields := strings.Fields(scanner.Text())
-		if len(fields) == 0 || len(fields[0]) == 0 || fields[0][0] == '#' {
-			continue
-		}
-		gen, err := getSource(fields)
-		if err != nil {
-			showErrorAndDie(err)
-		}
-		generators = append(generators, gen)
-	}
-	if err := scanner.Err(); err != nil {
+	generators, err := setupGenerators(file, drivers)
+	file.Close()
+	if err != nil {
 		showErrorAndDie(err)
 	}
-	file.Close()
 	httpSrv, err := startHttpServer(*portNum)
 	if err != nil {
 		showErrorAndDie(err)
