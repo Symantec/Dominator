@@ -25,14 +25,14 @@ func setExclusiveTagsForTarget(awsService *ec2.EC2, amiId string,
 	// First extract the value of the Name tag which is common to this stream.
 	imageIds := make([]string, 1)
 	imageIds[0] = amiId
-	images, err := awsService.DescribeImages(&ec2.DescribeImagesInput{
+	out, err := awsService.DescribeImages(&ec2.DescribeImagesInput{
 		ImageIds: aws.StringSlice(imageIds),
 	})
 	if err != nil {
 		return err
 	}
 	var nameTag string
-	for _, tag := range images.Images[0].Tags {
+	for _, tag := range out.Images[0].Tags {
 		if aws.StringValue(tag.Key) == "Name" {
 			nameTag = aws.StringValue(tag.Value)
 			break
@@ -41,29 +41,14 @@ func setExclusiveTagsForTarget(awsService *ec2.EC2, amiId string,
 	if nameTag == "" {
 		return fmt.Errorf("no \"Name\" tag for: %s", amiId)
 	}
-	filters := make([]*ec2.Filter, 2)
-	values0 := make([]string, 1)
-	values0[0] = nameTag
-	filters[0] = &ec2.Filter{
-		Name:   aws.String("tag:Name"),
-		Values: aws.StringSlice(values0),
-	}
-	values1 := make([]string, 1)
-	values1[0] = tagKey
-	filters[1] = &ec2.Filter{
-		Name:   aws.String("tag-key"),
-		Values: aws.StringSlice(values1),
-	}
-	images, err = awsService.DescribeImages(&ec2.DescribeImagesInput{
-		Filters: filters,
-	})
+	images, err := getImages(awsService, nameTag, tagKey)
 	if err != nil {
 		return err
 	}
 	tagKeys := make([]string, 1)
 	tagKeys[0] = tagKey
 	tagAlreadyPresent := false
-	for _, image := range images.Images {
+	for _, image := range images {
 		imageId := aws.StringValue(image.ImageId)
 		if imageId == amiId {
 			for _, tag := range image.Tags {

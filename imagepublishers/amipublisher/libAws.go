@@ -240,6 +240,27 @@ func deregisterAmi(awsService *ec2.EC2, amiId string) error {
 	return errors.New("timed out waiting for deregister: " + amiId)
 }
 
+func getImages(awsService *ec2.EC2, nameTag string, tagKey string) (
+	[]*ec2.Image, error) {
+	filters := make([]*ec2.Filter, 1, 2)
+	filters[0] = &ec2.Filter{
+		Name:   aws.String("tag:Name"),
+		Values: aws.StringSlice([]string{nameTag}),
+	}
+	if tagKey != "" {
+		filters = append(filters, &ec2.Filter{
+			Name:   aws.String("tag-key"),
+			Values: aws.StringSlice([]string{tagKey}),
+		})
+	}
+	out, err := awsService.DescribeImages(
+		&ec2.DescribeImagesInput{Filters: filters})
+	if err != nil {
+		return nil, err
+	}
+	return out.Images, nil
+}
+
 func getInstances(awsService *ec2.EC2, nameTag string) (
 	[]*ec2.Instance, error) {
 	if nameTag == "" {
