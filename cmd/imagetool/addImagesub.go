@@ -84,10 +84,10 @@ func copyMissingObjects(fs *filesystem.FileSystem, imageSClient *srpc.Client,
 	if err != nil {
 		return err
 	}
-	missingHashes := make([]hash.Hash, 0)
+	missingHashes := make(map[hash.Hash]struct{})
 	for index, size := range objectSizes {
 		if size < 1 {
-			missingHashes = append(missingHashes, hashes[index])
+			missingHashes[hashes[index]] = struct{}{}
 		}
 	}
 	if len(missingHashes) < 1 {
@@ -95,13 +95,15 @@ func copyMissingObjects(fs *filesystem.FileSystem, imageSClient *srpc.Client,
 	}
 	// Get missing objects from sub.
 	filesForMissingObjects := make([]string, 0, len(missingHashes))
-	for _, hash := range missingHashes {
-		if inums, ok := fs.HashToInodesTable()[hash]; !ok {
-			return fmt.Errorf("no inode for object: %x", hash)
+	hashToFilename := make(map[hash.Hash]string)
+	for hashVal := range missingHashes {
+		if inums, ok := fs.HashToInodesTable()[hashVal]; !ok {
+			return fmt.Errorf("no inode for object: %x", hashVal)
 		} else if files, ok := fs.InodeToFilenamesTable()[inums[0]]; !ok {
 			return fmt.Errorf("no file for inode: %d", inums[0])
 		} else {
 			filesForMissingObjects = append(filesForMissingObjects, files[0])
+			hashToFilename[hashVal] = files[0]
 		}
 	}
 	objAdderQueue, err := objectclient.NewObjectAdderQueue(imageSClient)
@@ -114,12 +116,24 @@ func copyMissingObjects(fs *filesystem.FileSystem, imageSClient *srpc.Client,
 		return fmt.Errorf("error dialing %s", err)
 	}
 	defer subClient.Close()
-	if err := subclient.GetFiles(subClient, filesForMissingObjects,
+	err = subclient.GetFiles(subClient, filesForMissingObjects,
 		func(reader io.Reader, size uint64) error {
-			_, err := objAdderQueue.Add(reader, size)
-			return err
-		}); err != nil {
+			hashVal, err := objAdderQueue.Add(reader, size)
+			if err != nil {
+				return err
+			}
+			delete(missingHashes, hashVal)
+			return nil
+		})
+	if err != nil {
 		return err
+	}
+	if len(missingHashes) > 0 {
+		for hashVal := range missingHashes {
+			fmt.Fprintf(os.Stderr, "Contents for file changed: %s\n",
+				hashToFilename[hashVal])
+		}
+		return errors.New("one or more files on the sub changed")
 	}
 	return objAdderQueue.Close()
 }
