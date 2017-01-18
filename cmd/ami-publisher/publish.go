@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
 	libjson "github.com/Symantec/Dominator/lib/json"
-	"log"
+	"github.com/Symantec/Dominator/lib/log"
 	"os"
 	"path"
 	"strings"
 	"time"
 )
 
-func publishSubcommand(args []string, logger *log.Logger) {
+func publishSubcommand(args []string, logger log.Logger) {
 	imageServerAddr := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)
 	err := publish(imageServerAddr, args[0], args[1], logger)
@@ -23,7 +23,7 @@ func publishSubcommand(args []string, logger *log.Logger) {
 }
 
 func publish(imageServerAddress string, streamName string, imageLeafName string,
-	logger *log.Logger) error {
+	logger log.Logger) error {
 	streamName = path.Clean(streamName)
 	imageLeafName = path.Clean(imageLeafName)
 	var tags map[string]string

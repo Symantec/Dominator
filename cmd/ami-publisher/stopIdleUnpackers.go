@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
-	"log"
+	"github.com/Symantec/Dominator/lib/log"
 	"os"
 )
 
-func stopIdleUnpackersSubcommand(args []string, logger *log.Logger) {
+func stopIdleUnpackersSubcommand(args []string, logger log.Logger) {
 	err := amipublisher.StopIdleUnpackers(targets, skipTargets, *unpackerName,
 		*maxIdleTime, logger)
 	if err != nil {

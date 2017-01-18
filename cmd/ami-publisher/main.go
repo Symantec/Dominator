@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/constants"
+	liblog "github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"log"
 	"os"
@@ -56,7 +57,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  stop-idle-unpackers")
 }
 
-type commandFunc func([]string, *log.Logger)
+type commandFunc func([]string, liblog.Logger)
 
 type subcommand struct {
 	command string
