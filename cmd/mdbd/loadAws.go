@@ -57,6 +57,13 @@ func (g *awsGeneratorType) Generate(unused_datacentre string,
 	hostnames := make(map[string]struct{})
 	for i := 0; i < numTargets; i++ {
 		result := <-resultsChannel
+		if result.err != nil {
+			if err == nil {
+				err = result.err
+				logger.Println(err)
+			}
+			continue
+		}
 		for _, machine := range result.mdb.Machines {
 			if _, ok := hostnames[machine.Hostname]; ok {
 				txt := "duplicate hostname: " + machine.Hostname
