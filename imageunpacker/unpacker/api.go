@@ -41,6 +41,7 @@ type imageStreamInfo struct {
 	DeviceId       string
 	status         proto.StreamStatus
 	requestChannel chan<- requestType
+	scannedFS      *filesystem.FileSystem
 }
 
 type persistentState struct {
@@ -78,6 +79,11 @@ func (u *Unpacker) AddDevice(deviceId string) error {
 func (u *Unpacker) AssociateStreamWithDevice(streamName string,
 	deviceId string) error {
 	return u.associateStreamWithDevice(streamName, deviceId)
+}
+
+func (u *Unpacker) GetFileSystem(streamName string) (
+	*filesystem.FileSystem, error) {
+	return u.getFileSystem(streamName)
 }
 
 func (u *Unpacker) GetStatus() proto.GetStatusResponse {

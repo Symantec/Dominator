@@ -38,6 +38,9 @@ func (u *Unpacker) streamManager(streamName string,
 		streamName: streamName,
 		streamInfo: streamInfo}
 	for {
+		u.rwMutex.Lock()
+		streamInfo.scannedFS = stream.fileSystem
+		u.rwMutex.Unlock()
 		select {
 		case request := <-requestChannel:
 			var err error
