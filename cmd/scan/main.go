@@ -11,6 +11,7 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/fsrateio"
+	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/memstats"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"os"
@@ -23,8 +24,10 @@ var (
 	debugFile = flag.String("debugFile", "",
 		"Name of file to write debugging information to")
 	gobFile = flag.String("gobFile", "",
-		"Name of file to write encoded data to")
+		"Name of file to write GOB-encoded data to")
 	interval = flag.Uint("interval", 0, "Seconds to sleep after each scan")
+	jsonFile = flag.String("jsonFile", "",
+		"Name of file to write JSON-encoded data to")
 	numScans = flag.Int("numScans", 1,
 		"The number of scans to run (infinite: < 0)")
 	objectCache = flag.String("objectCache", "",
@@ -38,23 +41,23 @@ var (
 func main() {
 	flag.Parse()
 	var err error
-	bytesPerSecond, blocksPerSecond, err := fsbench.GetReadSpeed(*rootDir)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error! %s\n", err)
-		return
-	}
 	var configuration scanner.Configuration
 	configuration.ScanFilter, err = filter.New(nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create empty filter: %s\n", err)
 		os.Exit(1)
 	}
-	configuration.FsScanContext = fsrateio.NewReaderContext(bytesPerSecond,
-		blocksPerSecond, 0)
-	if *scanSpeed != 0 {
+	if *scanSpeed < 100 {
+		bytesPerSecond, blocksPerSecond, err := fsbench.GetReadSpeed(*rootDir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error! %s\n", err)
+			return
+		}
+		configuration.FsScanContext = fsrateio.NewReaderContext(bytesPerSecond,
+			blocksPerSecond, 0)
 		configuration.FsScanContext.GetContext().SetSpeedPercent(*scanSpeed)
+		fmt.Println(configuration.FsScanContext)
 	}
-	fmt.Println(configuration.FsScanContext)
 	syscall.Setpriority(syscall.PRIO_PROCESS, 0, 10)
 	var prev_fs *scanner.FileSystem
 	for iter := 0; *numScans < 0 || iter < *numScans; iter++ {
@@ -104,6 +107,19 @@ func main() {
 			encoderStartTime := time.Now()
 			encoder.Encode(fs)
 			fmt.Printf("Encoder time: %s\n", time.Since(encoderStartTime))
+			file.Close()
+		}
+		if *jsonFile != "" {
+			file, err := os.Create(*jsonFile)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error creating: %s: %s\n",
+					*jsonFile, err)
+				os.Exit(1)
+			}
+			if err := json.WriteWithIndent(file, "    ", fs); err != nil {
+				fmt.Fprintf(os.Stderr, "Error writing JSON: %s\n", err)
+				os.Exit(1)
+			}
 			file.Close()
 		}
 		prev_fs = fs
