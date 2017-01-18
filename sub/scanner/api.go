@@ -95,7 +95,7 @@ type FileSystem struct {
 func ScanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	configuration *Configuration) (*FileSystem, error) {
 	return scanFileSystem(rootDirectoryName, cacheDirectoryName, configuration,
-		nil)
+		&FileSystem{})
 }
 
 func (fs *FileSystem) ScanObjectCache() error {
