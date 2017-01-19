@@ -59,6 +59,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  set-exclusive-tags key value results-file...")
 	fmt.Fprintln(os.Stderr, "  set-tags-on-unpackers")
 	fmt.Fprintln(os.Stderr, "  stop-idle-unpackers")
+	fmt.Fprintln(os.Stderr, "  terminate-instances")
 }
 
 type commandFunc func([]string, liblog.Logger)
@@ -81,6 +82,7 @@ var subcommands = []subcommand{
 	{"set-exclusive-tags", 2, -1, setExclusiveTagsSubcommand},
 	{"set-tags-on-unpackers", 0, 0, setTagsSubcommand},
 	{"stop-idle-unpackers", 0, 0, stopIdleUnpackersSubcommand},
+	{"terminate-instances", 0, 0, terminateInstancesSubcommand},
 }
 
 func main() {
