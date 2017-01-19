@@ -29,6 +29,8 @@ var (
 	skipTargets awsutil.TargetList
 	tagsFile    = flag.String("tagsFile", "",
 		"JSON encoded file containing tags to apply to AMIs")
+	tagKey       = flag.String("tagKey", "", "Tag key name to apply")
+	tagValue     = flag.String("tagValue", "", "Tag value to apply")
 	targets      awsutil.TargetList
 	unpackerName = flag.String("unpackerName", "ImageUnpacker",
 		"The Name tag value for image unpacker instances")
@@ -54,6 +56,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  prepare-unpackers stream-name")
 	fmt.Fprintln(os.Stderr, "  publish stream-name image-leaf-name")
 	fmt.Fprintln(os.Stderr, "  set-exclusive-tags key value results-file...")
+	fmt.Fprintln(os.Stderr, "  set-tags-on-unpackers")
 	fmt.Fprintln(os.Stderr, "  stop-idle-unpackers")
 }
 
@@ -74,6 +77,7 @@ var subcommands = []subcommand{
 	{"prepare-unpackers", 1, 1, prepareUnpackersSubcommand},
 	{"publish", 2, 2, publishSubcommand},
 	{"set-exclusive-tags", 2, -1, setExclusiveTagsSubcommand},
+	{"set-tags-on-unpackers", 0, 0, setTagsSubcommand},
 	{"stop-idle-unpackers", 0, 0, stopIdleUnpackersSubcommand},
 }
 
