@@ -1,7 +1,9 @@
 package amipublisher
 
 import (
+	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
@@ -56,4 +58,46 @@ func deleteTagsForResource(awsService *ec2.EC2, resource Resource,
 		logger.Println("error deleting tag(s)")
 	}
 	return err
+}
+
+func deleteTagsOnUnpackers(targets awsutil.TargetList,
+	skipList awsutil.TargetList, name string, tagKeys []string,
+	logger log.Logger) error {
+	if len(tagKeys) < 1 {
+		return nil
+	}
+	resultsChannel := make(chan error, 1)
+	numTargets, err := awsutil.ForEachTarget(targets, skipList,
+		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
+			err := deleteTagsInTarget(awsService, name, tagKeys, logger)
+			if err != nil {
+				logger.Println(err)
+			}
+			resultsChannel <- err
+		},
+		logger)
+	// Collect results.
+	for i := 0; i < numTargets; i++ {
+		e := <-resultsChannel
+		if e != nil && err == nil {
+			err = e
+		}
+	}
+	return err
+}
+
+func deleteTagsInTarget(awsService *ec2.EC2, name string, tagKeys []string,
+	logger log.Logger) error {
+	instances, err := getInstances(awsService, name)
+	if err != nil {
+		return err
+	}
+	if len(instances) < 1 {
+		return nil
+	}
+	resourceIds := make([]string, 0, len(instances))
+	for _, instance := range instances {
+		resourceIds = append(resourceIds, aws.StringValue(instance.InstanceId))
+	}
+	return deleteTagsFromResources(awsService, tagKeys, resourceIds...)
 }

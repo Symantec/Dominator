@@ -60,6 +60,12 @@ func DeleteTags(resources []Resource, tagKeys []string,
 	return deleteTags(resources, tagKeys, logger)
 }
 
+func DeleteTagsOnUnpackers(targets awsutil.TargetList,
+	skipList awsutil.TargetList, name string, tagKeys []string,
+	logger log.Logger) error {
+	return deleteTagsOnUnpackers(targets, skipList, name, tagKeys, logger)
+}
+
 func ExpireResources(targets awsutil.TargetList, skipList awsutil.TargetList,
 	logger log.Logger) error {
 	return expireResources(targets, skipList, logger)
