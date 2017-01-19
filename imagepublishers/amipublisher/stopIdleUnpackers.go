@@ -75,7 +75,7 @@ func stopIdleUnpacker(awsService *ec2.EC2, instance *ec2.Instance,
 		return nil
 	}
 	instanceId := aws.StringValue(instance.InstanceId)
-	if err := stopInstance(awsService, instanceId); err != nil {
+	if err := stopInstances(awsService, instanceId); err != nil {
 		return err
 	}
 	logger.Printf("stopped idle instance: %s\n", instanceId)

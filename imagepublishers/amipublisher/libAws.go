@@ -288,6 +288,14 @@ func getInstances(awsService *ec2.EC2, nameTag string) (
 	return instances, nil
 }
 
+func getInstanceIds(instances []*ec2.Instance) []string {
+	instanceIds := make([]string, 0, len(instances))
+	for _, instance := range instances {
+		instanceIds = append(instanceIds, aws.StringValue(instance.InstanceId))
+	}
+	return instanceIds
+}
+
 func getRunningInstance(awsService *ec2.EC2, instances []*ec2.Instance,
 	logger log.Logger) (*ec2.Instance, error) {
 	for _, instance := range instances {
@@ -393,18 +401,14 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
 	return *ami.ImageId, nil
 }
 
-func stopInstance(awsService *ec2.EC2, instanceId string) error {
-	instanceIds := make([]string, 1)
-	instanceIds[0] = instanceId
+func stopInstances(awsService *ec2.EC2, instanceIds ...string) error {
 	_, err := awsService.StopInstances(&ec2.StopInstancesInput{
 		InstanceIds: aws.StringSlice(instanceIds),
 	})
 	return err
 }
 
-func terminateInstance(awsService *ec2.EC2, instanceId string) error {
-	instanceIds := make([]string, 1)
-	instanceIds[0] = instanceId
+func libTerminateInstances(awsService *ec2.EC2, instanceIds ...string) error {
 	_, err := awsService.TerminateInstances(&ec2.TerminateInstancesInput{
 		InstanceIds: aws.StringSlice(instanceIds),
 	})

@@ -113,3 +113,8 @@ func StopIdleUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
 	name string, idleTimeout time.Duration, logger log.Logger) error {
 	return stopIdleUnpackers(targets, skipList, name, idleTimeout, logger)
 }
+
+func TerminateInstances(targets awsutil.TargetList,
+	skipList awsutil.TargetList, name string, logger log.Logger) error {
+	return terminateInstances(targets, skipList, name, logger)
+}

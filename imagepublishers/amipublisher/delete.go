@@ -3,7 +3,6 @@ package amipublisher
 import (
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
@@ -95,9 +94,6 @@ func deleteTagsInTarget(awsService *ec2.EC2, name string, tagKeys []string,
 	if len(instances) < 1 {
 		return nil
 	}
-	resourceIds := make([]string, 0, len(instances))
-	for _, instance := range instances {
-		resourceIds = append(resourceIds, aws.StringValue(instance.InstanceId))
-	}
-	return deleteTagsFromResources(awsService, tagKeys, resourceIds...)
+	return deleteTagsFromResources(awsService, tagKeys,
+		getInstanceIds(instances)...)
 }
