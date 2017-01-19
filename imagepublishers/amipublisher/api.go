@@ -98,6 +98,11 @@ func SetExclusiveTags(resources []Resource, tagKey string, tagValue string,
 	return setExclusiveTags(resources, tagKey, tagValue, logger)
 }
 
+func SetTags(targets awsutil.TargetList, skipList awsutil.TargetList,
+	name string, tags map[string]string, logger log.Logger) error {
+	return setTags(targets, skipList, name, tags, logger)
+}
+
 func StopIdleUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
 	name string, idleTimeout time.Duration, logger log.Logger) error {
 	return stopIdleUnpackers(targets, skipList, name, idleTimeout, logger)
