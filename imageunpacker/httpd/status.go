@@ -42,6 +42,7 @@ func (s state) writeDashboard(writer io.Writer) {
 	fmt.Fprintln(writer, "  <tr>")
 	fmt.Fprintln(writer, "    <th>Image Stream</th>")
 	fmt.Fprintln(writer, "    <th>Device Id</th>")
+	fmt.Fprintln(writer, "    <th>Device Name</th>")
 	fmt.Fprintln(writer, "    <th>Status</th>")
 	fmt.Fprintln(writer, "  </tr>")
 	streamNames := make([]string, 0, len(status.ImageStreams))
@@ -52,8 +53,12 @@ func (s state) writeDashboard(writer io.Writer) {
 	for _, streamName := range streamNames {
 		stream := status.ImageStreams[streamName]
 		fmt.Fprintf(writer, "  <tr>\n")
-		fmt.Fprintf(writer, "    <td>%s</td>\n", streamName)
+		fmt.Fprintf(writer,
+			"    <td><a href=\"showFileSystem?%s\">%s</a></td>\n",
+			streamName, streamName)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", stream.DeviceId)
+		fmt.Fprintf(writer, "    <td>%s</td>\n",
+			status.Devices[stream.DeviceId].DeviceName)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", stream.Status)
 		fmt.Fprintf(writer, "  </tr>\n")
 	}

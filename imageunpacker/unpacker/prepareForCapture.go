@@ -16,8 +16,7 @@ import (
 
 var (
 	makeBootableTool = flag.String("makeBootableTool",
-		path.Join(os.Getenv("HOME"), "etc", "make-bootable"),
-		"Name of tool to make device bootable")
+		"/usr/local/etc/make-bootable", "Name of tool to make device bootable")
 )
 
 func (u *Unpacker) prepareForCapture(streamName string) error {

@@ -5,6 +5,7 @@ import (
 	domlib "github.com/Symantec/Dominator/dom/lib"
 	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
@@ -92,7 +93,8 @@ func (stream *streamManagerState) unpack(imageName string,
 		ObjectCache: stream.objectCache,
 	}
 	stream.fileSystem = nil
-	desiredImage := &image.Image{FileSystem: desiredFS}
+	emptyFilter, _ := filter.New(nil)
+	desiredImage := &image.Image{FileSystem: desiredFS, Filter: emptyFilter}
 	objectsToFetch, _ := domlib.BuildMissingLists(subObj, desiredImage, false,
 		true, stream.unpacker.logger)
 	objectsDir := path.Join(mountPoint, ".subd", "objects")
