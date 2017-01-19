@@ -51,6 +51,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  delete results-file...")
 	fmt.Fprintln(os.Stderr, "  delete-tags tag-key results-file...")
+	fmt.Fprintln(os.Stderr, "  delete-tag-on-unpackers tag-key")
 	fmt.Fprintln(os.Stderr, "  expire")
 	fmt.Fprintln(os.Stderr, "  list-unpackers")
 	fmt.Fprintln(os.Stderr, "  prepare-unpackers stream-name")
@@ -72,6 +73,7 @@ type subcommand struct {
 var subcommands = []subcommand{
 	{"delete", 1, -1, deleteSubcommand},
 	{"delete-tags", 2, -1, deleteTagsSubcommand},
+	{"delete-tags-on-unpackers", 1, 1, deleteTagsOnUnpackersSubcommand},
 	{"expire", 0, 0, expireSubcommand},
 	{"list-unpackers", 0, 0, listUnpackersSubcommand},
 	{"prepare-unpackers", 1, 1, prepareUnpackersSubcommand},
