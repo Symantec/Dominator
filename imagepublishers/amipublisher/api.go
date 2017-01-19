@@ -71,6 +71,11 @@ func ExpireResources(targets awsutil.TargetList, skipList awsutil.TargetList,
 	return expireResources(targets, skipList, logger)
 }
 
+func ImportKeyPair(targets awsutil.TargetList, skipList awsutil.TargetList,
+	keyName string, publicKey []byte, logger log.Logger) error {
+	return importKeyPair(targets, skipList, keyName, publicKey, logger)
+}
+
 func ListUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
 	name string, logger log.Logger) (
 	[]TargetUnpackers, error) {
