@@ -53,6 +53,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  delete-tags tag-key results-file...")
 	fmt.Fprintln(os.Stderr, "  delete-tag-on-unpackers tag-key")
 	fmt.Fprintln(os.Stderr, "  expire")
+	fmt.Fprintln(os.Stderr, "  import-key-pair name pub-key-file")
 	fmt.Fprintln(os.Stderr, "  list-unpackers")
 	fmt.Fprintln(os.Stderr, "  prepare-unpackers stream-name")
 	fmt.Fprintln(os.Stderr, "  publish stream-name image-leaf-name")
@@ -76,6 +77,7 @@ var subcommands = []subcommand{
 	{"delete-tags", 2, -1, deleteTagsSubcommand},
 	{"delete-tags-on-unpackers", 1, 1, deleteTagsOnUnpackersSubcommand},
 	{"expire", 0, 0, expireSubcommand},
+	{"import-key-pair", 2, 2, importKeyPairSubcommand},
 	{"list-unpackers", 0, 0, listUnpackersSubcommand},
 	{"prepare-unpackers", 1, 1, prepareUnpackersSubcommand},
 	{"publish", 2, 2, publishSubcommand},
