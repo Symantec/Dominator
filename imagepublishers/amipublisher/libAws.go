@@ -345,6 +345,61 @@ func getRunningInstance(awsService *ec2.EC2, instances []*ec2.Instance,
 	return stoppedInstance, nil
 }
 
+func getSecurityGroup(awsService *ec2.EC2, tagKey string) (
+	*ec2.SecurityGroup, error) {
+	out, err := awsService.DescribeSecurityGroups(
+		&ec2.DescribeSecurityGroupsInput{
+			Filters: []*ec2.Filter{&ec2.Filter{
+				Name:   aws.String("tag-key"),
+				Values: aws.StringSlice([]string{tagKey}),
+			}}})
+	if err != nil {
+		return nil, err
+	}
+	if len(out.SecurityGroups) > 1 {
+		return nil, errors.New("too many security groups found")
+	}
+	return out.SecurityGroups[0], nil
+}
+
+func getSubnet(awsService *ec2.EC2, vpcId string) (*ec2.Subnet, error) {
+	out, err := awsService.DescribeSubnets(&ec2.DescribeSubnetsInput{
+		Filters: []*ec2.Filter{&ec2.Filter{
+			Name:   aws.String("vpc-id"),
+			Values: aws.StringSlice([]string{vpcId}),
+		}}})
+	if err != nil {
+		return nil, err
+	}
+	if len(out.Subnets) < 1 {
+		return nil, errors.New("no subnets found")
+	}
+	for _, subnet := range out.Subnets {
+		if aws.Int64Value(subnet.AvailableIpAddressCount) > 0 {
+			return subnet, nil
+		}
+	}
+	return nil, errors.New("no subnets with available IPs found")
+}
+
+func getVpc(awsService *ec2.EC2, tagKey string) (*ec2.Vpc, error) {
+	out, err := awsService.DescribeVpcs(&ec2.DescribeVpcsInput{
+		Filters: []*ec2.Filter{&ec2.Filter{
+			Name:   aws.String("tag-key"),
+			Values: aws.StringSlice([]string{tagKey}),
+		}}})
+	if err != nil {
+		return nil, err
+	}
+	if len(out.Vpcs) < 1 {
+		return nil, errors.New("no VPCs found")
+	}
+	if len(out.Vpcs) > 1 {
+		return nil, errors.New("too many VPCs found")
+	}
+	return out.Vpcs[0], nil
+}
+
 func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
 	imageName string, tags map[string]string, logger log.Logger) (
 	string, error) {
