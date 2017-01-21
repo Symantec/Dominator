@@ -36,12 +36,30 @@ type Tag struct {
 	Value string
 }
 
+func (tag Tag) MakeFilter() *ec2.Filter {
+	return tag.makeFilter()
+}
+
 func (tag *Tag) String() string {
 	return tag.string()
 }
 
 func (tag *Tag) Set(value string) error {
 	return tag.set(value)
+}
+
+type Tags map[string]string // Key: tag key, value: tag value.
+
+func (tags Tags) MakeFilters() []*ec2.Filter {
+	return tags.makeFilters()
+}
+
+func (tags *Tags) String() string {
+	return tags.string()
+}
+
+func (tags *Tags) Set(value string) error {
+	return tags.set(value)
 }
 
 type Target struct {
