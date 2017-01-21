@@ -5,6 +5,19 @@ import (
 	"strings"
 )
 
+func (tag *Tag) string() string {
+	return tag.Key + ":" + tag.Value
+}
+
+func (tag *Tag) set(value string) error {
+	splitValue := strings.Split(value, ":")
+	if len(splitValue) != 2 {
+		return errors.New(`malformed tag: "` + value + `"`)
+	}
+	*tag = Tag{splitValue[0], splitValue[1]}
+	return nil
+}
+
 func (list *TargetList) string() string {
 	targets := make([]string, 0, len(*list))
 	for _, target := range *list {

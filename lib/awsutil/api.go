@@ -31,6 +31,19 @@ func ListRegions(awsService *ec2.EC2) ([]string, error) {
 	return listRegions(awsService)
 }
 
+type Tag struct {
+	Key   string
+	Value string
+}
+
+func (tag *Tag) String() string {
+	return tag.string()
+}
+
+func (tag *Tag) Set(value string) error {
+	return tag.set(value)
+}
+
 type Target struct {
 	AccountName string
 	Region      string
