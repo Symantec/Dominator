@@ -241,6 +241,15 @@ func deregisterAmi(awsService *ec2.EC2, amiId string) error {
 	return errors.New("timed out waiting for deregister: " + amiId)
 }
 
+func findImage(awsService *ec2.EC2, tags awsutil.Tags) (
+	*ec2.Image, error) {
+	images, err := getImages(awsService, tags)
+	if err != nil {
+		return nil, err
+	}
+	return findLatestImage(images)
+}
+
 func findLatestImage(images []*ec2.Image) (*ec2.Image, error) {
 	var youngestImage *ec2.Image
 	var youngestTime time.Time
@@ -279,21 +288,10 @@ func findMarketplaceImage(awsService *ec2.EC2, productCode string) (
 	return findLatestImage(out.Images)
 }
 
-func getImages(awsService *ec2.EC2, nameTag string, tagKey string) (
+func getImages(awsService *ec2.EC2, tags awsutil.Tags) (
 	[]*ec2.Image, error) {
-	filters := make([]*ec2.Filter, 1, 2)
-	filters[0] = &ec2.Filter{
-		Name:   aws.String("tag:Name"),
-		Values: aws.StringSlice([]string{nameTag}),
-	}
-	if tagKey != "" {
-		filters = append(filters, &ec2.Filter{
-			Name:   aws.String("tag-key"),
-			Values: aws.StringSlice([]string{tagKey}),
-		})
-	}
 	out, err := awsService.DescribeImages(
-		&ec2.DescribeImagesInput{Filters: filters})
+		&ec2.DescribeImagesInput{Filters: tags.MakeFilters()})
 	if err != nil {
 		return nil, err
 	}
