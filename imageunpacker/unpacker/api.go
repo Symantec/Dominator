@@ -16,6 +16,7 @@ const (
 	requestScan
 	requestUnpack
 	requestPrepareForCapture
+	requestPrepareForCopy
 )
 
 var (
@@ -92,6 +93,10 @@ func (u *Unpacker) GetStatus() proto.GetStatusResponse {
 
 func (u *Unpacker) PrepareForCapture(streamName string) error {
 	return u.prepareForCapture(streamName)
+}
+
+func (u *Unpacker) PrepareForCopy(streamName string) error {
+	return u.prepareForCopy(streamName)
 }
 
 func (u *Unpacker) PrepareForUnpack(streamName string, skipIfPrepared bool,
