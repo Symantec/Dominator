@@ -30,3 +30,18 @@ func deleteTags(tagKey string, resultsFiles []string, logger log.Logger) error {
 	tagKeys[0] = tagKey
 	return amipublisher.DeleteTags(results, tagKeys, logger)
 }
+
+func deleteTagsOnUnpackersSubcommand(args []string, logger log.Logger) {
+	err := deleteTagsOnUnpackers(args[0], logger)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error deleting tags on unpackers: %s\n", err)
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
+func deleteTagsOnUnpackers(tagKey string, logger log.Logger) error {
+	tagKeys := []string{tagKey}
+	return amipublisher.DeleteTagsOnUnpackers(targets, skipTargets,
+		*unpackerName, tagKeys, logger)
+}

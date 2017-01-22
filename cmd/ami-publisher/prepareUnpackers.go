@@ -9,16 +9,15 @@ import (
 )
 
 func prepareUnpackersSubcommand(args []string, logger log.Logger) {
-	err := prepareUnpackers(args[0], logger)
+	streamName := ""
+	if len(args) > 0 {
+		streamName = path.Clean(args[0])
+	}
+	err := amipublisher.PrepareUnpackers(streamName, targets, skipTargets,
+		*unpackerName, logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error preparing unpackers: %s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
-}
-
-func prepareUnpackers(streamName string, logger log.Logger) error {
-	streamName = path.Clean(streamName)
-	return amipublisher.PrepareUnpackers(streamName, targets, skipTargets,
-		*unpackerName, logger)
 }

@@ -87,7 +87,7 @@ func expireInstance(awsService *ec2.EC2, instance *ec2.Instance,
 	currentTime time.Time, logger log.Logger) {
 	if hasExpired(instance.Tags, currentTime) {
 		instanceId := aws.StringValue(instance.InstanceId)
-		if err := terminateInstance(awsService, instanceId); err != nil {
+		if err := libTerminateInstances(awsService, instanceId); err != nil {
 			logger.Printf("error terminating: %s: %s\n", instanceId, err)
 		} else {
 			logger.Printf("terminated: %s\n", instanceId)

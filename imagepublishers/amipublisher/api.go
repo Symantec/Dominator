@@ -60,9 +60,29 @@ func DeleteTags(resources []Resource, tagKeys []string,
 	return deleteTags(resources, tagKeys, logger)
 }
 
+func DeleteTagsOnUnpackers(targets awsutil.TargetList,
+	skipList awsutil.TargetList, name string, tagKeys []string,
+	logger log.Logger) error {
+	return deleteTagsOnUnpackers(targets, skipList, name, tagKeys, logger)
+}
+
 func ExpireResources(targets awsutil.TargetList, skipList awsutil.TargetList,
 	logger log.Logger) error {
 	return expireResources(targets, skipList, logger)
+}
+
+func ImportKeyPair(targets awsutil.TargetList, skipList awsutil.TargetList,
+	keyName string, publicKey []byte, logger log.Logger) error {
+	return importKeyPair(targets, skipList, keyName, publicKey, logger)
+}
+
+func LaunchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
+	imageSearchTags, vpcSearchTags, subnetSearchTags,
+	securityGroupSearchTags awsutil.Tags, instanceType string,
+	sshKeyName string, tags map[string]string, logger log.Logger) error {
+	return launchInstances(targets, skipList, imageSearchTags, vpcSearchTags,
+		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName,
+		tags, logger)
 }
 
 func ListUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
@@ -98,7 +118,17 @@ func SetExclusiveTags(resources []Resource, tagKey string, tagValue string,
 	return setExclusiveTags(resources, tagKey, tagValue, logger)
 }
 
+func SetTags(targets awsutil.TargetList, skipList awsutil.TargetList,
+	name string, tags map[string]string, logger log.Logger) error {
+	return setTags(targets, skipList, name, tags, logger)
+}
+
 func StopIdleUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
 	name string, idleTimeout time.Duration, logger log.Logger) error {
 	return stopIdleUnpackers(targets, skipList, name, idleTimeout, logger)
+}
+
+func TerminateInstances(targets awsutil.TargetList,
+	skipList awsutil.TargetList, name string, logger log.Logger) error {
+	return terminateInstances(targets, skipList, name, logger)
 }

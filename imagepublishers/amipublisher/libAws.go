@@ -2,6 +2,7 @@ package amipublisher
 
 import (
 	"errors"
+	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -240,21 +241,57 @@ func deregisterAmi(awsService *ec2.EC2, amiId string) error {
 	return errors.New("timed out waiting for deregister: " + amiId)
 }
 
-func getImages(awsService *ec2.EC2, nameTag string, tagKey string) (
-	[]*ec2.Image, error) {
-	filters := make([]*ec2.Filter, 1, 2)
-	filters[0] = &ec2.Filter{
-		Name:   aws.String("tag:Name"),
-		Values: aws.StringSlice([]string{nameTag}),
+func findImage(awsService *ec2.EC2, tags awsutil.Tags) (
+	*ec2.Image, error) {
+	images, err := getImages(awsService, tags)
+	if err != nil {
+		return nil, err
 	}
-	if tagKey != "" {
-		filters = append(filters, &ec2.Filter{
-			Name:   aws.String("tag-key"),
-			Values: aws.StringSlice([]string{tagKey}),
-		})
+	return findLatestImage(images)
+}
+
+func findLatestImage(images []*ec2.Image) (*ec2.Image, error) {
+	var youngestImage *ec2.Image
+	var youngestTime time.Time
+	for _, image := range images {
+		creationTime, err := time.Parse("2006-01-02T15:04:05.000Z",
+			aws.StringValue(image.CreationDate))
+		if err != nil {
+			return nil, err
+		}
+		if creationTime.After(youngestTime) {
+			youngestImage = image
+			youngestTime = creationTime
+		}
 	}
+	return youngestImage, nil
+}
+
+func findMarketplaceImage(awsService *ec2.EC2, productCode string) (
+	*ec2.Image, error) {
 	out, err := awsService.DescribeImages(
-		&ec2.DescribeImagesInput{Filters: filters})
+		&ec2.DescribeImagesInput{
+			Filters: []*ec2.Filter{
+				{
+					Name:   aws.String("product-code"),
+					Values: aws.StringSlice([]string{productCode}),
+				},
+				{
+					Name:   aws.String("product-code.type"),
+					Values: aws.StringSlice([]string{"marketplace"}),
+				},
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+	return findLatestImage(out.Images)
+}
+
+func getImages(awsService *ec2.EC2, tags awsutil.Tags) (
+	[]*ec2.Image, error) {
+	out, err := awsService.DescribeImages(
+		&ec2.DescribeImagesInput{Filters: tags.MakeFilters()})
 	if err != nil {
 		return nil, err
 	}
@@ -266,15 +303,22 @@ func getInstances(awsService *ec2.EC2, nameTag string) (
 	if nameTag == "" {
 		return nil, errors.New("no name given")
 	}
-	tagValues := make([]string, 1)
-	tagValues[0] = nameTag
-	filters := make([]*ec2.Filter, 1)
-	filters[0] = &ec2.Filter{
-		Name:   aws.String("tag:Name"),
-		Values: aws.StringSlice(tagValues),
+	states := []string{
+		ec2.InstanceStateNamePending,
+		ec2.InstanceStateNameRunning,
+		ec2.InstanceStateNameStopped,
 	}
 	out, err := awsService.DescribeInstances(&ec2.DescribeInstancesInput{
-		Filters: filters,
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("tag:Name"),
+				Values: aws.StringSlice([]string{nameTag}),
+			},
+			{
+				Name:   aws.String("instance-state-name"),
+				Values: aws.StringSlice(states),
+			},
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -286,6 +330,14 @@ func getInstances(awsService *ec2.EC2, nameTag string) (
 		}
 	}
 	return instances, nil
+}
+
+func getInstanceIds(instances []*ec2.Instance) []string {
+	instanceIds := make([]string, 0, len(instances))
+	for _, instance := range instances {
+		instanceIds = append(instanceIds, aws.StringValue(instance.InstanceId))
+	}
+	return instanceIds
 }
 
 func getRunningInstance(awsService *ec2.EC2, instances []*ec2.Instance,
@@ -335,6 +387,60 @@ func getRunningInstance(awsService *ec2.EC2, instances []*ec2.Instance,
 		return nil, err
 	}
 	return stoppedInstance, nil
+}
+
+func getSecurityGroup(awsService *ec2.EC2, tags awsutil.Tags) (
+	*ec2.SecurityGroup, error) {
+	out, err := awsService.DescribeSecurityGroups(
+		&ec2.DescribeSecurityGroupsInput{Filters: tags.MakeFilters()})
+	if err != nil {
+		return nil, err
+	}
+	if len(out.SecurityGroups) < 1 {
+		return nil, errors.New("no security group found")
+	}
+	if len(out.SecurityGroups) > 1 {
+		return nil, errors.New("too many security groups found")
+	}
+	return out.SecurityGroups[0], nil
+}
+
+func getSubnet(awsService *ec2.EC2, vpcId string, tags awsutil.Tags) (
+	*ec2.Subnet, error) {
+	filters := tags.MakeFilters()
+	filters = append(filters, &ec2.Filter{
+		Name:   aws.String("vpc-id"),
+		Values: aws.StringSlice([]string{vpcId}),
+	})
+	out, err := awsService.DescribeSubnets(
+		&ec2.DescribeSubnetsInput{Filters: filters})
+	if err != nil {
+		return nil, err
+	}
+	if len(out.Subnets) < 1 {
+		return nil, errors.New("no subnets found")
+	}
+	for _, subnet := range out.Subnets {
+		if aws.Int64Value(subnet.AvailableIpAddressCount) > 0 {
+			return subnet, nil
+		}
+	}
+	return nil, errors.New("no subnets with available IPs found")
+}
+
+func getVpc(awsService *ec2.EC2, tags awsutil.Tags) (*ec2.Vpc, error) {
+	out, err := awsService.DescribeVpcs(
+		&ec2.DescribeVpcsInput{Filters: tags.MakeFilters()})
+	if err != nil {
+		return nil, err
+	}
+	if len(out.Vpcs) < 1 {
+		return nil, errors.New("no VPC found")
+	}
+	if len(out.Vpcs) > 1 {
+		return nil, errors.New("too many VPCs found")
+	}
+	return out.Vpcs[0], nil
 }
 
 func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
@@ -393,18 +499,14 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
 	return *ami.ImageId, nil
 }
 
-func stopInstance(awsService *ec2.EC2, instanceId string) error {
-	instanceIds := make([]string, 1)
-	instanceIds[0] = instanceId
+func stopInstances(awsService *ec2.EC2, instanceIds ...string) error {
 	_, err := awsService.StopInstances(&ec2.StopInstancesInput{
 		InstanceIds: aws.StringSlice(instanceIds),
 	})
 	return err
 }
 
-func terminateInstance(awsService *ec2.EC2, instanceId string) error {
-	instanceIds := make([]string, 1)
-	instanceIds[0] = instanceId
+func libTerminateInstances(awsService *ec2.EC2, instanceIds ...string) error {
 	_, err := awsService.TerminateInstances(&ec2.TerminateInstancesInput{
 		InstanceIds: aws.StringSlice(instanceIds),
 	})

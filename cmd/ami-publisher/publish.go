@@ -26,14 +26,9 @@ func publish(imageServerAddress string, streamName string, imageLeafName string,
 	logger log.Logger) error {
 	streamName = path.Clean(streamName)
 	imageLeafName = path.Clean(imageLeafName)
-	var tags map[string]string
-	if *tagsFile != "" {
-		if err := libjson.ReadFromFile(*tagsFile, &tags); err != nil {
-			return fmt.Errorf("error loading tags file: %s", err)
-		}
-	}
-	if tags == nil {
-		tags = make(map[string]string)
+	tags, err := makeTags()
+	if err != nil {
+		return err
 	}
 	if *expiresIn > 0 {
 		expirationTime := time.Now().Add(*expiresIn)
@@ -66,4 +61,21 @@ func publish(imageServerAddress string, streamName string, imageLeafName string,
 		}
 	}
 	return nil
+}
+
+func makeTags() (map[string]string, error) {
+	var fileTags map[string]string
+	if *tagsFile != "" {
+		if err := libjson.ReadFromFile(*tagsFile, &fileTags); err != nil {
+			return nil, fmt.Errorf("error loading tags file: %s", err)
+		}
+	}
+	newTags := make(map[string]string)
+	for key, value := range fileTags {
+		newTags[key] = value
+	}
+	for key, value := range tags {
+		newTags[key] = value
+	}
+	return newTags, nil
 }
