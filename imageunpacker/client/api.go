@@ -22,6 +22,10 @@ func PrepareForCapture(srpcClient *srpc.Client, streamName string) error {
 	return prepareForCapture(srpcClient, streamName)
 }
 
+func PrepareForCopy(srpcClient *srpc.Client, streamName string) error {
+	return prepareForCopy(srpcClient, streamName)
+}
+
 func PrepareForUnpack(srpcClient *srpc.Client, streamName string,
 	skipIfPrepared bool, doNotWaitForResult bool) error {
 	return prepareForUnpack(srpcClient, streamName, skipIfPrepared,

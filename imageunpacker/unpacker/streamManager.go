@@ -53,6 +53,8 @@ func (u *Unpacker) streamManager(streamName string,
 				err = stream.unpack(request.imageName, request.desiredFS)
 			case requestPrepareForCapture:
 				err = stream.prepareForCapture()
+			case requestPrepareForCopy:
+				err = stream.prepareForCopy()
 			default:
 				panic("unknown request: " + strconv.Itoa(request.request))
 			}

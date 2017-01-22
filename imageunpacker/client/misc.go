@@ -31,6 +31,13 @@ func prepareForCapture(srpcClient *srpc.Client, streamName string) error {
 		&reply)
 }
 
+func prepareForCopy(srpcClient *srpc.Client, streamName string) error {
+	request := proto.PrepareForCopyRequest{StreamName: streamName}
+	var reply proto.PrepareForCopyResponse
+	return srpcClient.RequestReply("ImageUnpacker.PrepareForCopy", request,
+		&reply)
+}
+
 func prepareForUnpack(srpcClient *srpc.Client, streamName string,
 	skipIfPrepared bool, doNotWaitForResult bool) error {
 	request := proto.PrepareForUnpackRequest{

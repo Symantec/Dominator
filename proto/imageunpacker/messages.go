@@ -52,6 +52,12 @@ type PrepareForCaptureRequest struct {
 
 type PrepareForCaptureResponse struct{}
 
+type PrepareForCopyRequest struct {
+	StreamName string
+}
+
+type PrepareForCopyResponse struct{}
+
 type PrepareForUnpackRequest struct {
 	StreamName         string
 	SkipIfPrepared     bool
