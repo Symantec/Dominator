@@ -28,6 +28,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  get-status")
 	fmt.Fprintln(os.Stderr, "  get-device-for-stream stream-name")
 	fmt.Fprintln(os.Stderr, "  prepare-for-capture stream-name")
+	fmt.Fprintln(os.Stderr, "  prepare-for-copy stream-name")
 	fmt.Fprintln(os.Stderr, "  prepare-for-unpack stream-name")
 	fmt.Fprintln(os.Stderr, "  unpack-image stream-name image-leaf-name")
 }
@@ -47,6 +48,7 @@ var subcommands = []subcommand{
 	{"get-status", 0, 0, getStatusSubcommand},
 	{"get-device-for-stream", 1, 1, getDeviceForStreamSubcommand},
 	{"prepare-for-capture", 1, 1, prepareForCaptureSubcommand},
+	{"prepare-for-copy", 1, 1, prepareForCopySubcommand},
 	{"prepare-for-unpack", 1, 1, prepareForUnpackSubcommand},
 	{"unpack-image", 2, 2, unpackImageSubcommand},
 }
