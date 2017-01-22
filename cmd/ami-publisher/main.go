@@ -36,8 +36,7 @@ var (
 	subnetSearchTags awsutil.Tags = awsutil.Tags{"Network": "Private"}
 	tagsFile                      = flag.String("tagsFile", "",
 		"JSON encoded file containing tags to apply to AMIs")
-	tagKey       = flag.String("tagKey", "", "Tag key name to apply")
-	tagValue     = flag.String("tagValue", "", "Tag value to apply")
+	tags         awsutil.Tags
 	targets      awsutil.TargetList
 	unpackerName = flag.String("unpackerName", "ImageUnpacker",
 		"The Name tag value for image unpacker instances")
@@ -53,6 +52,7 @@ func init() {
 		"List of targets to skip (default none). No wildcards permitted")
 	flag.Var(&subnetSearchTags, "subnetSearchTags",
 		"Restrict subnet search to given tags")
+	flag.Var(&tags, "tags", "Tags to apply")
 	flag.Var(&targets, "targets",
 		"List of targets (default all accounts and regions)")
 	flag.Var(&vpcSearchTags, "vpcSearchTags",

@@ -64,17 +64,18 @@ func publish(imageServerAddress string, streamName string, imageLeafName string,
 }
 
 func makeTags() (map[string]string, error) {
-	var tags map[string]string
+	var fileTags map[string]string
 	if *tagsFile != "" {
-		if err := libjson.ReadFromFile(*tagsFile, &tags); err != nil {
+		if err := libjson.ReadFromFile(*tagsFile, &fileTags); err != nil {
 			return nil, fmt.Errorf("error loading tags file: %s", err)
 		}
 	}
-	if tags == nil {
-		tags = make(map[string]string)
+	newTags := make(map[string]string)
+	for key, value := range fileTags {
+		newTags[key] = value
 	}
-	if *tagKey != "" {
-		tags[*tagKey] = *tagValue
+	for key, value := range tags {
+		newTags[key] = value
 	}
-	return tags, nil
+	return newTags, nil
 }
