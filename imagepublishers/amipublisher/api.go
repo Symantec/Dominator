@@ -76,6 +76,15 @@ func ImportKeyPair(targets awsutil.TargetList, skipList awsutil.TargetList,
 	return importKeyPair(targets, skipList, keyName, publicKey, logger)
 }
 
+func LaunchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
+	imageSearchTags, vpcSearchTags, subnetSearchTags,
+	securityGroupSearchTags awsutil.Tags, instanceType string,
+	sshKeyName string, tags map[string]string, logger log.Logger) error {
+	return launchInstances(targets, skipList, imageSearchTags, vpcSearchTags,
+		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName,
+		tags, logger)
+}
+
 func ListUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
 	name string, logger log.Logger) (
 	[]TargetUnpackers, error) {
