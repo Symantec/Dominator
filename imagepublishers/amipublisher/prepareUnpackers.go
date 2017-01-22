@@ -43,6 +43,9 @@ func prepareUnpacker(awsService *ec2.EC2, streamName string, name string,
 		return err
 	}
 	defer srpcClient.Close()
+	if streamName == "" {
+		return nil
+	}
 	logger.Println("preparing unpacker")
 	err = uclient.PrepareForUnpack(srpcClient, streamName, true, false)
 	if err != nil {
