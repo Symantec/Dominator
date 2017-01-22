@@ -72,7 +72,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  import-key-pair name pub-key-file")
 	fmt.Fprintln(os.Stderr, "  launch-instances boot-image [dominator-image]")
 	fmt.Fprintln(os.Stderr, "  list-unpackers")
-	fmt.Fprintln(os.Stderr, "  prepare-unpackers stream-name")
+	fmt.Fprintln(os.Stderr, "  prepare-unpackers [stream-name]")
 	fmt.Fprintln(os.Stderr, "  publish stream-name image-leaf-name")
 	fmt.Fprintln(os.Stderr, "  set-exclusive-tags key value results-file...")
 	fmt.Fprintln(os.Stderr, "  set-tags-on-unpackers")
@@ -97,7 +97,7 @@ var subcommands = []subcommand{
 	{"import-key-pair", 2, 2, importKeyPairSubcommand},
 	{"launch-instances", 1, 2, launchInstancesSubcommand},
 	{"list-unpackers", 0, 0, listUnpackersSubcommand},
-	{"prepare-unpackers", 1, 1, prepareUnpackersSubcommand},
+	{"prepare-unpackers", 0, 1, prepareUnpackersSubcommand},
 	{"publish", 2, 2, publishSubcommand},
 	{"set-exclusive-tags", 2, -1, setExclusiveTagsSubcommand},
 	{"set-tags-on-unpackers", 0, 0, setTagsSubcommand},
