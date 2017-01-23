@@ -16,7 +16,7 @@ func launchInstancesSubcommand(args []string, logger log.Logger) {
 	}
 	err := launchInstances(args[0], domImage, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error copying bootstrap images: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error launching instances: %s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
@@ -38,6 +38,6 @@ func launchInstances(bootImage, domImage string, logger log.Logger) error {
 	}
 	imageTags["Name"] = bootImage
 	return amipublisher.LaunchInstances(targets, skipTargets, imageTags,
-		subnetSearchTags, vpcSearchTags, securityGroupSearchTags,
+		vpcSearchTags, subnetSearchTags, securityGroupSearchTags,
 		*instanceType, *sshKeyName, tags, logger)
 }
