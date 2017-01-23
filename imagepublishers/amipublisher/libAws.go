@@ -443,6 +443,44 @@ func getVpc(awsService *ec2.EC2, tags awsutil.Tags) (*ec2.Vpc, error) {
 	return out.Vpcs[0], nil
 }
 
+func launchInstance(awsService *ec2.EC2, image *ec2.Image,
+	vpcSearchTags, subnetSearchTags, securityGroupSearchTags awsutil.Tags,
+	instanceType string, sshKeyName string) (*ec2.Instance, error) {
+	vpc, err := getVpc(awsService, vpcSearchTags)
+	if err != nil {
+		return nil, err
+	}
+	subnet, err := getSubnet(awsService, aws.StringValue(vpc.VpcId),
+		subnetSearchTags)
+	if err != nil {
+		return nil, err
+	}
+	sg, err := getSecurityGroup(awsService, securityGroupSearchTags)
+	if err != nil {
+		return nil, err
+	}
+	reservation, err := awsService.RunInstances(&ec2.RunInstancesInput{
+		ImageId:          image.ImageId,
+		InstanceType:     aws.String(instanceType),
+		KeyName:          aws.String(sshKeyName),
+		MaxCount:         aws.Int64(1),
+		MinCount:         aws.Int64(1),
+		SecurityGroupIds: []*string{sg.GroupId},
+		SubnetId:         subnet.SubnetId,
+	})
+	if err != nil {
+		return nil, err
+	}
+	instance := reservation.Instances[0]
+	err = awsService.WaitUntilInstanceExists(&ec2.DescribeInstancesInput{
+		InstanceIds: []*string{instance.InstanceId},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return instance, nil
+}
+
 func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
 	imageName string, tags map[string]string, logger log.Logger) (
 	string, error) {
