@@ -52,14 +52,16 @@ func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 	if err != nil {
 		return err
 	}
-	logger.Printf("Requested attach(%s): %s on %s, waiting...\n",
+	logger.Printf("requested attach(%s): %s on %s, waiting...\n",
 		aws.StringValue(instance.InstanceId), volumeId, blockDeviceName)
-	volumeIds := make([]string, 1)
-	volumeIds[0] = volumeId
+	dvi := &ec2.DescribeVolumesInput{
+		VolumeIds: aws.StringSlice([]string{volumeId}),
+	}
+	if err := awsService.WaitUntilVolumeInUse(dvi); err != nil {
+		return err
+	}
 	for ; true; time.Sleep(time.Second) {
-		desc, err := awsService.DescribeVolumes(&ec2.DescribeVolumesInput{
-			VolumeIds: aws.StringSlice(volumeIds),
-		})
+		desc, err := awsService.DescribeVolumes(dvi)
 		if err != nil {
 			return err
 		}
@@ -69,7 +71,7 @@ func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 			break
 		}
 	}
-	logger.Printf("Attached: %s\n", volumeId)
+	logger.Printf("attached: %s\n", volumeId)
 	return nil
 }
 
