@@ -54,6 +54,14 @@ func (tags Tags) MakeFilters() []*ec2.Filter {
 	return tags.makeFilters()
 }
 
+func (tags Tags) Copy() Tags {
+	return tags.copy()
+}
+
+func (to Tags) Merge(from Tags) {
+	to.merge(from)
+}
+
 func (tags *Tags) String() string {
 	return tags.string()
 }

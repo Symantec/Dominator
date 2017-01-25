@@ -2,6 +2,7 @@ package awsutil
 
 import (
 	"errors"
+	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"strings"
@@ -37,6 +38,20 @@ func (tag *Tag) set(value string) error {
 	return nil
 }
 
+func (tags Tags) copy() Tags {
+	newTags := make(Tags, len(tags))
+	for key, value := range tags {
+		newTags[key] = value
+	}
+	return newTags
+}
+
+func (to Tags) merge(from Tags) {
+	for key, value := range from {
+		to[key] = value
+	}
+}
+
 func (tags Tags) makeFilters() []*ec2.Filter {
 	if len(tags) < 1 {
 		return nil
@@ -63,6 +78,17 @@ func (tags *Tags) set(value string) error {
 		return nil
 	}
 	for _, tag := range strings.Split(value, ",") {
+		if len(tag) < 3 {
+			return errors.New(`malformed tag: "` + tag + `"`)
+		}
+		if tag[0] == '@' {
+			var fileTags Tags
+			if err := libjson.ReadFromFile(tag[1:], &fileTags); err != nil {
+				return errors.New("error loading tags file: " + err.Error())
+			}
+			newTags.Merge(fileTags)
+			continue
+		}
 		splitTag := strings.Split(tag, ":")
 		if len(splitTag) != 2 {
 			return errors.New(`malformed tag: "` + tag + `"`)
