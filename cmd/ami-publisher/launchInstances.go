@@ -28,7 +28,7 @@ func launchInstances(bootImage, domImage string, logger log.Logger) error {
 	if err != nil {
 		return err
 	}
-	tags["Name"] = *unpackerName
+	tags["Name"] = *instanceName
 	if domImage != "" {
 		tags["RequiredImage"] = domImage
 	}

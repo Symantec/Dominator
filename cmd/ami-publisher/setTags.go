@@ -21,6 +21,6 @@ func setTags(logger log.Logger) error {
 	if err != nil {
 		return err
 	}
-	return amipublisher.SetTags(targets, skipTargets, *unpackerName, tags,
+	return amipublisher.SetTags(targets, skipTargets, *instanceName, tags,
 		logger)
 }

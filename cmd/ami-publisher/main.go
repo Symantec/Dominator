@@ -22,6 +22,8 @@ var (
 		"Hostname of imageserver")
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber, "Port number of imageserver")
+	instanceName = flag.String("instanceName", "ImageUnpacker",
+		"The Name tag value for image unpacker instances")
 	instanceType = flag.String("instanceType", "t2.medium",
 		"Instance type to launch")
 	maxIdleTime = flag.Duration("maxIdleTime", time.Minute*50,
@@ -36,10 +38,8 @@ var (
 	subnetSearchTags awsutil.Tags = awsutil.Tags{"Network": "Private"}
 	tagsFile                      = flag.String("tagsFile", "",
 		"JSON encoded file containing tags to apply to AMIs")
-	tags         awsutil.Tags
-	targets      awsutil.TargetList
-	unpackerName = flag.String("unpackerName", "ImageUnpacker",
-		"The Name tag value for image unpacker instances")
+	tags          awsutil.Tags
+	targets       awsutil.TargetList
 	vpcSearchTags awsutil.Tags = awsutil.Tags{"Preferred": ""}
 )
 

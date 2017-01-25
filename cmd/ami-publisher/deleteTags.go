@@ -43,5 +43,5 @@ func deleteTagsOnUnpackersSubcommand(args []string, logger log.Logger) {
 func deleteTagsOnUnpackers(tagKey string, logger log.Logger) error {
 	tagKeys := []string{tagKey}
 	return amipublisher.DeleteTagsOnUnpackers(targets, skipTargets,
-		*unpackerName, tagKeys, logger)
+		*instanceName, tagKeys, logger)
 }

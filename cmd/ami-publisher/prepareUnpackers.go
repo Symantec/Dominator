@@ -14,7 +14,7 @@ func prepareUnpackersSubcommand(args []string, logger log.Logger) {
 		streamName = path.Clean(args[0])
 	}
 	err := amipublisher.PrepareUnpackers(streamName, targets, skipTargets,
-		*unpackerName, logger)
+		*instanceName, logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error preparing unpackers: %s\n", err)
 		os.Exit(1)

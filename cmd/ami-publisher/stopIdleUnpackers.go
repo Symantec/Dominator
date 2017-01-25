@@ -8,7 +8,7 @@ import (
 )
 
 func stopIdleUnpackersSubcommand(args []string, logger log.Logger) {
-	err := amipublisher.StopIdleUnpackers(targets, skipTargets, *unpackerName,
+	err := amipublisher.StopIdleUnpackers(targets, skipTargets, *instanceName,
 		*maxIdleTime, logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error stopping idle unpackers: %s\n", err)
