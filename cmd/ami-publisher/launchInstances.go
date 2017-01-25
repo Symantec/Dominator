@@ -10,28 +10,20 @@ import (
 )
 
 func launchInstancesSubcommand(args []string, logger log.Logger) {
-	domImage := ""
-	if len(args) > 1 {
-		domImage = args[1]
-	}
-	err := launchInstances(args[0], domImage, logger)
-	if err != nil {
+	if err := launchInstances(args[0], logger); err != nil {
 		fmt.Fprintf(os.Stderr, "Error launching instances: %s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
 }
 
-func launchInstances(bootImage, domImage string, logger log.Logger) error {
+func launchInstances(bootImage string, logger log.Logger) error {
 	bootImage = path.Clean(bootImage)
 	tags, err := makeTags()
 	if err != nil {
 		return err
 	}
 	tags["Name"] = *instanceName
-	if domImage != "" {
-		tags["RequiredImage"] = domImage
-	}
 	imageTags := make(awsutil.Tags)
 	for key, value := range searchTags {
 		imageTags[key] = value
