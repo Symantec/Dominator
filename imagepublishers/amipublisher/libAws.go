@@ -75,8 +75,8 @@ func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 	return nil
 }
 
-func createSnapshot(awsService *ec2.EC2, volumeId string,
-	description string, tags map[string]string, logger log.Logger) (
+func createSnapshot(awsService *ec2.EC2, volumeId string, description string,
+	tags awsutil.Tags, logger log.Logger) (
 	string, error) {
 	snapshot, err := awsService.CreateSnapshot(&ec2.CreateSnapshotInput{
 		VolumeId:    aws.String(volumeId),
@@ -88,17 +88,8 @@ func createSnapshot(awsService *ec2.EC2, volumeId string,
 	snapshotIds := make([]string, 1)
 	snapshotIds[0] = *snapshot.SnapshotId
 	logger.Printf("Created: %s\n", *snapshot.SnapshotId)
-	// Strip out possible Name tag.
-	newTags := make(map[string]string)
-	for key, value := range tags {
-		switch key {
-		case "Name":
-		default:
-			newTags[key] = value
-		}
-	}
-	newTags["Name"] = description
-	tags = newTags
+	tags = tags.Copy()
+	tags["Name"] = description
 	if err := createTags(awsService, *snapshot.SnapshotId, tags); err != nil {
 		return "", err
 	}
@@ -129,19 +120,10 @@ func createTags(awsService *ec2.EC2, resourceId string,
 }
 
 func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
-	tags map[string]string, logger log.Logger) (string, error) {
-	// Strip out possible ExpiresAt tag.
-	newTags := make(map[string]string)
-	for key, value := range tags {
-		switch key {
-		case "ExpiresAt":
-		case "Name":
-		default:
-			newTags[key] = value
-		}
-	}
-	newTags["Name"] = "image unpacker"
-	tags = newTags
+	tags awsutil.Tags, logger log.Logger) (string, error) {
+	tags = tags.Copy()
+	delete(tags, "ExpiresAt")
+	tags["Name"] = "image unpacker"
 	sizeInGiB := int64(size) >> 30
 	if sizeInGiB<<30 < int64(size) {
 		sizeInGiB++
@@ -243,8 +225,7 @@ func deregisterAmi(awsService *ec2.EC2, amiId string) error {
 	return errors.New("timed out waiting for deregister: " + amiId)
 }
 
-func findImage(awsService *ec2.EC2, tags awsutil.Tags) (
-	*ec2.Image, error) {
+func findImage(awsService *ec2.EC2, tags awsutil.Tags) (*ec2.Image, error) {
 	images, err := getImages(awsService, tags)
 	if err != nil {
 		return nil, err
@@ -290,8 +271,7 @@ func findMarketplaceImage(awsService *ec2.EC2, productCode string) (
 	return findLatestImage(out.Images)
 }
 
-func getImages(awsService *ec2.EC2, tags awsutil.Tags) (
-	[]*ec2.Image, error) {
+func getImages(awsService *ec2.EC2, tags awsutil.Tags) ([]*ec2.Image, error) {
 	out, err := awsService.DescribeImages(
 		&ec2.DescribeImagesInput{Filters: tags.MakeFilters()})
 	if err != nil {
@@ -484,8 +464,7 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image,
 }
 
 func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
-	imageName string, tags map[string]string, logger log.Logger) (
-	string, error) {
+	imageName string, tags awsutil.Tags, logger log.Logger) (string, error) {
 	rootDevName := "/dev/sda1"
 	blkDevMaps := make([]*ec2.BlockDeviceMapping, 1)
 	blkDevMaps[0] = &ec2.BlockDeviceMapping{
@@ -515,17 +494,8 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
 	logger.Printf("Created: %s\n", *ami.ImageId)
 	imageIds := make([]string, 1)
 	imageIds[0] = *ami.ImageId
-	// Strip out possible Name tag.
-	newTags := make(map[string]string)
-	for key, value := range tags {
-		switch key {
-		case "Name":
-		default:
-			newTags[key] = value
-		}
-	}
-	newTags["Name"] = path.Dir(imageName)
-	tags = newTags
+	tags = tags.Copy()
+	tags["Name"] = path.Dir(imageName)
 	if err := createTags(awsService, *ami.ImageId, tags); err != nil {
 		return "", err
 	}
