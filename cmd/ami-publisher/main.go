@@ -36,11 +36,9 @@ var (
 	sshKeyName              = flag.String("sshKeyName", "",
 		"Name of SSH key for instance")
 	subnetSearchTags awsutil.Tags = awsutil.Tags{"Network": "Private"}
-	tagsFile                      = flag.String("tagsFile", "",
-		"JSON encoded file containing tags to apply to AMIs")
-	tags          awsutil.Tags
-	targets       awsutil.TargetList
-	vpcSearchTags awsutil.Tags = awsutil.Tags{"Preferred": ""}
+	tags             awsutil.Tags
+	targets          awsutil.TargetList
+	vpcSearchTags    awsutil.Tags = awsutil.Tags{"Preferred": ""}
 )
 
 func init() {
