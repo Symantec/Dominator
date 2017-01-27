@@ -51,6 +51,17 @@ func (v TargetResult) MarshalJSON() ([]byte, error) {
 	return v.marshalJSON()
 }
 
+func CopyBootstrapImage(streamName string, targets awsutil.TargetList,
+	skipList awsutil.TargetList, marketplaceImage, marketplaceLoginName string,
+	newImageTags awsutil.Tags, unpackerName string,
+	vpcSearchTags, subnetSearchTags, securityGroupSearchTags awsutil.Tags,
+	instanceType string, sshKeyName string, logger log.Logger) error {
+	return copyBootstrapImage(streamName, targets, skipList, marketplaceImage,
+		marketplaceLoginName, newImageTags, unpackerName, vpcSearchTags,
+		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName,
+		logger)
+}
+
 func DeleteResources(resources []Resource, logger log.Logger) error {
 	return deleteResources(resources, logger)
 }
