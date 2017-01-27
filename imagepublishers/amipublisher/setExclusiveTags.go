@@ -47,8 +47,7 @@ func setExclusiveTagsForTarget(awsService *ec2.EC2, amiId string,
 	if err != nil {
 		return err
 	}
-	tagKeys := make([]string, 1)
-	tagKeys[0] = tagKey
+	tagKeysToStrip := []string{tagKey, "Name"}
 	tagAlreadyPresent := false
 	for _, image := range images {
 		imageId := aws.StringValue(image.ImageId)
@@ -64,7 +63,7 @@ func setExclusiveTagsForTarget(awsService *ec2.EC2, amiId string,
 			}
 			continue
 		}
-		err := deleteTagsFromResources(awsService, tagKeys, imageId)
+		err := deleteTagsFromResources(awsService, tagKeysToStrip, imageId)
 		if err != nil {
 			return err
 		}
