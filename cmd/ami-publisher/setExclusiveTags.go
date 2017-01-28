@@ -23,7 +23,7 @@ func setExclusiveTags(tagKey string, tagValue string, resultsFiles []string,
 	logger log.Logger) error {
 	results := make([]amipublisher.Resource, 0)
 	for _, resultsFile := range resultsFiles {
-		fileResults := make([]amipublisher.Resource, 0)
+		var fileResults []amipublisher.Resource
 		if err := libjson.ReadFromFile(resultsFile, &fileResults); err != nil {
 			return err
 		}

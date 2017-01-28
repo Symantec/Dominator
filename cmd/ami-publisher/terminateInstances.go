@@ -8,7 +8,7 @@ import (
 )
 
 func terminateInstancesSubcommand(args []string, logger log.Logger) {
-	err := amipublisher.TerminateInstances(targets, skipTargets, *unpackerName,
+	err := amipublisher.TerminateInstances(targets, skipTargets, *instanceName,
 		logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error terminating instances: %s\n", err)

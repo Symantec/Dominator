@@ -22,8 +22,15 @@ var (
 		"Hostname of imageserver")
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber, "Port number of imageserver")
+	instanceName = flag.String("instanceName", "ImageUnpacker",
+		"The Name tag value for image unpacker instances")
 	instanceType = flag.String("instanceType", "t2.medium",
 		"Instance type to launch")
+	marketplaceImage = flag.String("marketplaceImage",
+		"3f8t6t8fp5m9xx18yzwriozxi",
+		"Product code (default Debian Jessie amd64)")
+	marketplaceLoginName = flag.String("marketplaceLoginName", "admin",
+		"Login name for instance booted from marketplace image")
 	maxIdleTime = flag.Duration("maxIdleTime", time.Minute*50,
 		"Maximum idle time for image unpacker instances")
 	minFreeBytes = flag.Uint64("minFreeBytes", 1<<28,
@@ -34,13 +41,9 @@ var (
 	sshKeyName              = flag.String("sshKeyName", "",
 		"Name of SSH key for instance")
 	subnetSearchTags awsutil.Tags = awsutil.Tags{"Network": "Private"}
-	tagsFile                      = flag.String("tagsFile", "",
-		"JSON encoded file containing tags to apply to AMIs")
-	tags         awsutil.Tags
-	targets      awsutil.TargetList
-	unpackerName = flag.String("unpackerName", "ImageUnpacker",
-		"The Name tag value for image unpacker instances")
-	vpcSearchTags awsutil.Tags = awsutil.Tags{"Preferred": ""}
+	tags             awsutil.Tags
+	targets          awsutil.TargetList
+	vpcSearchTags    awsutil.Tags = awsutil.Tags{"Preferred": ""}
 )
 
 func init() {
@@ -65,12 +68,13 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
+	fmt.Fprintln(os.Stderr, "  copy-bootstrap-image stream-name")
 	fmt.Fprintln(os.Stderr, "  delete results-file...")
 	fmt.Fprintln(os.Stderr, "  delete-tags tag-key results-file...")
 	fmt.Fprintln(os.Stderr, "  delete-tag-on-unpackers tag-key")
 	fmt.Fprintln(os.Stderr, "  expire")
 	fmt.Fprintln(os.Stderr, "  import-key-pair name pub-key-file")
-	fmt.Fprintln(os.Stderr, "  launch-instances boot-image [dominator-image]")
+	fmt.Fprintln(os.Stderr, "  launch-instances boot-image")
 	fmt.Fprintln(os.Stderr, "  list-unpackers")
 	fmt.Fprintln(os.Stderr, "  prepare-unpackers [stream-name]")
 	fmt.Fprintln(os.Stderr, "  publish stream-name image-leaf-name")
@@ -90,12 +94,13 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
+	{"copy-bootstrap-image", 1, 1, copyBootstrapImageSubcommand},
 	{"delete", 1, -1, deleteSubcommand},
 	{"delete-tags", 2, -1, deleteTagsSubcommand},
 	{"delete-tags-on-unpackers", 1, 1, deleteTagsOnUnpackersSubcommand},
 	{"expire", 0, 0, expireSubcommand},
 	{"import-key-pair", 2, 2, importKeyPairSubcommand},
-	{"launch-instances", 1, 2, launchInstancesSubcommand},
+	{"launch-instances", 1, 1, launchInstancesSubcommand},
 	{"list-unpackers", 0, 0, listUnpackersSubcommand},
 	{"prepare-unpackers", 0, 1, prepareUnpackersSubcommand},
 	{"publish", 2, 2, publishSubcommand},

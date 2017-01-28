@@ -57,29 +57,12 @@ func launchInstanceInTarget(awsService *ec2.EC2,
 		// TODO(rgooch): Create bootstrap image.
 		return errors.New("no image found")
 	}
-	vpc, err := getVpc(awsService, vpcSearchTags)
+	instance, err := launchInstance(awsService, image, vpcSearchTags,
+		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName)
 	if err != nil {
 		return err
 	}
-	subnet, err := getSubnet(awsService, aws.StringValue(vpc.VpcId),
-		subnetSearchTags)
-	sg, err := getSecurityGroup(awsService, securityGroupSearchTags)
-	if err != nil {
-		return err
-	}
-	reservation, err := awsService.RunInstances(&ec2.RunInstancesInput{
-		ImageId:          image.ImageId,
-		InstanceType:     aws.String(instanceType),
-		KeyName:          aws.String(sshKeyName),
-		MaxCount:         aws.Int64(1),
-		MinCount:         aws.Int64(1),
-		SecurityGroupIds: []*string{sg.GroupId},
-		SubnetId:         subnet.SubnetId,
-	})
-	if err != nil {
-		return err
-	}
-	instanceId := aws.StringValue(reservation.Instances[0].InstanceId)
+	instanceId := aws.StringValue(instance.InstanceId)
 	logger.Printf("launched: %s\n", instanceId)
 	if err := createTags(awsService, instanceId, tags); err != nil {
 		return nil
