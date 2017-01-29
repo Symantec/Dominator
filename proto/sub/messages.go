@@ -9,8 +9,9 @@ import (
 )
 
 type Configuration struct {
-	ScanSpeedPercent    uint
+	CpuPercent          uint
 	NetworkSpeedPercent uint
+	ScanSpeedPercent    uint
 	ScanExclusionList   []string
 }
 
