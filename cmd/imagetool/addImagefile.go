@@ -213,5 +213,7 @@ func buildImageFromRaw(imageSClient *srpc.Client, filter *filter.Filter,
 	if err := cmd.Run(); err != nil {
 		return nil, err
 	}
-	return buildImageWithHasher(imageSClient, filter, "/mnt", h)
+	fs, err := buildImageWithHasher(imageSClient, filter, "/mnt", h)
+	syscall.Unmount("/mnt", 0)
+	return fs, err
 }
