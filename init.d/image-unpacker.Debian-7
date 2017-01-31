@@ -16,6 +16,7 @@
 umask 022
 
 readonly default_log_dir='/var/log/image-unpacker'
+readonly default_state_dir='/var/lib/image-unpacker'
 
 DAEMON='/usr/local/sbin/image-unpacker'
 IMAGE_SERVER_HOSTNAME=
@@ -25,7 +26,7 @@ LOGBUF_LINES=
 LOOP_PIDFILE='/var/run/image-unpacker.loop.pid'
 MAKE_BOOTABLE_TOOL=
 PIDFILE='/var/run/image-unpacker.pid'
-STATE_DIR=
+STATE_DIR="$default_state_dir"
 
 PROG_ARGS=
 
@@ -35,7 +36,7 @@ test -x "$DAEMON" || exit 0
 
 export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
 
-mkdir -m 0755 -p "$LOG_DIR"
+mkdir -m 0755 -p "$LOG_DIR" "$STATE_DIR"
 
 if [ -n "$IMAGE_SERVER_HOSTNAME" ]; then
     PROG_ARGS="$PROG_ARGS -imageServerHostname=$IMAGE_SERVER_HOSTNAME"
@@ -57,7 +58,7 @@ if [ -n "$MAKE_BOOTABLE_TOOL" ]; then
     PROG_ARGS="$PROG_ARGS -makeBootableTool=$MAKE_BOOTABLE_TOOL"
 fi
 
-if [ -n "$STATE_DIR" ]; then
+if [ -n "$STATE_DIR" ] && [ "$STATE_DIR" != "$default_state_dir" ]; then
     PROG_ARGS="$PROG_ARGS -stateDir=$STATE_DIR"
 fi
 
