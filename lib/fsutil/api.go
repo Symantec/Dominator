@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
 )
 
 var (
@@ -60,6 +61,15 @@ func LoadLines(filename string) ([]string, error) {
 // command-line programme "chattr -ai pathname...".
 func MakeMutable(pathname ...string) error {
 	return makeMutable(pathname...)
+}
+
+// WaitFile waits for the file given by pathname to become available to read and
+// yields a io.ReadCloser when available, or an error if the timeout is
+// exceeded or an error (other than file not existing) is encountered. A
+// negative timeout indicates to wait forever. The io.ReadCloser must be closed
+// after use.
+func WaitFile(pathname string, timeout time.Duration) (io.ReadCloser, error) {
+	return waitFile(pathname, timeout)
 }
 
 // WatchFile watches the file given by pathname and yields a new io.ReadCloser
