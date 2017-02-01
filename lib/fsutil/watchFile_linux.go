@@ -7,6 +7,8 @@ import (
 	"os"
 	"path"
 	"sync"
+	"syscall"
+	"time"
 )
 
 var (
@@ -20,6 +22,17 @@ func watchFileWithFsNotify(pathname string, channel chan<- io.ReadCloser,
 	if err != nil {
 		logger.Println("Error creating watcher:", err)
 		return false
+	}
+	// TODO(rgooch): Come up with a better way.
+	for ; ; time.Sleep(time.Second) {
+		var stat syscall.Stat_t
+		if err := syscall.Stat(pathname, &stat); err != nil {
+			if logger != nil {
+				logger.Printf("Error stating file: %s: %s\n", pathname, err)
+			}
+		} else {
+			break
+		}
 	}
 	lock.Lock()
 	defer lock.Unlock()
