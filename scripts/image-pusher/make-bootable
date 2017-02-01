@@ -1,26 +1,18 @@
 #! /bin/bash --posix
 
-case "$1" in
-  start)
-    cp -p /etc/fstab /mnt/etc
-    chroot /mnt /make-bootable make-bootable
-    rm /mnt/make-bootable
-    exit 0
-    ;;
+set -o nounset
+cd /
 
-  make-bootable)
-    ;;
+readonly boot_device="$1"
 
-  *)
-    echo "Usage: /etc/init.d/make-bootable {start|make-bootable}"
-    exit 1
-esac
+mount -n none -t proc "/proc"    || exit
+mount -n none -t devtmpfs "/dev" || exit
+mount -n none -t sysfs "/sys"    || exit
 
-mount -n none -t proc /proc
-mount -n none -t devtmpfs /dev
-mount -n none -t sysfs /sys
+readonly root_uuid=$(blkid -o export "${boot_device}1" |\
+			sed -nre 's/^UUID=(.*)$/\1/p')
+echo "UUID=$root_uuid /  ext4  defaults  0 1" > /etc/fstab
 
-readonly boot_device=$(blkid -L rootfs | sed -re 's/([[:digit:]]+$)//')
 readonly kernel_version=$(ls -v /lib/modules | tail -n 1)
 
 # Build a new initramfs suited to the machine.
@@ -41,7 +33,7 @@ else
     fi
     tmp="$(< "$grub_config_file")"
     echo "$tmp" | sed -r \
-	-e 's/UUID=[^[:space:]]+/LABEL=rootfs/g' \
+	-e "s/UUID=[^[:space:]]+/UUID=$root_uuid/g" \
 	-e 's/quiet$/quiet console=ttyS0/' > "$grub_config_file"
     grub <<-EOF
 	device (hd0) $boot_device
@@ -49,3 +41,7 @@ else
 	setup (hd0)
 EOF
 fi
+
+umount "/sys"
+umount "/dev"
+umount "/proc"

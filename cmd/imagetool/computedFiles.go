@@ -23,8 +23,7 @@ func spliceComputedFiles(fs *filesystem.FileSystem) error {
 	}
 	computedFileList, err := loadComputedFiles(*computedFiles)
 	if err != nil {
-		return errors.New("cannot load computed files list from: " +
-			*computedFiles + ": " + err.Error())
+		return errors.New("cannot load computed files: " + err.Error())
 	}
 	filenameToInodeTable := fs.FilenameToInodeTable()
 	inodeToFilenamesTable := fs.InodeToFilenamesTable()
