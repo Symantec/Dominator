@@ -81,15 +81,22 @@ func (t *rpcType) updateAndUnlock(request sub.UpdateRequest,
 			t.logger.Printf("Error decoding old triggers: %s", err.Error())
 		}
 	}
-	file, err = os.Create(t.oldTriggersFilename)
-	if err == nil {
-		writer := bufio.NewWriter(file)
-		if err := jsonlib.WriteWithIndent(writer, "    ",
-			request.Triggers.Triggers); err != nil {
-			t.logger.Printf("Error marshaling triggers: %s", err)
+	if request.Triggers != nil {
+		// Fall back to using new triggers and hope for the best. This supports
+		// initial Domination of a machine.
+		if len(oldTriggers.Triggers) < 1 {
+			oldTriggers.Triggers = request.Triggers.Triggers
 		}
-		writer.Flush()
-		file.Close()
+		file, err = os.Create(t.oldTriggersFilename)
+		if err == nil {
+			writer := bufio.NewWriter(file)
+			if err := jsonlib.WriteWithIndent(writer, "    ",
+				request.Triggers.Triggers); err != nil {
+				t.logger.Printf("Error marshaling triggers: %s", err)
+			}
+			writer.Flush()
+			file.Close()
+		}
 	}
 	hadTriggerFailures, fsChangeDuration, lastUpdateError := lib.Update(
 		request, rootDirectoryName, t.objectsDir, &oldTriggers,
