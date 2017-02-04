@@ -7,8 +7,6 @@ import (
 	"os"
 	"path"
 	"sync"
-	"syscall"
-	"time"
 )
 
 var (
@@ -23,27 +21,14 @@ func watchFileWithFsNotify(pathname string, channel chan<- io.ReadCloser,
 		logger.Println("Error creating watcher:", err)
 		return false
 	}
-	// TODO(rgooch): Come up with a better way.
-	for ; ; time.Sleep(time.Second) {
-		var stat syscall.Stat_t
-		if err := syscall.Stat(pathname, &stat); err != nil {
-			if logger != nil {
-				logger.Printf("Error stating file: %s: %s\n", pathname, err)
-			}
-		} else {
-			break
-		}
-	}
 	lock.Lock()
 	defer lock.Unlock()
 	watchers = append(watchers, watcher)
-	if err := watcher.Watch(path.Dir(pathname)); err != nil {
+	pathname = path.Clean(pathname)
+	dirname := path.Dir(pathname)
+	if err := watcher.WatchFlags(dirname, fsnotify.FSN_CREATE); err != nil {
 		logger.Println("Error adding watch:", err)
 		return false
-	}
-	if err := watcher.WatchFlags(pathname,
-		fsnotify.FSN_CREATE|fsnotify.FSN_RENAME); err != nil {
-		logger.Println("Error setting flags:", err)
 	}
 	go waitForNotifyEvents(watcher, pathname, channel, logger)
 	return true
@@ -79,7 +64,7 @@ func waitForNotifyEvents(watcher *fsnotify.Watcher, pathname string,
 			if !ok {
 				return
 			}
-			if event.Name != pathname {
+			if path.Clean(event.Name) != pathname {
 				continue
 			}
 			if file, err := os.Open(pathname); err != nil {
