@@ -308,7 +308,7 @@ func addSpecialFile(dirent *filesystem.DirectoryEntry,
 	return nil
 }
 
-func (h simpleHasher) Hash(reader io.Reader, length uint64) (hash.Hash, error) {
+func (h simpleHasher) hash(reader io.Reader, length uint64) (hash.Hash, error) {
 	hasher := sha512.New()
 	var hashVal hash.Hash
 	nCopied, err := io.CopyN(hasher, reader, int64(length))
@@ -327,6 +327,12 @@ func (h simpleHasher) Hash(reader io.Reader, length uint64) (hash.Hash, error) {
 	}
 	copy(hashVal[:], hasher.Sum(nil))
 	return hashVal, nil
+}
+
+func (h cpuLimitedHasher) hash(reader io.Reader, length uint64) (
+	hash.Hash, error) {
+	h.limiter.Limit()
+	return h.hasher.Hash(reader, length)
 }
 
 func scanRegularInode(inode *filesystem.RegularInode, fileSystem *FileSystem,

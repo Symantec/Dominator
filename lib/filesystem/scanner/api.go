@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"github.com/Symantec/Dominator/lib/cpulimiter"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/fsrateio"
@@ -13,6 +14,11 @@ type Hasher interface {
 }
 
 type simpleHasher bool // If true, ignore short reads.
+
+type cpuLimitedHasher struct {
+	limiter cpulimiter.CpuLimiter
+	hasher  Hasher
+}
 
 type FileSystem struct {
 	rootDirectoryName       string
@@ -40,4 +46,18 @@ func (fs *FileSystem) GetObject(hashVal hash.Hash) (
 
 func GetSimpleHasher(ignoreShortReads bool) Hasher {
 	return simpleHasher(ignoreShortReads)
+}
+
+func (h simpleHasher) Hash(reader io.Reader, length uint64) (hash.Hash, error) {
+	return h.hash(reader, length)
+}
+
+func NewCpuLimitedHasher(cpuLimiter cpulimiter.CpuLimiter,
+	hasher Hasher) cpuLimitedHasher {
+	return cpuLimitedHasher{cpuLimiter, hasher}
+}
+
+func (h cpuLimitedHasher) Hash(reader io.Reader, length uint64) (
+	hash.Hash, error) {
+	return h.hash(reader, length)
 }
