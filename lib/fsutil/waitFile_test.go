@@ -25,7 +25,7 @@ func TestWaitFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer file.Close()
+	file.Close()
 	rc, err = WaitFile(pathExists, time.Microsecond)
 	if err != nil {
 		t.Error(err)
