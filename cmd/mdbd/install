@@ -1,0 +1,13 @@
+#! /bin/bash --posix
+
+set -o nounset
+
+cd "${0%/*}"
+
+. ./scripts/install.lib
+
+echo=
+
+$echo mkdir -p /usr/local/sbin || exit
+$echo cp -p bin/* /usr/local/sbin || exit
+install_service mdbd || exit
