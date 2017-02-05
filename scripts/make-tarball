@@ -22,5 +22,5 @@ tar --owner=0 --group=0 -czf $target \
     init.d/$command.* \
     scripts/install.lib \
     "$@" \
-    -C $PWD/cmd/$command install \
+    -C $PWD/cmd/$command health-check.yml install \
     -C $GOPATH bin/$command
