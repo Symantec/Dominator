@@ -15,7 +15,7 @@ dominator.tarball:
 	@tar --owner=0 --group=0 -czf $(DOMINATOR_TARGET) \
 	init.d/dominator.* \
 	scripts/install.lib \
-	-C dom install \
+	-C cmd/dominator install \
 	-C $(GOPATH) bin/dominator \
 	-C $(ETCDIR) ssl
 
@@ -34,7 +34,7 @@ image-unpacker.tarball:
 	init.d/image-unpacker.* \
 	scripts/install.lib \
 	scripts/image-pusher/make-bootable \
-	-C imageunpacker install \
+	-C cmd/image-unpacker install \
 	-C $(GOPATH) bin/image-unpacker \
 	-C $(ETCDIR) ssl
 
@@ -43,7 +43,7 @@ imageserver.tarball:
 	@tar --owner=0 --group=0 -czf $(IMAGESERVER_TARGET) \
 	init.d/imageserver.* \
 	scripts/install.lib \
-	-C imageserver install \
+	-C cmd/imageserver install \
 	-C $(GOPATH) bin/imageserver \
 	-C $(ETCDIR) ssl
 
@@ -61,7 +61,7 @@ subd.tarball:
 	@tar --owner=0 --group=0 -czf $(SUBD_TARGET) \
 	init.d/subd.* \
 	scripts/install.lib \
-	-C sub install \
+	-C cmd/subd install \
 	-C $(GOPATH) bin/run-in-mntns bin/subd \
 	-C $(ETCDIR) ssl
 
