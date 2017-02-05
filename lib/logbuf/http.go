@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/url"
+	_ "github.com/Symantec/tricorder/go/healthserver"
 	"io"
 	"net/http"
 	"os"
