@@ -6,11 +6,4 @@ cd "${0%/*}"
 
 . ./scripts/install.lib
 
-echo=
-
-$echo mkdir -p /etc/ssl/dominator || exit
-$echo cp -p ssl/CA*.pem /etc/ssl || exit
-$echo cp -p ssl/dominator/*.pem /etc/ssl/dominator || exit
-$echo mkdir -p /usr/local/sbin || exit
-$echo cp -p bin/* /usr/local/sbin || exit
-install_service dominator || exit
+install_all dominator

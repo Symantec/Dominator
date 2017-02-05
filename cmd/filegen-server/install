@@ -6,11 +6,4 @@ cd "${0%/*}"
 
 . ./scripts/install.lib
 
-echo=
-
-$echo mkdir -p /etc/ssl/filegen-server || exit
-$echo cp -p ssl/CA*.pem /etc/ssl || exit
-$echo cp -p ssl/filegen-server/*.pem /etc/ssl/filegen-server || exit
-$echo mkdir -p /usr/local/sbin || exit
-$echo cp -p bin/* /usr/local/sbin || exit
-install_service filegen-server || exit
+install_all filegen-server

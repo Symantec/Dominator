@@ -6,11 +6,4 @@ cd "${0%/*}"
 
 . ./scripts/install.lib
 
-echo=
-
-$echo mkdir -p /etc/ssl/imageserver || exit
-$echo cp -p ssl/CA*.pem /etc/ssl || exit
-$echo cp -p ssl/imageserver/*.pem /etc/ssl/imageserver || exit
-$echo mkdir -p /usr/local/sbin || exit
-$echo cp -p bin/* /usr/local/sbin || exit
-install_service imageserver || exit
+install_all imageserver
