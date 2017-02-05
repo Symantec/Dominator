@@ -10,4 +10,6 @@ echo=
 
 $echo mkdir -p /usr/local/sbin || exit
 $echo cp -p bin/* /usr/local/sbin || exit
+$echo mkdir -p /etc/health-agent/tests.d
+$echo cp -p health-check.yml /etc/health-agent/tests.d/mdbd.yml || exit
 install_service mdbd || exit
