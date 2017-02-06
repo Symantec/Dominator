@@ -8,7 +8,7 @@ const (
 	SimpleMdbServerPortNumber    = 6973
 	ImageUnpackerPortNumber      = 6974
 
-	DefaultCpuPercent          = 2
+	DefaultCpuPercent          = 50
 	DefaultNetworkSpeedPercent = 10
 	DefaultScanSpeedPercent    = 2
 
