@@ -41,14 +41,8 @@ func (cl *CpuLimiter) limit() error {
 		cl.lastProbeCpuTime.Sec) * time.Second
 	cpuTimeSinceLastProbe += time.Duration(
 		rusage.Utime.Usec-cl.lastProbeCpuTime.Usec) * time.Microsecond
-	allowedCpuTime := wallTimeSinceLastProbe * time.Duration(cl.cpuPercent) /
-		100
-	if cpuTimeSinceLastProbe < allowedCpuTime {
-		cl.lastProbeTime = now
-		cl.lastProbeCpuTime = rusage.Utime
-		return nil
-	}
-	time.Sleep(cpuTimeSinceLastProbe - allowedCpuTime)
+	time.Sleep(cpuTimeSinceLastProbe*100/time.Duration(cl.cpuPercent) -
+		wallTimeSinceLastProbe)
 	cl.lastProbeTime = time.Now()
 	cl.lastProbeCpuTime = rusage.Utime
 	return nil
