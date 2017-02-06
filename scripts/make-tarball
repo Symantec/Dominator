@@ -1,0 +1,26 @@
+#! /bin/bash --posix
+
+set -eu
+
+readonly command="$1"
+shift
+
+readonly bin="$GOPATH/bin/$command"
+readonly target="/tmp/$LOGNAME/$command.tar.gz"
+
+(cd $GOPATH/src; go install github.com/Symantec/Dominator/cmd/$command)
+
+strip -o "$bin~" "$bin"
+if cmp -s "$bin~" "$bin"; then
+    rm "$bin~"
+else
+    touch -r "$bin" "$bin~"
+    mv "$bin~" "$bin"
+fi
+
+tar --owner=0 --group=0 -czf $target \
+    init.d/$command.* \
+    scripts/install.lib \
+    "$@" \
+    -C $PWD/cmd/$command health-check.yml install \
+    -C $GOPATH bin/$command
