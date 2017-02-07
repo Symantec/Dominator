@@ -65,6 +65,7 @@ func (t *rpcType) getUpdateLock() error {
 func (t *rpcType) updateAndUnlock(request sub.UpdateRequest,
 	rootDirectoryName string) error {
 	defer t.clearUpdateInProgress()
+	defer t.scannerConfiguration.BoostCpuLimit(t.logger)
 	t.disableScannerFunc(true)
 	defer t.disableScannerFunc(false)
 	startTime := time.Now()
