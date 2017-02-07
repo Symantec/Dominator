@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/cpulimiter"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/fsbench"
@@ -31,6 +32,8 @@ import (
 )
 
 var (
+	defaultCpuPercent = flag.Uint("defaultCpuPercent",
+		constants.DefaultCpuPercent, "CPU speed as percentage of capacity")
 	defaultNetworkSpeedPercent = flag.Uint64("defaultNetworkSpeedPercent",
 		constants.DefaultNetworkSpeedPercent,
 		"Network speed as percentage of capacity")
@@ -291,6 +294,9 @@ func main() {
 	}
 	publishFsSpeed(bytesPerSecond, blocksPerSecond)
 	var configuration scanner.Configuration
+	configuration.CpuLimiter = cpulimiter.New(100)
+	configuration.DefaultCpuPercent = *defaultCpuPercent
+	go adjustVcpuLimit(&configuration.DefaultCpuPercent, logger)
 	var err error
 	configuration.ScanFilter, err = filter.New(scanExcludeList)
 	if err != nil {
