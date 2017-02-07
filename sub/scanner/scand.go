@@ -1,7 +1,7 @@
 package scanner
 
 import (
-	"log"
+	"github.com/Symantec/Dominator/lib/log"
 	"runtime"
 	"syscall"
 )
@@ -10,7 +10,7 @@ var disableScanRequest chan bool
 var disableScanAcknowledge chan bool
 
 func startScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
-	configuration *Configuration, logger *log.Logger) (
+	configuration *Configuration, logger log.Logger) (
 	<-chan *FileSystem, func(disableScanner bool)) {
 	fsChannel := make(chan *FileSystem)
 	disableScanRequest = make(chan bool, 1)
@@ -21,7 +21,7 @@ func startScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 }
 
 func startScanning(rootDirectoryName string, cacheDirectoryName string,
-	configuration *Configuration, logger *log.Logger,
+	configuration *Configuration, logger log.Logger,
 	mainFunc func(<-chan *FileSystem, func(disableScanner bool))) {
 	fsChannel := make(chan *FileSystem)
 	disableScanRequest = make(chan bool, 1)
@@ -33,7 +33,7 @@ func startScanning(rootDirectoryName string, cacheDirectoryName string,
 
 func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 	configuration *Configuration, fsChannel chan<- *FileSystem,
-	logger *log.Logger) {
+	logger log.Logger) {
 	runtime.LockOSThread()
 	loweredPriority := false
 	var oldFS FileSystem
@@ -56,6 +56,7 @@ func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 				syscall.Setpriority(syscall.PRIO_PROCESS, 0, 15)
 				loweredPriority = true
 			}
+			configuration.RestoreCpuLimit(logger) // Reset after scan.
 		}
 	}
 }
