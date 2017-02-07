@@ -51,7 +51,10 @@ func (cl *CpuLimiter) limit() error {
 func (cl *CpuLimiter) setCpuPercent(cpuPercent uint) {
 	if cpuPercent < 1 {
 		cpuPercent = 1
+	} else if cpuPercent > 100 {
+		cpuPercent = 100
 	}
+	cl.confCpuPercent = cpuPercent
 	cpuPercent *= uint(runtime.NumCPU())
 	if cpuPercent > 100 {
 		cpuPercent = 100

@@ -6,7 +6,8 @@ import (
 )
 
 type CpuLimiter struct {
-	cpuPercent       uint
+	confCpuPercent   uint // Aggregate across all CPUs.
+	cpuPercent       uint // For a single CPU.
 	lastProbeTime    time.Time
 	lastProbeCpuTime wsyscall.Timeval
 }
@@ -19,7 +20,7 @@ func (cl *CpuLimiter) Limit() error {
 	return cl.limit()
 }
 
-func (cl *CpuLimiter) CpuPercent() uint { return cl.cpuPercent }
+func (cl *CpuLimiter) CpuPercent() uint { return cl.confCpuPercent }
 
 func (cl *CpuLimiter) SetCpuPercent(cpuPercent uint) {
 	cl.setCpuPercent(cpuPercent)
