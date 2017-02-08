@@ -32,8 +32,8 @@ import (
 )
 
 var (
-	defaultCpuPercent = flag.Uint("defaultCpuPercent",
-		constants.DefaultCpuPercent, "CPU speed as percentage of capacity")
+	defaultCpuPercent = flag.Uint("defaultCpuPercent", 0,
+		"CPU speed as percentage of capacity (default 50)")
 	defaultNetworkSpeedPercent = flag.Uint64("defaultNetworkSpeedPercent",
 		constants.DefaultNetworkSpeedPercent,
 		"Network speed as percentage of capacity")
@@ -296,7 +296,10 @@ func main() {
 	var configuration scanner.Configuration
 	configuration.CpuLimiter = cpulimiter.New(100)
 	configuration.DefaultCpuPercent = *defaultCpuPercent
-	go adjustVcpuLimit(&configuration.DefaultCpuPercent, logger)
+	if configuration.DefaultCpuPercent < 1 {
+		configuration.DefaultCpuPercent = constants.DefaultCpuPercent
+		go adjustVcpuLimit(&configuration.DefaultCpuPercent, logger)
+	}
 	var err error
 	configuration.ScanFilter, err = filter.New(scanExcludeList)
 	if err != nil {
