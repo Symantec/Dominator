@@ -22,6 +22,7 @@ type objectServer struct {
 }
 
 func (t *addObjectsHandlerType) AddObjects(conn *srpc.Conn) error {
+	defer t.scannerConfiguration.BoostCpuLimit(t.logger)
 	objSrv := &objectServer{t.objectsDir}
 	return lib.AddObjects(conn, objSrv, t.logger)
 }
