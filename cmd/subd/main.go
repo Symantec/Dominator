@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/cpulimiter"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/fsbench"
@@ -15,6 +16,7 @@ import (
 	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/Dominator/lib/wsyscall"
+	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/httpd"
 	"github.com/Symantec/Dominator/sub/rpcd"
 	"github.com/Symantec/Dominator/sub/scanner"
@@ -31,6 +33,10 @@ import (
 )
 
 var (
+	configDirectory = flag.String("configDirectory", "/etc/subd/conf.d",
+		"Directory of optional JSON configuration files")
+	defaultCpuPercent = flag.Uint("defaultCpuPercent", 0,
+		"CPU speed as percentage of capacity (default 50)")
 	defaultNetworkSpeedPercent = flag.Uint64("defaultNetworkSpeedPercent",
 		constants.DefaultNetworkSpeedPercent,
 		"Network speed as percentage of capacity")
@@ -290,7 +296,18 @@ func main() {
 		os.Exit(1)
 	}
 	publishFsSpeed(bytesPerSecond, blocksPerSecond)
+	fileConfig := sub.Configuration{}
+	loadConfiguration(*configDirectory, &fileConfig, logger)
+	if *defaultCpuPercent > 0 {
+		fileConfig.CpuPercent = *defaultCpuPercent
+	}
 	var configuration scanner.Configuration
+	configuration.CpuLimiter = cpulimiter.New(100)
+	configuration.DefaultCpuPercent = fileConfig.CpuPercent
+	if configuration.DefaultCpuPercent < 1 {
+		configuration.DefaultCpuPercent = constants.DefaultCpuPercent
+		go adjustVcpuLimit(&configuration.DefaultCpuPercent, logger)
+	}
 	var err error
 	configuration.ScanFilter, err = filter.New(scanExcludeList)
 	if err != nil {

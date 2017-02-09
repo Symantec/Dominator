@@ -74,6 +74,7 @@ func (t *rpcType) doFetch(request sub.FetchRequest) error {
 	defer t.clearFetchInProgress()
 	objectServer := objectclient.NewObjectClient(request.ServerAddress)
 	defer objectServer.Close()
+	defer t.scannerConfiguration.BoostCpuLimit(t.logger)
 	benchmark := false
 	linkSpeed, haveLinkSpeed := netspeed.GetSpeedToAddress(
 		request.ServerAddress)

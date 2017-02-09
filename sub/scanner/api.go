@@ -2,32 +2,43 @@ package scanner
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/lib/cpulimiter"
 	"github.com/Symantec/Dominator/lib/filesystem/scanner"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsrateio"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"io"
-	"log"
 	"sync"
 	"time"
 )
 
 type Configuration struct {
+	CpuLimiter           *cpulimiter.CpuLimiter
+	DefaultCpuPercent    uint
 	FsScanContext        *fsrateio.ReaderContext
 	NetworkReaderContext *rateio.ReaderContext
 	ScanFilter           *filter.Filter
 }
 
-func (configuration *Configuration) WriteHtml(writer io.Writer) {
-	configuration.writeHtml(writer)
+func (configuration *Configuration) BoostCpuLimit(logger log.Logger) {
+	configuration.boostCpuLimit(logger)
 }
 
 func (configuration *Configuration) RegisterMetrics(
 	dir *tricorder.DirectorySpec) error {
 	return configuration.registerMetrics(dir)
+}
+
+func (configuration *Configuration) RestoreCpuLimit(logger log.Logger) {
+	configuration.restoreCpuLimit(logger)
+}
+
+func (configuration *Configuration) WriteHtml(writer io.Writer) {
+	configuration.writeHtml(writer)
 }
 
 type FileSystemHistory struct {
@@ -127,14 +138,14 @@ func CompareFileSystems(left, right *FileSystem, logWriter io.Writer) bool {
 }
 
 func StartScannerDaemon(rootDirectoryName string, cacheDirectoryName string,
-	configuration *Configuration, logger *log.Logger) (
+	configuration *Configuration, logger log.Logger) (
 	<-chan *FileSystem, func(disableScanner bool)) {
 	return startScannerDaemon(rootDirectoryName, cacheDirectoryName,
 		configuration, logger)
 }
 
 func StartScanning(rootDirectoryName string, cacheDirectoryName string,
-	configuration *Configuration, logger *log.Logger,
+	configuration *Configuration, logger log.Logger,
 	mainFunc func(<-chan *FileSystem, func(disableScanner bool))) {
 	startScanning(rootDirectoryName, cacheDirectoryName, configuration, logger,
 		mainFunc)

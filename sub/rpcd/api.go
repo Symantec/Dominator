@@ -35,8 +35,9 @@ type rpcType struct {
 }
 
 type addObjectsHandlerType struct {
-	objectsDir string
-	logger     *log.Logger
+	objectsDir           string
+	scannerConfiguration *scanner.Configuration
+	logger               *log.Logger
 }
 
 type HtmlWriter struct {
@@ -62,8 +63,9 @@ func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 		logger:                    logger}
 	srpc.RegisterName("Subd", rpcObj)
 	addObjectsHandler := &addObjectsHandlerType{
-		objectsDir: objectsDirname,
-		logger:     logger}
+		objectsDir:           objectsDirname,
+		scannerConfiguration: configuration,
+		logger:               logger}
 	srpc.RegisterName("ObjectServer", addObjectsHandler)
 	tricorder.RegisterMetric("/image-name", &rpcObj.lastSuccessfulImageName,
 		units.None, "name of the image for the last successful update")

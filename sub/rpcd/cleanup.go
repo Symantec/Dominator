@@ -11,6 +11,7 @@ import (
 
 func (t *rpcType) Cleanup(conn *srpc.Conn, request sub.CleanupRequest,
 	reply *sub.CleanupResponse) error {
+	defer t.scannerConfiguration.BoostCpuLimit(t.logger)
 	t.disableScannerFunc(true)
 	defer t.disableScannerFunc(false)
 	t.rwLock.Lock()

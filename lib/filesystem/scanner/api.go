@@ -16,7 +16,7 @@ type Hasher interface {
 type simpleHasher bool // If true, ignore short reads.
 
 type cpuLimitedHasher struct {
-	limiter cpulimiter.CpuLimiter
+	limiter *cpulimiter.CpuLimiter
 	hasher  Hasher
 }
 
@@ -52,7 +52,7 @@ func (h simpleHasher) Hash(reader io.Reader, length uint64) (hash.Hash, error) {
 	return h.hash(reader, length)
 }
 
-func NewCpuLimitedHasher(cpuLimiter cpulimiter.CpuLimiter,
+func NewCpuLimitedHasher(cpuLimiter *cpulimiter.CpuLimiter,
 	hasher Hasher) cpuLimitedHasher {
 	return cpuLimitedHasher{cpuLimiter, hasher}
 }

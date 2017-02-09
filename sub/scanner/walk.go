@@ -11,10 +11,13 @@ func scanFileSystem(rootDirectoryName string, cacheDirectoryName string,
 	fileSystem.configuration = configuration
 	fileSystem.rootDirectoryName = rootDirectoryName
 	fileSystem.cacheDirectoryName = cacheDirectoryName
+	hasher := scanner.GetSimpleHasher(true)
+	if configuration.CpuLimiter != nil {
+		hasher = scanner.NewCpuLimitedHasher(configuration.CpuLimiter, hasher)
+	}
 	fs, err := scanner.ScanFileSystem(rootDirectoryName,
 		configuration.FsScanContext, configuration.ScanFilter,
-		checkScanDisableRequest, scanner.GetSimpleHasher(true),
-		&oldFS.FileSystem)
+		checkScanDisableRequest, hasher, &oldFS.FileSystem)
 	if err != nil {
 		return nil, err
 	}

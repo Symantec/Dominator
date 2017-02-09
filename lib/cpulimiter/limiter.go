@@ -14,7 +14,15 @@ func newCpuLimiter(cpuPercent uint) *CpuLimiter {
 	return cl
 }
 
+func (cl *CpuLimiter) getConfCpuPercent() uint {
+	cl.mutex.Lock()
+	defer cl.mutex.Unlock()
+	return cl.confCpuPercent
+}
+
 func (cl *CpuLimiter) limit() error {
+	cl.mutex.Lock()
+	defer cl.mutex.Unlock()
 	if cl.cpuPercent >= 100 {
 		return nil
 	}
@@ -41,8 +49,11 @@ func (cl *CpuLimiter) limit() error {
 		cl.lastProbeCpuTime.Sec) * time.Second
 	cpuTimeSinceLastProbe += time.Duration(
 		rusage.Utime.Usec-cl.lastProbeCpuTime.Usec) * time.Microsecond
-	time.Sleep(cpuTimeSinceLastProbe*100/time.Duration(cl.cpuPercent) -
-		wallTimeSinceLastProbe)
+	sleepTime := cpuTimeSinceLastProbe*100/time.Duration(cl.cpuPercent) -
+		wallTimeSinceLastProbe
+	cl.mutex.Unlock()
+	time.Sleep(sleepTime)
+	cl.mutex.Lock()
 	cl.lastProbeTime = time.Now()
 	cl.lastProbeCpuTime = rusage.Utime
 	return nil
@@ -51,10 +62,16 @@ func (cl *CpuLimiter) limit() error {
 func (cl *CpuLimiter) setCpuPercent(cpuPercent uint) {
 	if cpuPercent < 1 {
 		cpuPercent = 1
-	}
-	cpuPercent *= uint(runtime.NumCPU())
-	if cpuPercent > 100 {
+	} else if cpuPercent > 100 {
 		cpuPercent = 100
 	}
-	cl.cpuPercent = cpuPercent
+	singleCpuPercent := cpuPercent * uint(runtime.NumCPU())
+	if singleCpuPercent > 100 {
+		singleCpuPercent = 100
+	}
+	cl.mutex.Lock()
+	defer cl.mutex.Unlock()
+	cl.confCpuPercent = cpuPercent
+	cl.cpuPercent = singleCpuPercent
+	cl.lastProbeTime = time.Time{} // Reset calculations.
 }
