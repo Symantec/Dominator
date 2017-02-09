@@ -18,7 +18,7 @@ func TestSameFile(t *testing.T) {
 }
 
 func TestFileToDelete(t *testing.T) {
-	request := makeUpdateRequest(testDataFile0(), testDataFile1())
+	request := makeUpdateRequest(testDataFile1(), testDataFile0())
 	if len(request.PathsToDelete) != 1 {
 		t.Errorf("number of paths to delete: %d != 1",
 			len(request.PathsToDelete))
@@ -34,7 +34,7 @@ func TestSameOnlyDirectory(t *testing.T) {
 }
 
 func TestOnlyDirectoryToDelete(t *testing.T) {
-	request := makeUpdateRequest(testDataDirectory0(), testDataDirectory2())
+	request := makeUpdateRequest(testDataDirectory2(), testDataDirectory0())
 	if len(request.PathsToDelete) != 1 {
 		t.Errorf("number of paths to delete: %d != 1",
 			len(request.PathsToDelete))
@@ -42,27 +42,27 @@ func TestOnlyDirectoryToDelete(t *testing.T) {
 }
 
 func TestExtraDirectoryToDelete(t *testing.T) {
-	request := makeUpdateRequest(testDataDirectory01(), testDataDirectory0())
+	request := makeUpdateRequest(testDataDirectory0(), testDataDirectory01())
 	if len(request.PathsToDelete) != 1 {
 		t.Errorf("number of paths to delete: %d != 1",
 			len(request.PathsToDelete))
 	}
 }
 
-func makeUpdateRequest(subFS *filesystem.FileSystem,
-	imageFS *filesystem.FileSystem) subproto.UpdateRequest {
-	if err := subFS.RebuildInodePointers(); err != nil {
-		panic(err)
-	}
+func makeUpdateRequest(imageFS *filesystem.FileSystem,
+	subFS *filesystem.FileSystem) subproto.UpdateRequest {
 	objectCache := make([]hash.Hash, 0, len(imageFS.InodeTable))
 	for hashVal := range imageFS.HashToInodesTable() {
 		objectCache = append(objectCache, hashVal)
+	}
+	imageFS.BuildEntryMap()
+	if err := subFS.RebuildInodePointers(); err != nil {
+		panic(err)
 	}
 	subFS.BuildEntryMap()
 	if err := imageFS.RebuildInodePointers(); err != nil {
 		panic(err)
 	}
-	imageFS.BuildEntryMap()
 	subObj := Sub{FileSystem: subFS, ObjectCache: objectCache}
 	var request subproto.UpdateRequest
 	emptyFilter, _ := filter.New(nil)
