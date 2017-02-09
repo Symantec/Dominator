@@ -46,6 +46,11 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 	wantedImages[herd.defaultImageName] = struct{}{}
 	wantedImages[herd.nextDefaultImageName] = struct{}{}
 	for _, machine := range mdb.Machines { // Sorted by Hostname.
+		if machine.Hostname == "" {
+			herd.logger.Printf("Empty Hostname field, ignoring \"%s\"\n",
+				machine)
+			continue
+		}
 		sub := herd.subsByName[machine.Hostname]
 		wantedImages[machine.RequiredImage] = struct{}{}
 		wantedImages[machine.PlannedImage] = struct{}{}

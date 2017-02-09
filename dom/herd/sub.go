@@ -538,7 +538,8 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, image *image.Image,
 func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	logger := sub.herd.logger
 	if !sub.pendingSafetyClear {
-		// Perform a cheap safety check.
+		// Perform a cheap safety check: if over half the inodes will be deleted
+		// then mark the update as unsafe.
 		if sub.requiredImage.Filter != nil &&
 			len(sub.fileSystem.InodeTable)>>1 >
 				len(sub.requiredImage.FileSystem.InodeTable) {
@@ -557,6 +558,8 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	}
 	sub.status = statusSendingUpdate
 	sub.lastUpdateTime = time.Now()
+	logger.Printf("Calling %s:Subd.Update() for image: %s\n",
+		sub, sub.requiredImageName)
 	if err := client.CallUpdate(srpcClient, request, &reply); err != nil {
 		srpcClient.Close()
 		logger.Printf("Error calling %s:Subd.Update(): %s\n", sub, err)
