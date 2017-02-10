@@ -22,7 +22,8 @@ func (objSrv *ObjectServer) getObject(hashVal hash.Hash) (
 	objSrv.rwLock.RLock()
 	defer objSrv.rwLock.RUnlock()
 	if data, ok := objSrv.objectMap[hashVal]; !ok {
-		return 0, nil, errors.New("missing object")
+		hashStr, _ := hashVal.MarshalText()
+		return 0, nil, errors.New("missing object: " + string(hashStr))
 	} else {
 		return uint64(len(data)), ioutil.NopCloser(bytes.NewReader(data)), nil
 	}
@@ -33,11 +34,5 @@ func (or *ObjectsReader) nextObject() (uint64, io.ReadCloser, error) {
 	if or.nextIndex >= int64(len(or.hashes)) {
 		return 0, nil, errors.New("all objects have been consumed")
 	}
-	or.objectServer.rwLock.RLock()
-	defer or.objectServer.rwLock.RUnlock()
-	if data, ok := or.objectServer.objectMap[or.hashes[or.nextIndex]]; !ok {
-		return 0, nil, errors.New("missing object")
-	} else {
-		return uint64(len(data)), ioutil.NopCloser(bytes.NewReader(data)), nil
-	}
+	return or.objectServer.getObject(or.hashes[or.nextIndex])
 }
