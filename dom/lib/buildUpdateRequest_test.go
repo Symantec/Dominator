@@ -1,16 +1,18 @@
 package lib
 
 import (
+	"encoding/json"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	subproto "github.com/Symantec/Dominator/proto/sub"
+	"reflect"
 	"testing"
 )
 
 func TestSameFile(t *testing.T) {
-	request := makeUpdateRequest(testDataFile0(), testDataFile0())
+	request := makeUpdateRequest(testDataFile0(0), testDataFile0(0))
 	if len(request.PathsToDelete) != 0 {
 		t.Errorf("number of paths to delete: %d != 0",
 			len(request.PathsToDelete))
@@ -18,10 +20,22 @@ func TestSameFile(t *testing.T) {
 }
 
 func TestFileToDelete(t *testing.T) {
-	request := makeUpdateRequest(testDataFile1(), testDataFile0())
+	request := makeUpdateRequest(testDataFile1(0), testDataFile0(0))
 	if len(request.PathsToDelete) != 1 {
 		t.Errorf("number of paths to delete: %d != 1",
 			len(request.PathsToDelete))
+	}
+}
+
+func TestFileToChange(t *testing.T) {
+	request := makeUpdateRequest(testDataFile0(0), testDataFile0(1))
+	if reflect.DeepEqual(request, subproto.UpdateRequest{}) {
+		txt, _ := json.MarshalIndent(request, "", "    ")
+		t.Errorf("Inode not being changed:\n%s", txt)
+	}
+	if len(request.InodesToChange) != 1 {
+		txt, _ := json.MarshalIndent(request, "", "    ")
+		t.Errorf("Inode not being changed:\n%s", txt)
 	}
 }
 
@@ -51,8 +65,15 @@ func TestExtraDirectoryToDelete(t *testing.T) {
 
 func makeUpdateRequest(imageFS *filesystem.FileSystem,
 	subFS *filesystem.FileSystem) subproto.UpdateRequest {
-	objectCache := make([]hash.Hash, 0, len(imageFS.InodeTable))
+	fetchedObjects := make(map[hash.Hash]struct{}, len(imageFS.InodeTable))
 	for hashVal := range imageFS.HashToInodesTable() {
+		fetchedObjects[hashVal] = struct{}{}
+	}
+	for hashVal := range subFS.HashToInodesTable() {
+		delete(fetchedObjects, hashVal)
+	}
+	objectCache := make([]hash.Hash, 0, len(fetchedObjects))
+	for hashVal := range fetchedObjects {
 		objectCache = append(objectCache, hashVal)
 	}
 	imageFS.BuildEntryMap()
@@ -126,10 +147,10 @@ func testDataDirectory2() *filesystem.FileSystem {
 	}
 }
 
-func testDataFile0() *filesystem.FileSystem {
+func testDataFile0(uid uint32) *filesystem.FileSystem {
 	return &filesystem.FileSystem{
 		InodeTable: filesystem.InodeTable{
-			1: &filesystem.RegularInode{Size: 100, Hash: hash0},
+			1: &filesystem.RegularInode{Size: 100, Hash: hash0, Uid: uid},
 		},
 		DirectoryInode: filesystem.DirectoryInode{
 			EntryList: []*filesystem.DirectoryEntry{
@@ -142,10 +163,10 @@ func testDataFile0() *filesystem.FileSystem {
 	}
 }
 
-func testDataFile1() *filesystem.FileSystem {
+func testDataFile1(uid uint32) *filesystem.FileSystem {
 	return &filesystem.FileSystem{
 		InodeTable: filesystem.InodeTable{
-			1: &filesystem.RegularInode{Size: 101, Hash: hash1},
+			1: &filesystem.RegularInode{Size: 101, Hash: hash1, Uid: uid},
 		},
 		DirectoryInode: filesystem.DirectoryInode{
 			EntryList: []*filesystem.DirectoryEntry{
