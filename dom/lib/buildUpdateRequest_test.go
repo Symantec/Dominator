@@ -63,7 +63,7 @@ func TestExtraDirectoryToDelete(t *testing.T) {
 	}
 }
 
-func TestMergeFiles(t *testing.T) {
+func TestLinkFiles(t *testing.T) {
 	request := makeUpdateRequest(testDataLinkedFiles(),
 		testDataDuplicateFiles())
 	failed := false
@@ -73,6 +73,101 @@ func TestMergeFiles(t *testing.T) {
 	}
 	req := subproto.UpdateRequest{
 		HardlinksToMake: request.HardlinksToMake,
+	}
+	if !reflect.DeepEqual(request, req) {
+		t.Error("Unexpected changes being made")
+		failed = true
+	}
+	if failed {
+		reqTxt, err := json.MarshalIndent(request, "", "    ")
+		if err != nil {
+			t.Error(err)
+		} else {
+			t.Errorf("%s", reqTxt)
+		}
+	}
+}
+
+func TestSplitHardlinks(t *testing.T) {
+	request := makeUpdateRequest(testDataDuplicateFiles(),
+		testDataLinkedFiles())
+	failed := false
+	if len(request.FilesToCopyToCache) != 1 {
+		t.Error("File not being copied to cache")
+		failed = true
+	}
+	if len(request.InodesToMake) != 1 {
+		t.Error("Inode not being created")
+		failed = true
+	}
+	req := subproto.UpdateRequest{
+		FilesToCopyToCache: request.FilesToCopyToCache,
+		InodesToMake:       request.InodesToMake,
+	}
+	if !reflect.DeepEqual(request, req) {
+		t.Error("Unexpected changes being made")
+		failed = true
+	}
+	if failed {
+		reqTxt, err := json.MarshalIndent(request, "", "    ")
+		if err != nil {
+			t.Error(err)
+		} else {
+			t.Errorf("%s", reqTxt)
+		}
+	}
+}
+
+func TestSplitHashes1(t *testing.T) {
+	request := makeUpdateRequest(testDataDuplicateHashes1(),
+		testDataLinkedFiles())
+	failed := false
+	if len(request.FilesToCopyToCache) != 1 {
+		t.Error("File not being copied to cache")
+		failed = true
+	}
+	if len(request.InodesToMake) != 1 {
+		t.Error("Inode not being created")
+		failed = true
+	}
+	if len(request.InodesToChange) != 1 {
+		t.Error("Inode not being changed")
+		failed = true
+	}
+	req := subproto.UpdateRequest{
+		FilesToCopyToCache: request.FilesToCopyToCache,
+		InodesToMake:       request.InodesToMake,
+		InodesToChange:     request.InodesToChange,
+	}
+	if !reflect.DeepEqual(request, req) {
+		t.Error("Unexpected changes being made")
+		failed = true
+	}
+	if failed {
+		reqTxt, err := json.MarshalIndent(request, "", "    ")
+		if err != nil {
+			t.Error(err)
+		} else {
+			t.Errorf("%s", reqTxt)
+		}
+	}
+}
+
+func TestSplitHashes2(t *testing.T) {
+	request := makeUpdateRequest(testDataDuplicateHashes2(),
+		testDataLinkedFiles())
+	failed := false
+	if len(request.FilesToCopyToCache) != 1 {
+		t.Error("File not being copied to cache")
+		failed = true
+	}
+	if len(request.InodesToMake) != 1 {
+		t.Error("Inode not being created")
+		failed = true
+	}
+	req := subproto.UpdateRequest{
+		FilesToCopyToCache: request.FilesToCopyToCache,
+		InodesToMake:       request.InodesToMake,
 	}
 	if !reflect.DeepEqual(request, req) {
 		t.Error("Unexpected changes being made")
@@ -239,6 +334,48 @@ func testDataLinkedFiles() *filesystem.FileSystem {
 				&filesystem.DirectoryEntry{
 					Name:        "file2",
 					InodeNumber: 1,
+				},
+			},
+		},
+	}
+}
+
+func testDataDuplicateHashes1() *filesystem.FileSystem {
+	return &filesystem.FileSystem{
+		InodeTable: filesystem.InodeTable{
+			1: &filesystem.RegularInode{Size: 101, Hash: hash1, Uid: 1},
+			2: &filesystem.RegularInode{Size: 101, Hash: hash1},
+		},
+		DirectoryInode: filesystem.DirectoryInode{
+			EntryList: []*filesystem.DirectoryEntry{
+				&filesystem.DirectoryEntry{
+					Name:        "file1",
+					InodeNumber: 1,
+				},
+				&filesystem.DirectoryEntry{
+					Name:        "file2",
+					InodeNumber: 2,
+				},
+			},
+		},
+	}
+}
+
+func testDataDuplicateHashes2() *filesystem.FileSystem {
+	return &filesystem.FileSystem{
+		InodeTable: filesystem.InodeTable{
+			1: &filesystem.RegularInode{Size: 101, Hash: hash1},
+			2: &filesystem.RegularInode{Size: 101, Hash: hash1, Uid: 1},
+		},
+		DirectoryInode: filesystem.DirectoryInode{
+			EntryList: []*filesystem.DirectoryEntry{
+				&filesystem.DirectoryEntry{
+					Name:        "file1",
+					InodeNumber: 1,
+				},
+				&filesystem.DirectoryEntry{
+					Name:        "file2",
+					InodeNumber: 2,
 				},
 			},
 		},
