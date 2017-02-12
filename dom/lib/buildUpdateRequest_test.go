@@ -63,6 +63,31 @@ func TestExtraDirectoryToDelete(t *testing.T) {
 	}
 }
 
+func TestMergeFiles(t *testing.T) {
+	request := makeUpdateRequest(testDataLinkedFiles(),
+		testDataDuplicateFiles())
+	failed := false
+	if len(request.HardlinksToMake) != 1 {
+		t.Error("File not being linked")
+		failed = true
+	}
+	req := subproto.UpdateRequest{
+		HardlinksToMake: request.HardlinksToMake,
+	}
+	if !reflect.DeepEqual(request, req) {
+		t.Error("Unexpected changes being made")
+		failed = true
+	}
+	if failed {
+		reqTxt, err := json.MarshalIndent(request, "", "    ")
+		if err != nil {
+			t.Error(err)
+		} else {
+			t.Errorf("%s", reqTxt)
+		}
+	}
+}
+
 func makeUpdateRequest(imageFS *filesystem.FileSystem,
 	subFS *filesystem.FileSystem) subproto.UpdateRequest {
 	fetchedObjects := make(map[hash.Hash]struct{}, len(imageFS.InodeTable))
@@ -172,6 +197,47 @@ func testDataFile1(uid uint32) *filesystem.FileSystem {
 			EntryList: []*filesystem.DirectoryEntry{
 				&filesystem.DirectoryEntry{
 					Name:        "file1",
+					InodeNumber: 1,
+				},
+			},
+		},
+	}
+}
+
+func testDataDuplicateFiles() *filesystem.FileSystem {
+	return &filesystem.FileSystem{
+		InodeTable: filesystem.InodeTable{
+			1: &filesystem.RegularInode{Size: 101, Hash: hash1},
+			2: &filesystem.RegularInode{Size: 101, Hash: hash1},
+		},
+		DirectoryInode: filesystem.DirectoryInode{
+			EntryList: []*filesystem.DirectoryEntry{
+				&filesystem.DirectoryEntry{
+					Name:        "file1",
+					InodeNumber: 1,
+				},
+				&filesystem.DirectoryEntry{
+					Name:        "file2",
+					InodeNumber: 2,
+				},
+			},
+		},
+	}
+}
+
+func testDataLinkedFiles() *filesystem.FileSystem {
+	return &filesystem.FileSystem{
+		InodeTable: filesystem.InodeTable{
+			1: &filesystem.RegularInode{Size: 101, Hash: hash1},
+		},
+		DirectoryInode: filesystem.DirectoryInode{
+			EntryList: []*filesystem.DirectoryEntry{
+				&filesystem.DirectoryEntry{
+					Name:        "file1",
+					InodeNumber: 1,
+				},
+				&filesystem.DirectoryEntry{
+					Name:        "file2",
 					InodeNumber: 1,
 				},
 			},
