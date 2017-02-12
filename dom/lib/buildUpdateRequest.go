@@ -7,6 +7,7 @@ import (
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"log"
 	"path"
+	"sort"
 	"time"
 )
 
@@ -18,6 +19,7 @@ func (sub *Sub) buildUpdateRequest(image *image.Image,
 	sub.filter = image.Filter
 	request.Triggers = image.Triggers
 	sub.requiredInodeToSubInode = make(map[uint64]uint64)
+	sub.inodesMapped = make(map[uint64]struct{})
 	sub.inodesChanged = make(map[uint64]bool)
 	sub.inodesCreated = make(map[uint64]string)
 	sub.subObjectCacheUsage = make(map[hash.Hash]uint64, len(sub.ObjectCache))
@@ -63,7 +65,14 @@ func (sub *Sub) compareDirectories(request *subproto.UpdateRequest,
 			}
 		}
 	}
-	for name, requiredEntry := range requiredDirectory.EntriesByName {
+	// For the love of repeatable unit tests, sort before looping.
+	names := make([]string, 0, len(requiredDirectory.EntriesByName))
+	for name := range requiredDirectory.EntriesByName {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		requiredEntry := requiredDirectory.EntriesByName[name]
 		pathname := path.Join(myPathName, name)
 		if sub.filter != nil && sub.filter.Match(pathname) {
 			continue
@@ -164,30 +173,37 @@ func (sub *Sub) compareEntries(request *subproto.UpdateRequest,
 		return
 	}
 	if sameType && sameData && sameMetadata {
-		sub.relink(request, subEntry, requiredEntry, myPathName)
-		return
-	}
-	if sameType && sameData {
-		sub.updateMetadata(request, requiredEntry, myPathName)
-		sub.relink(request, subEntry, requiredEntry, myPathName)
-		return
+		if sub.relink(request, subEntry, requiredEntry, myPathName) {
+			return
+		}
+	} else if sameType && sameData {
+		if sub.relink(request, subEntry, requiredEntry, myPathName) {
+			sub.updateMetadata(request, requiredEntry, myPathName)
+			return
+		}
 	}
 	sub.addInode(request, requiredEntry, myPathName)
 }
 
 func (sub *Sub) relink(request *subproto.UpdateRequest,
-	subEntry, requiredEntry *filesystem.DirectoryEntry, myPathName string) {
+	subEntry, requiredEntry *filesystem.DirectoryEntry,
+	myPathName string) bool {
 	subInum, ok := sub.requiredInodeToSubInode[requiredEntry.InodeNumber]
 	if !ok {
+		if _, mapped := sub.inodesMapped[subEntry.InodeNumber]; mapped {
+			return false
+		}
 		sub.requiredInodeToSubInode[requiredEntry.InodeNumber] =
 			subEntry.InodeNumber
-		return
+		sub.inodesMapped[subEntry.InodeNumber] = struct{}{}
+		return true
 	}
 	if subInum == subEntry.InodeNumber {
-		return
+		return true
 	}
 	makeHardlink(request,
 		myPathName, sub.FileSystem.InodeToFilenamesTable()[subInum][0])
+	return true
 }
 
 func makeHardlink(request *subproto.UpdateRequest, newLink, target string) {
