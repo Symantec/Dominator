@@ -3,7 +3,6 @@ package unpacker
 import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/objectcache"
-	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"io"
 	"log"
@@ -59,13 +58,13 @@ type streamManagerState struct {
 }
 
 type Unpacker struct {
-	baseDir             string
-	imageServerResource *srpc.ClientResource
-	logger              *log.Logger
-	rwMutex             sync.RWMutex // Protect below.
-	pState              persistentState
-	scannedDevices      map[string]struct{}
-	lastUsedTime        time.Time
+	baseDir            string
+	imageServerAddress string
+	logger             *log.Logger
+	rwMutex            sync.RWMutex // Protect below.
+	pState             persistentState
+	scannedDevices     map[string]struct{}
+	lastUsedTime       time.Time
 }
 
 func Load(baseDir string, imageServerAddress string, logger *log.Logger) (

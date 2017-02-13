@@ -3,7 +3,6 @@ package unpacker
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/Symantec/Dominator/lib/srpc"
 	"log"
 	"os"
 	"path"
@@ -22,9 +21,9 @@ func load(baseDir string, imageServerAddress string, logger *log.Logger) (
 		return nil, err
 	}
 	u := &Unpacker{
-		baseDir:             baseDir,
-		imageServerResource: srpc.NewClientResource("tcp", imageServerAddress),
-		logger:              logger,
+		baseDir:            baseDir,
+		imageServerAddress: imageServerAddress,
+		logger:             logger,
 	}
 	u.updateUsageTimeWithLock()
 	file, err := os.Open(path.Join(baseDir, stateFile))
