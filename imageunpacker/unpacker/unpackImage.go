@@ -12,6 +12,7 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
+	"github.com/Symantec/Dominator/lib/srpc"
 	unpackproto "github.com/Symantec/Dominator/proto/imageunpacker"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	sublib "github.com/Symantec/Dominator/sub/lib"
@@ -52,19 +53,19 @@ func (u *Unpacker) getImage(imageName string) *image.Image {
 	u.logger.Printf("Getting image: %s\n", imageName)
 	interval := time.Second
 	for ; true; time.Sleep(interval) {
-		srpcClient, err := u.imageServerResource.GetHTTP(nil, 0)
+		srpcClient, err := srpc.DialHTTP("tcp", u.imageServerAddress,
+			time.Second*15)
 		if err != nil {
 			u.logger.Printf("Error connecting to image server: %s\n", err)
 			continue
 		}
 		image, err := imageclient.GetImageWithTimeout(srpcClient, imageName,
 			time.Minute)
+		srpcClient.Close()
 		if err != nil {
-			srpcClient.Close()
 			u.logger.Printf("Error getting image: %s\n", err)
 			continue
 		}
-		srpcClient.Put()
 		if image != nil {
 			return image
 		}
@@ -151,11 +152,12 @@ func (stream *streamManagerState) fetch(imageName string,
 	objectsToFetch []hash.Hash, destDirname string) error {
 	startTime := time.Now()
 	stream.streamInfo.status = unpackproto.StatusStreamFetching
-	srpcClient, err := stream.unpacker.imageServerResource.GetHTTP(nil, 0)
+	srpcClient, err := srpc.DialHTTP("tcp", stream.unpacker.imageServerAddress,
+		time.Second*15)
 	if err != nil {
 		return err
 	}
-	defer srpcClient.Put()
+	defer srpcClient.Close()
 	objectServer := objectclient.AttachObjectClient(srpcClient)
 	defer objectServer.Close()
 	objectsReader, err := objectServer.GetObjects(objectsToFetch)
