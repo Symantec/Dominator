@@ -20,7 +20,7 @@ func (pData *publishData) publish(targets awsutil.TargetList,
 	if err != nil {
 		return nil, err
 	}
-	fs.TotalDataBytes = estimateFsUsage(fs)
+	fs.TotalDataBytes = fs.EstimateUsage(0)
 	pData.fileSystem = fs
 	resultsChannel := make(chan TargetResult, 1)
 	numTargets, err := awsutil.ForEachTarget(targets, skipList,
@@ -126,27 +126,6 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	amiId, err := registerAmi(awsService, snapshotId, pData.amiName, imageName,
 		pData.tags, logger)
 	return snapshotId, amiId, uint(volumeSize >> 30), nil
-}
-
-func estimateFsUsage(fs *filesystem.FileSystem) uint64 {
-	var totalDataBytes uint64
-	for _, inode := range fs.InodeTable {
-		if _, ok := inode.(*filesystem.DirectoryInode); ok {
-			totalDataBytes += 1 << 12
-		}
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			// Round up to the nearest page size.
-			size := (inode.Size >> 12) << 12
-			if size < inode.Size {
-				size += 1 << 12
-			}
-			totalDataBytes += size
-		}
-		if _, ok := inode.(*filesystem.SymlinkInode); ok {
-			totalDataBytes += 1 << 9
-		}
-	}
-	return totalDataBytes
 }
 
 func selectVolume(srpcClient *srpc.Client, awsService *ec2.EC2,
