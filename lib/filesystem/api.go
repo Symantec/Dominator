@@ -63,6 +63,10 @@ func (fs *FileSystem) Encode(writer io.Writer) error {
 	return fs.encode(writer)
 }
 
+func (fs *FileSystem) EstimateUsage(blockSize uint64) uint64 {
+	return fs.estimateUsage(blockSize)
+}
+
 func (fs *FileSystem) FilenameToInodeTable() FilenameToInodeTable {
 	return fs.buildFilenameToInodeTable()
 }

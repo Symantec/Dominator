@@ -464,14 +464,20 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image,
 }
 
 func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
-	imageName string, tags awsutil.Tags, logger log.Logger) (string, error) {
+	imageName string, tags awsutil.Tags, imageGiB uint64, logger log.Logger) (
+	string, error) {
 	rootDevName := "/dev/sda1"
 	blkDevMaps := make([]*ec2.BlockDeviceMapping, 1)
+	var volumeSize *int64
+	if imageGiB > 0 {
+		volumeSize = aws.Int64(int64(imageGiB))
+	}
 	blkDevMaps[0] = &ec2.BlockDeviceMapping{
 		DeviceName: aws.String(rootDevName),
 		Ebs: &ec2.EbsBlockDevice{
 			DeleteOnTermination: aws.Bool(true),
 			SnapshotId:          aws.String(snapshotId),
+			VolumeSize:          volumeSize,
 			VolumeType:          aws.String("gp2"),
 		},
 	}

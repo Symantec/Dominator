@@ -20,7 +20,7 @@ func (pData *publishData) publish(targets awsutil.TargetList,
 	if err != nil {
 		return nil, err
 	}
-	fs.TotalDataBytes = estimateFsUsage(fs)
+	fs.TotalDataBytes = fs.EstimateUsage(0)
 	pData.fileSystem = fs
 	resultsChannel := make(chan TargetResult, 1)
 	numTargets, err := awsutil.ForEachTarget(targets, skipList,
@@ -84,7 +84,8 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	defer srpcClient.Close()
 	logger.Printf("Preparing to unpack: %s\n", pData.streamName)
 	uclient.PrepareForUnpack(srpcClient, pData.streamName, true, false)
-	minBytes := pData.fileSystem.TotalDataBytes + pData.minFreeBytes
+	usageEstimate := pData.fileSystem.EstimateUsage(0)
+	minBytes := usageEstimate + usageEstimate>>2 // 25% extra for updating.
 	status, err := selectVolume(srpcClient, awsService, pData.streamName,
 		minBytes, pData.tags, unpackerInstance, logger)
 	if err != nil {
@@ -122,31 +123,18 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 		return "", "", 0, err
 	}
 	logger.Println("Registering AMI...")
-	volumeSize := status.Devices[volumeId].Size
-	amiId, err := registerAmi(awsService, snapshotId, pData.amiName, imageName,
-		pData.tags, logger)
-	return snapshotId, amiId, uint(volumeSize >> 30), nil
-}
-
-func estimateFsUsage(fs *filesystem.FileSystem) uint64 {
-	var totalDataBytes uint64
-	for _, inode := range fs.InodeTable {
-		if _, ok := inode.(*filesystem.DirectoryInode); ok {
-			totalDataBytes += 1 << 12
-		}
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			// Round up to the nearest page size.
-			size := (inode.Size >> 12) << 12
-			if size < inode.Size {
-				size += 1 << 12
-			}
-			totalDataBytes += size
-		}
-		if _, ok := inode.(*filesystem.SymlinkInode); ok {
-			totalDataBytes += 1 << 9
-		}
+	volumeSize := status.Devices[volumeId].Size >> 30
+	imageBytes := usageEstimate + pData.minFreeBytes
+	imageGiB := imageBytes >> 30
+	if imageGiB<<30 < imageBytes {
+		imageGiB++
 	}
-	return totalDataBytes
+	if volumeSize > imageGiB {
+		imageGiB = volumeSize
+	}
+	amiId, err := registerAmi(awsService, snapshotId, pData.amiName, imageName,
+		pData.tags, imageGiB, logger)
+	return snapshotId, amiId, uint(imageGiB), nil
 }
 
 func selectVolume(srpcClient *srpc.Client, awsService *ec2.EC2,
