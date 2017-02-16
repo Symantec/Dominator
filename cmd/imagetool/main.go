@@ -70,6 +70,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "           i: name of an image on the imageserver")
 	fmt.Fprintln(os.Stderr, "           l: name of file containing an Image")
 	fmt.Fprintln(os.Stderr, "           s: name of sub to poll")
+	fmt.Fprintln(os.Stderr, "  estimate-usage name")
 	fmt.Fprintln(os.Stderr, "  get    name directory")
 	fmt.Fprintln(os.Stderr, "  list")
 	fmt.Fprintln(os.Stderr, "  listdirs")
@@ -109,6 +110,7 @@ var subcommands = []subcommand{
 	{"delete", 1, 1, deleteImageSubcommand},
 	{"delunrefobj", 2, 2, deleteUnreferencedObjectsSubcommand},
 	{"diff", 3, 3, diffSubcommand},
+	{"estimate-usage", 1, 1, estimateImageUsageSubcommand},
 	{"get", 2, 2, getImageSubcommand},
 	{"list", 0, 0, listImagesSubcommand},
 	{"listdirs", 0, 0, listDirectoriesSubcommand},
