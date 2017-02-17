@@ -22,8 +22,10 @@ func CopyToFile(destFilename string, perm os.FileMode, reader io.Reader,
 }
 
 // ForceLink creates newname as a hard link to the oldname file. It first
-// attempts to link using os.Link and if that fails, it blindly calls
-// MakeMutable and then retries.
+// attempts to link using os.Link. If the first attempt fails due to
+// a permission error, it blindly calls MakeMutable and then retries. If the
+// first attempt fails due to newname existing, it blindly removes it and then
+// retries.
 func ForceLink(oldname, newname string) error {
 	return forceLink(oldname, newname)
 }
