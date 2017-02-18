@@ -13,6 +13,8 @@ func forceLink(oldname, newname string) error {
 	if os.IsPermission(err) {
 		// Blindly attempt to remove immutable attributes.
 		MakeMutable(oldname, newname)
+	} else if os.IsExist(err) {
+		forceRemove(newname)
 	}
 	return os.Link(oldname, newname)
 }

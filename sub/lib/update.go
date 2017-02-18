@@ -79,7 +79,7 @@ func copyFile(destPathname, sourcePathname string, doHardlink bool) error {
 		return err
 	}
 	if doHardlink {
-		return os.Link(sourcePathname, destPathname)
+		return fsutil.ForceLink(sourcePathname, destPathname)
 	}
 	sourceFile, err := os.Open(sourcePathname)
 	if err != nil {
