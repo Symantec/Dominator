@@ -73,6 +73,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
+	fmt.Fprintln(os.Stderr, "  cleanup")
 	fmt.Fprintln(os.Stderr, "  fetch hashesFile")
 	fmt.Fprintln(os.Stderr, "  get-config")
 	fmt.Fprintln(os.Stderr, "  get-file remoteFile localFile")
@@ -126,6 +127,7 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
+	{"cleanup", 0, getSubClient, cleanupSubcommand},
 	{"fetch", 1, getSubClient, fetchSubcommand},
 	{"get-config", 0, getSubClient, getConfigSubcommand},
 	{"get-file", 2, getSubClient, getFileSubcommand},
