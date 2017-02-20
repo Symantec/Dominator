@@ -20,7 +20,7 @@ fi
 readonly signing_key="$1"
 readonly newkey="$2"
 
-if [ "$3" == "AUTO" ]; then
+if [ "$3" = "AUTO" ]; then
     if [ -r .serial ]; then
 	old_serial=$(< .serial)
     else
