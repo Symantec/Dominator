@@ -76,13 +76,15 @@ func (m *Manager) handleRequest(decoder *gob.Decoder,
 	serverMessage := new(proto.ServerMessage)
 	if request := request.YieldRequest; request != nil {
 		m.updateMachineData(request.Machine)
-		fileInfos := make([]proto.FileInfo, len(request.Pathnames))
+		fileInfos := make([]proto.FileInfo, 0, len(request.Pathnames))
+		for _, pathname := range request.Pathnames {
+			if fileInfo, ok := m.computeFile(request.Machine, pathname); ok {
+				fileInfos = append(fileInfos, fileInfo)
+			}
+		}
 		serverMessage.YieldResponse = &proto.YieldResponse{
 			Hostname: request.Machine.Hostname,
 			Files:    fileInfos}
-		for index, pathname := range request.Pathnames {
-			fileInfos[index] = m.computeFile(request.Machine, pathname)
-		}
 	}
 	if request := request.GetObjectRequest; request != nil {
 		_, reader, err := m.objectServer.GetObject(request.Hash)
@@ -113,29 +115,29 @@ func (m *Manager) updateMachineData(machine mdb.Machine) {
 	}
 }
 
-func (m *Manager) computeFile(machine mdb.Machine,
-	pathname string) proto.FileInfo {
+func (m *Manager) computeFile(machine mdb.Machine, pathname string) (
+	proto.FileInfo, bool) {
 	fileInfo := proto.FileInfo{Pathname: pathname}
 	m.rwMutex.RLock()
 	pathMgr, ok := m.pathManagers[pathname]
 	if !ok {
 		m.rwMutex.RUnlock()
 		m.logger.Println("no generator for: " + pathname)
-		return fileInfo
+		return fileInfo, false
 	}
 	if fi, ok := pathMgr.machineHashes[machine.Hostname]; ok {
 		if fi.validUntil.IsZero() || time.Now().Before(fi.validUntil) {
 			m.rwMutex.RUnlock()
 			fileInfo.Hash = fi.hash
 			fileInfo.Length = fi.length
-			return fileInfo
+			return fileInfo, true
 		}
 	}
 	m.rwMutex.RUnlock()
 	hashVal, length, validUntil, err := pathMgr.generator.generate(machine,
 		m.logger)
 	if err != nil {
-		return fileInfo
+		return fileInfo, false
 	}
 	fileInfo.Hash = hashVal
 	fileInfo.Length = length
@@ -144,5 +146,5 @@ func (m *Manager) computeFile(machine mdb.Machine,
 	pathMgr.machineHashes[machine.Hostname] = expiringHash{
 		hashVal, length, validUntil}
 	m.scheduleTimer(pathname, machine.Hostname, validUntil)
-	return fileInfo
+	return fileInfo, true
 }
