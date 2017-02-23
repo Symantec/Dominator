@@ -6,6 +6,8 @@ import (
 	"reflect"
 )
 
+var zeroHash hash.Hash
+
 func buildMachine(machine Machine) *machineType {
 	computedFiles := make(map[string]string, len(machine.ComputedFiles))
 	sourceToPaths := make(map[string][]string)
@@ -76,6 +78,7 @@ func (m *Manager) handleYieldResponse(machine *machineType,
 	files []proto.FileInfo) {
 	objectsToWaitFor := make(map[hash.Hash]struct{})
 	waiterChannel := make(chan hash.Hash)
+	// Get list of objects to wait for.
 	for _, file := range files {
 		sourceName, ok := machine.computedFiles[file.Pathname]
 		if !ok {
@@ -87,11 +90,16 @@ func (m *Manager) handleYieldResponse(machine *machineType,
 		if !ok {
 			panic("no source for: " + sourceName)
 		}
-		hashes := make([]hash.Hash, 1)
-		hashes[0] = file.Hash
+		if file.Hash == zeroHash {
+			m.logger.Printf("Received zero hash for machine: %s file: %s\n",
+				machine.machine.Hostname, file.Pathname)
+			continue // No object.
+		}
+		hashes := []hash.Hash{file.Hash}
 		if lengths, err := m.objectServer.CheckObjects(hashes); err != nil {
 			panic(err)
 		} else if lengths[0] < 1 {
+			// Not already in objectserver, so add to the list to wait for.
 			request := &proto.ClientRequest{
 				GetObjectRequest: &proto.GetObjectRequest{file.Hash}}
 			source.sendChannel <- request

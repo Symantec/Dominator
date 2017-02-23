@@ -31,6 +31,7 @@ var (
 		"If true, prefer to use IP address from MDB if available")
 
 	subPortNumber = fmt.Sprintf(":%d", constants.SubPortNumber)
+	zeroHash      hash.Hash
 )
 
 func (sub *Sub) string() string {
@@ -220,6 +221,9 @@ func (sub *Sub) processFileUpdates() bool {
 			}
 			filenameToInodeTable := image.FileSystem.FilenameToInodeTable()
 			for _, fileInfo := range fileInfos {
+				if fileInfo.Hash == zeroHash {
+					continue // No object.
+				}
 				inum, ok := filenameToInodeTable[fileInfo.Pathname]
 				if !ok {
 					continue
@@ -232,13 +236,14 @@ func (sub *Sub) processFileUpdates() bool {
 				if !ok {
 					continue
 				}
-				rInode := new(filesystem.RegularInode)
-				rInode.Mode = cInode.Mode
-				rInode.Uid = cInode.Uid
-				rInode.Gid = cInode.Gid
-				rInode.MtimeSeconds = -1 // The time is set during the compute.
-				rInode.Size = fileInfo.Length
-				rInode.Hash = fileInfo.Hash
+				rInode := &filesystem.RegularInode{
+					Mode:         cInode.Mode,
+					Uid:          cInode.Uid,
+					Gid:          cInode.Gid,
+					MtimeSeconds: -1, // The time is set during the compute.
+					Size:         fileInfo.Length,
+					Hash:         fileInfo.Hash,
+				}
 				sub.computedInodes[fileInfo.Pathname] = rInode
 				haveUpdates = true
 			}
