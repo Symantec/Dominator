@@ -80,8 +80,12 @@ func getWorkingUnpacker(awsService *ec2.EC2, name string, logger log.Logger) (
 		strconv.Itoa(constants.ImageUnpackerPortNumber)
 	logger.Printf("discovered unpacker: %s at %s\n",
 		*unpackerInstance.InstanceId, address)
-	srpcClient, err := connectToUnpacker(address,
-		launchTime.Add(time.Minute*10), logger)
+	retryUntil := launchTime.Add(time.Minute * 10)
+	if time.Until(retryUntil) < time.Minute {
+		// Give at least one minute grace in case unpacker restarts.
+		retryUntil = time.Now().Add(time.Minute)
+	}
+	srpcClient, err := connectToUnpacker(address, retryUntil, logger)
 	if err != nil {
 		return nil, nil, err
 	}
