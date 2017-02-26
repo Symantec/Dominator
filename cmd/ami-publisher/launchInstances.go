@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
+	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"os"
 	"path"
@@ -20,7 +21,19 @@ func launchInstances(bootImage string, logger log.Logger) error {
 	bootImage = path.Clean(bootImage)
 	tags["Name"] = *instanceName
 	searchTags["Name"] = bootImage
-	return amipublisher.LaunchInstances(targets, skipTargets, searchTags,
-		vpcSearchTags, subnetSearchTags, securityGroupSearchTags,
+	results, err := amipublisher.LaunchInstances(targets, skipTargets,
+		searchTags, vpcSearchTags, subnetSearchTags, securityGroupSearchTags,
 		*instanceType, *sshKeyName, tags, logger)
+	if err != nil {
+		return err
+	}
+	if err := libjson.WriteWithIndent(os.Stdout, "    ", results); err != nil {
+		return err
+	}
+	for _, result := range results {
+		if result.Error != nil {
+			return result.Error
+		}
+	}
+	return nil
 }

@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+type InstanceResult struct {
+	awsutil.Target
+	InstanceId string
+	Error      error
+}
+
 type publishData struct {
 	imageServerAddress string
 	streamName         string
@@ -90,7 +96,8 @@ func ImportKeyPair(targets awsutil.TargetList, skipList awsutil.TargetList,
 func LaunchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
 	imageSearchTags, vpcSearchTags, subnetSearchTags,
 	securityGroupSearchTags awsutil.Tags, instanceType string,
-	sshKeyName string, tags map[string]string, logger log.Logger) error {
+	sshKeyName string, tags map[string]string, logger log.Logger) (
+	[]InstanceResult, error) {
 	return launchInstances(targets, skipList, imageSearchTags, vpcSearchTags,
 		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName,
 		tags, logger)
