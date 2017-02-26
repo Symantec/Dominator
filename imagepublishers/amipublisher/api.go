@@ -13,6 +13,10 @@ type InstanceResult struct {
 	Error      error
 }
 
+func (v InstanceResult) MarshalJSON() ([]byte, error) {
+	return v.marshalJSON()
+}
+
 type publishData struct {
 	imageServerAddress string
 	streamName         string
