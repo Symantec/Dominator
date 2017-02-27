@@ -107,6 +107,15 @@ func LaunchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
 		tags, logger)
 }
 
+func LaunchInstancesForImages(images []Resource,
+	vpcSearchTags, subnetSearchTags, securityGroupSearchTags awsutil.Tags,
+	instanceType string, sshKeyName string, tags map[string]string,
+	logger log.Logger) ([]InstanceResult, error) {
+	return launchInstancesForImages(images, vpcSearchTags,
+		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName,
+		tags, logger)
+}
+
 func ListUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
 	name string, logger log.Logger) (
 	[]TargetUnpackers, error) {

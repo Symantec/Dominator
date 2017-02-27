@@ -83,3 +83,63 @@ func launchInstanceInTarget(awsService *ec2.EC2,
 	logger.Printf("running: %s\n", instanceId)
 	return instanceId, nil
 }
+
+func launchInstancesForImages(resources []Resource,
+	vpcSearchTags, subnetSearchTags, securityGroupSearchTags awsutil.Tags,
+	instanceType string, sshKeyName string, tags map[string]string,
+	logger log.Logger) ([]InstanceResult, error) {
+	resultsChannel := make(chan InstanceResult, 1)
+	err := forEachResource(resources, false,
+		func(awsService *ec2.EC2, resource Resource, logger log.Logger) error {
+			instanceId, err := launchInstanceForImage(awsService, resource,
+				vpcSearchTags, subnetSearchTags, securityGroupSearchTags,
+				instanceType, sshKeyName, tags, logger)
+			if err != nil {
+				logger.Println(err)
+			}
+			resultsChannel <- InstanceResult{
+				awsutil.Target{resource.AccountName, resource.Region},
+				instanceId,
+				err,
+			}
+			return err
+		},
+		logger)
+	// Collect results.
+	results := make([]InstanceResult, 0, len(resources))
+	for i := 0; i < len(resources); i++ {
+		result := <-resultsChannel
+		if result.AccountName == "" || result.Region == "" {
+			continue
+		}
+		results = append(results, result)
+	}
+	return results, err
+}
+
+func launchInstanceForImage(awsService *ec2.EC2, resource Resource,
+	vpcSearchTags, subnetSearchTags,
+	securityGroupSearchTags awsutil.Tags,
+	instanceType string, sshKeyName string, tags map[string]string,
+	logger log.Logger) (string, error) {
+	instance, err := launchInstance(awsService,
+		&ec2.Image{ImageId: aws.String(resource.AmiId)},
+		vpcSearchTags, subnetSearchTags, securityGroupSearchTags, instanceType,
+		sshKeyName)
+	if err != nil {
+		return "", err
+	}
+	instanceId := aws.StringValue(instance.InstanceId)
+	logger.Printf("launched: %s\n", instanceId)
+	if err := createTags(awsService, instanceId, tags); err != nil {
+		return "", nil
+	}
+	err = awsService.WaitUntilInstanceRunning(&ec2.DescribeInstancesInput{
+		InstanceIds: aws.StringSlice([]string{instanceId}),
+	})
+	if err != nil {
+		return "", err
+	}
+	logger.Printf("running: %s\n", instanceId)
+	return instanceId, nil
+}
