@@ -10,6 +10,7 @@ import (
 type InstanceResult struct {
 	awsutil.Target
 	InstanceId string
+	PrivateIp  string
 	Error      error
 }
 

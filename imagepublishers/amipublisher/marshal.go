@@ -13,8 +13,9 @@ func (v InstanceResult) marshalJSON() ([]byte, error) {
 		AccountName string
 		Region      string
 		InstanceId  string `json:",omitempty"`
+		PrivateIp   string `json:",omitempty"`
 		Error       string `json:",omitempty"`
-	}{v.AccountName, v.Region, v.InstanceId, errString}
+	}{v.AccountName, v.Region, v.InstanceId, v.PrivateIp, errString}
 	return json.Marshal(val)
 }
 
