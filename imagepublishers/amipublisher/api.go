@@ -155,6 +155,12 @@ func SetTags(targets awsutil.TargetList, skipList awsutil.TargetList,
 	return setTags(targets, skipList, name, tags, logger)
 }
 
+func StartInstances(targets awsutil.TargetList,
+	skipList awsutil.TargetList, name string, logger log.Logger) (
+	[]InstanceResult, error) {
+	return startInstances(targets, skipList, name, logger)
+}
+
 func StopIdleUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
 	name string, idleTimeout time.Duration, logger log.Logger) error {
 	return stopIdleUnpackers(targets, skipList, name, idleTimeout, logger)

@@ -515,6 +515,19 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
 	return *ami.ImageId, nil
 }
 
+func libStartInstances(awsService *ec2.EC2, instanceIds ...string) error {
+	_, err := awsService.StartInstances(&ec2.StartInstancesInput{
+		InstanceIds: aws.StringSlice(instanceIds),
+	})
+	if err != nil {
+		return err
+	}
+	err = awsService.WaitUntilInstanceRunning(&ec2.DescribeInstancesInput{
+		InstanceIds: aws.StringSlice(instanceIds),
+	})
+	return err
+}
+
 func stopInstances(awsService *ec2.EC2, instanceIds ...string) error {
 	_, err := awsService.StopInstances(&ec2.StopInstancesInput{
 		InstanceIds: aws.StringSlice(instanceIds),
