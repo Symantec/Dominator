@@ -81,6 +81,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  publish stream-name image-leaf-name")
 	fmt.Fprintln(os.Stderr, "  set-exclusive-tags key value results-file...")
 	fmt.Fprintln(os.Stderr, "  set-tags-on-unpackers")
+	fmt.Fprintln(os.Stderr, "  start-instances")
 	fmt.Fprintln(os.Stderr, "  stop-idle-unpackers")
 	fmt.Fprintln(os.Stderr, "  terminate-instances")
 }
@@ -108,6 +109,7 @@ var subcommands = []subcommand{
 	{"publish", 2, 2, publishSubcommand},
 	{"set-exclusive-tags", 2, -1, setExclusiveTagsSubcommand},
 	{"set-tags-on-unpackers", 0, 0, setTagsSubcommand},
+	{"start-instances", 0, 0, startInstancesSubcommand},
 	{"stop-idle-unpackers", 0, 0, stopIdleUnpackersSubcommand},
 	{"terminate-instances", 0, 0, terminateInstancesSubcommand},
 }
