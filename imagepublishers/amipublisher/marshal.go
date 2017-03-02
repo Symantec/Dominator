@@ -4,6 +4,21 @@ import (
 	"encoding/json"
 )
 
+func (v InstanceResult) marshalJSON() ([]byte, error) {
+	errString := ""
+	if v.Error != nil {
+		errString = v.Error.Error()
+	}
+	val := struct {
+		AccountName string
+		Region      string
+		InstanceId  string `json:",omitempty"`
+		PrivateIp   string `json:",omitempty"`
+		Error       string `json:",omitempty"`
+	}{v.AccountName, v.Region, v.InstanceId, v.PrivateIp, errString}
+	return json.Marshal(val)
+}
+
 func (v TargetResult) marshalJSON() ([]byte, error) {
 	errString := ""
 	if v.Error != nil {

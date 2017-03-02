@@ -1,4 +1,8 @@
 language: go
+
+go:
+  - 1.x
+
 before_install:
 - REPO_NAME=$(basename $PWD)
 - GITHUB_PATH=$(dirname $(dirname $PWD))

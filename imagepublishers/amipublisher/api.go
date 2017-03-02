@@ -7,6 +7,17 @@ import (
 	"time"
 )
 
+type InstanceResult struct {
+	awsutil.Target
+	InstanceId string
+	PrivateIp  string
+	Error      error
+}
+
+func (v InstanceResult) MarshalJSON() ([]byte, error) {
+	return v.marshalJSON()
+}
+
 type publishData struct {
 	imageServerAddress string
 	streamName         string
@@ -90,8 +101,18 @@ func ImportKeyPair(targets awsutil.TargetList, skipList awsutil.TargetList,
 func LaunchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
 	imageSearchTags, vpcSearchTags, subnetSearchTags,
 	securityGroupSearchTags awsutil.Tags, instanceType string,
-	sshKeyName string, tags map[string]string, logger log.Logger) error {
+	sshKeyName string, tags map[string]string, logger log.Logger) (
+	[]InstanceResult, error) {
 	return launchInstances(targets, skipList, imageSearchTags, vpcSearchTags,
+		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName,
+		tags, logger)
+}
+
+func LaunchInstancesForImages(images []Resource,
+	vpcSearchTags, subnetSearchTags, securityGroupSearchTags awsutil.Tags,
+	instanceType string, sshKeyName string, tags map[string]string,
+	logger log.Logger) ([]InstanceResult, error) {
+	return launchInstancesForImages(images, vpcSearchTags,
 		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName,
 		tags, logger)
 }
@@ -132,6 +153,12 @@ func SetExclusiveTags(resources []Resource, tagKey string, tagValue string,
 func SetTags(targets awsutil.TargetList, skipList awsutil.TargetList,
 	name string, tags map[string]string, logger log.Logger) error {
 	return setTags(targets, skipList, name, tags, logger)
+}
+
+func StartInstances(targets awsutil.TargetList,
+	skipList awsutil.TargetList, name string, logger log.Logger) (
+	[]InstanceResult, error) {
+	return startInstances(targets, skipList, name, logger)
 }
 
 func StopIdleUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
