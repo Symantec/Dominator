@@ -4,6 +4,15 @@ import (
 	"regexp"
 )
 
+type MergeableTriggers struct {
+	triggers map[string]*mergeableTrigger // Key: service name.
+}
+
+type mergeableTrigger struct {
+	matchLines map[string]struct{}
+	highImpact bool
+}
+
 type Trigger struct {
 	MatchLines   []string
 	matchRegexes []*regexp.Regexp
@@ -28,6 +37,14 @@ func Load(filename string) (*Triggers, error) {
 
 func New() *Triggers {
 	return newTriggers()
+}
+
+func (mt *MergeableTriggers) ExportTriggers() *Triggers {
+	return mt.exportTriggers()
+}
+
+func (mt *MergeableTriggers) Merge(triggers *Triggers) {
+	mt.merge(triggers)
 }
 
 func (triggers *Triggers) Match(line string) {
