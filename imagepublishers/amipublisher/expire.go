@@ -85,6 +85,9 @@ func expireImage(awsService *ec2.EC2, image *ec2.Image, currentTime time.Time,
 
 func expireInstance(awsService *ec2.EC2, instance *ec2.Instance,
 	currentTime time.Time, logger log.Logger) {
+	if aws.StringValue(instance.State.Name) == ec2.InstanceStateNameTerminated {
+		return
+	}
 	if hasExpired(instance.Tags, currentTime) {
 		instanceId := aws.StringValue(instance.InstanceId)
 		if err := libTerminateInstances(awsService, instanceId); err != nil {
