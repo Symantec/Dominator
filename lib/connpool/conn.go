@@ -1,10 +1,5 @@
 package connpool
 
-import (
-	"net"
-	"time"
-)
-
 func newConnResource(network, address string) *ConnResource {
 	connResource := &ConnResource{
 		network: network,
@@ -17,8 +12,8 @@ func newConnResource(network, address string) *ConnResource {
 }
 
 func (cr *ConnResource) get(cancelChannel <-chan struct{},
-	timeout time.Duration) (*Conn, error) {
-	cr.privateConnResource.dialTimeout = timeout
+	dialer Dialer) (*Conn, error) {
+	cr.privateConnResource.dialer = dialer
 	if err := cr.resource.Get(cancelChannel); err != nil {
 		return nil, err
 	}
@@ -37,7 +32,7 @@ func (conn *Conn) put() {
 
 func (pcr *privateConnResource) Allocate() error {
 	cr := pcr.connResource
-	netConn, err := net.DialTimeout(cr.network, cr.address, pcr.dialTimeout)
+	netConn, err := pcr.dialer.Dial(cr.network, cr.address)
 	if err != nil {
 		return err
 	}
