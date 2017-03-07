@@ -107,7 +107,8 @@ func (cr *ConnResource) Get(cancelChannel <-chan struct{},
 // to make the connection. The OS may impose it's own timeout (typically 3
 // minutes for TCP). A different dialer may be used to create TLS connections.
 // Note that changing dialer types does not guarantee the connection type
-// returned, as the dialer may not be called on every call to GetWithDialer.
+// returned, as the dialer may not be called on every call to GetWithDialer,
+// thus changing dialer types will result in unpredictable behaviour.
 // GetWithDialer will panic if it is called again without an intervening Close
 // or Put.
 func (cr *ConnResource) GetWithDialer(cancelChannel <-chan struct{},
