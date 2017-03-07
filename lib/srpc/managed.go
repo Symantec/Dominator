@@ -3,7 +3,6 @@ package srpc
 import (
 	"crypto/tls"
 	"github.com/Symantec/Dominator/lib/connpool"
-	"time"
 )
 
 func newClientResource(network, address string) *ClientResource {
@@ -18,9 +17,9 @@ func newClientResource(network, address string) *ClientResource {
 }
 
 func (cr *ClientResource) getHTTP(tlsConfig *tls.Config,
-	cancelChannel <-chan struct{}, timeout time.Duration) (*Client, error) {
+	cancelChannel <-chan struct{}, dialer connpool.Dialer) (*Client, error) {
 	cr.privateClientResource.tlsConfig = tlsConfig
-	cr.privateClientResource.dialTimeout = timeout
+	cr.privateClientResource.dialer = dialer
 	if err := cr.resource.Get(cancelChannel); err != nil {
 		return nil, err
 	}
@@ -43,8 +42,7 @@ func (client *Client) put() {
 
 func (pcr *privateClientResource) Allocate() error {
 	cr := pcr.clientResource
-	client, err := dialHTTP(cr.network, cr.address, pcr.tlsConfig,
-		pcr.dialTimeout)
+	client, err := dialHTTP(cr.network, cr.address, pcr.tlsConfig, pcr.dialer)
 	if err != nil {
 		return err
 	}

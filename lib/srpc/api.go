@@ -15,6 +15,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"errors"
+	"github.com/Symantec/Dominator/lib/connpool"
 	"github.com/Symantec/Dominator/lib/resourcepool"
 	"net"
 	"sync"
@@ -84,7 +85,7 @@ func RegisterClientTlsConfig(config *tls.Config) {
 type privateClientResource struct {
 	clientResource *ClientResource
 	tlsConfig      *tls.Config
-	dialTimeout    time.Duration
+	dialer         connpool.Dialer
 }
 
 type ClientResource struct {
@@ -127,19 +128,34 @@ func NewClientResource(network, address string) *ClientResource {
 // connection. If timeout is zero or less, the underlying OS timeout is used
 // (typically 3 minutes for TCP).
 func (cr *ClientResource) GetHTTP(cancelChannel <-chan struct{},
-	timeout time.Duration) (
-	*Client, error) {
-	return cr.getHTTP(clientTlsConfig, cancelChannel, timeout)
+	timeout time.Duration) (*Client, error) {
+	return cr.getHTTP(clientTlsConfig, cancelChannel,
+		&net.Dialer{Timeout: timeout})
+}
+
+// GetHTTPWithDialer is similar to GetHTTP except that the dialer is used to
+// create the underlying connection.
+func (cr *ClientResource) GetHTTPWithDialer(cancelChannel <-chan struct{},
+	dialer connpool.Dialer) (*Client, error) {
+	return cr.getHTTP(clientTlsConfig, cancelChannel, dialer)
 }
 
 // GetTlsHTTP is similar to DialTlsHTTP but returns a Client that is part of a
 // managed pool like the GetHTTP method returns.
 func (cr *ClientResource) GetTlsHTTP(tlsConfig *tls.Config,
 	cancelChannel <-chan struct{}, timeout time.Duration) (*Client, error) {
+	return cr.GetTlsHTTPWithDialer(tlsConfig, cancelChannel,
+		&net.Dialer{Timeout: timeout})
+}
+
+// GetTlsHTTPWithDialer is similar to GetTlsHTTP except that the dialer is used
+// to create the underlying connection.
+func (cr *ClientResource) GetTlsHTTPWithDialer(tlsConfig *tls.Config,
+	cancelChannel <-chan struct{}, dialer connpool.Dialer) (*Client, error) {
 	if tlsConfig == nil {
 		tlsConfig = clientTlsConfig
 	}
-	return cr.getHTTP(tlsConfig, cancelChannel, timeout)
+	return cr.getHTTP(tlsConfig, cancelChannel, dialer)
 }
 
 func (cr *ClientResource) ScheduleClose() {
@@ -158,19 +174,36 @@ type Client struct {
 // listening on the HTTP SRPC path. If timeout is zero or less, the underlying
 // OS timeout is used (typically 3 minutes for TCP).
 func DialHTTP(network, address string, timeout time.Duration) (*Client, error) {
-	return dialHTTP(network, address, clientTlsConfig, timeout)
+	return dialHTTP(network, address, clientTlsConfig,
+		&net.Dialer{Timeout: timeout})
 }
 
-// DialHTTP connects to an HTTP SRPC TLS server at the specified network address
-// listening on the HTTP SRPC TLS path. If timeout is zero or less, the
+// DialHTTPWithDialer is similar to DialHTTP except that the dialer is used to
+// create the underlying connection.
+func DialHTTPWithDialer(network, address string, dialer connpool.Dialer) (
+	*Client, error) {
+	return dialHTTP(network, address, clientTlsConfig, dialer)
+}
+
+// DialTlsHTTP connects to an HTTP SRPC TLS server at the specified network
+// address listening on the HTTP SRPC TLS path. If timeout is zero or less, the
 // underlying OS timeout is used (typically 3 minutes for TCP).
 func DialTlsHTTP(network, address string, tlsConfig *tls.Config,
 	timeout time.Duration) (
 	*Client, error) {
+	return DialTlsHTTPWithDialer(network, address, tlsConfig,
+		&net.Dialer{Timeout: timeout})
+}
+
+// DialTlsHTTPWithDialer is similar to DialTlsHTTP except that the dialer is
+// used to create the underlying connection.
+func DialTlsHTTPWithDialer(network, address string, tlsConfig *tls.Config,
+	dialer connpool.Dialer) (
+	*Client, error) {
 	if tlsConfig == nil {
 		tlsConfig = clientTlsConfig
 	}
-	return dialHTTP(network, address, tlsConfig, timeout)
+	return dialHTTP(network, address, tlsConfig, dialer)
 }
 
 // Close will close a client, immediately releasing the internal connection.

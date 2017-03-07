@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/gob"
 	"errors"
+	"github.com/Symantec/Dominator/lib/connpool"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
@@ -46,10 +47,10 @@ func registerClientMetrics() {
 }
 
 func dialHTTP(network, address string, tlsConfig *tls.Config,
-	timeout time.Duration) (*Client, error) {
+	dialer connpool.Dialer) (*Client, error) {
 	hostPort := strings.SplitN(address, ":", 2)
 	address = strings.SplitN(hostPort[0], "*", 2)[0] + ":" + hostPort[1]
-	unsecuredConn, err := net.DialTimeout(network, address, timeout)
+	unsecuredConn, err := dialer.Dial(network, address)
 	if err != nil {
 		if strings.Contains(err.Error(), ErrorConnectionRefused.Error()) {
 			return nil, ErrorConnectionRefused
@@ -82,7 +83,7 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 		tlsConfig != nil &&
 		tlsConfig.InsecureSkipVerify {
 		// Fall back to insecure connection.
-		return dialHTTP(network, address, nil, timeout)
+		return dialHTTP(network, address, nil, dialer)
 	}
 	if resp.StatusCode == http.StatusMethodNotAllowed {
 		return nil, ErrorMissingCertificate
