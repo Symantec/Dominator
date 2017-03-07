@@ -43,6 +43,11 @@ import (
 	"time"
 )
 
+// Dialer implements a dialer that can be use to create connections.
+type Dialer interface {
+	Dial(network, address string) (net.Conn, error)
+}
+
 // GetResourcePool returns a global resourcepool.Pool which may be used by other
 // packages which need to share a common resource pool with the connpool
 // package. This is needed for efficient sharing of the underlying file
@@ -53,7 +58,7 @@ func GetResourcePool() *resourcepool.Pool {
 
 type privateConnResource struct {
 	connResource *ConnResource
-	dialTimeout  time.Duration
+	dialer       Dialer
 }
 
 // ConnResource manages a single Conn.
@@ -87,7 +92,28 @@ func New(network, address string) *ConnResource {
 // Get will panic if it is called again without an intervening Close or Put.
 func (cr *ConnResource) Get(cancelChannel <-chan struct{},
 	timeout time.Duration) (*Conn, error) {
-	return cr.get(cancelChannel, timeout)
+	return cr.get(cancelChannel, &net.Dialer{Timeout: timeout})
+}
+
+// GetWithDialer will return a Conn network connection which implements the
+// net.Conn interface from the standard library. GetWithDialer will wait until
+// a resource is available or a message is received on cancelChannel. If
+// cancelChannel is nil then GetWithDialer will wait indefinitely until a
+// resource is available. If the wait is cancelled then GetWithDialer will
+// return ErrorResourceLimitExceeded.
+// The dialer is used to perform the operation which creates the connection. A
+// *net.Dialer type from the standard library satisfies the Dialer interface,
+// and may be used to specify how long to wait (after a resource is available)
+// to make the connection. The OS may impose it's own timeout (typically 3
+// minutes for TCP). A different dialer may be used to create TLS connections.
+// Note that changing dialer types does not guarantee the connection type
+// returned, as the dialer may not be called on every call to GetWithDialer,
+// thus changing dialer types will result in unpredictable behaviour.
+// GetWithDialer will panic if it is called again without an intervening Close
+// or Put.
+func (cr *ConnResource) GetWithDialer(cancelChannel <-chan struct{},
+	dialer Dialer) (*Conn, error) {
+	return cr.get(cancelChannel, dialer)
 }
 
 // ScheduleClose will immediatly Close the associated Conn if it is not in use
