@@ -23,7 +23,6 @@
 package cpusharer
 
 import (
-	"runtime"
 	"sync"
 	"time"
 )
@@ -44,7 +43,7 @@ type FifoCpuSharer struct {
 // NewFifoCpuSharer creates a simple FIFO CpuSharer. CPU access is granted in
 // the order in which they are requested.
 func NewFifoCpuSharer() *FifoCpuSharer {
-	return &FifoCpuSharer{semaphore: make(chan struct{}, runtime.NumCPU())}
+	return newFifoCpuSharer()
 }
 
 // GetStatistics will update and return the Statistics.

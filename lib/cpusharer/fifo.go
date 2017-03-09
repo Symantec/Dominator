@@ -1,6 +1,16 @@
 package cpusharer
 
-import "time"
+import (
+	"runtime"
+	"time"
+)
+
+func newFifoCpuSharer() *FifoCpuSharer {
+	return &FifoCpuSharer{
+		semaphore:     make(chan struct{}, runtime.NumCPU()),
+		lastIdleEvent: time.Now(),
+	}
+}
 
 func (s *FifoCpuSharer) getStatistics() Statistics {
 	s.mutex.Lock()
