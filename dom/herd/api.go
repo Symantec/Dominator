@@ -12,6 +12,7 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	filegenproto "github.com/Symantec/Dominator/proto/filegenerator"
 	subproto "github.com/Symantec/Dominator/proto/sub"
+	"github.com/Symantec/tricorder/go/tricorder"
 	"io"
 	"log"
 	"sync"
@@ -137,8 +138,8 @@ type Herd struct {
 }
 
 func NewHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
-	logger *log.Logger) *Herd {
-	return newHerd(imageServerAddress, objectServer, logger)
+	metricsDir *tricorder.DirectorySpec, logger *log.Logger) *Herd {
+	return newHerd(imageServerAddress, objectServer, metricsDir, logger)
 }
 
 func (herd *Herd) AddHtmlWriter(htmlWriter HtmlWriter) {

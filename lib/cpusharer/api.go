@@ -23,7 +23,7 @@
 package cpusharer
 
 import (
-	"runtime"
+	"sync"
 	"time"
 )
 
@@ -33,17 +33,22 @@ type CpuSharer interface {
 }
 
 type FifoCpuSharer struct {
-	semaphore chan struct{}
+	semaphore     chan struct{}
+	mutex         sync.Mutex
+	lastIdleEvent time.Time
+	numIdleEvents uint64
+	Statistics    Statistics
 }
 
 // NewFifoCpuSharer creates a simple FIFO CpuSharer. CPU access is granted in
 // the order in which they are requested.
 func NewFifoCpuSharer() *FifoCpuSharer {
-	return &FifoCpuSharer{semaphore: make(chan struct{}, runtime.NumCPU())}
+	return newFifoCpuSharer()
 }
 
-func (s *FifoCpuSharer) GetStats() (int, int) {
-	return len(s.semaphore), cap(s.semaphore)
+// GetStatistics will update and return the Statistics.
+func (s *FifoCpuSharer) GetStatistics() Statistics {
+	return s.getStatistics()
 }
 
 func (s *FifoCpuSharer) Go(goFunc func()) {
@@ -51,7 +56,7 @@ func (s *FifoCpuSharer) Go(goFunc func()) {
 }
 
 func (s *FifoCpuSharer) GrabCpu() {
-	s.semaphore <- struct{}{}
+	s.grabCpu()
 }
 
 func (s *FifoCpuSharer) ReleaseCpu() {
@@ -60,4 +65,11 @@ func (s *FifoCpuSharer) ReleaseCpu() {
 
 func (s *FifoCpuSharer) Sleep(duration time.Duration) {
 	sleep(s, duration)
+}
+
+type Statistics struct {
+	LastIdleEvent time.Time
+	NumCpuRunning uint
+	NumCpu        uint
+	NumIdleEvents uint64
 }
