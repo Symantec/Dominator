@@ -4,7 +4,7 @@ import (
 	"net"
 )
 
-type connection struct {
+type cpuSharingConnection struct {
 	net.Conn
 	cpuSharer CpuSharer
 }
@@ -25,16 +25,16 @@ func (d *cpuSharingDialer) Dial(network, address string) (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &connection{Conn: netConn, cpuSharer: d.cpuSharer}, nil
+	return &cpuSharingConnection{Conn: netConn, cpuSharer: d.cpuSharer}, nil
 }
 
-func (conn *connection) Read(b []byte) (n int, err error) {
+func (conn *cpuSharingConnection) Read(b []byte) (n int, err error) {
 	conn.cpuSharer.ReleaseCpu()
 	defer conn.cpuSharer.GrabCpu()
 	return conn.Conn.Read(b)
 }
 
-func (conn *connection) Write(b []byte) (n int, err error) {
+func (conn *cpuSharingConnection) Write(b []byte) (n int, err error) {
 	conn.cpuSharer.ReleaseCpu()
 	defer conn.cpuSharer.GrabCpu()
 	return conn.Conn.Write(b)
