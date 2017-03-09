@@ -72,8 +72,9 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 	//len(herd.connectionSemaphore), cap(herd.connectionSemaphore))
 	fmt.Fprintf(writer, "Poll slots: %d out of %d<br>\n",
 		len(herd.pollSemaphore), cap(herd.pollSemaphore))
-	cpuUsage, cpuCapacity := herd.cpuSharer.GetStats()
-	fmt.Fprintf(writer, "CPU slots: %d out of %d<br>\n", cpuUsage, cpuCapacity)
+	stats := herd.cpuSharer.GetStatistics()
+	fmt.Fprintf(writer, "CPU slots: %d out of %d, idle events: %d<br>\n",
+		stats.NumCpuRunning, stats.NumCpu, stats.NumIdleEvents)
 }
 
 func (herd *Herd) writeDisableStatus(writer io.Writer) {
