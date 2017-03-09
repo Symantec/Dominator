@@ -2,6 +2,7 @@ package herd
 
 import (
 	"github.com/Symantec/Dominator/dom/images"
+	"github.com/Symantec/Dominator/lib/cpusharer"
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/image"
@@ -130,7 +131,7 @@ type Herd struct {
 	subsByIndex           []*Sub // Sorted by Sub.hostname.
 	pollSemaphore         chan struct{}
 	pushSemaphore         chan struct{}
-	computeSemaphore      chan struct{}
+	cpuSharer             *cpusharer.FifoCpuSharer
 	currentScanStartTime  time.Time
 	previousScanDuration  time.Duration
 }

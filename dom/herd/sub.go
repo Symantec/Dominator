@@ -10,6 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	libnet "github.com/Symantec/Dominator/lib/net"
 	"github.com/Symantec/Dominator/lib/resourcepool"
 	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
@@ -117,8 +118,10 @@ func (sub *Sub) connectAndPoll() {
 		sub.clientResource = srpc.NewClientResource("tcp", sub.address())
 	}
 	sub.busyFlagMutex.Unlock()
-	srpcClient, err := sub.clientResource.GetHTTP(sub.cancelChannel,
-		time.Second*time.Duration(*subConnectTimeout))
+	srpcClient, err := sub.clientResource.GetHTTPWithDialer(sub.cancelChannel,
+		libnet.NewCpuSharingDialer(&net.Dialer{
+			Timeout: time.Second * time.Duration(*subConnectTimeout)},
+			sub.herd.cpuSharer))
 	dialReturnedTime := time.Now()
 	if err != nil {
 		sub.isInsecure = false
@@ -172,10 +175,13 @@ func (sub *Sub) connectAndPoll() {
 		sub.lastConnectionSucceededTime.Sub(sub.lastConnectionStartTime)
 	connectDistribution.Add(sub.lastConnectDuration)
 	waitStartTime := time.Now()
+	sub.herd.cpuSharer.ReleaseCpu()
 	select {
 	case sub.herd.pollSemaphore <- struct{}{}:
+		sub.herd.cpuSharer.GrabCpu()
 		break
 	case <-sub.cancelChannel:
+		sub.herd.cpuSharer.GrabCpu()
 		return
 	}
 	pollWaitTimeDistribution.Add(time.Since(waitStartTime))

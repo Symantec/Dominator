@@ -10,10 +10,6 @@ import (
 // Returns (idle, missing), idle=true if no update needs to be performed.
 func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 	bool, bool) {
-	waitStartTime := time.Now()
-	sub.herd.computeSemaphore <- struct{}{}
-	computeSlotWaitTimeDistribution.Add(time.Since(waitStartTime))
-	defer func() { <-sub.herd.computeSemaphore }()
 	request.ImageName = sub.requiredImageName
 	request.Triggers = sub.requiredImage.Triggers
 	var rusageStart, rusageStop syscall.Rusage
