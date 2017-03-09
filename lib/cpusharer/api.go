@@ -36,6 +36,7 @@ type CpuSharer interface {
 type FifoCpuSharer struct {
 	semaphore     chan struct{}
 	mutex         sync.Mutex
+	lastIdleEvent time.Time
 	numIdleEvents uint64
 	Statistics    Statistics
 }
@@ -68,6 +69,7 @@ func (s *FifoCpuSharer) Sleep(duration time.Duration) {
 }
 
 type Statistics struct {
+	LastIdleEvent time.Time
 	NumCpuRunning uint
 	NumCpu        uint
 	NumIdleEvents uint64
