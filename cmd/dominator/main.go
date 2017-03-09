@@ -159,8 +159,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Cannot load objectcache: %s\n", err)
 		os.Exit(1)
 	}
+	metricsDir, err := tricorder.RegisterDirectory("/dominator/herd")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot create metrics directory: %s\n", err)
+		os.Exit(1)
+	}
 	herd := herd.NewHerd(fmt.Sprintf("%s:%d", *imageServerHostname,
-		*imageServerPortNum), objectServer, logger)
+		*imageServerPortNum), objectServer, metricsDir, logger)
 	herd.AddHtmlWriter(circularBuffer)
 	rpcd.Setup(herd, logger)
 	if err = herd.StartServer(*portNum, true); err != nil {

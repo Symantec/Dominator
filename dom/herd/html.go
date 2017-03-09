@@ -2,10 +2,13 @@ package herd
 
 import (
 	"fmt"
+	"github.com/Symantec/Dominator/lib/format"
 	"io"
 	"sort"
 	"time"
 )
+
+var timeFormat string = "02 Jan 2006 15:04:05.99 MST"
 
 type rDuration time.Duration
 
@@ -73,12 +76,16 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 	fmt.Fprintf(writer, "Poll slots: %d out of %d<br>\n",
 		len(herd.pollSemaphore), cap(herd.pollSemaphore))
 	stats := herd.cpuSharer.GetStatistics()
-	fmt.Fprintf(writer, "CPU slots: %d out of %d, idle events: %d<br>\n",
-		stats.NumCpuRunning, stats.NumCpu, stats.NumIdleEvents)
+	timeSinceLastIdleEvent := time.Since(stats.LastIdleEvent)
+	fmt.Fprintf(writer,
+		"CPU slots: %d out of %d; idle events: %d, last: %s, time since: %s<br>\n",
+		stats.NumCpuRunning, stats.NumCpu, stats.NumIdleEvents,
+		stats.LastIdleEvent.Format(timeFormat),
+		format.Duration(timeSinceLastIdleEvent))
 }
 
 func (herd *Herd) writeDisableStatus(writer io.Writer) {
-	timeString := herd.updatesDisabledTime.Format("02 Jan 2006 15:04:05.99 MST")
+	timeString := herd.updatesDisabledTime.Format(timeFormat)
 	if herd.updatesDisabledBy == "" {
 		fmt.Fprintf(writer,
 			"<font color=\"red\">Updates disabled because: %s</font> at %s\n",
