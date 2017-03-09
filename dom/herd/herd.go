@@ -5,6 +5,7 @@ import (
 	"flag"
 	"github.com/Symantec/Dominator/dom/images"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/cpusharer"
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/url"
@@ -36,11 +37,7 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	numPollSlots := uint(runtime.NumCPU()) * *pollSlotsPerCPU
 	herd.pollSemaphore = make(chan struct{}, numPollSlots)
 	herd.pushSemaphore = make(chan struct{}, runtime.NumCPU())
-	numComputeSlots := runtime.NumCPU() - 1
-	if numComputeSlots < 1 {
-		numComputeSlots = 1
-	}
-	herd.computeSemaphore = make(chan struct{}, numComputeSlots)
+	herd.cpuSharer = cpusharer.NewFifoCpuSharer()
 	herd.currentScanStartTime = time.Now()
 	return &herd
 }
@@ -97,13 +94,13 @@ func (herd *Herd) pollNextSub() bool {
 	if sub.busy { // Quick lockless check.
 		return false
 	}
-	go func() {
+	herd.cpuSharer.Go(func() {
 		if !sub.tryMakeBusy() {
 			return
 		}
 		sub.connectAndPoll()
 		sub.makeUnbusy()
-	}()
+	})
 	return false
 }
 
