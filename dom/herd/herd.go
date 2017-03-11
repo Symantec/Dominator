@@ -28,10 +28,6 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	herd.objectServer = objectServer
 	herd.computedFilesManager = filegenclient.New(objectServer, logger)
 	herd.logger = logger
-	herd.configurationForSubs.ScanSpeedPercent =
-		constants.DefaultScanSpeedPercent
-	herd.configurationForSubs.NetworkSpeedPercent =
-		constants.DefaultNetworkSpeedPercent
 	herd.configurationForSubs.ScanExclusionList =
 		constants.ScanExcludeList
 	herd.subsByName = make(map[string]*Sub)
