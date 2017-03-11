@@ -452,6 +452,14 @@ func (sub *Sub) updateConfiguration(srpcClient *srpc.Client,
 	sub.herd.RLock()
 	newConf := sub.herd.configurationForSubs
 	sub.herd.RUnlock()
+	if newConf.NetworkSpeedPercent < 1 {
+		newConf.NetworkSpeedPercent =
+			pollReply.CurrentConfiguration.NetworkSpeedPercent
+	}
+	if newConf.ScanSpeedPercent < 1 {
+		newConf.ScanSpeedPercent =
+			pollReply.CurrentConfiguration.ScanSpeedPercent
+	}
 	if compareConfigs(pollReply.CurrentConfiguration, newConf) {
 		return
 	}
