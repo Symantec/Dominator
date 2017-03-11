@@ -37,12 +37,10 @@ var (
 		"Directory of optional JSON configuration files")
 	defaultCpuPercent = flag.Uint("defaultCpuPercent", 0,
 		"CPU speed as percentage of capacity (default 50)")
-	defaultNetworkSpeedPercent = flag.Uint64("defaultNetworkSpeedPercent",
-		constants.DefaultNetworkSpeedPercent,
-		"Network speed as percentage of capacity")
-	defaultScanSpeedPercent = flag.Uint64("defaultScanSpeedPercent",
-		constants.DefaultScanSpeedPercent,
-		"Scan speed as percentage of capacity")
+	defaultNetworkSpeedPercent = flag.Uint("defaultNetworkSpeedPercent", 0,
+		"Network speed as percentage of capacity (default 10)")
+	defaultScanSpeedPercent = flag.Uint("defaultScanSpeedPercent", 0,
+		"Scan speed as percentage of capacity (default 2)")
 	maxThreads = flag.Uint("maxThreads", 1,
 		"Maximum number of parallel OS threads to use")
 	permitInsecureMode = flag.Bool("permitInsecureMode", false,
@@ -296,17 +294,31 @@ func main() {
 		os.Exit(1)
 	}
 	publishFsSpeed(bytesPerSecond, blocksPerSecond)
-	fileConfig := sub.Configuration{}
-	loadConfiguration(*configDirectory, &fileConfig, logger)
+	configParams := sub.Configuration{}
+	loadConfiguration(*configDirectory, &configParams, logger)
+	// Command-line flags override file configuration.
 	if *defaultCpuPercent > 0 {
-		fileConfig.CpuPercent = *defaultCpuPercent
+		configParams.CpuPercent = *defaultCpuPercent
+	}
+	if *defaultNetworkSpeedPercent > 0 {
+		configParams.NetworkSpeedPercent = *defaultNetworkSpeedPercent
+	}
+	if *defaultScanSpeedPercent > 0 {
+		configParams.ScanSpeedPercent = *defaultScanSpeedPercent
 	}
 	var configuration scanner.Configuration
 	configuration.CpuLimiter = cpulimiter.New(100)
-	configuration.DefaultCpuPercent = fileConfig.CpuPercent
+	configuration.DefaultCpuPercent = configParams.CpuPercent
+	// Apply built-in defaults if nothing specified.
 	if configuration.DefaultCpuPercent < 1 {
 		configuration.DefaultCpuPercent = constants.DefaultCpuPercent
 		go adjustVcpuLimit(&configuration.DefaultCpuPercent, logger)
+	}
+	if configParams.NetworkSpeedPercent < 1 {
+		configParams.NetworkSpeedPercent = constants.DefaultNetworkSpeedPercent
+	}
+	if configParams.ScanSpeedPercent < 1 {
+		configParams.ScanSpeedPercent = constants.DefaultScanSpeedPercent
 	}
 	var err error
 	configuration.ScanFilter, err = filter.New(scanExcludeList)
@@ -316,7 +328,7 @@ func main() {
 		os.Exit(1)
 	}
 	configuration.FsScanContext = fsrateio.NewReaderContext(bytesPerSecond,
-		blocksPerSecond, *defaultScanSpeedPercent)
+		blocksPerSecond, uint64(configParams.ScanSpeedPercent))
 	defaultSpeed := configuration.FsScanContext.GetContext().SpeedPercent()
 	if firstScan {
 		configuration.FsScanContext.GetContext().SetSpeedPercent(100)
@@ -329,7 +341,7 @@ func main() {
 		disableScanner func(disableScanner bool)) {
 		networkReaderContext := rateio.NewReaderContext(
 			getCachedNetworkSpeed(netbenchFilename),
-			*defaultNetworkSpeedPercent, &rateio.ReadMeasurer{})
+			uint64(configParams.NetworkSpeedPercent), &rateio.ReadMeasurer{})
 		configuration.NetworkReaderContext = networkReaderContext
 		invalidateNextScanObjectCache := false
 		rpcdHtmlWriter :=
