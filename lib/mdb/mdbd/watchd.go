@@ -20,7 +20,7 @@ import (
 )
 
 func startMdbDaemon(mdbFileName string, logger *log.Logger) <-chan *mdb.Mdb {
-	mdbChannel := make(chan *mdb.Mdb)
+	mdbChannel := make(chan *mdb.Mdb, 1)
 	if *mdbServerHostname != "" && *mdbServerPortNum > 0 {
 		go serverWatchDaemon(*mdbServerHostname, *mdbServerPortNum, mdbFileName,
 			mdbChannel, logger)
