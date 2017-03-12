@@ -20,7 +20,7 @@ import (
 )
 
 func startMdbDaemon(mdbFileName string, logger *log.Logger) <-chan *mdb.Mdb {
-	mdbChannel := make(chan *mdb.Mdb)
+	mdbChannel := make(chan *mdb.Mdb, 1)
 	if *mdbServerHostname != "" && *mdbServerPortNum > 0 {
 		go serverWatchDaemon(*mdbServerHostname, *mdbServerPortNum, mdbFileName,
 			mdbChannel, logger)
@@ -56,13 +56,12 @@ func fileWatchDaemon(mdbFileName string, mdbChannel chan<- *mdb.Mdb,
 
 func serverWatchDaemon(mdbServerHostname string, mdbServerPortNum uint,
 	mdbFileName string, mdbChannel chan<- *mdb.Mdb, logger *log.Logger) {
-	var lastMdb *mdb.Mdb
 	if file, err := os.Open(mdbFileName); err == nil {
-		lastMdb = loadFile(file, mdbFileName, logger)
+		fileMdb := loadFile(file, mdbFileName, logger)
 		file.Close()
-		if lastMdb != nil {
-			sort.Sort(lastMdb)
-			mdbChannel <- lastMdb
+		if fileMdb != nil {
+			sort.Sort(fileMdb)
+			mdbChannel <- fileMdb
 		}
 	}
 	address := fmt.Sprintf("%s:%d", mdbServerHostname, mdbServerPortNum)
@@ -79,17 +78,13 @@ func serverWatchDaemon(mdbServerHostname string, mdbServerPortNum uint,
 			continue
 		}
 		decoder := gob.NewDecoder(conn)
-		firstUpdate := true
+		lastMdb := &mdb.Mdb{}
 		for {
 			var mdbUpdate mdbserver.MdbUpdate
 			if err := decoder.Decode(&mdbUpdate); err != nil {
 				logger.Println(err)
 				break
 			} else {
-				if firstUpdate {
-					lastMdb = &mdb.Mdb{}
-					firstUpdate = false
-				}
 				lastMdb = processUpdate(lastMdb, mdbUpdate)
 				sort.Sort(lastMdb)
 				mdbChannel <- lastMdb

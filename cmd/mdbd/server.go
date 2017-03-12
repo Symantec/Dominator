@@ -20,7 +20,6 @@ type rpcType struct {
 
 func startRpcd(logger *log.Logger) *rpcType {
 	rpcObj := &rpcType{
-		currentMdb:     &mdb.Mdb{},
 		logger:         logger,
 		updateChannels: make(map[*srpc.Conn]chan<- mdbserver.MdbUpdate),
 	}
@@ -34,12 +33,20 @@ func (t *rpcType) GetMdbUpdates(conn *srpc.Conn) error {
 	t.rwMutex.Lock()
 	t.updateChannels[conn] = updateChannel
 	t.rwMutex.Unlock()
-	mdbUpdate := mdbserver.MdbUpdate{MachinesToAdd: t.currentMdb.Machines}
-	if err := encoder.Encode(mdbUpdate); err != nil {
-		return nil
-	}
-	if err := conn.Flush(); err != nil {
-		return nil
+	defer func() {
+		close(updateChannel)
+		t.rwMutex.Lock()
+		delete(t.updateChannels, conn)
+		t.rwMutex.Unlock()
+	}()
+	if t.currentMdb != nil {
+		mdbUpdate := mdbserver.MdbUpdate{MachinesToAdd: t.currentMdb.Machines}
+		if err := encoder.Encode(mdbUpdate); err != nil {
+			return err
+		}
+		if err := conn.Flush(); err != nil {
+			return err
+		}
 	}
 	closeChannel := getCloseNotifier(conn)
 	for {
@@ -56,9 +63,6 @@ func (t *rpcType) GetMdbUpdates(conn *srpc.Conn) error {
 			break
 		}
 		if err != nil {
-			t.rwMutex.Lock()
-			delete(t.updateChannels, conn)
-			t.rwMutex.Unlock()
 			if err != io.EOF {
 				t.logger.Println(err)
 				return err
@@ -71,10 +75,8 @@ func (t *rpcType) GetMdbUpdates(conn *srpc.Conn) error {
 
 func (t *rpcType) pushUpdateToAll(old, new *mdb.Mdb) {
 	t.currentMdb = new
-	t.rwMutex.RLock()
-	numConnections := len(t.updateChannels)
-	t.rwMutex.RUnlock()
-	if numConnections < 1 {
+	updateChannels := t.getUpdateChannels()
+	if len(updateChannels) < 1 {
 		return
 	}
 	mdbUpdate := mdbserver.MdbUpdate{}
@@ -102,11 +104,42 @@ func (t *rpcType) pushUpdateToAll(old, new *mdb.Mdb) {
 	for name := range oldMachines {
 		mdbUpdate.MachinesToDelete = append(mdbUpdate.MachinesToDelete, name)
 	}
+	if isEmptyUpdate(mdbUpdate) {
+		t.logger.Println("Ignoring empty update")
+		return
+	}
+	for _, channel := range updateChannels {
+		sendUpdate(channel, mdbUpdate)
+	}
+}
+
+func (t *rpcType) getUpdateChannels() []chan<- mdbserver.MdbUpdate {
 	t.rwMutex.RLock()
 	defer t.rwMutex.RUnlock()
+	channels := make([]chan<- mdbserver.MdbUpdate, 0, len(t.updateChannels))
 	for _, channel := range t.updateChannels {
-		channel <- mdbUpdate
+		channels = append(channels, channel)
 	}
+	return channels
+}
+
+func isEmptyUpdate(mdbUpdate mdbserver.MdbUpdate) bool {
+	if len(mdbUpdate.MachinesToAdd) > 0 {
+		return false
+	}
+	if len(mdbUpdate.MachinesToUpdate) > 0 {
+		return false
+	}
+	if len(mdbUpdate.MachinesToDelete) > 0 {
+		return false
+	}
+	return true
+}
+
+func sendUpdate(channel chan<- mdbserver.MdbUpdate,
+	mdbUpdate mdbserver.MdbUpdate) {
+	defer func() { recover() }()
+	channel <- mdbUpdate
 }
 
 func getCloseNotifier(conn *srpc.Conn) <-chan error {
