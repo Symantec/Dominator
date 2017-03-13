@@ -42,6 +42,16 @@ func newAwsFilteredGenerator(args []string) (generator, error) {
 	return &gen, nil
 }
 
+func newAwsLocalGenerator(args []string) (generator, error) {
+	region, err := awsutil.GetLocalRegion()
+	if err != nil {
+		return nil, err
+	}
+	return &awsGeneratorType{
+			targets: awsutil.TargetList{awsutil.Target{"", region}}},
+		nil
+}
+
 func (g *awsGeneratorType) Generate(unused_datacentre string,
 	logger log.Logger) (*mdb.Mdb, error) {
 	resultsChannel := make(chan resultType, 1)
