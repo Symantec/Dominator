@@ -66,6 +66,7 @@ type driver struct {
 var drivers = []driver{
 	{"aws", 2, 2, newAwsGenerator},
 	{"aws-filtered", 2, 2, newAwsFilteredGenerator},
+	{"aws-local", 0, 0, newAwsLocalGenerator},
 	{"cis", 1, 1, newCisGenerator},
 	{"ds.host.fqdn", 1, 1, newDsHostFqdnGenerator},
 	{"text", 1, 1, newTextGenerator},
