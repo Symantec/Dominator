@@ -23,6 +23,10 @@ func ForEachTarget(targets TargetList, skipList TargetList,
 	return forEachTarget(targets, skipList, targetFunc, logger)
 }
 
+func GetLocalRegion() (string, error) {
+	return getLocalRegion()
+}
+
 func ListAccountNames() ([]string, error) {
 	return listAccountNames()
 }
