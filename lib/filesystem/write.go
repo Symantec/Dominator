@@ -23,7 +23,13 @@ func forceWriteMetadata(inode GenericInode, name string) error {
 }
 
 func (inode *DirectoryInode) write(name string) error {
-	if inode.make(name) != nil {
+	if err := inode.make(name); err != nil {
+		// If existing directory, don't blow it away, just update metadata.
+		if os.IsExist(err) {
+			if fi, err := os.Lstat(name); err == nil && fi.IsDir() {
+				return inode.writeMetadata(name)
+			}
+		}
 		fsutil.ForceRemoveAll(name)
 		if err := inode.make(name); err != nil {
 			return err
