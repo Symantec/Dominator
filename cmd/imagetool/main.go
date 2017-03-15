@@ -19,6 +19,8 @@ var (
 		"Filename or URL containing build log")
 	computedFiles = flag.String("computedFiles", "",
 		"Name of file containing computed files list")
+	copyMtimesFrom = flag.String("copyMtimesFrom", "",
+		"Name of image to copy mtimes for otherwise unchanged files/devices")
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
 	deleteFilter = flag.String("deleteFilter", "",

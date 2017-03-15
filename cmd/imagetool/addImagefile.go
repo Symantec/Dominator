@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/imageserver/client"
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/image"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -44,5 +45,56 @@ func addImagefile(imageSClient *srpc.Client,
 	if err := spliceComputedFiles(newImage.FileSystem); err != nil {
 		return err
 	}
+	if err := copyMtimes(imageSClient, newImage, *copyMtimesFrom); err != nil {
+		return err
+	}
 	return addImage(imageSClient, name, newImage)
+}
+
+func copyMtimes(imageSClient *srpc.Client, img *image.Image,
+	oldImageName string) error {
+	if oldImageName == "" {
+		return nil
+	}
+	fs := img.FileSystem
+	oldFs, err := getFsOfImage(imageSClient, oldImageName)
+	if err != nil {
+		return err
+	}
+	inodeToFilenamesTable := fs.InodeToFilenamesTable()
+	oldFilenameToInodeTable := oldFs.FilenameToInodeTable()
+	for inum, inode := range fs.InodeTable {
+		filenames := inodeToFilenamesTable[inum]
+		var oldInode filesystem.GenericInode
+		for _, filename := range filenames {
+			if oldInum, ok := oldFilenameToInodeTable[filename]; ok {
+				oldInode = oldFs.InodeTable[oldInum]
+				break
+			}
+		}
+		if oldInode == nil {
+			continue
+		}
+		if inode, ok := inode.(*filesystem.RegularInode); ok {
+			if oldInode, ok := oldInode.(*filesystem.RegularInode); ok {
+				newInode := *inode
+				newInode.MtimeNanoSeconds = oldInode.MtimeNanoSeconds
+				newInode.MtimeSeconds = oldInode.MtimeSeconds
+				if filesystem.CompareRegularInodes(&newInode, oldInode, nil) {
+					fs.InodeTable[inum] = &newInode
+				}
+			}
+		}
+		if inode, ok := inode.(*filesystem.SpecialInode); ok {
+			if oldInode, ok := oldInode.(*filesystem.SpecialInode); ok {
+				newInode := *inode
+				newInode.MtimeNanoSeconds = oldInode.MtimeNanoSeconds
+				newInode.MtimeSeconds = oldInode.MtimeSeconds
+				if filesystem.CompareSpecialInodes(&newInode, oldInode, nil) {
+					fs.InodeTable[inum] = &newInode
+				}
+			}
+		}
+	}
+	return nil
 }
