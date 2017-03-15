@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/gob"
+	"errors"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/mdbserver"
@@ -29,7 +30,7 @@ func startRpcd(logger *log.Logger) *rpcType {
 
 func (t *rpcType) GetMdbUpdates(conn *srpc.Conn) error {
 	encoder := gob.NewEncoder(conn)
-	updateChannel := make(chan mdbserver.MdbUpdate, 1)
+	updateChannel := make(chan mdbserver.MdbUpdate, 10)
 	t.rwMutex.Lock()
 	t.updateChannels[conn] = updateChannel
 	t.rwMutex.Unlock()
@@ -53,6 +54,10 @@ func (t *rpcType) GetMdbUpdates(conn *srpc.Conn) error {
 		var err error
 		select {
 		case mdbUpdate := <-updateChannel:
+			if isEmptyUpdate(mdbUpdate) {
+				t.logger.Printf("Queue for: %s is filling up: dropping client")
+				return errors.New("update queue too full")
+			}
 			if err = encoder.Encode(mdbUpdate); err != nil {
 				break
 			}
@@ -139,6 +144,12 @@ func isEmptyUpdate(mdbUpdate mdbserver.MdbUpdate) bool {
 func sendUpdate(channel chan<- mdbserver.MdbUpdate,
 	mdbUpdate mdbserver.MdbUpdate) {
 	defer func() { recover() }()
+	if cap(channel)-len(channel) < 2 {
+		// Not enough room for an update and a possible "too much" message next
+		// time around: send a "too much" message now.
+		channel <- mdbserver.MdbUpdate{}
+		return
+	}
 	channel <- mdbUpdate
 }
 
