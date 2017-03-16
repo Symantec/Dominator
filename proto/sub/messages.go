@@ -52,13 +52,14 @@ type PollResponse struct {
 	LastUpdateError              string
 	LastUpdateHadTriggerFailures bool
 	LastSuccessfulImageName      string
+	FreeSpace                    *uint64
 	StartTime                    time.Time
 	PollTime                     time.Time
 	ScanCount                    uint64
 	DurationOfLastScan           time.Duration
 	GenerationCount              uint64
-	FileSystem                   *filesystem.FileSystem // Streamed separately.
 	FileSystemFollows            bool
+	FileSystem                   *filesystem.FileSystem  // Streamed separately.
 	ObjectCache                  objectcache.ObjectCache // Streamed separately.
 } // FileSystem is encoded afterwards, followed by ObjectCache.
 
