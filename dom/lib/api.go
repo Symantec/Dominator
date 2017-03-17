@@ -56,7 +56,7 @@ type Sub struct {
 // push. The map is nil if there are missing computed files.
 func BuildMissingLists(sub Sub, image *image.Image, pushComputedFiles bool,
 	ignoreMissingComputedFiles bool, logger *log.Logger) (
-	[]hash.Hash, map[hash.Hash]struct{}) {
+	map[hash.Hash]uint64, map[hash.Hash]struct{}) {
 	return sub.buildMissingLists(image, pushComputedFiles,
 		ignoreMissingComputedFiles, logger)
 }

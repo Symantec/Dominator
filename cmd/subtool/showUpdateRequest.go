@@ -6,6 +6,7 @@ import (
 	"github.com/Symantec/Dominator/dom/lib"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
 	"log"
@@ -54,8 +55,9 @@ func showUpdateRequest(getSubClient getSubClientFunc, imageName string) error {
 			return err
 		}
 	}
-	subObj.ObjectCache, _ = lib.BuildMissingLists(subObj, img, false, true,
+	objectsToFetch, _ := lib.BuildMissingLists(subObj, img, false, true,
 		logger)
+	subObj.ObjectCache = objectcache.ObjectMapToCache(objectsToFetch)
 	var updateRequest sub.UpdateRequest
 	if lib.BuildUpdateRequest(subObj, img, &updateRequest, true, logger) {
 		return errors.New("missing computed file(s)")

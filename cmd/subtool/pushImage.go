@@ -11,6 +11,7 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
@@ -194,7 +195,7 @@ func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 			err := subObj.Client.RequestReply("Subd.Fetch", sub.FetchRequest{
 				ServerAddress: imageServerAddress,
 				Wait:          true,
-				Hashes:        objectsToFetch},
+				Hashes:        objectcache.ObjectMapToCache(objectsToFetch)},
 				&sub.FetchResponse{})
 			if err != nil {
 				showBlankLine()

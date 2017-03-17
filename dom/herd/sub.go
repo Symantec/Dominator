@@ -11,6 +11,7 @@ import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	libnet "github.com/Symantec/Dominator/lib/net"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/resourcepool"
 	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
@@ -516,7 +517,7 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, image *image.Image,
 		logger.Printf("Calling %s:Subd.Fetch() for: %d objects\n",
 			sub, len(objectsToFetch))
 		err := client.Fetch(srpcClient, sub.herd.imageManager.String(),
-			objectsToFetch)
+			objectcache.ObjectMapToCache(objectsToFetch))
 		if err != nil {
 			srpcClient.Close()
 			logger.Printf("Error calling %s:Subd.Fetch(): %s\n", sub, err)
