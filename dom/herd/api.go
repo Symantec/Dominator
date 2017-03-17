@@ -42,6 +42,7 @@ const (
 	statusSubNotReady
 	statusImageUndefined
 	statusImageNotReady
+	statusNotEnoughFreeSpace
 	statusFetching
 	statusFetchDenied
 	statusFailedToFetch
@@ -88,6 +89,7 @@ type Sub struct {
 	fileSystem                   *filesystem.FileSystem
 	objectCache                  objectcache.ObjectCache
 	generationCount              uint64
+	freeSpaceThreshold           *uint64
 	computedFilesChangeTime      time.Time
 	scanCountAtLastUpdateEnd     uint64
 	isInsecure                   bool

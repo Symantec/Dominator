@@ -325,8 +325,14 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		if !sub.startTime.Equal(reply.StartTime) {
 			sub.generationCount = 0 // Sub has restarted: force a full poll.
 		}
+		if sub.freeSpaceThreshold != nil && reply.FreeSpace != nil {
+			if *reply.FreeSpace > *sub.freeSpaceThreshold {
+				sub.generationCount = 0 // Force a full poll for next time.
+			}
+		}
 	} else {
 		sub.lastPollWasFull = true
+		sub.freeSpaceThreshold = nil
 		if err := fs.RebuildInodePointers(); err != nil {
 			sub.status = statusFailedToPoll
 			logger.Printf("Error building pointers for: %s %s\n", sub, err)
@@ -412,7 +418,7 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(srpcClient, sub.requiredImage,
-		true); !idle {
+		reply.FreeSpace, true); !idle {
 		sub.status = status
 		sub.reclaim()
 		return
@@ -424,8 +430,8 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 		return
 	}
 	if idle, status := sub.fetchMissingObjects(srpcClient, sub.plannedImage,
-		false); !idle {
-		if status != statusImageNotReady {
+		reply.FreeSpace, false); !idle {
+		if status != statusImageNotReady && status != statusNotEnoughFreeSpace {
 			sub.status = status
 			sub.reclaim()
 			return
@@ -493,7 +499,7 @@ func compareConfigs(oldConf, newConf subproto.Configuration) bool {
 
 // Returns true if all required objects are available.
 func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, image *image.Image,
-	pushComputedFiles bool) (
+	freeSpace *uint64, pushComputedFiles bool) (
 	bool, subStatus) {
 	if image == nil {
 		return false, statusImageNotReady
@@ -514,6 +520,9 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, image *image.Image,
 	var returnAvailable bool = true
 	var returnStatus subStatus = statusSynced
 	if len(objectsToFetch) > 0 {
+		if !sub.checkForEnoughSpace(freeSpace, objectsToFetch) {
+			return false, statusNotEnoughFreeSpace
+		}
 		logger.Printf("Calling %s:Subd.Fetch() for: %d objects\n",
 			sub, len(objectsToFetch))
 		err := client.Fetch(srpcClient, sub.herd.imageManager.String(),
@@ -630,6 +639,28 @@ func (sub *Sub) cleanup(srpcClient *srpc.Client) {
 		srpcClient.Close()
 		logger.Printf("Error calling %s:Subd.Cleanup(): %s\n", sub, err)
 	}
+}
+
+func (sub *Sub) checkForEnoughSpace(freeSpace *uint64,
+	objects map[hash.Hash]uint64) bool {
+	if freeSpace == nil {
+		sub.freeSpaceThreshold = nil
+		return true // Don't know, assume OK.
+	}
+	var totalUsage uint64
+	for _, size := range objects {
+		usage := (size >> 12) << 12
+		if usage < size {
+			usage += 1 << 12
+		}
+		totalUsage += usage
+	}
+	if *freeSpace > totalUsage {
+		sub.freeSpaceThreshold = nil
+		return true
+	}
+	sub.freeSpaceThreshold = &totalUsage
+	return false
 }
 
 func (sub *Sub) clearSafetyShutoff() error {
