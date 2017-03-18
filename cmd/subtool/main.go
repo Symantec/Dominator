@@ -78,9 +78,11 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  fetch hashesFile")
 	fmt.Fprintln(os.Stderr, "  get-config")
 	fmt.Fprintln(os.Stderr, "  get-file remoteFile localFile")
+	fmt.Fprintln(os.Stderr, "  list-missing-objects image")
 	fmt.Fprintln(os.Stderr, "  poll")
 	fmt.Fprintln(os.Stderr, "  push-file source dest")
 	fmt.Fprintln(os.Stderr, "  push-image image")
+	fmt.Fprintln(os.Stderr, "  push-missing-objects image")
 	fmt.Fprintln(os.Stderr, "  set-config")
 	fmt.Fprintln(os.Stderr, "  show-update-request image")
 	fmt.Fprintln(os.Stderr, "  wait-for-image image")
@@ -134,9 +136,13 @@ var subcommands = []subcommand{
 	{"fetch", 1, getSubClient, fetchSubcommand},
 	{"get-config", 0, getSubClient, getConfigSubcommand},
 	{"get-file", 2, getSubClient, getFileSubcommand},
+	{"list-missing-objects", 1, getSubClientRetry,
+		listMissingObjectsSubcommand},
 	{"poll", 0, getSubClient, pollSubcommand},
 	{"push-file", 2, getSubClient, pushFileSubcommand},
 	{"push-image", 1, getSubClientRetry, pushImageSubcommand},
+	{"push-missing-objects", 1, getSubClientRetry,
+		pushMissingObjectsSubcommand},
 	{"set-config", 0, getSubClient, setConfigSubcommand},
 	{"show-update-request", 1, getSubClientRetry, showUpdateRequestSubcommand},
 	{"wait-for-image", 1, getSubClientRetry, waitForImageSubcommand},
