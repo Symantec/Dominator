@@ -22,55 +22,74 @@ func New(logger TestLogger) *Logger {
 }
 
 func (l *Logger) Debug(level uint8, v ...interface{}) {
-	l.logger.Log(fmt.Sprint(v...))
+	l.logger.Log(sprint(v...))
 }
 
 func (l *Logger) Debugf(level uint8, format string, v ...interface{}) {
-	l.logger.Log(fmt.Sprintf(format, v...))
+	l.logger.Log(sprintf(format, v...))
 }
 
 func (l *Logger) Debugln(level uint8, v ...interface{}) {
-	l.logger.Log(fmt.Sprint(v...))
+	l.logger.Log(sprint(v...))
 }
 
 func (l *Logger) Fatal(v ...interface{}) {
-	l.logger.Fatal(fmt.Sprint(v...))
+	l.logger.Fatal(sprint(v...))
 }
 
 func (l *Logger) Fatalf(format string, v ...interface{}) {
-	l.logger.Fatal(fmt.Sprintf(format, v...))
+	l.logger.Fatal(sprintf(format, v...))
 }
 
 func (l *Logger) Fatalln(v ...interface{}) {
-	l.logger.Fatal(fmt.Sprint(v...))
+	l.logger.Fatal(sprint(v...))
 }
 
 func (l *Logger) Panic(v ...interface{}) {
-	s := fmt.Sprint(v...)
+	s := sprint(v...)
 	l.logger.Fatal(s)
 	panic(s)
 }
 
 func (l *Logger) Panicf(format string, v ...interface{}) {
-	s := fmt.Sprintf(format, v...)
+	s := sprintf(format, v...)
 	l.logger.Fatal(s)
 	panic(s)
 }
 
 func (l *Logger) Panicln(v ...interface{}) {
-	s := fmt.Sprintln(v...)
+	s := sprint(v...)
 	l.logger.Fatal(s)
 	panic(s)
 }
 
 func (l *Logger) Print(v ...interface{}) {
-	l.logger.Log(fmt.Sprint(v...))
+	l.logger.Log(sprint(v...))
 }
 
 func (l *Logger) Printf(format string, v ...interface{}) {
-	l.logger.Log(fmt.Sprintf(format, v...))
+	l.logger.Log(sprintf(format, v...))
 }
 
 func (l *Logger) Println(v ...interface{}) {
-	l.logger.Log(fmt.Sprint(v...))
+	l.logger.Log(sprint(v...))
+}
+
+func strip(s string) string {
+	length := len(s)
+	if length < 1 {
+		return ""
+	}
+	if s[length-1] == '\n' {
+		return s[:length-1]
+	}
+	return s
+}
+
+func sprint(v ...interface{}) string {
+	return strip(fmt.Sprint(v...))
+}
+
+func sprintf(format string, v ...interface{}) string {
+	return strip(fmt.Sprintf(format, v...))
 }
