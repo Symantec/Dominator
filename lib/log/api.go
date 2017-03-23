@@ -11,3 +11,10 @@ type Logger interface {
 	Printf(format string, v ...interface{})
 	Println(v ...interface{})
 }
+
+type DebugLogger interface {
+	Debug(level uint8, v ...interface{})
+	Debugf(level uint8, format string, v ...interface{})
+	Debugln(level uint8, v ...interface{})
+	Logger
+}
