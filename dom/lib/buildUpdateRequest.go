@@ -4,8 +4,8 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/log"
 	subproto "github.com/Symantec/Dominator/proto/sub"
-	"log"
 	"path"
 	"sort"
 	"time"
@@ -14,7 +14,7 @@ import (
 // Returns true if there is a failure due to missing computed files.
 func (sub *Sub) buildUpdateRequest(image *image.Image,
 	request *subproto.UpdateRequest, deleteMissingComputedFiles bool,
-	logger *log.Logger) bool {
+	logger log.Logger) bool {
 	sub.requiredFS = image.FileSystem
 	sub.filter = image.Filter
 	request.Triggers = image.Triggers
@@ -52,7 +52,7 @@ func (sub *Sub) buildUpdateRequest(image *image.Image,
 func (sub *Sub) compareDirectories(request *subproto.UpdateRequest,
 	subDirectory, requiredDirectory *filesystem.DirectoryInode,
 	myPathName string, deleteMissingComputedFiles bool,
-	logger *log.Logger) bool {
+	logger log.Logger) bool {
 	// First look for entries that should be deleted.
 	if sub.filter != nil && subDirectory != nil {
 		for name := range subDirectory.EntriesByName {

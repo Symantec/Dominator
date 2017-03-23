@@ -4,11 +4,11 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
-	"log"
+	"github.com/Symantec/Dominator/lib/log"
 )
 
 func (sub *Sub) buildMissingLists(image *image.Image, pushComputedFiles bool,
-	ignoreMissingComputedFiles bool, logger *log.Logger) (
+	ignoreMissingComputedFiles bool, logger log.Logger) (
 	map[hash.Hash]uint64, map[hash.Hash]struct{}) {
 	objectsToFetch := make(map[hash.Hash]uint64)
 	objectsToPush := make(map[hash.Hash]struct{})

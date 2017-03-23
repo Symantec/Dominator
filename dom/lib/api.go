@@ -14,11 +14,11 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
-	"log"
 )
 
 var (
@@ -55,7 +55,7 @@ type Sub struct {
 // BuildMissingLists returns a slice of objects to fetch and a map of files to
 // push. The map is nil if there are missing computed files.
 func BuildMissingLists(sub Sub, image *image.Image, pushComputedFiles bool,
-	ignoreMissingComputedFiles bool, logger *log.Logger) (
+	ignoreMissingComputedFiles bool, logger log.Logger) (
 	map[hash.Hash]uint64, map[hash.Hash]struct{}) {
 	return sub.buildMissingLists(image, pushComputedFiles,
 		ignoreMissingComputedFiles, logger)
@@ -67,7 +67,7 @@ func BuildMissingLists(sub Sub, image *image.Image, pushComputedFiles bool,
 // It returns true if the function failed due to missing computed files.
 func BuildUpdateRequest(sub Sub, image *image.Image,
 	request *subproto.UpdateRequest, deleteMissingComputedFiles bool,
-	logger *log.Logger) bool {
+	logger log.Logger) bool {
 	return sub.buildUpdateRequest(image, request, deleteMissingComputedFiles,
 		logger)
 }
@@ -75,7 +75,7 @@ func BuildUpdateRequest(sub Sub, image *image.Image,
 // PushObjects will push the list of files given by objectsToPush to the sub.
 // File data are obtained from sub.ObjectGetter.
 func PushObjects(sub Sub, objectsToPush map[hash.Hash]struct{},
-	logger *log.Logger) error {
+	logger log.Logger) error {
 	return sub.pushObjects(objectsToPush, logger)
 }
 
