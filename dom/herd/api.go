@@ -171,12 +171,20 @@ func (herd *Herd) GetSubsConfiguration() subproto.Configuration {
 	return herd.getSubsConfiguration()
 }
 
+func (herd *Herd) LockWithTimeout(timeout time.Duration) {
+	herd.lockWithTimeout(timeout)
+}
+
 func (herd *Herd) MdbUpdate(mdb *mdb.Mdb) {
 	herd.mdbUpdate(mdb)
 }
 
 func (herd *Herd) PollNextSub() bool {
 	return herd.pollNextSub()
+}
+
+func (herd *Herd) RLockWithTimeout(timeout time.Duration) {
+	herd.rLockWithTimeout(timeout)
 }
 
 func (herd *Herd) SetDefaultImage(imageName string) error {

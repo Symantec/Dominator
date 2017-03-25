@@ -73,9 +73,13 @@ func (herd *Herd) enableUpdates() error {
 }
 
 func (herd *Herd) getSubsConfiguration() subproto.Configuration {
-	herd.RLock()
+	herd.RLockWithTimeout(time.Minute)
 	defer herd.RUnlock()
 	return herd.configurationForSubs
+}
+
+func (herd *Herd) lockWithTimeout(timeout time.Duration) {
+	timeoutFunction(herd.Lock, timeout)
 }
 
 func (herd *Herd) pollNextSub() bool {
@@ -144,6 +148,10 @@ func (herd *Herd) getReachableSelector(parsedQuery url.ParsedQuery) (
 	return rDuration(duration).selector, nil
 }
 
+func (herd *Herd) rLockWithTimeout(timeout time.Duration) {
+	timeoutFunction(herd.RLock, timeout)
+}
+
 func (herd *Herd) setDefaultImage(imageName string) error {
 	if imageName == "" {
 		herd.Lock()
@@ -202,4 +210,26 @@ func (herd *Herd) setDefaultImage(imageName string) error {
 		}
 	}
 	return nil
+}
+
+func timeoutFunction(f func(), timeout time.Duration) {
+	if timeout < 0 {
+		f()
+		return
+	}
+	completionChannel := make(chan struct{})
+	go func() {
+		f()
+		completionChannel <- struct{}{}
+	}()
+	timer := time.NewTimer(timeout)
+	select {
+	case <-completionChannel:
+		if !timer.Stop() {
+			<-timer.C
+		}
+		return
+	case <-timer.C:
+		panic("timeout")
+	}
 }
