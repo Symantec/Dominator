@@ -17,6 +17,16 @@ func New(logger log.Logger) *Logger {
 	return &Logger{-1, logger}
 }
 
+// Upgrade will upgrade a log.Logger, adding methods for debug logs. If the
+// provided logger is a log.DebugLogger, it is simply returned, otherwise the
+// logger is wrapped in a new Logger.
+func Upgrade(logger log.Logger) log.DebugLogger {
+	if logger, ok := logger.(log.DebugLogger); ok {
+		return logger
+	}
+	return New(logger)
+}
+
 // Debug will call the Print method if level is less than the max debug level
 // for the Logger.
 func (l *Logger) Debug(level uint8, v ...interface{}) {
