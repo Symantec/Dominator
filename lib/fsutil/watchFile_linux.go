@@ -1,9 +1,9 @@
 package fsutil
 
 import (
+	"github.com/Symantec/Dominator/lib/log"
 	"gopkg.in/fsnotify.v0"
 	"io"
-	"log"
 	"os"
 	"path"
 	"sync"
@@ -15,7 +15,7 @@ var (
 )
 
 func watchFileWithFsNotify(pathname string, channel chan<- io.ReadCloser,
-	logger *log.Logger) bool {
+	logger log.Logger) bool {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		logger.Println("Error creating watcher:", err)
@@ -54,7 +54,7 @@ func watchFileStopWithFsNotify() bool {
 }
 
 func waitForNotifyEvents(watcher *fsnotify.Watcher, pathname string,
-	channel chan<- io.ReadCloser, logger *log.Logger) {
+	channel chan<- io.ReadCloser, logger log.Logger) {
 	if file, err := os.Open(pathname); err == nil {
 		channel <- file
 	}

@@ -3,12 +3,12 @@
 package fsutil
 
 import (
+	"github.com/Symantec/Dominator/lib/log"
 	"io"
-	"log"
 )
 
 func watchFileWithFsNotify(pathname string, channel chan<- io.ReadCloser,
-	logger *log.Logger) bool {
+	logger log.Logger) bool {
 	return false
 }
 

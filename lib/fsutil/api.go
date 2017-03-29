@@ -2,9 +2,9 @@ package fsutil
 
 import (
 	"errors"
+	"github.com/Symantec/Dominator/lib/log"
 	"hash"
 	"io"
-	"log"
 	"os"
 	"time"
 )
@@ -78,7 +78,7 @@ func WaitFile(pathname string, timeout time.Duration) (io.ReadCloser, error) {
 // when a new inode is found and it is a regular file. The io.ReadCloser must
 // be closed after use.
 // Any errors are logged to the logger if it is not nil.
-func WatchFile(pathname string, logger *log.Logger) <-chan io.ReadCloser {
+func WatchFile(pathname string, logger log.Logger) <-chan io.ReadCloser {
 	return watchFile(pathname, logger)
 }
 
