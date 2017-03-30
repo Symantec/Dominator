@@ -15,6 +15,7 @@ import (
 	"github.com/Symantec/Dominator/lib/wsyscall"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"log"
+	_ "net/http/pprof"
 	"os"
 	"os/user"
 	"path"

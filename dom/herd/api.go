@@ -78,7 +78,6 @@ type Sub struct {
 	fileUpdateChannel            <-chan []filegenproto.FileInfo
 	busyFlagMutex                sync.Mutex
 	busy                         bool
-	busyMutex                    sync.Mutex
 	deleting                     bool
 	busyStartTime                time.Time
 	busyStopTime                 time.Time

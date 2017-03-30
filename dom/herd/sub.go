@@ -85,12 +85,10 @@ func (sub *Sub) tryMakeBusy() bool {
 	}
 	sub.busyStartTime = time.Now()
 	sub.busy = true
-	sub.busyMutex.Lock()
 	return true
 }
 
 func (sub *Sub) makeUnbusy() {
-	sub.busyMutex.Unlock()
 	sub.busyFlagMutex.Lock()
 	defer sub.busyFlagMutex.Unlock()
 	sub.busyStopTime = time.Now()
