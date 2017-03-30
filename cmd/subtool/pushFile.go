@@ -32,9 +32,6 @@ func pushFile(getSubClient getSubClientFunc, source, dest string) error {
 	srpcClient := getSubClient()
 	objClient := objclient.AttachObjectClient(srpcClient)
 	defer objClient.Close()
-	if err != nil {
-		return err
-	}
 	hashVal, _, err := objClient.AddObject(sourceFile, uint64(sourceStat.Size),
 		nil)
 	if err != nil {
