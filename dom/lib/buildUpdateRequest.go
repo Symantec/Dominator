@@ -4,8 +4,9 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/log/debuglogger"
 	subproto "github.com/Symantec/Dominator/proto/sub"
-	"log"
 	"path"
 	"sort"
 	"time"
@@ -14,7 +15,13 @@ import (
 // Returns true if there is a failure due to missing computed files.
 func (sub *Sub) buildUpdateRequest(image *image.Image,
 	request *subproto.UpdateRequest, deleteMissingComputedFiles bool,
-	logger *log.Logger) bool {
+	slogger log.Logger) bool {
+	var logger log.DebugLogger
+	if l, ok := slogger.(log.DebugLogger); ok {
+		logger = l
+	} else {
+		logger = debuglogger.New(slogger)
+	}
 	sub.requiredFS = image.FileSystem
 	sub.filter = image.Filter
 	request.Triggers = image.Triggers
@@ -52,7 +59,7 @@ func (sub *Sub) buildUpdateRequest(image *image.Image,
 func (sub *Sub) compareDirectories(request *subproto.UpdateRequest,
 	subDirectory, requiredDirectory *filesystem.DirectoryInode,
 	myPathName string, deleteMissingComputedFiles bool,
-	logger *log.Logger) bool {
+	logger log.DebugLogger) bool {
 	// First look for entries that should be deleted.
 	if sub.filter != nil && subDirectory != nil {
 		for name := range subDirectory.EntriesByName {
@@ -108,9 +115,10 @@ func (sub *Sub) compareDirectories(request *subproto.UpdateRequest,
 			requiredEntry = newEntry
 		}
 		if subEntry == nil {
-			sub.addEntry(request, requiredEntry, pathname)
+			sub.addEntry(request, requiredEntry, pathname, logger)
 		} else {
-			sub.compareEntries(request, subEntry, requiredEntry, pathname)
+			sub.compareEntries(request, subEntry, requiredEntry, pathname,
+				logger)
 		}
 		// If a directory: descend (possibly with the directory for the sub).
 		if requiredInode, ok := requiredInode.(*filesystem.DirectoryInode); ok {
@@ -146,17 +154,19 @@ func setComputedFileMtime(requiredInode *filesystem.RegularInode,
 }
 
 func (sub *Sub) addEntry(request *subproto.UpdateRequest,
-	requiredEntry *filesystem.DirectoryEntry, myPathName string) {
+	requiredEntry *filesystem.DirectoryEntry, myPathName string,
+	logger log.DebugLogger) {
 	requiredInode := requiredEntry.Inode()
 	if requiredInode, ok := requiredInode.(*filesystem.DirectoryInode); ok {
 		makeDirectory(request, requiredInode, myPathName, true)
 	} else {
-		sub.addInode(request, requiredEntry, myPathName)
+		sub.addInode(request, requiredEntry, myPathName, logger)
 	}
 }
 
 func (sub *Sub) compareEntries(request *subproto.UpdateRequest,
-	subEntry, requiredEntry *filesystem.DirectoryEntry, myPathName string) {
+	subEntry, requiredEntry *filesystem.DirectoryEntry, myPathName string,
+	logger log.DebugLogger) {
 	subInode := subEntry.Inode()
 	requiredInode := requiredEntry.Inode()
 	sameType, sameMetadata, sameData := filesystem.CompareInodes(
@@ -173,21 +183,24 @@ func (sub *Sub) compareEntries(request *subproto.UpdateRequest,
 		return
 	}
 	if sameType && sameData && sameMetadata {
-		if sub.relink(request, subEntry, requiredEntry, myPathName) {
+		if sub.relink(request, subEntry, requiredEntry, myPathName, logger) {
+			logger.Debugf(0, "identical relink OK for %s\n", myPathName)
 			return
 		}
 	} else if sameType && sameData {
-		if sub.relink(request, subEntry, requiredEntry, myPathName) {
+		if sub.relink(request, subEntry, requiredEntry, myPathName,
+			logger) {
+			logger.Debugf(0, "relink OK for %s\n", myPathName)
 			sub.updateMetadata(request, requiredEntry, myPathName)
 			return
 		}
 	}
-	sub.addInode(request, requiredEntry, myPathName)
+	sub.addInode(request, requiredEntry, myPathName, logger)
 }
 
 func (sub *Sub) relink(request *subproto.UpdateRequest,
 	subEntry, requiredEntry *filesystem.DirectoryEntry,
-	myPathName string) bool {
+	myPathName string, logger log.DebugLogger) bool {
 	subInum, ok := sub.requiredInodeToSubInode[requiredEntry.InodeNumber]
 	if !ok {
 		if _, mapped := sub.inodesMapped[subEntry.InodeNumber]; mapped {
@@ -195,6 +208,8 @@ func (sub *Sub) relink(request *subproto.UpdateRequest,
 		}
 		sub.requiredInodeToSubInode[requiredEntry.InodeNumber] =
 			subEntry.InodeNumber
+		logger.Debugf(0, "mapping sub inum: %d for: %s\n",
+			subEntry.InodeNumber, myPathName)
 		sub.inodesMapped[subEntry.InodeNumber] = struct{}{}
 		return true
 	}
@@ -242,9 +257,13 @@ func makeDirectory(request *subproto.UpdateRequest,
 }
 
 func (sub *Sub) addInode(request *subproto.UpdateRequest,
-	requiredEntry *filesystem.DirectoryEntry, myPathName string) {
+	requiredEntry *filesystem.DirectoryEntry, myPathName string,
+	logger log.DebugLogger) {
 	requiredInode := requiredEntry.Inode()
+	logger.Debugf(0, "addInode(%s, %d) Uid=%d\n",
+		myPathName, requiredEntry.InodeNumber, requiredInode.GetUid())
 	if name, ok := sub.inodesCreated[requiredEntry.InodeNumber]; ok {
+		logger.Debugf(0, "make link: %s to %s\n", myPathName, name)
 		makeHardlink(request, myPathName, name)
 		return
 	}
@@ -255,11 +274,17 @@ func (sub *Sub) addInode(request *subproto.UpdateRequest,
 		var sameDataInode filesystem.GenericInode
 		var sameDataName string
 		for _, name := range names {
+			if name == myPathName {
+				logger.Debugf(0, "skipping self comparison: %s\n", name)
+				continue
+			}
 			if inum, found := subFS.FilenameToInodeTable()[name]; found {
 				subInode := sub.FileSystem.InodeTable[inum]
 				_, sameMetadata, sameData := filesystem.CompareInodes(
 					subInode, requiredInode, nil)
 				if sameMetadata && sameData {
+					logger.Debugf(0, "make sibling link: %s to %s (uid=%d)\n",
+						myPathName, name, subInode.GetUid())
 					makeHardlink(request, myPathName, name)
 					return
 				}
@@ -270,6 +295,8 @@ func (sub *Sub) addInode(request *subproto.UpdateRequest,
 			}
 		}
 		if sameDataInode != nil {
+			logger.Debugf(0, "same data make link: %s to %s (uid=%d)\n",
+				myPathName, sameDataName, sameDataInode.GetUid())
 			sub.updateMetadata(request, requiredEntry, sameDataName)
 			makeHardlink(request, myPathName, sameDataName)
 			return
@@ -281,6 +308,7 @@ func (sub *Sub) addInode(request *subproto.UpdateRequest,
 				sub.subObjectCacheUsage[inode.Hash]++
 			} else {
 				// Not in object cache: grab it from file-system.
+				logger.Debugf(0, "copy to cache for: %s\n", myPathName)
 				request.FilesToCopyToCache = append(
 					request.FilesToCopyToCache,
 					sub.getFileToCopy(myPathName, inode.Hash))

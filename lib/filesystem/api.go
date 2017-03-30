@@ -26,9 +26,8 @@ const (
 )
 
 type GenericInode interface {
-	// GetUid() and GetGid() may be added if needed.
-	//GetUid() uint32
-	//GetGid() uint32
+	GetUid() uint32
+	GetGid() uint32
 	List(w io.Writer, name string, numLinksTable NumLinksTable,
 		numLinks int, listSelector ListSelector, filter *filter.Filter) error
 	WriteMetadata(name string) error
@@ -192,6 +191,14 @@ type ComputedRegularInode struct {
 	Uid    uint32
 	Gid    uint32
 	Source string
+}
+
+func (inode *ComputedRegularInode) GetUid() uint32 {
+	return inode.Uid
+}
+
+func (inode *ComputedRegularInode) GetGid() uint32 {
+	return inode.Gid
 }
 
 func (inode *ComputedRegularInode) List(w io.Writer, name string,

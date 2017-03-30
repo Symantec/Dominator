@@ -30,7 +30,7 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 
 func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 	int, int, int, map[string]struct{}) {
-	herd.Lock()
+	herd.LockWithTimeout(time.Minute)
 	defer herd.Unlock()
 	startTime := time.Now()
 	numNew := 0

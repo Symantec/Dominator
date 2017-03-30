@@ -28,7 +28,7 @@ var (
 	expiresIn = flag.Duration("expiresIn", 0,
 		"How long before the image expires (auto deletes). Default: never")
 	filterFile = flag.String("filterFile", "",
-		"Filter file to apply when diffing images")
+		"Filter file to apply when adding images")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
 		"Hostname of image server")
 	imageServerPortNum = flag.Uint("imageServerPortNum",
