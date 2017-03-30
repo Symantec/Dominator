@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
+	"syscall"
 	"time"
 )
 
@@ -36,6 +37,7 @@ func (t *rpcType) Poll(conn *srpc.Conn) error {
 		response.LastUpdateHadTriggerFailures = t.lastUpdateHadTriggerFailures
 	}
 	response.LastSuccessfulImageName = t.lastSuccessfulImageName
+	response.FreeSpace = t.getFreeSpace()
 	t.rwLock.RUnlock()
 	response.StartTime = startTime
 	response.PollTime = time.Now()
@@ -61,4 +63,20 @@ func (t *rpcType) Poll(conn *srpc.Conn) error {
 		}
 	}
 	return nil
+}
+
+func (t *rpcType) getFreeSpace() *uint64 {
+	if fd, err := syscall.Open(t.rootDir, syscall.O_RDONLY, 0); err != nil {
+		t.logger.Printf("error opening: %s: %s", t.rootDir, err)
+		return nil
+	} else {
+		defer syscall.Close(fd)
+		var statbuf syscall.Statfs_t
+		if err := syscall.Fstatfs(fd, &statbuf); err != nil {
+			t.logger.Printf("error getting file-system stats: %s\n", err)
+			return nil
+		}
+		retval := uint64(statbuf.Bfree * uint64(statbuf.Bsize))
+		return &retval
+	}
 }

@@ -32,6 +32,10 @@ func HashToFilename(hash hash.Hash) string {
 	return hashToFilename(hash)
 }
 
+func ObjectMapToCache(objectMap map[hash.Hash]uint64) ObjectCache {
+	return objectMapToCache(objectMap)
+}
+
 func ReadObject(reader io.Reader, length uint64, expectedHash *hash.Hash) (
 	hash.Hash, []byte, error) {
 	return readObject(reader, length, expectedHash)

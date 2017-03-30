@@ -9,13 +9,13 @@ import (
 
 func (sub *Sub) buildMissingLists(image *image.Image, pushComputedFiles bool,
 	ignoreMissingComputedFiles bool, logger *log.Logger) (
-	[]hash.Hash, map[hash.Hash]struct{}) {
-	objectsToFetch := make(map[hash.Hash]struct{})
+	map[hash.Hash]uint64, map[hash.Hash]struct{}) {
+	objectsToFetch := make(map[hash.Hash]uint64)
 	objectsToPush := make(map[hash.Hash]struct{})
 	for inum, inode := range image.FileSystem.InodeTable {
 		if rInode, ok := inode.(*filesystem.RegularInode); ok {
 			if rInode.Size > 0 {
-				objectsToFetch[rInode.Hash] = struct{}{}
+				objectsToFetch[rInode.Hash] = rInode.Size
 			}
 		} else if pushComputedFiles {
 			if _, ok := inode.(*filesystem.ComputedRegularInode); ok {
@@ -46,9 +46,5 @@ func (sub *Sub) buildMissingLists(image *image.Image, pushComputedFiles bool,
 			}
 		}
 	}
-	fetchList := make([]hash.Hash, 0, len(objectsToFetch))
-	for hashVal := range objectsToFetch {
-		fetchList = append(fetchList, hashVal)
-	}
-	return fetchList, objectsToPush
+	return objectsToFetch, objectsToPush
 }

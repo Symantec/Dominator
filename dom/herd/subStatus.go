@@ -38,6 +38,8 @@ func (status subStatus) string() string {
 		return "image undefined"
 	case statusImageNotReady:
 		return "image not ready"
+	case statusNotEnoughFreeSpace:
+		return "insufficient space"
 	case statusFetching:
 		return "fetching"
 	case statusFetchDenied:

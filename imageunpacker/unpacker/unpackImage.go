@@ -96,8 +96,9 @@ func (stream *streamManagerState) unpack(imageName string,
 	stream.fileSystem = nil
 	emptyFilter, _ := filter.New(nil)
 	desiredImage := &image.Image{FileSystem: desiredFS, Filter: emptyFilter}
-	objectsToFetch, _ := domlib.BuildMissingLists(subObj, desiredImage, false,
+	fetchMap, _ := domlib.BuildMissingLists(subObj, desiredImage, false,
 		true, stream.unpacker.logger)
+	objectsToFetch := objectcache.ObjectMapToCache(fetchMap)
 	objectsDir := path.Join(mountPoint, ".subd", "objects")
 	if err := stream.fetch(imageName, objectsToFetch, objectsDir); err != nil {
 		streamInfo.status = unpackproto.StatusStreamMounted

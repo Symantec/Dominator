@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/gob"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
@@ -62,6 +63,9 @@ func pollSubcommand(getSubClient getSubClientFunc, args []string) {
 		if reply.LastSuccessfulImageName != "" {
 			fmt.Printf("Last successful image: \"%s\"\n",
 				reply.LastSuccessfulImageName)
+		}
+		if reply.FreeSpace != nil {
+			fmt.Printf("Free space: %s\n", format.FormatBytes(*reply.FreeSpace))
 		}
 	}
 	time.Sleep(time.Duration(*wait) * time.Second)
