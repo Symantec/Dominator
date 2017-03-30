@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	jsonwriter "github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/mdbserver"
 	"io"
-	"log"
 	"os"
 	"path"
 	"reflect"
@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-func startMdbDaemon(mdbFileName string, logger *log.Logger) <-chan *mdb.Mdb {
+func startMdbDaemon(mdbFileName string, logger log.Logger) <-chan *mdb.Mdb {
 	mdbChannel := make(chan *mdb.Mdb, 1)
 	if *mdbServerHostname != "" && *mdbServerPortNum > 0 {
 		go serverWatchDaemon(*mdbServerHostname, *mdbServerPortNum, mdbFileName,
@@ -35,7 +35,7 @@ type genericDecoder interface {
 }
 
 func fileWatchDaemon(mdbFileName string, mdbChannel chan<- *mdb.Mdb,
-	logger *log.Logger) {
+	logger log.Logger) {
 	var lastMdb *mdb.Mdb
 	for readCloser := range fsutil.WatchFile(mdbFileName, logger) {
 		mdb := loadFile(readCloser, mdbFileName, logger)
@@ -55,7 +55,7 @@ func fileWatchDaemon(mdbFileName string, mdbChannel chan<- *mdb.Mdb,
 }
 
 func serverWatchDaemon(mdbServerHostname string, mdbServerPortNum uint,
-	mdbFileName string, mdbChannel chan<- *mdb.Mdb, logger *log.Logger) {
+	mdbFileName string, mdbChannel chan<- *mdb.Mdb, logger log.Logger) {
 	if file, err := os.Open(mdbFileName); err == nil {
 		fileMdb := loadFile(file, mdbFileName, logger)
 		file.Close()
@@ -116,7 +116,7 @@ func serverWatchDaemon(mdbServerHostname string, mdbServerPortNum uint,
 	}
 }
 
-func loadFile(reader io.Reader, filename string, logger *log.Logger) *mdb.Mdb {
+func loadFile(reader io.Reader, filename string, logger log.Logger) *mdb.Mdb {
 	decoder := getDecoder(reader, filename)
 	var mdb mdb.Mdb
 	decodeStartTime := time.Now()

@@ -9,8 +9,8 @@ package mdbd
 import (
 	"flag"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
-	"log"
 )
 
 var (
@@ -41,6 +41,6 @@ var (
 // a subsequent restart of the application.
 //
 // The logger will be used to log problems.
-func StartMdbDaemon(mdbFileName string, logger *log.Logger) <-chan *mdb.Mdb {
+func StartMdbDaemon(mdbFileName string, logger log.Logger) <-chan *mdb.Mdb {
 	return startMdbDaemon(mdbFileName, logger)
 }
