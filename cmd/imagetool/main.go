@@ -19,6 +19,8 @@ var (
 		"Filename or URL containing build log")
 	computedFiles = flag.String("computedFiles", "",
 		"Name of file containing computed files list")
+	copyMtimesFrom = flag.String("copyMtimesFrom", "",
+		"Name of image to copy mtimes for otherwise unchanged files/devices")
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
 	deleteFilter = flag.String("deleteFilter", "",
@@ -70,14 +72,15 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "           i: name of an image on the imageserver")
 	fmt.Fprintln(os.Stderr, "           l: name of file containing an Image")
 	fmt.Fprintln(os.Stderr, "           s: name of sub to poll")
-	fmt.Fprintln(os.Stderr, "  estimate-usage name")
-	fmt.Fprintln(os.Stderr, "  get    name directory")
+	fmt.Fprintln(os.Stderr, "  estimate-usage    name")
+	fmt.Fprintln(os.Stderr, "  get               name directory")
 	fmt.Fprintln(os.Stderr, "  list")
 	fmt.Fprintln(os.Stderr, "  listdirs")
 	fmt.Fprintln(os.Stderr, "  listunrefobj")
-	fmt.Fprintln(os.Stderr, "  merge-triggers triggers-file...")
-	fmt.Fprintln(os.Stderr, "  mkdir  name")
-	fmt.Fprintln(os.Stderr, "  show   name")
+	fmt.Fprintln(os.Stderr, "  list-latest-image directory")
+	fmt.Fprintln(os.Stderr, "  merge-triggers    triggers-file...")
+	fmt.Fprintln(os.Stderr, "  mkdir             name")
+	fmt.Fprintln(os.Stderr, "  show              name")
 	fmt.Fprintln(os.Stderr, "  showunrefobj")
 	fmt.Fprintln(os.Stderr, "Fields:")
 	fmt.Fprintln(os.Stderr, "  m: mode")
@@ -116,6 +119,7 @@ var subcommands = []subcommand{
 	{"list", 0, 0, listImagesSubcommand},
 	{"listdirs", 0, 0, listDirectoriesSubcommand},
 	{"listunrefobj", 0, 0, listUnreferencedObjectsSubcommand},
+	{"list-latest-image", 1, 1, listLatestImageSubcommand},
 	{"merge-triggers", 1, -1, mergeTriggersSubcommand},
 	{"mkdir", 1, 1, makeDirectorySubcommand},
 	{"show", 1, 1, showImageSubcommand},
