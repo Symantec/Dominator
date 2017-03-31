@@ -2,9 +2,9 @@ package filesystem
 
 import (
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"io"
-	"log"
 	"sync"
 )
 
@@ -12,10 +12,10 @@ type ObjectServer struct {
 	baseDir  string
 	rwLock   sync.RWMutex         // Protect map mutations.
 	sizesMap map[hash.Hash]uint64 // Only set if object is known.
-	logger   *log.Logger
+	logger   log.Logger
 }
 
-func NewObjectServer(baseDir string, logger *log.Logger) (
+func NewObjectServer(baseDir string, logger log.Logger) (
 	*ObjectServer, error) {
 	return newObjectServer(baseDir, logger)
 }
