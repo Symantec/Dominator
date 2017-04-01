@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"encoding/gob"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"io"
-	"log"
 	"time"
 )
 
-func newManager(objSrv objectserver.ObjectServer, logger *log.Logger) *Manager {
+func newManager(objSrv objectserver.ObjectServer, logger log.Logger) *Manager {
 	sourceReconnectChannel := make(chan string)
 	m := &Manager{
 		sourceMap:              make(map[string]*sourceType),
@@ -94,7 +94,7 @@ func (m *Manager) getSource(sourceName string) *sourceType {
 
 func manageSource(sourceName string, sourceReconnectChannel chan<- string,
 	clientRequestChannel <-chan *proto.ClientRequest,
-	serverMessageChannel chan<- *serverMessageType, logger *log.Logger) {
+	serverMessageChannel chan<- *serverMessageType, logger log.Logger) {
 	closeNotifyChannel := make(chan struct{})
 	initialRetryTimeout := time.Millisecond * 100
 	retryTimeout := initialRetryTimeout
@@ -133,7 +133,7 @@ func manageSource(sourceName string, sourceReconnectChannel chan<- string,
 
 func sendClientRequests(conn *srpc.Conn,
 	clientRequestChannel <-chan *proto.ClientRequest,
-	closeNotifyChannel <-chan struct{}, logger *log.Logger) {
+	closeNotifyChannel <-chan struct{}, logger log.Logger) {
 	encoder := gob.NewEncoder(conn)
 	for {
 		select {
@@ -156,7 +156,7 @@ func sendClientRequests(conn *srpc.Conn,
 
 func handleServerMessages(sourceName string, decoder *gob.Decoder,
 	serverMessageChannel chan<- *serverMessageType,
-	closeNotifyChannel chan<- struct{}, logger *log.Logger) {
+	closeNotifyChannel chan<- struct{}, logger log.Logger) {
 	for {
 		var message proto.ServerMessage
 		if err := decoder.Decode(&message); err != nil {
