@@ -31,7 +31,7 @@ func Upgrade(logger log.Logger) log.DebugLogger {
 // for the Logger.
 func (l *Logger) Debug(level uint8, v ...interface{}) {
 	if l.level >= int16(level) {
-		l.Print(v)
+		l.Print(v...)
 	}
 }
 
@@ -39,7 +39,7 @@ func (l *Logger) Debug(level uint8, v ...interface{}) {
 // for the Logger.
 func (l *Logger) Debugf(level uint8, format string, v ...interface{}) {
 	if l.level >= int16(level) {
-		l.Printf(format, v)
+		l.Printf(format, v...)
 	}
 }
 
@@ -47,7 +47,7 @@ func (l *Logger) Debugf(level uint8, format string, v ...interface{}) {
 // level for the Logger.
 func (l *Logger) Debugln(level uint8, v ...interface{}) {
 	if l.level >= int16(level) {
-		l.Println(v)
+		l.Println(v...)
 	}
 }
 
