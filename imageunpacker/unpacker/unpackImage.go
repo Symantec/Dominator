@@ -109,7 +109,7 @@ func (stream *streamManagerState) unpack(imageName string,
 	stream.unpacker.logger.Printf("Update(%s) starting\n", imageName)
 	startTime := time.Now()
 	var request subproto.UpdateRequest
-	domlib.BuildUpdateRequest(subObj, desiredImage, &request, true,
+	domlib.BuildUpdateRequest(subObj, desiredImage, &request, true, false,
 		stream.unpacker.logger)
 	_, _, err = sublib.Update(request, mountPoint, objectsDir, nil, nil, nil,
 		stream.unpacker.logger)

@@ -20,7 +20,7 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 		FileSystem:     sub.fileSystem,
 		ComputedInodes: sub.computedInodes,
 		ObjectCache:    sub.objectCache}
-	if lib.BuildUpdateRequest(subObj, sub.requiredImage, request, false,
+	if lib.BuildUpdateRequest(subObj, sub.requiredImage, request, false, false,
 		sub.herd.logger) {
 		return false, true
 	}

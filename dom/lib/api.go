@@ -64,12 +64,14 @@ func BuildMissingLists(sub Sub, image *image.Image, pushComputedFiles bool,
 // BuildUpdateRequest will build an update request which can be sent to the sub.
 // If deleteMissingComputedFiles is true then missing computed files are deleted
 // on the sub, else missing computed files lead to the function failing.
+// If deleteMissingComputedFiles is false and ignoreMissingComputedFiles is true
+// then missing computed files are ignored.
 // It returns true if the function failed due to missing computed files.
 func BuildUpdateRequest(sub Sub, image *image.Image,
 	request *subproto.UpdateRequest, deleteMissingComputedFiles bool,
-	logger log.Logger) bool {
+	ignoreMissingComputedFiles bool, logger log.Logger) bool {
 	return sub.buildUpdateRequest(image, request, deleteMissingComputedFiles,
-		logger)
+		ignoreMissingComputedFiles, logger)
 }
 
 // PushObjects will push the list of files given by objectsToPush to the sub.

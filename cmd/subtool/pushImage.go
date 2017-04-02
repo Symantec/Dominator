@@ -56,8 +56,12 @@ func pushImage(getSubClient getSubClientFunc, imageName string) error {
 		Hostname:       *subHostname,
 		Client:         srpcClient,
 		ComputedInodes: computedInodes}
+	deleteMissingComputedFiles := true
+	ignoreMissingComputedFiles := false
 	if *computedFilesRoot == "" {
 		subObj.ObjectGetter = nullObjectGetterType{}
+		deleteMissingComputedFiles = false
+		ignoreMissingComputedFiles = true
 	} else {
 		fs, err := scanner.ScanFileSystem(*computedFilesRoot, nil, nil, nil,
 			nil, nil)
@@ -102,7 +106,8 @@ func pushImage(getSubClient getSubClientFunc, imageName string) error {
 	var updateRequest sub.UpdateRequest
 	var updateReply sub.UpdateResponse
 	startTime = showStart("lib.BuildUpdateRequest()")
-	if lib.BuildUpdateRequest(subObj, img, &updateRequest, true, logger) {
+	if lib.BuildUpdateRequest(subObj, img, &updateRequest,
+		deleteMissingComputedFiles, ignoreMissingComputedFiles, logger) {
 		showBlankLine()
 		return errors.New("missing computed file(s)")
 	}
@@ -165,6 +170,12 @@ func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 	logger *log.Logger) error {
 	var generationCount uint64
 	deleteEarly := *deleteBeforeFetch
+	ignoreMissingComputedFiles := true
+	pushComputedFiles := true
+	if *computedFilesRoot == "" {
+		ignoreMissingComputedFiles = false
+		pushComputedFiles = false
+	}
 	for ; time.Now().Before(timeoutTime); time.Sleep(time.Second) {
 		var pollReply sub.PollResponse
 		if err := pollAndBuildPointers(subObj.Client, &generationCount,
@@ -185,7 +196,7 @@ func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 		subObj.ObjectCache = pollReply.ObjectCache
 		startTime := showStart("lib.BuildMissingLists()")
 		objectsToFetch, objectsToPush := lib.BuildMissingLists(*subObj, img,
-			true, true, logger)
+			pushComputedFiles, ignoreMissingComputedFiles, logger)
 		showTimeTaken(startTime)
 		if len(objectsToFetch) < 1 && len(objectsToPush) < 1 {
 			return nil
