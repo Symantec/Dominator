@@ -16,12 +16,7 @@ import (
 func (sub *Sub) buildUpdateRequest(image *image.Image,
 	request *subproto.UpdateRequest, deleteMissingComputedFiles bool,
 	slogger log.Logger) bool {
-	var logger log.DebugLogger
-	if l, ok := slogger.(log.DebugLogger); ok {
-		logger = l
-	} else {
-		logger = debuglogger.New(slogger)
-	}
+	logger := debuglogger.Upgrade(slogger)
 	sub.requiredFS = image.FileSystem
 	sub.filter = image.Filter
 	request.Triggers = image.Triggers
