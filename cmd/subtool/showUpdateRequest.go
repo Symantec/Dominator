@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/dom/lib"
+	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filesystem/scanner"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/objectcache"
@@ -55,11 +57,35 @@ func showUpdateRequest(getSubClient getSubClientFunc, imageName string) error {
 			return err
 		}
 	}
-	objectsToFetch, _ := lib.BuildMissingLists(subObj, img, false, true,
-		logger)
+	deleteMissingComputedFiles := true
+	ignoreMissingComputedFiles := false
+	pushComputedFiles := true
+	if *computedFilesRoot == "" {
+		subObj.ObjectGetter = nullObjectGetterType{}
+		deleteMissingComputedFiles = false
+		ignoreMissingComputedFiles = true
+		pushComputedFiles = false
+	} else {
+		fs, err := scanner.ScanFileSystem(*computedFilesRoot, nil, nil, nil,
+			nil, nil)
+		if err != nil {
+			return err
+		}
+		subObj.ObjectGetter = fs
+		computedInodes := make(map[string]*filesystem.RegularInode)
+		subObj.ComputedInodes = computedInodes
+		for filename, inum := range fs.FilenameToInodeTable() {
+			if inode, ok := fs.InodeTable[inum].(*filesystem.RegularInode); ok {
+				computedInodes[filename] = inode
+			}
+		}
+	}
+	objectsToFetch, _ := lib.BuildMissingLists(subObj, img, pushComputedFiles,
+		ignoreMissingComputedFiles, logger)
 	subObj.ObjectCache = objectcache.ObjectMapToCache(objectsToFetch)
 	var updateRequest sub.UpdateRequest
-	if lib.BuildUpdateRequest(subObj, img, &updateRequest, true, logger) {
+	if lib.BuildUpdateRequest(subObj, img, &updateRequest,
+		deleteMissingComputedFiles, ignoreMissingComputedFiles, logger) {
 		return errors.New("missing computed file(s)")
 	}
 	if err := json.WriteWithIndent(os.Stdout, "  ", updateRequest); err != nil {

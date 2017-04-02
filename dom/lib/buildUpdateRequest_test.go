@@ -168,8 +168,7 @@ func makeUpdateRequest(t *testing.T, imageFS *filesystem.FileSystem,
 	emptyFilter, _ := filter.New(nil)
 	BuildUpdateRequest(subObj,
 		&image.Image{FileSystem: imageFS, Filter: emptyFilter},
-		&request,
-		false, testlogger.New(t))
+		&request, false, false, testlogger.New(t))
 	reqTxt, err := json.MarshalIndent(request, "", "    ")
 	if err != nil {
 		t.Fatal(err)

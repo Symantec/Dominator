@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/concurrent"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectcache"
-	"log"
 	"os"
 	"path"
 	"syscall"
 	"time"
 )
 
-func newObjectServer(baseDir string, logger *log.Logger) (
+func newObjectServer(baseDir string, logger log.Logger) (
 	*ObjectServer, error) {
 	fi, err := os.Stat(baseDir)
 	if err != nil {
@@ -26,9 +26,6 @@ func newObjectServer(baseDir string, logger *log.Logger) (
 	var objSrv ObjectServer
 	objSrv.baseDir = baseDir
 	objSrv.sizesMap = make(map[hash.Hash]uint64)
-	if logger == nil {
-		logger = log.New(os.Stdout, "", log.LstdFlags)
-	}
 	objSrv.logger = logger
 	state := concurrent.NewState(0)
 	startTime := time.Now()

@@ -2,10 +2,10 @@ package client
 
 import (
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
-	"log"
 )
 
 type ComputedFile struct {
@@ -44,13 +44,13 @@ type Manager struct {
 	serverMessageChannel   chan *serverMessageType
 	sourceReconnectChannel chan<- string
 	objectWaiters          map[hash.Hash][]chan<- hash.Hash
-	logger                 *log.Logger
+	logger                 log.Logger
 }
 
 // New creates a new *Manager. Object data will be added to the object server
 // objSrv. Only one Manager should be created per application.
 // The logger will be used to log problems.
-func New(objSrv objectserver.ObjectServer, logger *log.Logger) *Manager {
+func New(objSrv objectserver.ObjectServer, logger log.Logger) *Manager {
 	return newManager(objSrv, logger)
 }
 

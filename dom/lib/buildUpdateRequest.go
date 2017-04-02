@@ -15,13 +15,8 @@ import (
 // Returns true if there is a failure due to missing computed files.
 func (sub *Sub) buildUpdateRequest(image *image.Image,
 	request *subproto.UpdateRequest, deleteMissingComputedFiles bool,
-	slogger log.Logger) bool {
-	var logger log.DebugLogger
-	if l, ok := slogger.(log.DebugLogger); ok {
-		logger = l
-	} else {
-		logger = debuglogger.New(slogger)
-	}
+	ignoreMissingComputedFiles bool, slogger log.Logger) bool {
+	logger := debuglogger.Upgrade(slogger)
 	sub.requiredFS = image.FileSystem
 	sub.filter = image.Filter
 	request.Triggers = image.Triggers
@@ -40,7 +35,7 @@ func (sub *Sub) buildUpdateRequest(image *image.Image,
 	}
 	if sub.compareDirectories(request,
 		&sub.FileSystem.DirectoryInode, &sub.requiredFS.DirectoryInode,
-		"/", deleteMissingComputedFiles, logger) {
+		"/", deleteMissingComputedFiles, ignoreMissingComputedFiles, logger) {
 		return true
 	}
 	// Look for multiply used objects and tell the sub.
@@ -59,7 +54,7 @@ func (sub *Sub) buildUpdateRequest(image *image.Image,
 func (sub *Sub) compareDirectories(request *subproto.UpdateRequest,
 	subDirectory, requiredDirectory *filesystem.DirectoryInode,
 	myPathName string, deleteMissingComputedFiles bool,
-	logger log.DebugLogger) bool {
+	ignoreMissingComputedFiles bool, logger log.DebugLogger) bool {
 	// First look for entries that should be deleted.
 	if sub.filter != nil && subDirectory != nil {
 		for name := range subDirectory.EntriesByName {
@@ -102,6 +97,9 @@ func (sub *Sub) compareDirectories(request *subproto.UpdateRequest,
 					}
 					continue
 				}
+				if ignoreMissingComputedFiles {
+					continue
+				}
 				logger.Printf(
 					"compareDirectories(%s): missing computed file: %s\n",
 					sub, pathname)
@@ -129,7 +127,7 @@ func (sub *Sub) compareDirectories(request *subproto.UpdateRequest,
 				}
 			}
 			sub.compareDirectories(request, subInode, requiredInode, pathname,
-				deleteMissingComputedFiles, logger)
+				deleteMissingComputedFiles, ignoreMissingComputedFiles, logger)
 		}
 	}
 	return false

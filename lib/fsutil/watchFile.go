@@ -1,8 +1,8 @@
 package fsutil
 
 import (
+	"github.com/Symantec/Dominator/lib/log"
 	"io"
-	"log"
 	"os"
 	"syscall"
 	"time"
@@ -10,7 +10,7 @@ import (
 
 var stopped bool
 
-func watchFile(pathname string, logger *log.Logger) <-chan io.ReadCloser {
+func watchFile(pathname string, logger log.Logger) <-chan io.ReadCloser {
 	channel := make(chan io.ReadCloser, 1)
 	if !watchFileWithFsNotify(pathname, channel, logger) {
 		go watchFileForever(pathname, channel, logger)
@@ -25,7 +25,7 @@ func watchFileStop() {
 }
 
 func watchFileForever(pathname string, channel chan<- io.ReadCloser,
-	logger *log.Logger) {
+	logger log.Logger) {
 	var lastStat syscall.Stat_t
 	lastFd := -1
 	for ; !stopped; time.Sleep(time.Second) {
