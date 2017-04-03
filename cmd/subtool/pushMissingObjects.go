@@ -9,22 +9,18 @@ import (
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
-	"log"
 	"os"
 )
 
 func pushMissingObjectsSubcommand(getSubClient getSubClientFunc,
 	args []string) {
 	if err := pushMissingObjects(getSubClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error pushing missing objects: %s: %s\n",
-			args[0], err)
-		os.Exit(2)
+		logger.Fatalf("Error pushing missing objects: %s: %s\n", args[0], err)
 	}
 	os.Exit(0)
 }
 
 func pushMissingObjects(getSubClient getSubClientFunc, imageName string) error {
-	logger := log.New(os.Stderr, "", log.LstdFlags)
 	// Start querying the imageserver for the image.
 	imageServerAddress := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)

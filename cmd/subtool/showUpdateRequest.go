@@ -11,20 +11,17 @@ import (
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
-	"log"
 	"os"
 )
 
 func showUpdateRequestSubcommand(getSubClient getSubClientFunc, args []string) {
 	if err := showUpdateRequest(getSubClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error showing update: %s: %s\n", args[0], err)
-		os.Exit(2)
+		logger.Fatalf("Error showing update: %s: %s\n", args[0], err)
 	}
 	os.Exit(0)
 }
 
 func showUpdateRequest(getSubClient getSubClientFunc, imageName string) error {
-	logger := log.New(os.Stderr, "", log.LstdFlags)
 	// Start querying the imageserver for the image.
 	imageServerAddress := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)

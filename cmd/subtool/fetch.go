@@ -12,8 +12,7 @@ import (
 
 func fetchSubcommand(getSubClient getSubClientFunc, args []string) {
 	if err := fetch(getSubClient(), args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error fetching: %s\n", err)
-		os.Exit(2)
+		logger.Fatalf("Error fetching: %s\n", err)
 	}
 	os.Exit(0)
 }

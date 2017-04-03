@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	objclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/triggers"
@@ -13,8 +12,7 @@ import (
 
 func pushFileSubcommand(getSubClient getSubClientFunc, args []string) {
 	if err := pushFile(getSubClient, args[0], args[1]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error pushing file: %s\n", err)
-		os.Exit(2)
+		logger.Fatalf("Error pushing file: %s\n", err)
 	}
 	os.Exit(0)
 }

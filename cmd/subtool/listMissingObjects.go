@@ -7,22 +7,18 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
-	"log"
 	"os"
 )
 
 func listMissingObjectsSubcommand(getSubClient getSubClientFunc,
 	args []string) {
 	if err := listMissingObjects(getSubClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing missing objects: %s: %s\n",
-			args[0], err)
-		os.Exit(2)
+		logger.Fatalf("Error listing missing objects: %s: %s\n", args[0], err)
 	}
 	os.Exit(0)
 }
 
 func listMissingObjects(getSubClient getSubClientFunc, imageName string) error {
-	logger := log.New(os.Stderr, "", log.LstdFlags)
 	// Start querying the imageserver for the image.
 	imageServerAddress := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)

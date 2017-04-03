@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/flagutil"
+	"github.com/Symantec/Dominator/lib/log/cmdlogger"
+	"github.com/Symantec/Dominator/lib/log/debuglogger"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"os"
@@ -59,6 +61,7 @@ var (
 		"Replacement triggers string to apply when pushing image (ignored if triggersFile is set)")
 	wait = flag.Uint("wait", 0, "Seconds to sleep after last Poll")
 
+	logger      *debuglogger.Logger
 	timeoutTime time.Time
 )
 
@@ -92,8 +95,7 @@ func getSubClient() *srpc.Client {
 	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
 	client, err := srpc.DialHTTP("tcp", clientName, time.Second*5)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error dialing %s: %s\n", clientName, err)
-		os.Exit(3)
+		logger.Fatalf("Error dialing %s: %s\n", clientName, err)
 	}
 	return client
 }
@@ -111,12 +113,10 @@ func getSubClientRetry() *srpc.Client {
 			err == srpc.ErrorBadCertificate ||
 			err == srpc.ErrorAccessToMethodDenied {
 			// Never going to happen. Bail out.
-			fmt.Fprintf(os.Stderr, "Error dialing %s: %s\n", clientName, err)
-			os.Exit(3)
+			logger.Fatalf("Error dialing %s: %s\n", clientName, err)
 		}
 	}
-	fmt.Fprintf(os.Stderr, "Error dialing %s: %s\n", clientName, err)
-	os.Exit(3)
+	logger.Fatalf("Error dialing %s: %s\n", clientName, err)
 	return nil
 }
 
@@ -155,14 +155,13 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
+	logger = cmdlogger.New()
 	if *triggersFile != "" && *triggersString != "" {
-		fmt.Fprintln(os.Stderr,
+		logger.Fatalln(os.Stderr,
 			"Cannot specify both -triggersFile and -triggersString")
-		os.Exit(2)
 	}
 	if err := setupclient.SetupTls(true); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		logger.Fatalln(os.Stderr, err)
 	}
 	timeoutTime = time.Now().Add(*timeout)
 	for _, subcommand := range subcommands {
