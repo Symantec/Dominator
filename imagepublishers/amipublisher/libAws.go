@@ -371,10 +371,15 @@ func getRunningInstance(awsService *ec2.EC2, instances []*ec2.Instance,
 	return stoppedInstance, nil
 }
 
-func getSecurityGroup(awsService *ec2.EC2, tags awsutil.Tags) (
+func getSecurityGroup(awsService *ec2.EC2, vpcId string, tags awsutil.Tags) (
 	*ec2.SecurityGroup, error) {
+	filters := tags.MakeFilters()
+	filters = append(filters, &ec2.Filter{
+		Name:   aws.String("vpc-id"),
+		Values: aws.StringSlice([]string{vpcId}),
+	})
 	out, err := awsService.DescribeSecurityGroups(
-		&ec2.DescribeSecurityGroupsInput{Filters: tags.MakeFilters()})
+		&ec2.DescribeSecurityGroupsInput{Filters: filters})
 	if err != nil {
 		return nil, err
 	}
@@ -437,7 +442,8 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image,
 	if err != nil {
 		return nil, err
 	}
-	sg, err := getSecurityGroup(awsService, securityGroupSearchTags)
+	sg, err := getSecurityGroup(awsService, aws.StringValue(vpc.VpcId),
+		securityGroupSearchTags)
 	if err != nil {
 		return nil, err
 	}
