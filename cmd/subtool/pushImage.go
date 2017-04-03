@@ -11,13 +11,13 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
 	"io"
-	"log"
 	"os"
 	"time"
 )
@@ -36,14 +36,12 @@ func (getter nullObjectGetterType) GetObject(hashVal hash.Hash) (
 
 func pushImageSubcommand(getSubClient getSubClientFunc, args []string) {
 	if err := pushImage(getSubClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error pushing image: %s: %s\n", args[0], err)
-		os.Exit(2)
+		logger.Fatalf("Error pushing image: %s: %s\n", args[0], err)
 	}
 	os.Exit(0)
 }
 
 func pushImage(getSubClient getSubClientFunc, imageName string) error {
-	logger := log.New(os.Stderr, "", log.LstdFlags)
 	computedInodes := make(map[string]*filesystem.RegularInode)
 	// Start querying the imageserver for the image.
 	imageServerAddress := fmt.Sprintf("%s:%d",
@@ -78,7 +76,7 @@ func pushImage(getSubClient getSubClientFunc, imageName string) error {
 	startTime = showStart("<-imgChannel")
 	imageResult := <-imgChannel
 	showTimeTaken(startTime)
-	fmt.Fprintf(os.Stderr, "Background image fetch took %s\n",
+	logger.Printf("Background image fetch took %s\n",
 		format.Duration(imageResult.duration))
 	img := imageResult.image
 	var err error
@@ -131,8 +129,7 @@ func getImageChannel(clientName, imageName string,
 		startTime := time.Now()
 		img, err := getImageRetry(clientName, imageName, timeoutTime)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting image: %s\n", err)
-			os.Exit(1)
+			logger.Fatalf("Error getting image: %s\n", err)
 		}
 		resultChannel <- timedImageFetch{img, time.Since(startTime)}
 	}()
@@ -167,7 +164,7 @@ func getImageRetry(clientName, imageName string,
 
 func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 	imageServerAddress string, timeoutTime time.Time,
-	logger *log.Logger) error {
+	logger log.DebugLogger) error {
 	var generationCount uint64
 	deleteEarly := *deleteBeforeFetch
 	ignoreMissingComputedFiles := true
@@ -256,7 +253,7 @@ func pollAndBuildPointers(srpcClient *srpc.Client, generationCount *uint64,
 
 func showStart(operation string) time.Time {
 	if *showTimes {
-		fmt.Fprint(os.Stderr, operation, " ")
+		logger.Print(operation, " ")
 	}
 	return time.Now()
 }
@@ -264,19 +261,18 @@ func showStart(operation string) time.Time {
 func showTimeTaken(startTime time.Time) {
 	if *showTimes {
 		stopTime := time.Now()
-		fmt.Fprintf(os.Stderr, "took %s\n",
-			format.Duration(stopTime.Sub(startTime)))
+		logger.Printf("took %s\n", format.Duration(stopTime.Sub(startTime)))
 	}
 }
 
 func showBlankLine() {
 	if *showTimes {
-		fmt.Fprintln(os.Stderr)
+		logger.Println()
 	}
 }
 
 func deleteUnneededFiles(srpcClient *srpc.Client, subFS *filesystem.FileSystem,
-	imgFS *filesystem.FileSystem, logger *log.Logger) bool {
+	imgFS *filesystem.FileSystem, logger log.DebugLogger) bool {
 	startTime := showStart("compute early files to delete")
 	pathsToDelete := make([]string, 0)
 	imgHashToInodesTable := imgFS.HashToInodesTable()

@@ -28,8 +28,7 @@ func pollSubcommand(getSubClient getSubClientFunc, args []string) {
 		err = client.CallPoll(srpcClient, request, &reply)
 		fmt.Printf("Poll duration: %s\n", time.Since(pollStartTime))
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error calling: %s\n", err)
-			os.Exit(1)
+			logger.Fatalf("Error calling: %s\n", err)
 		}
 		if *newConnection {
 			srpcClient.Close()
@@ -51,9 +50,7 @@ func pollSubcommand(getSubClient getSubClientFunc, args []string) {
 			if *file != "" {
 				f, err := os.Create(*file)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error creating: %s: %s\n",
-						*file, err)
-					os.Exit(1)
+					logger.Fatalf("Error creating: %s: %s\n", *file, err)
 				}
 				encoder := gob.NewEncoder(f)
 				encoder.Encode(fs)

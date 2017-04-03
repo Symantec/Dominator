@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
@@ -10,8 +9,7 @@ import (
 
 func cleanupSubcommand(getSubClient getSubClientFunc, args []string) {
 	if err := cleanup(getSubClient()); err != nil {
-		fmt.Fprintf(os.Stderr, "Error cleaning up: %s\n", err)
-		os.Exit(2)
+		logger.Fatalf("Error cleaning up: %s\n", err)
 	}
 	os.Exit(0)
 }
@@ -25,7 +23,7 @@ func cleanup(srpcClient *srpc.Client) error {
 	if len(reply.ObjectCache) < 1 {
 		return nil
 	}
-	fmt.Fprintf(os.Stderr, "Deleting: %d objects\n", len(reply.ObjectCache))
+	logger.Printf("Deleting: %d objects\n", len(reply.ObjectCache))
 	return client.Cleanup(srpcClient, reply.ObjectCache)
 	return nil
 }

@@ -9,8 +9,7 @@ import (
 
 func getConfigSubcommand(getSubClient getSubClientFunc, args []string) {
 	if err := getConfig(getSubClient()); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting config: %s\n", err)
-		os.Exit(1)
+		logger.Fatalf("Error getting config: %s\n", err)
 	}
 	os.Exit(0)
 }

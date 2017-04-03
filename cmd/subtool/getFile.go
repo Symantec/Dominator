@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/sub/client"
 	"io"
@@ -11,8 +10,7 @@ import (
 
 func getFileSubcommand(getSubClient getSubClientFunc, args []string) {
 	if err := getFile(getSubClient(), args[0], args[1]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting file: %s\n", err)
-		os.Exit(2)
+		logger.Fatalf("Error getting file: %s\n", err)
 	}
 	os.Exit(0)
 }

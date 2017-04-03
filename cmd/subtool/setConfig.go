@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
@@ -10,8 +9,7 @@ import (
 
 func setConfigSubcommand(getSubClient getSubClientFunc, args []string) {
 	if err := setConfig(getSubClient()); err != nil {
-		fmt.Fprintf(os.Stderr, "Error setting config: %s\n", err)
-		os.Exit(1)
+		logger.Fatalf("Error setting config: %s\n", err)
 	}
 	os.Exit(0)
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
 	"log"
@@ -12,9 +11,7 @@ import (
 
 func waitForImageSubcommand(getSubClient getSubClientFunc, args []string) {
 	if err := waitForImage(getSubClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error waiting for image: %s: %s\n",
-			args[0], err)
-		os.Exit(2)
+		logger.Fatalf("Error waiting for image: %s: %s\n", args[0], err)
 	}
 	os.Exit(0)
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 	"os"
@@ -9,8 +8,7 @@ import (
 
 func deleteSubcommand(getSubClient getSubClientFunc, args []string) {
 	if err := deletePaths(getSubClient(), args); err != nil {
-		fmt.Fprintf(os.Stderr, "Error deleting: %s\n", err)
-		os.Exit(2)
+		logger.Fatalf("Error deleting: %s\n", err)
 	}
 	os.Exit(0)
 }
