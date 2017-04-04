@@ -35,7 +35,7 @@ var (
 		"Maximum idle time for image unpacker instances")
 	minFreeBytes = flag.Uint64("minFreeBytes", 1<<28,
 		"minimum number of free bytes in image")
-	searchTags              = awsutil.Tags{"Preferred": ""}
+	searchTags              = awsutil.Tags{"Preferred": "true"}
 	securityGroupSearchTags awsutil.Tags
 	skipTargets             awsutil.TargetList
 	sshKeyName              = flag.String("sshKeyName", "",
@@ -43,7 +43,7 @@ var (
 	subnetSearchTags awsutil.Tags = awsutil.Tags{"Network": "Private"}
 	tags             awsutil.Tags
 	targets          awsutil.TargetList
-	vpcSearchTags    awsutil.Tags = awsutil.Tags{"Preferred": ""}
+	vpcSearchTags    awsutil.Tags = awsutil.Tags{"Preferred": "true"}
 )
 
 func init() {
