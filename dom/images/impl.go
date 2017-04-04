@@ -3,12 +3,12 @@ package images
 import (
 	"github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"log"
 	"time"
 )
 
-func newManager(imageServerAddress string, logger *log.Logger) *Manager {
+func newManager(imageServerAddress string, logger log.Logger) *Manager {
 	imageInterestChannel := make(chan map[string]struct{})
 	imageRequestChannel := make(chan string)
 	imageExpireChannel := make(chan string, 16)
