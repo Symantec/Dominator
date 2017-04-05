@@ -6,6 +6,7 @@ import (
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectserver"
@@ -14,7 +15,6 @@ import (
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"io"
-	"log"
 	"sync"
 	"time"
 )
@@ -120,7 +120,7 @@ type Herd struct {
 	imageManager          *images.Manager
 	objectServer          objectserver.ObjectServer
 	computedFilesManager  *filegenclient.Manager
-	logger                *log.Logger
+	logger                log.DebugLogger
 	htmlWriters           []HtmlWriter
 	updatesDisabledReason string
 	updatesDisabledBy     string
@@ -139,7 +139,7 @@ type Herd struct {
 }
 
 func NewHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
-	metricsDir *tricorder.DirectorySpec, logger *log.Logger) *Herd {
+	metricsDir *tricorder.DirectorySpec, logger log.DebugLogger) *Herd {
 	return newHerd(imageServerAddress, objectServer, metricsDir, logger)
 }
 

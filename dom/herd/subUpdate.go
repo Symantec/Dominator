@@ -39,7 +39,7 @@ func (sub *Sub) buildUpdateRequest(request *subproto.UpdateRequest) (
 		len(request.DirectoriesToMake) > 0 ||
 		len(request.InodesToChange) > 0 ||
 		sub.lastSuccessfulImageName != sub.requiredImageName {
-		sub.herd.logger.Printf(
+		sub.herd.logger.Debugf(0,
 			"buildUpdateRequest(%s) took: %s user CPU time\n",
 			sub, sub.lastComputeUpdateCpuDuration)
 		return false, false

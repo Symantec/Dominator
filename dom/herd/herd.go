@@ -7,11 +7,11 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/cpusharer"
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/url"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/tricorder/go/tricorder"
-	"log"
 	"runtime"
 	"time"
 )
@@ -22,7 +22,7 @@ var (
 )
 
 func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
-	metricsDir *tricorder.DirectorySpec, logger *log.Logger) *Herd {
+	metricsDir *tricorder.DirectorySpec, logger log.DebugLogger) *Herd {
 	var herd Herd
 	herd.imageManager = images.New(imageServerAddress, logger)
 	herd.objectServer = objectServer
