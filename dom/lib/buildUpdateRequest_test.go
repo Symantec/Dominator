@@ -13,6 +13,12 @@ import (
 	"testing"
 )
 
+type fileInfo struct {
+	size    uint64
+	hashVal hash.Hash
+	uid     uint32
+}
+
 func TestSameFile(t *testing.T) {
 	request := makeUpdateRequest(t, testDataFile0(0), testDataFile0(0))
 	if len(request.PathsToDelete) != 0 {
@@ -96,7 +102,10 @@ func TestSplitHardlinks(t *testing.T) {
 }
 
 func TestSplitHashes1(t *testing.T) {
-	request := makeUpdateRequest(t, testDataDuplicateHashes1(),
+	request := makeUpdateRequest(t,
+		testDataMulti(
+			[]fileInfo{{101, hash1, 1}, {101, hash1, 0}},
+			[]uint64{1, 2}),
 		testDataLinkedFiles(2))
 	if len(request.FilesToCopyToCache) != 1 {
 		t.Error("File not being copied to cache")
@@ -108,16 +117,12 @@ func TestSplitHashes1(t *testing.T) {
 	if len(request.InodesToMake) != 1 {
 		t.Error("Inode not being created")
 	}
-	if request.InodesToMake[0].Name != "/file2" {
-		t.Error("/file2 not being created")
-	}
-	if len(request.InodesToChange) != 1 {
-		t.Error("Inode not being changed")
+	if request.InodesToMake[0].Name != "/file1" {
+		t.Error("/file1 not being created")
 	}
 	req := subproto.UpdateRequest{
 		FilesToCopyToCache: request.FilesToCopyToCache,
 		InodesToMake:       request.InodesToMake,
-		InodesToChange:     request.InodesToChange,
 	}
 	if !reflect.DeepEqual(request, req) {
 		t.Error("Unexpected changes being made")
@@ -125,7 +130,10 @@ func TestSplitHashes1(t *testing.T) {
 }
 
 func TestSplitHashes2(t *testing.T) {
-	request := makeUpdateRequest(t, testDataDuplicateHashes2(),
+	request := makeUpdateRequest(t,
+		testDataMulti(
+			[]fileInfo{{101, hash1, 0}, {101, hash1, 1}},
+			[]uint64{1, 2}),
 		testDataLinkedFiles(2))
 	if len(request.FilesToCopyToCache) != 1 {
 		t.Error("File not being copied to cache")
@@ -136,6 +144,114 @@ func TestSplitHashes2(t *testing.T) {
 	req := subproto.UpdateRequest{
 		FilesToCopyToCache: request.FilesToCopyToCache,
 		InodesToMake:       request.InodesToMake,
+	}
+	if !reflect.DeepEqual(request, req) {
+		t.Error("Unexpected changes being made")
+	}
+}
+
+func TestSplitHashes3(t *testing.T) {
+	request := makeUpdateRequest(t,
+		testDataMulti(
+			[]fileInfo{{101, hash1, 1}, {101, hash1, 0}},
+			[]uint64{1, 2, 2}),
+		testDataLinkedFiles(3))
+	if len(request.FilesToCopyToCache) != 1 {
+		t.Error("File not being copied to cache")
+	}
+	if request.FilesToCopyToCache[0].DoHardlink {
+		t.Errorf("%s is being hardlinked to cache",
+			request.FilesToCopyToCache[0].Name)
+	}
+	if len(request.InodesToMake) != 1 {
+		t.Error("Inode not being created")
+	}
+	if request.InodesToMake[0].Name != "/file1" {
+		t.Error("/file1 not being created")
+	}
+	req := subproto.UpdateRequest{
+		FilesToCopyToCache: request.FilesToCopyToCache,
+		InodesToMake:       request.InodesToMake,
+	}
+	if !reflect.DeepEqual(request, req) {
+		t.Error("Unexpected changes being made")
+	}
+}
+
+func TestSplitHashes4(t *testing.T) {
+	request := makeUpdateRequest(t,
+		testDataMulti(
+			[]fileInfo{{101, hash1, 1}, {101, hash1, 0}, {101, hash1, 0}},
+			[]uint64{1, 2, 2, 1, 3}),
+		testDataLinkedFiles(4))
+	if len(request.FilesToCopyToCache) != 1 {
+		t.Error("File not being copied to cache")
+	}
+	if request.FilesToCopyToCache[0].DoHardlink {
+		t.Errorf("%s is being hardlinked to cache",
+			request.FilesToCopyToCache[0].Name)
+	}
+	if len(request.InodesToMake) != 2 {
+		t.Error("Inodes not being created")
+	}
+	if request.InodesToMake[0].Name != "/file1" {
+		t.Error("/file1 not being created")
+	}
+	if request.InodesToMake[1].Name != "/file5" {
+		t.Error("/file5 not being created")
+	}
+	if len(request.HardlinksToMake) != 1 {
+		t.Error("File not being linked")
+	}
+	if request.HardlinksToMake[0].NewLink != "/file4" ||
+		request.HardlinksToMake[0].Target != "/file1" {
+		t.Errorf("/file4 not being linked to /file1")
+	}
+	if len(request.MultiplyUsedObjects) != 1 {
+		t.Error("Object not being duplicated")
+	}
+	req := subproto.UpdateRequest{
+		FilesToCopyToCache:  request.FilesToCopyToCache,
+		InodesToMake:        request.InodesToMake,
+		HardlinksToMake:     request.HardlinksToMake,
+		MultiplyUsedObjects: request.MultiplyUsedObjects,
+	}
+	if !reflect.DeepEqual(request, req) {
+		t.Error("Unexpected changes being made")
+	}
+}
+
+func TestSplitHashes5(t *testing.T) {
+	request := makeUpdateRequest(t,
+		testDataMulti(
+			[]fileInfo{{101, hash1, 1}, {101, hash1, 0}, {101, hash1, 1}},
+			[]uint64{1, 2, 2, 1, 3}),
+		testDataMulti(
+			[]fileInfo{{101, hash1, 1}, {101, hash1, 0}, {101, hash1, 0}},
+			[]uint64{1, 2, 1, 2, 3}))
+	if len(request.HardlinksToMake) != 2 {
+		t.Error("#HardlinksToMake: %d != 2", len(request.HardlinksToMake))
+	}
+	if request.HardlinksToMake[0].NewLink != "/file3" ||
+		request.HardlinksToMake[0].Target != "/file2" {
+		t.Errorf("/file3 not being linked to /file2")
+	}
+	if request.HardlinksToMake[1].NewLink != "/file4" ||
+		request.HardlinksToMake[1].Target != "/file1" {
+		t.Errorf("/file4 not being linked to /file1")
+	}
+	if len(request.InodesToChange) < 1 {
+		t.Error("Inode not being changed")
+	}
+	if len(request.InodesToChange) > 1 {
+		t.Error("Too many inodes being changed")
+	}
+	if request.InodesToChange[0].Name != "/file5" {
+		t.Error("/file5 not being changed")
+	}
+	req := subproto.UpdateRequest{
+		HardlinksToMake: request.HardlinksToMake,
+		InodesToChange:  request.InodesToChange,
 	}
 	if !reflect.DeepEqual(request, req) {
 		t.Error("Unexpected changes being made")
@@ -300,45 +416,26 @@ func testDataLinkedFiles(nFiles int) *filesystem.FileSystem {
 	}
 }
 
-func testDataDuplicateHashes1() *filesystem.FileSystem {
-	return &filesystem.FileSystem{
-		InodeTable: filesystem.InodeTable{
-			1: &filesystem.RegularInode{Size: 101, Hash: hash1, Uid: 1},
-			2: &filesystem.RegularInode{Size: 101, Hash: hash1},
-		},
-		DirectoryInode: filesystem.DirectoryInode{
-			EntryList: []*filesystem.DirectoryEntry{
-				&filesystem.DirectoryEntry{
-					Name:        "file1",
-					InodeNumber: 1,
-				},
-				&filesystem.DirectoryEntry{
-					Name:        "file2",
-					InodeNumber: 2,
-				},
-			},
-		},
+func testDataMulti(fInfos []fileInfo, files []uint64) *filesystem.FileSystem {
+	inodes := make(filesystem.InodeTable, len(fInfos))
+	for i := uint64(0); i < uint64(len(fInfos)); i++ {
+		fi := fInfos[i]
+		inodes[i+1] = &filesystem.RegularInode{
+			Size: fi.size,
+			Hash: fi.hashVal,
+			Uid:  fi.uid,
+		}
 	}
-}
-
-func testDataDuplicateHashes2() *filesystem.FileSystem {
+	entries := make([]*filesystem.DirectoryEntry, 0, len(files))
+	for i := 0; i < len(files); i++ {
+		entries = append(entries, &filesystem.DirectoryEntry{
+			Name:        fmt.Sprintf("file%d", i+1),
+			InodeNumber: files[i],
+		})
+	}
 	return &filesystem.FileSystem{
-		InodeTable: filesystem.InodeTable{
-			1: &filesystem.RegularInode{Size: 101, Hash: hash1},
-			2: &filesystem.RegularInode{Size: 101, Hash: hash1, Uid: 1},
-		},
-		DirectoryInode: filesystem.DirectoryInode{
-			EntryList: []*filesystem.DirectoryEntry{
-				&filesystem.DirectoryEntry{
-					Name:        "file1",
-					InodeNumber: 1,
-				},
-				&filesystem.DirectoryEntry{
-					Name:        "file2",
-					InodeNumber: 2,
-				},
-			},
-		},
+		InodeTable:     inodes,
+		DirectoryInode: filesystem.DirectoryInode{EntryList: entries},
 	}
 }
 

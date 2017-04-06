@@ -35,7 +35,7 @@ type Sub struct {
 	ObjectGetter            objectserver.ObjectGetter
 	requiredInodeToSubInode map[uint64]uint64
 	inodesMapped            map[uint64]struct{} // Sub inode number.
-	inodesChanged           map[uint64]bool     // Required inode number.
+	inodesChanged           map[uint64]struct{} // Required inode number.
 	inodesCreated           map[uint64]string   // Required inode number.
 	subObjectCacheUsage     map[hash.Hash]uint64
 	requiredFS              *filesystem.FileSystem
