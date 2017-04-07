@@ -7,6 +7,8 @@ import (
 	"github.com/Symantec/Dominator/dom/herd"
 	"github.com/Symantec/Dominator/dom/rpcd"
 	"github.com/Symantec/Dominator/lib/constants"
+	liblog "github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/log/debuglogger"
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/mdb/mdbd"
@@ -107,7 +109,7 @@ func pathJoin(first, second string) string {
 	return path.Join(first, second)
 }
 
-func newObjectServer(objectsDir string, logger *log.Logger) (
+func newObjectServer(objectsDir string, logger liblog.DebugLogger) (
 	*objectserver.ObjectServer, error) {
 	fi, err := os.Stat(objectsDir)
 	if err != nil {
@@ -124,7 +126,7 @@ func main() {
 	flag.Parse()
 	tricorder.RegisterFlags()
 	circularBuffer := logbuf.New()
-	logger := log.New(circularBuffer, "", log.LstdFlags)
+	logger := debuglogger.New(log.New(circularBuffer, "", log.LstdFlags))
 	if err := setupserver.SetupTls(); err != nil {
 		logger.Println(err)
 		circularBuffer.Flush()

@@ -22,7 +22,7 @@ func (sub *Sub) buildUpdateRequest(image *image.Image,
 	request.Triggers = image.Triggers
 	sub.requiredInodeToSubInode = make(map[uint64]uint64)
 	sub.inodesMapped = make(map[uint64]struct{})
-	sub.inodesChanged = make(map[uint64]bool)
+	sub.inodesChanged = make(map[uint64]struct{})
 	sub.inodesCreated = make(map[uint64]string)
 	sub.subObjectCacheUsage = make(map[hash.Hash]uint64, len(sub.ObjectCache))
 	// Populate subObjectCacheUsage.
@@ -185,10 +185,12 @@ func (sub *Sub) compareEntries(request *subproto.UpdateRequest,
 			logger.Debugf(0, "identical relink OK for %s\n", myPathName)
 			return
 		}
-	} else if sameType && sameData {
+	} else if sameType && sameData &&
+		sub.compareInodeLinks(requiredEntry.InodeNumber, subEntry.InodeNumber) {
 		if sub.relink(request, subEntry, requiredEntry, myPathName,
 			logger) {
-			logger.Debugf(0, "relink OK for %s\n", myPathName)
+			logger.Debugf(0, "mapped and changed for %s, inum: %d\n",
+				myPathName, subEntry.InodeNumber)
 			sub.updateMetadata(request, requiredEntry, myPathName)
 			return
 		}
@@ -206,8 +208,8 @@ func (sub *Sub) relink(request *subproto.UpdateRequest,
 		}
 		sub.requiredInodeToSubInode[requiredEntry.InodeNumber] =
 			subEntry.InodeNumber
-		logger.Debugf(0, "mapping sub inum: %d for: %s\n",
-			subEntry.InodeNumber, myPathName)
+		logger.Debugf(0, "mapping required inum: %d to sub inum: %d for: %s\n",
+			requiredEntry.InodeNumber, subEntry.InodeNumber, myPathName)
 		sub.inodesMapped[subEntry.InodeNumber] = struct{}{}
 		return true
 	}
@@ -226,16 +228,34 @@ func makeHardlink(request *subproto.UpdateRequest, newLink, target string) {
 	request.HardlinksToMake = append(request.HardlinksToMake, hardlink)
 }
 
+func (sub *Sub) compareInodeLinks(requiredInum, subInum uint64) bool {
+	requiredNames := sub.requiredFS.InodeToFilenamesTable()[requiredInum]
+	subNames := sub.FileSystem.InodeToFilenamesTable()[subInum]
+	if len(subNames) > len(requiredNames) {
+		return false
+	}
+	requiredLinks := make(map[string]struct{}, len(requiredNames))
+	for _, name := range requiredNames {
+		requiredLinks[name] = struct{}{}
+	}
+	for _, name := range subNames {
+		if _, ok := requiredLinks[name]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func (sub *Sub) updateMetadata(request *subproto.UpdateRequest,
 	requiredEntry *filesystem.DirectoryEntry, myPathName string) {
-	if sub.inodesChanged[requiredEntry.InodeNumber] {
+	if _, ok := sub.inodesChanged[requiredEntry.InodeNumber]; ok {
 		return
 	}
 	var inode subproto.Inode
 	inode.Name = myPathName
 	inode.GenericInode = requiredEntry.Inode()
 	request.InodesToChange = append(request.InodesToChange, inode)
-	sub.inodesChanged[requiredEntry.InodeNumber] = true
+	sub.inodesChanged[requiredEntry.InodeNumber] = struct{}{}
 }
 
 func makeDirectory(request *subproto.UpdateRequest,
@@ -269,8 +289,6 @@ func (sub *Sub) addInode(request *subproto.UpdateRequest,
 	names := sub.requiredFS.InodeToFilenamesTable()[requiredEntry.InodeNumber]
 	subFS := sub.FileSystem
 	if len(names) > 1 {
-		var sameDataInode filesystem.GenericInode
-		var sameDataName string
 		for _, name := range names {
 			if name == myPathName {
 				logger.Debugf(0, "skipping self comparison: %s\n", name)
@@ -286,24 +304,16 @@ func (sub *Sub) addInode(request *subproto.UpdateRequest,
 					makeHardlink(request, myPathName, name)
 					return
 				}
-				if sameData {
-					sameDataInode = subInode
-					sameDataName = name
-				}
 			}
-		}
-		if sameDataInode != nil {
-			logger.Debugf(0, "same data make link: %s to %s (uid=%d)\n",
-				myPathName, sameDataName, sameDataInode.GetUid())
-			sub.updateMetadata(request, requiredEntry, sameDataName)
-			makeHardlink(request, myPathName, sameDataName)
-			return
 		}
 	}
 	if inode, ok := requiredEntry.Inode().(*filesystem.RegularInode); ok {
 		if inode.Size > 0 {
-			if _, ok := sub.subObjectCacheUsage[inode.Hash]; ok {
+			if old, ok := sub.subObjectCacheUsage[inode.Hash]; ok {
 				sub.subObjectCacheUsage[inode.Hash]++
+				if old > 0 {
+					logger.Debugf(0, "duplicate in cache for: %s\n", myPathName)
+				}
 			} else {
 				// Not in object cache: grab it from file-system.
 				logger.Debugf(0, "copy to cache for: %s\n", myPathName)

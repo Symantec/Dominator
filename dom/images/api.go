@@ -2,13 +2,13 @@ package images
 
 import (
 	"github.com/Symantec/Dominator/lib/image"
-	"log"
+	"github.com/Symantec/Dominator/lib/log"
 	"sync"
 )
 
 type Manager struct {
 	imageServerAddress string
-	logger             *log.Logger
+	logger             log.Logger
 	loggedDialFailure  bool
 	sync.RWMutex
 	// Protected by lock.
@@ -19,7 +19,7 @@ type Manager struct {
 	missingImages        map[string]error
 }
 
-func New(imageServerAddress string, logger *log.Logger) *Manager {
+func New(imageServerAddress string, logger log.Logger) *Manager {
 	return newManager(imageServerAddress, logger)
 }
 
