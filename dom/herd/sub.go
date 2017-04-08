@@ -454,7 +454,7 @@ func (sub *Sub) updateConfiguration(srpcClient *srpc.Client,
 	if pollReply.ScanCount < 1 {
 		return
 	}
-	sub.herd.RLockWithTimeout(time.Minute * 5)
+	sub.herd.RLockWithTimeout(time.Minute)
 	newConf := sub.herd.configurationForSubs
 	sub.herd.RUnlock()
 	if newConf.NetworkSpeedPercent < 1 {
