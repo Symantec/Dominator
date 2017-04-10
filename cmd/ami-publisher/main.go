@@ -6,8 +6,8 @@ import (
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/constants"
 	liblog "github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/log/cmdlogger"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
-	"log"
 	"os"
 	"time"
 )
@@ -115,13 +115,14 @@ var subcommands = []subcommand{
 }
 
 func main() {
+	cmdlogger.SetDatestampsDefault(true)
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {
 		printUsage()
 		os.Exit(2)
 	}
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := cmdlogger.New()
 	if err := setupclient.SetupTls(true); err != nil {
 		logger.Println(err)
 		os.Exit(1)
