@@ -12,6 +12,7 @@ import (
 	"github.com/Symantec/Dominator/lib/url"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/tricorder/go/tricorder"
+	"os"
 	"runtime"
 	"time"
 )
@@ -230,6 +231,11 @@ func timeoutFunction(f func(), timeout time.Duration) {
 		}
 		return
 	case <-timer.C:
+		os.Stderr.Write([]byte("lock timeout. Full stack trace follows:\n"))
+		buf := make([]byte, 1024*1024)
+		nBytes := runtime.Stack(buf, true)
+		os.Stderr.Write(buf[0:nBytes])
+		os.Stderr.Write([]byte("\n"))
 		panic("timeout")
 	}
 }
