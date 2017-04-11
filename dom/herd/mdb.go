@@ -3,12 +3,17 @@ package herd
 import (
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"reflect"
 	"time"
 )
 
 func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
-	numNew, numDeleted, numChanged, wantedImages := herd.mdbUpdateGetLock(mdb)
+	numNew, numDeleted, numChanged, wantedImages, clientResourcesToDelete :=
+		herd.mdbUpdateGetLock(mdb)
+	for _, clientResource := range clientResourcesToDelete {
+		clientResource.ScheduleClose()
+	}
 	// Clean up unreferenced images.
 	herd.imageManager.SetImageInterestList(wantedImages, true)
 	pluralNew := "s"
@@ -29,7 +34,7 @@ func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {
 }
 
 func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
-	int, int, int, map[string]struct{}) {
+	int, int, int, map[string]struct{}, []*srpc.ClientResource) {
 	herd.LockWithTimeout(time.Minute)
 	defer herd.Unlock()
 	startTime := time.Now()
@@ -91,12 +96,14 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 	}
 	delete(wantedImages, "")
 	// Delete flagged subs (those not in the new MDB).
+	clientResourcesToDelete := make([]*srpc.ClientResource, 0)
 	for subHostname := range subsToDelete {
 		sub := herd.subsByName[subHostname]
 		sub.busyFlagMutex.Lock()
 		sub.deleting = true
 		if sub.clientResource != nil {
-			sub.clientResource.ScheduleClose()
+			clientResourcesToDelete = append(clientResourcesToDelete,
+				sub.clientResource)
 		}
 		sub.busyFlagMutex.Unlock()
 		herd.computedFilesManager.Remove(subHostname)
@@ -104,5 +111,5 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 		numDeleted++
 	}
 	mdbUpdateTimeDistribution.Add(time.Since(startTime))
-	return numNew, numDeleted, numChanged, wantedImages
+	return numNew, numDeleted, numChanged, wantedImages, clientResourcesToDelete
 }
