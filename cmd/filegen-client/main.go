@@ -4,13 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Symantec/Dominator/lib/filegen/client"
+	"github.com/Symantec/Dominator/lib/log/cmdlogger"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/mdb/mdbd"
 	"github.com/Symantec/Dominator/lib/objectserver/memory"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"io"
-	"log"
 	"os"
 	"time"
 )
@@ -92,7 +92,7 @@ func main() {
 		os.Exit(1)
 	}
 	objectServer := memory.NewObjectServer()
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := cmdlogger.New()
 	manager := client.New(objectServer, logger)
 	mdbChannel := mdbd.StartMdbDaemon(*mdbFile, logger)
 	machines := make(map[string]struct{})
