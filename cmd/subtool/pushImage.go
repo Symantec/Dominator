@@ -200,13 +200,12 @@ func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 		}
 		if len(objectsToFetch) > 0 {
 			startTime := showStart("Fetch()")
-			err := subObj.Client.RequestReply("Subd.Fetch", sub.FetchRequest{
+			err := fetchUntil(subObj, sub.FetchRequest{
 				ServerAddress: imageServerAddress,
 				Wait:          true,
 				Hashes:        objectcache.ObjectMapToCache(objectsToFetch)},
-				&sub.FetchResponse{})
+				timeoutTime, logger)
 			if err != nil {
-				showBlankLine()
 				logger.Printf("Error calling %s:Subd.Fetch(%s): %s\n",
 					subObj.Hostname, imageServerAddress, err)
 				return err
@@ -224,6 +223,28 @@ func pollFetchAndPush(subObj *lib.Sub, img *image.Image,
 		}
 	}
 	return errors.New("timed out fetching and pushing objects")
+}
+
+func fetchUntil(subObj *lib.Sub, request sub.FetchRequest,
+	timeoutTime time.Time, logger log.DebugLogger) error {
+	showBlank := true
+	for ; time.Now().Before(timeoutTime); time.Sleep(time.Second) {
+		err := subObj.Client.RequestReply("Subd.Fetch", request,
+			&sub.FetchResponse{})
+		if err == nil {
+			return nil
+		}
+		if showBlank {
+			showBlankLine()
+			showBlank = false
+		}
+		logger.Printf("Error calling %s:Subd.Fetch(): %s\n",
+			subObj.Hostname, err)
+	}
+	if showBlank {
+		showBlankLine()
+	}
+	return errors.New("timed out fetching objects")
 }
 
 func pollAndBuildPointers(srpcClient *srpc.Client, generationCount *uint64,
