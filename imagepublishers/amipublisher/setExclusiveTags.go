@@ -24,13 +24,14 @@ func setExclusiveTagsForTarget(awsService *ec2.EC2, amiId string,
 		return nil
 	}
 	// First extract the value of the Name tag which is common to this stream.
-	imageIds := make([]string, 1)
-	imageIds[0] = amiId
 	out, err := awsService.DescribeImages(&ec2.DescribeImagesInput{
-		ImageIds: aws.StringSlice(imageIds),
+		ImageIds: aws.StringSlice([]string{amiId}),
 	})
 	if err != nil {
 		return err
+	}
+	if len(out.Images) < 1 {
+		return fmt.Errorf("AMI: %s does not exist", amiId)
 	}
 	var nameTag string
 	for _, tag := range out.Images[0].Tags {
