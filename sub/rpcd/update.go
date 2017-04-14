@@ -69,7 +69,7 @@ func (t *rpcType) updateAndUnlock(request sub.UpdateRequest,
 	t.disableScannerFunc(true)
 	defer t.disableScannerFunc(false)
 	startTime := time.Now()
-	var oldTriggers triggers.Triggers
+	oldTriggers := &triggers.MergeableTriggers{}
 	file, err := os.Open(t.oldTriggersFilename)
 	if err == nil {
 		decoder := json.NewDecoder(file)
@@ -77,17 +77,15 @@ func (t *rpcType) updateAndUnlock(request sub.UpdateRequest,
 		err = decoder.Decode(&trig.Triggers)
 		file.Close()
 		if err == nil {
-			oldTriggers = trig
+			oldTriggers.Merge(&trig)
 		} else {
 			t.logger.Printf("Error decoding old triggers: %s", err.Error())
 		}
 	}
 	if request.Triggers != nil {
-		// Fall back to using new triggers and hope for the best. This supports
-		// initial Domination of a machine.
-		if len(oldTriggers.Triggers) < 1 {
-			oldTriggers.Triggers = request.Triggers.Triggers
-		}
+		// Merge new triggers into old triggers. This supports initial
+		// Domination of a machine and when the old triggers are incomplete.
+		oldTriggers.Merge(request.Triggers)
 		file, err = os.Create(t.oldTriggersFilename)
 		if err == nil {
 			writer := bufio.NewWriter(file)
@@ -100,7 +98,7 @@ func (t *rpcType) updateAndUnlock(request sub.UpdateRequest,
 		}
 	}
 	hadTriggerFailures, fsChangeDuration, lastUpdateError := lib.Update(
-		request, rootDirectoryName, t.objectsDir, &oldTriggers,
+		request, rootDirectoryName, t.objectsDir, oldTriggers.ExportTriggers(),
 		t.scannerConfiguration.ScanFilter, runTriggers, t.logger)
 	t.lastUpdateHadTriggerFailures = hadTriggerFailures
 	t.lastUpdateError = lastUpdateError
