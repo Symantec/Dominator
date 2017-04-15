@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+type BoostCpuLimitRequest struct{}
+
+type BoostCpuLimitResponse struct{}
+
 type Configuration struct {
 	CpuPercent          uint
 	NetworkSpeedPercent uint
