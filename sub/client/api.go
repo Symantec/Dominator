@@ -7,6 +7,10 @@ import (
 	"io"
 )
 
+func BoostCpuLimit(client *srpc.Client) error {
+	return boostCpuLimit(client)
+}
+
 func Cleanup(client *srpc.Client, hashes []hash.Hash) error {
 	return cleanup(client, hashes)
 }
