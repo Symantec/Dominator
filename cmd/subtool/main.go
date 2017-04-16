@@ -76,6 +76,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
+	fmt.Fprintln(os.Stderr, "  boost-cpu-limit")
 	fmt.Fprintln(os.Stderr, "  cleanup")
 	fmt.Fprintln(os.Stderr, "  delete pathname...")
 	fmt.Fprintln(os.Stderr, "  fetch hashesFile")
@@ -131,6 +132,7 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
+	{"boost-cpu-limit", 0, getSubClient, boostCpuLimitSubcommand},
 	{"cleanup", 0, getSubClient, cleanupSubcommand},
 	{"delete", 1, getSubClient, deleteSubcommand},
 	{"fetch", 1, getSubClient, fetchSubcommand},

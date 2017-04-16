@@ -25,5 +25,4 @@ func cleanup(srpcClient *srpc.Client) error {
 	}
 	logger.Printf("Deleting: %d objects\n", len(reply.ObjectCache))
 	return client.Cleanup(srpcClient, reply.ObjectCache)
-	return nil
 }
