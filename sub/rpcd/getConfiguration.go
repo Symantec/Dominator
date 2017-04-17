@@ -17,7 +17,7 @@ func (t *rpcType) GetConfiguration(conn *srpc.Conn,
 func (t *rpcType) getConfiguration() sub.Configuration {
 	var configuration sub.Configuration
 	configuration.CpuPercent =
-		t.scannerConfiguration.CpuLimiter.CpuPercent()
+		t.scannerConfiguration.DefaultCpuPercent
 	configuration.NetworkSpeedPercent =
 		t.scannerConfiguration.NetworkReaderContext.SpeedPercent()
 	configuration.ScanSpeedPercent =

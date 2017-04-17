@@ -9,7 +9,11 @@ import (
 func (t *rpcType) SetConfiguration(conn *srpc.Conn,
 	request sub.SetConfigurationRequest,
 	reply *sub.SetConfigurationResponse) error {
+	if request.CpuPercent > 100 {
+		request.CpuPercent = 100
+	}
 	if request.CpuPercent > 0 {
+		t.scannerConfiguration.DefaultCpuPercent = request.CpuPercent
 		t.scannerConfiguration.CpuLimiter.SetCpuPercent(request.CpuPercent)
 	}
 	if request.NetworkSpeedPercent > 0 {
