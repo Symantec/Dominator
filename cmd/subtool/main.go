@@ -16,6 +16,8 @@ import (
 var (
 	computedFilesRoot = flag.String("computedFilesRoot", "",
 		"Name of directory tree containing computed files")
+	cpuPercent = flag.Uint("cpuPercent", 0,
+		"CPU speed as percentage of capacity (default 50)")
 	debug             = flag.Bool("debug", false, "Enable debug mode")
 	deleteBeforeFetch = flag.Bool("deleteBeforeFetch", false,
 		"If true, delete prior to Fetch rather than during Update")

@@ -16,8 +16,9 @@ func setConfigSubcommand(getSubClient getSubClientFunc, args []string) {
 
 func setConfig(srpcClient *srpc.Client) error {
 	var config sub.Configuration
-	config.ScanSpeedPercent = *scanSpeedPercent
+	config.CpuPercent = *cpuPercent
 	config.NetworkSpeedPercent = *networkSpeedPercent
 	config.ScanExclusionList = scanExcludeList
+	config.ScanSpeedPercent = *scanSpeedPercent
 	return client.SetConfiguration(srpcClient, config)
 }
