@@ -11,6 +11,8 @@ import (
 )
 
 var (
+	cpuPercent = flag.Uint("cpuPercent", 0,
+		"CPU speed as percentage of capacity (default 50)")
 	networkSpeedPercent = flag.Uint("networkSpeedPercent",
 		constants.DefaultNetworkSpeedPercent,
 		"Network speed as percentage of capacity")

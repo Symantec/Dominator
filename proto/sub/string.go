@@ -5,8 +5,9 @@ import (
 )
 
 func (configuration Configuration) String() string {
-	retval := fmt.Sprintf("ScanSpeedPercent: %d\nNetworkSpeedPercent: %d",
-		configuration.ScanSpeedPercent, configuration.NetworkSpeedPercent)
+	retval := fmt.Sprintf("CpuPercent: %d\nNetworkSpeedPercent: %d\nScanSpeedPercent: %d",
+		configuration.CpuPercent, configuration.NetworkSpeedPercent,
+		configuration.ScanSpeedPercent)
 	if len(configuration.ScanExclusionList) > 0 {
 		retval += "\n" + "ScanExclusionList:"
 		for _, exclusion := range configuration.ScanExclusionList {

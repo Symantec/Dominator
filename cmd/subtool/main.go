@@ -16,6 +16,8 @@ import (
 var (
 	computedFilesRoot = flag.String("computedFilesRoot", "",
 		"Name of directory tree containing computed files")
+	cpuPercent = flag.Uint("cpuPercent", 0,
+		"CPU speed as percentage of capacity (default 50)")
 	debug             = flag.Bool("debug", false, "Enable debug mode")
 	deleteBeforeFetch = flag.Bool("deleteBeforeFetch", false,
 		"If true, delete prior to Fetch rather than during Update")
@@ -76,6 +78,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
+	fmt.Fprintln(os.Stderr, "  boost-cpu-limit")
 	fmt.Fprintln(os.Stderr, "  cleanup")
 	fmt.Fprintln(os.Stderr, "  delete pathname...")
 	fmt.Fprintln(os.Stderr, "  fetch hashesFile")
@@ -131,6 +134,7 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
+	{"boost-cpu-limit", 0, getSubClient, boostCpuLimitSubcommand},
 	{"cleanup", 0, getSubClient, cleanupSubcommand},
 	{"delete", 1, getSubClient, deleteSubcommand},
 	{"fetch", 1, getSubClient, fetchSubcommand},

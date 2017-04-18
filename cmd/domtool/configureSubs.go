@@ -18,8 +18,9 @@ func configureSubsSubcommand(client *srpc.Client, args []string) {
 func configureSubs(client *srpc.Client) error {
 	var request dominator.ConfigureSubsRequest
 	var reply dominator.ConfigureSubsResponse
-	request.ScanSpeedPercent = *scanSpeedPercent
+	request.CpuPercent = *cpuPercent
 	request.NetworkSpeedPercent = *networkSpeedPercent
 	request.ScanExclusionList = scanExcludeList
+	request.ScanSpeedPercent = *scanSpeedPercent
 	return client.RequestReply("Dominator.ConfigureSubs", request, &reply)
 }

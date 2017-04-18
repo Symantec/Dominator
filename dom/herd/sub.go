@@ -457,6 +457,9 @@ func (sub *Sub) updateConfiguration(srpcClient *srpc.Client,
 	sub.herd.RLockWithTimeout(time.Minute)
 	newConf := sub.herd.configurationForSubs
 	sub.herd.RUnlock()
+	if newConf.CpuPercent < 1 {
+		newConf.CpuPercent = pollReply.CurrentConfiguration.CpuPercent
+	}
 	if newConf.NetworkSpeedPercent < 1 {
 		newConf.NetworkSpeedPercent =
 			pollReply.CurrentConfiguration.NetworkSpeedPercent
@@ -478,10 +481,13 @@ func (sub *Sub) updateConfiguration(srpcClient *srpc.Client,
 }
 
 func compareConfigs(oldConf, newConf subproto.Configuration) bool {
-	if newConf.ScanSpeedPercent != oldConf.ScanSpeedPercent {
+	if newConf.CpuPercent != oldConf.CpuPercent {
 		return false
 	}
 	if newConf.NetworkSpeedPercent != oldConf.NetworkSpeedPercent {
+		return false
+	}
+	if newConf.ScanSpeedPercent != oldConf.ScanSpeedPercent {
 		return false
 	}
 	if len(newConf.ScanExclusionList) != len(oldConf.ScanExclusionList) {

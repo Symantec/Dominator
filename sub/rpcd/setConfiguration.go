@@ -9,10 +9,21 @@ import (
 func (t *rpcType) SetConfiguration(conn *srpc.Conn,
 	request sub.SetConfigurationRequest,
 	reply *sub.SetConfigurationResponse) error {
-	t.scannerConfiguration.FsScanContext.GetContext().SetSpeedPercent(
-		request.ScanSpeedPercent)
-	t.scannerConfiguration.NetworkReaderContext.SetSpeedPercent(
-		request.NetworkSpeedPercent)
+	if request.CpuPercent > 100 {
+		request.CpuPercent = 100
+	}
+	if request.CpuPercent > 0 {
+		t.scannerConfiguration.DefaultCpuPercent = request.CpuPercent
+		t.scannerConfiguration.CpuLimiter.SetCpuPercent(request.CpuPercent)
+	}
+	if request.NetworkSpeedPercent > 0 {
+		t.scannerConfiguration.NetworkReaderContext.SetSpeedPercent(
+			request.NetworkSpeedPercent)
+	}
+	if request.ScanSpeedPercent > 0 {
+		t.scannerConfiguration.FsScanContext.GetContext().SetSpeedPercent(
+			request.ScanSpeedPercent)
+	}
 	newFilter, err := filter.New(request.ScanExclusionList)
 	if err != nil {
 		return err
