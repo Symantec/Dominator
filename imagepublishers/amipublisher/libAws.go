@@ -119,6 +119,22 @@ func createTags(awsService *ec2.EC2, resourceId string,
 	return err
 }
 
+func createTagSpecification(resourceType string,
+	tags awsutil.Tags) *ec2.TagSpecification {
+	if tags == nil {
+		return nil
+	}
+	awsTags := make([]*ec2.Tag, 0, len(tags))
+	for key, value := range tags {
+		awsTags = append(awsTags,
+			&ec2.Tag{Key: aws.String(key), Value: aws.String(value)})
+	}
+	return &ec2.TagSpecification{
+		ResourceType: aws.String(resourceType),
+		Tags:         awsTags,
+	}
+}
+
 func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
 	tags awsutil.Tags, logger log.Logger) (string, error) {
 	tags = tags.Copy()
@@ -132,18 +148,17 @@ func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
 		AvailabilityZone: availabilityZone,
 		Encrypted:        aws.Bool(true),
 		Size:             aws.Int64(sizeInGiB),
-		VolumeType:       aws.String("gp2"),
+		TagSpecifications: []*ec2.TagSpecification{
+			createTagSpecification(ec2.ResourceTypeVolume, tags),
+		},
+		VolumeType: aws.String("gp2"),
 	})
 	if err != nil {
 		return "", err
 	}
 	volumeIds := make([]string, 1)
 	volumeIds[0] = *volume.VolumeId
-	logger.Printf("Created: %s\n", *volume.VolumeId)
-	if err := createTags(awsService, *volume.VolumeId, tags); err != nil {
-		return "", err
-	}
-	logger.Printf("Tagged: %s, waiting...\n", *volume.VolumeId)
+	logger.Printf("Created: %s, waiting...\n", *volume.VolumeId)
 	err = awsService.WaitUntilVolumeAvailable(&ec2.DescribeVolumesInput{
 		VolumeIds: aws.StringSlice(volumeIds),
 	})
@@ -430,7 +445,7 @@ func getVpc(awsService *ec2.EC2, tags awsutil.Tags) (*ec2.Vpc, error) {
 	return out.Vpcs[0], nil
 }
 
-func launchInstance(awsService *ec2.EC2, image *ec2.Image,
+func launchInstance(awsService *ec2.EC2, image *ec2.Image, tags awsutil.Tags,
 	vpcSearchTags, subnetSearchTags, securityGroupSearchTags awsutil.Tags,
 	instanceType string, sshKeyName string) (*ec2.Instance, error) {
 	vpc, err := getVpc(awsService, vpcSearchTags)
@@ -455,6 +470,9 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image,
 		MinCount:         aws.Int64(1),
 		SecurityGroupIds: []*string{sg.GroupId},
 		SubnetId:         subnet.SubnetId,
+		TagSpecifications: []*ec2.TagSpecification{
+			createTagSpecification(ec2.ResourceTypeInstance, tags),
+		},
 	})
 	if err != nil {
 		return nil, err

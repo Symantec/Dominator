@@ -107,7 +107,7 @@ func copyBootstrapImage(streamName string, targets awsutil.TargetList,
 			target.client.Close()
 		}
 	}
-	return nil
+	return err
 }
 
 func probeTarget(awsService *ec2.EC2, streamName string,
@@ -155,7 +155,7 @@ func (target *targetResult) bootstrap(streamName string,
 	if image == nil {
 		return errors.New("no marketplace image found")
 	}
-	instance, err := launchInstance(awsService, image, vpcSearchTags,
+	instance, err := launchInstance(awsService, image, nil, vpcSearchTags,
 		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName)
 	if err != nil {
 		return err
