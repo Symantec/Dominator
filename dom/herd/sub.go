@@ -481,10 +481,13 @@ func (sub *Sub) updateConfiguration(srpcClient *srpc.Client,
 }
 
 func compareConfigs(oldConf, newConf subproto.Configuration) bool {
-	if newConf.ScanSpeedPercent != oldConf.ScanSpeedPercent {
+	if newConf.CpuPercent != oldConf.CpuPercent {
 		return false
 	}
 	if newConf.NetworkSpeedPercent != oldConf.NetworkSpeedPercent {
+		return false
+	}
+	if newConf.ScanSpeedPercent != oldConf.ScanSpeedPercent {
 		return false
 	}
 	if len(newConf.ScanExclusionList) != len(oldConf.ScanExclusionList) {
