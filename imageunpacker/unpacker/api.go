@@ -16,6 +16,7 @@ const (
 	requestUnpack
 	requestPrepareForCapture
 	requestPrepareForCopy
+	requestExport
 )
 
 var (
@@ -29,12 +30,14 @@ type deviceInfo struct {
 }
 
 type requestType struct {
-	request        int
-	desiredFS      *filesystem.FileSystem
-	imageName      string
-	deviceId       string
-	skipIfPrepared bool
-	errorChannel   chan<- error
+	request           int
+	desiredFS         *filesystem.FileSystem
+	imageName         string
+	deviceId          string
+	skipIfPrepared    bool
+	exportType        string
+	exportDestination string
+	errorChannel      chan<- error
 }
 
 type imageStreamInfo struct {
@@ -79,6 +82,11 @@ func (u *Unpacker) AddDevice(deviceId string) error {
 func (u *Unpacker) AssociateStreamWithDevice(streamName string,
 	deviceId string) error {
 	return u.associateStreamWithDevice(streamName, deviceId)
+}
+
+func (u *Unpacker) ExportImage(streamName string, exportType string,
+	exportDestination string) error {
+	return u.exportImage(streamName, exportType, exportDestination)
 }
 
 func (u *Unpacker) GetFileSystem(streamName string) (
