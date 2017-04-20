@@ -25,6 +25,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  add-device DeviceId command ...")
 	fmt.Fprintln(os.Stderr, "  associate stream-name DeviceId")
+	fmt.Fprintln(os.Stderr, "  export-image stream-name type destination")
 	fmt.Fprintln(os.Stderr, "  get-status")
 	fmt.Fprintln(os.Stderr, "  get-device-for-stream stream-name")
 	fmt.Fprintln(os.Stderr, "  prepare-for-capture stream-name")
@@ -45,6 +46,7 @@ type subcommand struct {
 var subcommands = []subcommand{
 	{"add-device", 2, -1, addDeviceSubcommand},
 	{"associate", 2, 2, associateSubcommand},
+	{"export-image", 3, 3, exportImageSubcommand},
 	{"get-status", 0, 0, getStatusSubcommand},
 	{"get-device-for-stream", 1, 1, getDeviceForStreamSubcommand},
 	{"prepare-for-capture", 1, 1, prepareForCaptureSubcommand},
