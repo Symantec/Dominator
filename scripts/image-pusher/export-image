@@ -8,7 +8,7 @@ readonly scratch_dir='/scratch'
 
 # Pull in from the command line.
 readonly type="$1"
-readonly destination_raw="$2"
+readonly destination="$2"
 
 if [ "$type" != "s3" ]; then
     echo "Unknown type"
@@ -19,9 +19,6 @@ fi
 readonly document_url='http://169.254.169.254/latest/dynamic/instance-identity/document'
 readonly document="$(wget -q -O - "$document_url")"
 readonly account_id="$(echo "$document" | fgrep 'accountId' | cut -d'"' -f 4)"
-readonly region="$(echo "$document" | fgrep 'region' | cut -d'"' -f 4)"
-
-readonly destination="$(eval echo "$destination_raw")"
 
 # Load secrets (API keys). The following variables should be set:
 #   access_key_id
