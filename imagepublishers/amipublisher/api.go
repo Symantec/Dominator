@@ -26,6 +26,7 @@ type publishData struct {
 	amiName            string
 	tags               map[string]string
 	unpackerName       string
+	s3BucketExpression string
 	// Computed data follow.
 	fileSystem *filesystem.FileSystem
 }
@@ -131,7 +132,7 @@ func PrepareUnpackers(streamName string, targets awsutil.TargetList,
 func Publish(imageServerAddress string, streamName string, imageLeafName string,
 	minFreeBytes uint64, amiName string, tags map[string]string,
 	targets awsutil.TargetList, skipList awsutil.TargetList,
-	unpackerName string, logger log.Logger) (
+	unpackerName string, s3Bucket string, logger log.Logger) (
 	Results, error) {
 	pData := &publishData{
 		imageServerAddress: imageServerAddress,
@@ -141,6 +142,7 @@ func Publish(imageServerAddress string, streamName string, imageLeafName string,
 		amiName:            amiName,
 		tags:               tags,
 		unpackerName:       unpackerName,
+		s3BucketExpression: s3Bucket,
 	}
 	return pData.publish(targets, skipList, logger)
 }

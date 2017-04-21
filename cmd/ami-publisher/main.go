@@ -35,6 +35,8 @@ var (
 		"Maximum idle time for image unpacker instances")
 	minFreeBytes = flag.Uint64("minFreeBytes", 1<<28,
 		"minimum number of free bytes in image")
+	s3Bucket = flag.String("s3Bucket", "",
+		"S3 bucket to upload bundle to (default is EBS-backed AMIs)")
 	searchTags              = awsutil.Tags{"Preferred": "true"}
 	securityGroupSearchTags awsutil.Tags
 	skipTargets             awsutil.TargetList

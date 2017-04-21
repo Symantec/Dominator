@@ -487,9 +487,9 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image, tags awsutil.Tags,
 	return instance, nil
 }
 
-func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
-	imageName string, tags awsutil.Tags, imageGiB uint64, logger log.Logger) (
-	string, error) {
+func registerAmi(awsService *ec2.EC2, snapshotId string, s3Bucket string,
+	amiName string, imageName string, tags awsutil.Tags, imageGiB uint64,
+	logger log.Logger) (string, error) {
 	rootDevName := "/dev/sda1"
 	blkDevMaps := make([]*ec2.BlockDeviceMapping, 1)
 	var volumeSize *int64
@@ -508,16 +508,21 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
 	if amiName == "" {
 		amiName = imageName
 	}
-	amiName = strings.Replace(amiName, ":", ".", -1)
-	ami, err := awsService.RegisterImage(&ec2.RegisterImageInput{
-		Architecture:        aws.String("x86_64"),
-		BlockDeviceMappings: blkDevMaps,
-		Description:         aws.String(imageName),
-		Name:                aws.String(amiName),
-		RootDeviceName:      aws.String(rootDevName),
-		SriovNetSupport:     aws.String("simple"),
-		VirtualizationType:  aws.String("hvm"),
-	})
+	params := &ec2.RegisterImageInput{
+		Architecture:       aws.String("x86_64"),
+		Description:        aws.String(imageName),
+		Name:               aws.String(strings.Replace(amiName, ":", ".", -1)),
+		RootDeviceName:     aws.String(rootDevName),
+		SriovNetSupport:    aws.String("simple"),
+		VirtualizationType: aws.String("hvm"),
+	}
+	if snapshotId != "" {
+		params.BlockDeviceMappings = blkDevMaps
+	}
+	if s3Bucket != "" {
+		params.ImageLocation = aws.String(s3Bucket + "/image.manifest.xml")
+	}
+	ami, err := awsService.RegisterImage(params)
 	if err != nil {
 		return "", err
 	}

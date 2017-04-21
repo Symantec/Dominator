@@ -10,6 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"os"
 	"path"
 )
 
@@ -67,7 +68,10 @@ func (pData *publishData) publishToTargetWrapper(awsService *ec2.EC2,
 	target := awsutil.Target{AccountName: accountProfileName, Region: region}
 	resultMsg := TargetResult{Target: target}
 	resultMsg.SnapshotId, resultMsg.AmiId, resultMsg.Size, resultMsg.Error =
-		pData.publishToTarget(awsService, logger)
+		pData.publishToTarget(awsService,
+			expandBucketName(pData.s3BucketExpression, accountProfileName,
+				region),
+			logger)
 	if resultMsg.Error != nil {
 		logger.Println(resultMsg.Error)
 	}
@@ -75,7 +79,7 @@ func (pData *publishData) publishToTargetWrapper(awsService *ec2.EC2,
 }
 
 func (pData *publishData) publishToTarget(awsService *ec2.EC2,
-	logger log.Logger) (string, string, uint, error) {
+	s3Bucket string, logger log.Logger) (string, string, uint, error) {
 	unpackerInstance, srpcClient, err := getWorkingUnpacker(awsService,
 		pData.unpackerName, logger)
 	if err != nil {
@@ -106,16 +110,25 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	if err != nil {
 		return "", "", 0, err
 	}
-	logger.Printf("Capturing: %s\n", pData.streamName)
+	logger.Printf("Preparing to capture: %s\n", pData.streamName)
 	err = uclient.PrepareForCapture(srpcClient, pData.streamName)
 	if err != nil {
 		return "", "", 0, err
 	}
 	imageName := path.Join(pData.streamName, path.Base(pData.imageLeafName))
-	snapshotId, err := createSnapshot(awsService, volumeId, imageName,
-		pData.tags, logger)
-	if err != nil {
-		return "", "", 0, err
+	var snapshotId string
+	logger.Printf("Capturing: %s\n", pData.streamName)
+	if s3Bucket == "" {
+		snapshotId, err = createSnapshot(awsService, volumeId, imageName,
+			pData.tags, logger)
+		if err != nil {
+			return "", "", 0, err
+		}
+	} else {
+		err := uclient.ExportImage(srpcClient, pData.streamName, "s3", s3Bucket)
+		if err != nil {
+			return "", "", 0, err
+		}
 	}
 	// Kick off scan for next time.
 	err = uclient.PrepareForUnpack(srpcClient, pData.streamName, false, true)
@@ -132,8 +145,11 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	if volumeSize > imageGiB {
 		imageGiB = volumeSize
 	}
-	amiId, err := registerAmi(awsService, snapshotId, pData.amiName, imageName,
-		pData.tags, imageGiB, logger)
+	amiId, err := registerAmi(awsService, snapshotId, s3Bucket, pData.amiName,
+		imageName, pData.tags, imageGiB, logger)
+	if err != nil {
+		logger.Printf("Error registering AMI: %s\n", err)
+	}
 	return snapshotId, amiId, uint(imageGiB), nil
 }
 
@@ -192,4 +208,19 @@ func addVolume(srpcClient *srpc.Client, awsService *ec2.EC2,
 		return "", err
 	}
 	return volumeId, nil
+}
+
+func expandBucketName(expr, accountProfileName, region string) string {
+	if expr == "" {
+		return ""
+	}
+	return os.Expand(expr, func(variable string) string {
+		if variable == "region" {
+			return region
+		}
+		if variable == "accountName" {
+			return accountProfileName
+		}
+		return variable
+	})
 }
