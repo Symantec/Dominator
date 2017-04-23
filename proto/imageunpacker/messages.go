@@ -75,6 +75,12 @@ type PrepareForUnpackRequest struct {
 
 type PrepareForUnpackResponse struct{}
 
+type RemoveDeviceRequest struct {
+	DeviceId string
+}
+
+type RemoveDeviceResponse struct{}
+
 type StreamStatus uint
 
 func (status StreamStatus) String() string {
