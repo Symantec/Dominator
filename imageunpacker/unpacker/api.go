@@ -115,6 +115,10 @@ func (u *Unpacker) PrepareForAddDevice() error {
 	return u.prepareForAddDevice()
 }
 
+func (u *Unpacker) RemoveDevice(deviceId string) error {
+	return u.removeDevice(deviceId)
+}
+
 func (u *Unpacker) UnpackImage(streamName string, imageLeafName string) error {
 	return u.unpackImage(streamName, imageLeafName)
 }
