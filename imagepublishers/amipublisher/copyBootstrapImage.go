@@ -209,7 +209,8 @@ func (target *targetResult) bootstrap(streamName string,
 		"sudo dd bs=64k if=/dev/%s | gzip | ssh %s %s@%s \"%s\"",
 		sourceDevice.DeviceName, sshArgs, marketplaceLoginName,
 		instanceIP, destCommand)
-	logger.Printf("copying in image contents from %s\n", sourceTarget.region)
+	logger.Printf("copying image contents from %s in %s\n",
+		aws.StringValue(instance.PrivateIpAddress), sourceTarget.region)
 	startTime := time.Now()
 	cmd = makeSshCmd(sourceTarget.instance, sshKeyName, sourceCommand)
 	if out, err := cmd.CombinedOutput(); err != nil {
