@@ -125,8 +125,9 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 			return "", "", 0, err
 		}
 	} else {
-		err := uclient.ExportImage(srpcClient, pData.streamName, "s3",
-			path.Join(s3Bucket, imageName))
+		s3Bucket = path.Join(s3Bucket, imageName)
+		logger.Printf("Exporting to S3: %s\n", s3Bucket)
+		err := uclient.ExportImage(srpcClient, pData.streamName, "s3", s3Bucket)
 		if err != nil {
 			return "", "", 0, err
 		}
