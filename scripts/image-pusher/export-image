@@ -19,12 +19,13 @@ fi
 readonly document_url='http://169.254.169.254/latest/dynamic/instance-identity/document'
 readonly document="$(wget -q -O - "$document_url")"
 readonly account_id="$(echo "$document" | fgrep 'accountId' | cut -d'"' -f 4)"
+readonly region="$(echo "$document" | fgrep 'region' | cut -d'"' -f 4)"
 
 # Load secrets (API keys). The following variables should be set:
-#   access_key_id
+#   AWS_ACCESS_KEY_ID
 #   cert_file
 #   key_file
-#   secret_access_key
+#   AWS_SECRET_ACCESS_KEY
 . "$scratch_dir/secrets"
 
 readonly tmpdir="$(mktemp -d "$scratch_dir/$(basename "$0").XXXXXX")" || exit
@@ -33,5 +34,14 @@ trap "rm -rf $tmpdir" EXIT
 cat > "$tmpdir/image"
 ec2-bundle-image -c "$cert_file" -k "$key_file" -u "$account_id" \
   --image "$tmpdir/image" -d "$tmpdir" -r x86_64 --prefix image
-ec2-upload-bundle -b "$destination" -m "$tmpdir/image.manifest.xml" \
-  -a "$access_key_id" -s "$secret_access_key" --batch --retry
+
+#ec2-upload-bundle -b "$destination" -m "$tmpdir/image.manifest.xml" \
+#  -a "$access_key_id" -s "$secret_access_key" --batch --retry
+
+# ec2-upload-bundle doesn't support eu-central-1 so do this the hard way.
+readonly bucket="${destination%%/*}"
+readonly destdir="${destination#*/}"
+for file in "$tmpdir/image.manifest.xml" "$tmpdir"/image.part.*; do
+    aws s3api put-object --acl aws-exec-read --bucket "$bucket" \
+	--key "$destdir/${file##*/}" --body "$file" --region "$region" || exit
+done
