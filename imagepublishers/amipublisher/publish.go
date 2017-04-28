@@ -66,24 +66,28 @@ func (pData *publishData) publishToTargetWrapper(awsService *ec2.EC2,
 	accountProfileName string, region string, channel chan<- TargetResult,
 	logger log.Logger) {
 	target := awsutil.Target{AccountName: accountProfileName, Region: region}
-	resultMsg := TargetResult{Target: target}
-	resultMsg.SnapshotId, resultMsg.AmiId, resultMsg.Size, resultMsg.Error =
-		pData.publishToTarget(awsService,
-			expandBucketName(pData.s3BucketExpression, accountProfileName,
-				region),
-			logger)
-	if resultMsg.Error != nil {
-		logger.Println(resultMsg.Error)
+	resultMsg := TargetResult{}
+	res, err := pData.publishToTarget(awsService,
+		expandBucketName(pData.s3BucketExpression, accountProfileName, region),
+		pData.s3Folder, logger)
+	if res != nil {
+		resultMsg = *res
+	}
+	resultMsg.Target = target
+	resultMsg.Error = err
+	if err != nil {
+		logger.Println(err)
 	}
 	channel <- resultMsg
 }
 
 func (pData *publishData) publishToTarget(awsService *ec2.EC2,
-	s3Bucket string, logger log.Logger) (string, string, uint, error) {
+	s3Bucket string, s3Folder string, logger log.Logger) (
+	*TargetResult, error) {
 	unpackerInstance, srpcClient, err := getWorkingUnpacker(awsService,
 		pData.unpackerName, logger)
 	if err != nil {
-		return "", "", 0, err
+		return nil, err
 	}
 	defer srpcClient.Close()
 	logger.Printf("Preparing to unpack: %s\n", pData.streamName)
@@ -93,7 +97,7 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	status, err := selectVolume(srpcClient, awsService, pData.streamName,
 		minBytes, pData.tags, unpackerInstance, logger)
 	if err != nil {
-		return "", "", 0, err
+		return nil, err
 	}
 	volumeId := status.ImageStreams[pData.streamName].DeviceId
 	if status.ImageStreams[pData.streamName].Status !=
@@ -102,40 +106,45 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 		err := uclient.PrepareForUnpack(srpcClient, pData.streamName, true,
 			false)
 		if err != nil {
-			return "", "", 0, err
+			return nil, err
 		}
 	}
 	logger.Printf("Unpacking: %s\n", pData.streamName)
 	err = uclient.UnpackImage(srpcClient, pData.streamName, pData.imageLeafName)
 	if err != nil {
-		return "", "", 0, err
+		return nil, err
 	}
 	logger.Printf("Preparing to capture: %s\n", pData.streamName)
 	err = uclient.PrepareForCapture(srpcClient, pData.streamName)
 	if err != nil {
-		return "", "", 0, err
+		return nil, err
 	}
 	imageName := path.Join(pData.streamName, path.Base(pData.imageLeafName))
 	var snapshotId string
 	logger.Printf("Capturing: %s\n", pData.streamName)
+	var s3ManifestFile string
+	var s3Manifest string
 	if s3Bucket == "" {
 		snapshotId, err = createSnapshot(awsService, volumeId, imageName,
 			pData.tags, logger)
 		if err != nil {
-			return "", "", 0, err
+			return nil, err
 		}
 	} else {
-		s3Bucket = path.Join(s3Bucket, imageName)
-		logger.Printf("Exporting to S3: %s\n", s3Bucket)
-		err := uclient.ExportImage(srpcClient, pData.streamName, "s3", s3Bucket)
+		s3Location := path.Join(s3Bucket, s3Folder, imageName)
+		s3ManifestFile = path.Join(s3Folder, imageName, "image.manifest.xml")
+		s3Manifest = path.Join(s3Bucket, s3ManifestFile)
+		logger.Printf("Exporting to S3: %s\n", s3Location)
+		err := uclient.ExportImage(srpcClient, pData.streamName, "s3",
+			s3Location)
 		if err != nil {
-			return "", "", 0, err
+			return nil, err
 		}
 	}
 	// Kick off scan for next time.
 	err = uclient.PrepareForUnpack(srpcClient, pData.streamName, false, true)
 	if err != nil {
-		return "", "", 0, err
+		return nil, err
 	}
 	logger.Println("Registering AMI...")
 	volumeSize := status.Devices[volumeId].Size >> 30
@@ -147,12 +156,18 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	if volumeSize > imageGiB {
 		imageGiB = volumeSize
 	}
-	amiId, err := registerAmi(awsService, snapshotId, s3Bucket, pData.amiName,
+	amiId, err := registerAmi(awsService, snapshotId, s3Manifest, pData.amiName,
 		imageName, pData.tags, imageGiB, logger)
 	if err != nil {
 		logger.Printf("Error registering AMI: %s\n", err)
 	}
-	return snapshotId, amiId, uint(imageGiB), nil
+	return &TargetResult{
+		SnapshotId:     snapshotId,
+		S3Bucket:       s3Bucket,
+		S3ManifestFile: s3ManifestFile,
+		AmiId:          amiId,
+		Size:           uint(imageGiB),
+	}, err
 }
 
 func selectVolume(srpcClient *srpc.Client, awsService *ec2.EC2,

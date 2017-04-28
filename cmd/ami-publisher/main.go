@@ -37,6 +37,8 @@ var (
 		"minimum number of free bytes in image")
 	s3Bucket = flag.String("s3Bucket", "",
 		"S3 bucket to upload bundle to (default is EBS-backed AMIs)")
+	s3Folder = flag.String("s3Folder", "",
+		"S3 folder to upload bundle to (default is EBS-backed AMIs)")
 	searchTags              = awsutil.Tags{"Preferred": "true"}
 	securityGroupSearchTags awsutil.Tags
 	skipTargets             awsutil.TargetList

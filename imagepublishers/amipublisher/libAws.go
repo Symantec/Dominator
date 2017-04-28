@@ -487,7 +487,7 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image, tags awsutil.Tags,
 	return instance, nil
 }
 
-func registerAmi(awsService *ec2.EC2, snapshotId string, s3Bucket string,
+func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 	amiName string, imageName string, tags awsutil.Tags, imageGiB uint64,
 	logger log.Logger) (string, error) {
 	rootDevName := "/dev/sda1"
@@ -519,8 +519,8 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, s3Bucket string,
 	if snapshotId != "" {
 		params.BlockDeviceMappings = blkDevMaps
 	}
-	if s3Bucket != "" {
-		params.ImageLocation = aws.String(s3Bucket + "/image.manifest.xml")
+	if s3Manifest != "" {
+		params.ImageLocation = aws.String(s3Manifest)
 	}
 	ami, err := awsService.RegisterImage(params)
 	if err != nil {
