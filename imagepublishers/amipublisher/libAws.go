@@ -18,7 +18,7 @@ func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 		usedBlockDevices[aws.StringValue(device.DeviceName)] = struct{}{}
 	}
 	var blockDeviceName string
-	for c := 'f'; c <= 'p'; c++ {
+	for c := 'b'; c <= 'z'; c++ {
 		name := "/dev/sd" + string(c)
 		if _, ok := usedBlockDevices[name]; !ok {
 			blockDeviceName = name
