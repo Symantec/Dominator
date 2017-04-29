@@ -63,6 +63,12 @@ func (v TargetResult) MarshalJSON() ([]byte, error) {
 	return v.marshalJSON()
 }
 
+func AddVolumes(targets awsutil.TargetList, skipList awsutil.TargetList,
+	tags awsutil.Tags, unpackerName string, size uint64,
+	logger log.Logger) error {
+	return addVolumes(targets, skipList, tags, unpackerName, size, logger)
+}
+
 func CopyBootstrapImage(streamName string, targets awsutil.TargetList,
 	skipList awsutil.TargetList, marketplaceImage, marketplaceLoginName string,
 	newImageTags awsutil.Tags, unpackerName string,
