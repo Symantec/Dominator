@@ -70,6 +70,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
+	fmt.Fprintln(os.Stderr, "  add-volumes sizeInGiB")
 	fmt.Fprintln(os.Stderr, "  copy-bootstrap-image stream-name")
 	fmt.Fprintln(os.Stderr, "  delete results-file...")
 	fmt.Fprintln(os.Stderr, "  delete-tags tag-key results-file...")
@@ -98,6 +99,7 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
+	{"add-volumes", 1, 1, addVolumesSubcommand},
 	{"copy-bootstrap-image", 1, 1, copyBootstrapImageSubcommand},
 	{"delete", 1, -1, deleteSubcommand},
 	{"delete-tags", 2, -1, deleteTagsSubcommand},
