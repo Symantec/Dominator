@@ -35,8 +35,11 @@ type publishData struct {
 
 type Resource struct {
 	awsutil.Target
-	SnapshotId string
-	AmiId      string
+	SharedFrom     string
+	SnapshotId     string
+	S3Bucket       string
+	S3ManifestFile string
+	AmiId          string
 }
 
 type Results []TargetResult

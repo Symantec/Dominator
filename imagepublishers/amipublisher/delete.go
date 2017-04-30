@@ -16,6 +16,9 @@ func deleteResources(resources []Resource, logger log.Logger) error {
 
 func deleteResource(awsService *ec2.EC2, resource Resource,
 	logger log.Logger) error {
+	if resource.SharedFrom != "" {
+		return nil
+	}
 	var firstError error
 	if resource.AmiId != "" {
 		if err := deregisterAmi(awsService, resource.AmiId); err != nil {
