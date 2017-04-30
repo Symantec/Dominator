@@ -27,13 +27,14 @@ func (v TargetResult) marshalJSON() ([]byte, error) {
 	val := struct {
 		AccountName    string
 		Region         string
+		SharedFrom     string `json:",omitempty"`
 		SnapshotId     string `json:",omitempty"`
 		S3Bucket       string `json:",omitempty"`
 		S3ManifestFile string `json:",omitempty"`
 		AmiId          string `json:",omitempty"`
 		Size           uint   `json:",omitempty"`
 		Error          string `json:",omitempty"`
-	}{v.AccountName, v.Region, v.SnapshotId, v.S3Bucket, v.S3ManifestFile,
-		v.AmiId, v.Size, errString}
+	}{v.AccountName, v.Region, v.SharedFrom, v.SnapshotId, v.S3Bucket,
+		v.S3ManifestFile, v.AmiId, v.Size, errString}
 	return json.Marshal(val)
 }

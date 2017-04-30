@@ -9,14 +9,27 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"os"
 	"path"
+	"sync"
 )
+
+type sharingStateType struct {
+	sharingAccountName string
+	sync.Cond
+	sync.Mutex                          // Covers everything below.
+	results    map[string]*TargetResult // Key: Region.
+	sharers    map[string]*ec2.EC2      // Key: Region.
+}
 
 func (pData *publishData) publish(targets awsutil.TargetList,
 	skipList awsutil.TargetList, logger log.Logger) (
 	Results, error) {
+	if pData.sharingAccountName != "" && pData.s3BucketExpression == "" {
+		return nil, errors.New("sharing not supported for EBS AMIs")
+	}
 	fs, err := pData.getFileSystem(logger)
 	if err != nil {
 		return nil, err
@@ -24,10 +37,11 @@ func (pData *publishData) publish(targets awsutil.TargetList,
 	fs.TotalDataBytes = fs.EstimateUsage(0)
 	pData.fileSystem = fs
 	resultsChannel := make(chan TargetResult, 1)
+	sharingState := makeSharingState(pData.sharingAccountName)
 	numTargets, err := awsutil.ForEachTarget(targets, skipList,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			pData.publishToTargetWrapper(awsService, account, region,
-				resultsChannel, logger)
+				sharingState, resultsChannel, logger)
 		},
 		logger)
 	// Collect results.
@@ -63,13 +77,12 @@ func (pData *publishData) getFileSystem(logger log.Logger) (
 }
 
 func (pData *publishData) publishToTargetWrapper(awsService *ec2.EC2,
-	accountProfileName string, region string, channel chan<- TargetResult,
-	logger log.Logger) {
+	accountProfileName string, region string, sharingState *sharingStateType,
+	channel chan<- TargetResult, logger log.Logger) {
 	target := awsutil.Target{AccountName: accountProfileName, Region: region}
 	resultMsg := TargetResult{}
-	res, err := pData.publishToTarget(awsService,
-		expandBucketName(pData.s3BucketExpression, accountProfileName, region),
-		pData.s3Folder, logger)
+	res, err := pData.publishToTarget(awsService, accountProfileName, region,
+		sharingState, logger)
 	if res != nil {
 		resultMsg = *res
 	}
@@ -78,12 +91,17 @@ func (pData *publishData) publishToTargetWrapper(awsService *ec2.EC2,
 	if err != nil {
 		logger.Println(err)
 	}
+	sharingState.publish(awsService, resultMsg)
 	channel <- resultMsg
 }
 
 func (pData *publishData) publishToTarget(awsService *ec2.EC2,
-	s3Bucket string, s3Folder string, logger log.Logger) (
-	*TargetResult, error) {
+	accountProfileName string, region string, sharingState *sharingStateType,
+	logger log.Logger) (*TargetResult, error) {
+	if sharingState != nil &&
+		sharingState.sharingAccountName != accountProfileName {
+		return sharingState.harvest(awsService, region, pData.tags, logger)
+	}
 	unpackerInstance, srpcClient, err := getWorkingUnpacker(awsService,
 		pData.unpackerName, logger)
 	if err != nil {
@@ -124,6 +142,8 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	logger.Printf("Capturing: %s\n", pData.streamName)
 	var s3ManifestFile string
 	var s3Manifest string
+	s3Bucket := expandBucketName(pData.s3BucketExpression, accountProfileName,
+		region)
 	if s3Bucket == "" {
 		snapshotId, err = createSnapshot(awsService, volumeId, imageName,
 			pData.tags, logger)
@@ -131,8 +151,9 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 			return nil, err
 		}
 	} else {
-		s3Location := path.Join(s3Bucket, s3Folder, imageName)
-		s3ManifestFile = path.Join(s3Folder, imageName, "image.manifest.xml")
+		s3Location := path.Join(s3Bucket, pData.s3Folder, imageName)
+		s3ManifestFile = path.Join(pData.s3Folder, imageName,
+			"image.manifest.xml")
 		s3Manifest = path.Join(s3Bucket, s3ManifestFile)
 		logger.Printf("Exporting to S3: %s\n", s3Location)
 		err := uclient.ExportImage(srpcClient, pData.streamName, "s3",
@@ -240,4 +261,68 @@ func expandBucketName(expr, accountProfileName, region string) string {
 		}
 		return variable
 	})
+}
+
+func makeSharingState(sharingAccountName string) *sharingStateType {
+	if sharingAccountName == "" {
+		return nil
+	}
+	sharingState := sharingStateType{sharingAccountName: sharingAccountName}
+	sharingState.Cond.L = &sharingState.Mutex
+	sharingState.results = make(map[string]*TargetResult)
+	sharingState.sharers = make(map[string]*ec2.EC2)
+	return &sharingState
+}
+
+func (ss *sharingStateType) publish(awsService *ec2.EC2, result TargetResult) {
+	if ss == nil {
+		return
+	}
+	if ss.sharingAccountName != result.AccountName {
+		return
+	}
+	ss.Lock()
+	defer ss.Unlock()
+	ss.results[result.Region] = &result
+	ss.sharers[result.Region] = awsService
+	ss.Broadcast()
+}
+
+func (ss *sharingStateType) harvest(awsService *ec2.EC2, region string,
+	tags awsutil.Tags, logger log.Logger) (*TargetResult, error) {
+	ownerId, err := getAccountName(awsService)
+	if err != nil {
+		return nil, err
+	}
+	logger.Printf("Waiting to harvest AMI from: %s\n", ss.sharingAccountName)
+	ss.Lock()
+	defer ss.Unlock()
+	for ss.results[region] == nil {
+		ss.Wait()
+	}
+	result := ss.results[region]
+	sharerService := ss.sharers[region]
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	logger.Printf("Remote AMI ID: %s\n", result.AmiId)
+	_, err = sharerService.ModifyImageAttribute(&ec2.ModifyImageAttributeInput{
+		ImageId: aws.String(result.AmiId),
+		LaunchPermission: &ec2.LaunchPermissionModifications{
+			Add: []*ec2.LaunchPermission{
+				{
+					UserId: aws.String(ownerId),
+				},
+			},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := createTags(awsService, result.AmiId, tags); err != nil {
+		return nil, err
+	}
+	newResult := *result
+	newResult.SharedFrom = ss.sharingAccountName
+	return &newResult, nil
 }

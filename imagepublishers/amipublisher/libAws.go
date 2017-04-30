@@ -265,6 +265,21 @@ func findLatestImage(images []*ec2.Image) (*ec2.Image, error) {
 	return youngestImage, nil
 }
 
+func getAccountName(awsService *ec2.EC2) (string, error) {
+	// TODO(rgooch): This relies on at least one instance existing. This doesn't
+	//               work in a fresh account. Figure out a better way.
+	out, err := awsService.DescribeInstances(&ec2.DescribeInstancesInput{
+		MaxResults: aws.Int64(5),
+	})
+	if err != nil {
+		return "", err
+	}
+	if len(out.Reservations) < 1 {
+		return "", errors.New("no instances found")
+	}
+	return aws.StringValue(out.Reservations[0].OwnerId), nil
+}
+
 func findMarketplaceImage(awsService *ec2.EC2, productCode string) (
 	*ec2.Image, error) {
 	out, err := awsService.DescribeImages(
