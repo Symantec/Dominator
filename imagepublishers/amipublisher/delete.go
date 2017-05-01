@@ -3,19 +3,27 @@ package amipublisher
 import (
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"path"
 )
 
 func deleteResources(resources []Resource, logger log.Logger) error {
 	return forEachResource(resources, false,
-		func(awsService *ec2.EC2, resource Resource, logger log.Logger) error {
-			return deleteResource(awsService, resource, logger)
+		func(session *session.Session, awsService *ec2.EC2, resource Resource,
+			logger log.Logger) error {
+			return deleteResource(session, awsService, resource, logger)
 		},
 		logger)
 }
 
-func deleteResource(awsService *ec2.EC2, resource Resource,
-	logger log.Logger) error {
+func deleteResource(session *session.Session, awsService *ec2.EC2,
+	resource Resource, logger log.Logger) error {
+	if resource.SharedFrom != "" {
+		return nil
+	}
 	var firstError error
 	if resource.AmiId != "" {
 		if err := deregisterAmi(awsService, resource.AmiId); err != nil {
@@ -37,13 +45,27 @@ func deleteResource(awsService *ec2.EC2, resource Resource,
 			logger.Printf("deleted: %s\n", resource.SnapshotId)
 		}
 	}
+	if resource.S3Bucket != "" {
+		s3Client := s3.New(session,
+			&aws.Config{Region: aws.String(resource.Region)})
+		err := deleteS3Directory(s3Client, resource.S3Bucket,
+			path.Dir(resource.S3ManifestFile))
+		if err != nil {
+			logger.Printf("error deleting bundle: %s: %s\n",
+				resource.S3ManifestFile, err)
+			if firstError == nil {
+				firstError = err
+			}
+		}
+	}
 	return firstError
 }
 
 func deleteTags(resources []Resource, tagKeys []string,
 	logger log.Logger) error {
 	return forEachResource(resources, false,
-		func(awsService *ec2.EC2, resource Resource, logger log.Logger) error {
+		func(session *session.Session, awsService *ec2.EC2, resource Resource,
+			logger log.Logger) error {
 			return deleteTagsForResource(awsService, resource, tagKeys, logger)
 		},
 		logger)

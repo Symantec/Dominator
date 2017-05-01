@@ -11,7 +11,8 @@ filegen-server.tarball:
 
 image-unpacker.tarball:
 	@./scripts/make-tarball image-unpacker \
-		scripts/image-pusher/make-bootable -C $(ETCDIR) ssl
+		scripts/image-pusher/make-bootable \
+		scripts/image-pusher/export-image -C $(ETCDIR) ssl
 
 imageserver.tarball:
 	@./scripts/make-tarball imageserver -C $(ETCDIR) ssl

@@ -14,6 +14,11 @@ func AssociateStreamWithDevice(srpcClient *srpc.Client, streamName string,
 	return associateStreamWithDevice(srpcClient, streamName, deviceId)
 }
 
+func ExportImage(srpcClient *srpc.Client, streamName,
+	exportType, exportDestination string) error {
+	return exportImage(srpcClient, streamName, exportType, exportDestination)
+}
+
 func GetStatus(srpcClient *srpc.Client) (proto.GetStatusResponse, error) {
 	return getStatus(srpcClient)
 }

@@ -55,6 +55,9 @@ func (u *Unpacker) streamManager(streamName string,
 				err = stream.prepareForCapture()
 			case requestPrepareForCopy:
 				err = stream.prepareForCopy()
+			case requestExport:
+				err = stream.export(request.exportType,
+					request.exportDestination)
 			default:
 				panic("unknown request: " + strconv.Itoa(request.request))
 			}

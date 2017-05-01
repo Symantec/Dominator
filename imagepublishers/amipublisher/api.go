@@ -26,24 +26,33 @@ type publishData struct {
 	amiName            string
 	tags               map[string]string
 	unpackerName       string
+	s3BucketExpression string
+	s3Folder           string
+	sharingAccountName string
 	// Computed data follow.
 	fileSystem *filesystem.FileSystem
 }
 
 type Resource struct {
 	awsutil.Target
-	SnapshotId string
-	AmiId      string
+	SharedFrom     string
+	SnapshotId     string
+	S3Bucket       string
+	S3ManifestFile string
+	AmiId          string
 }
 
 type Results []TargetResult
 
 type TargetResult struct {
 	awsutil.Target
-	SnapshotId string
-	AmiId      string
-	Size       uint // Size in GiB.
-	Error      error
+	SharedFrom     string
+	SnapshotId     string
+	S3Bucket       string
+	S3ManifestFile string
+	AmiId          string
+	Size           uint // Size in GiB.
+	Error          error
 }
 
 type TargetUnpackers struct {
@@ -131,8 +140,8 @@ func PrepareUnpackers(streamName string, targets awsutil.TargetList,
 func Publish(imageServerAddress string, streamName string, imageLeafName string,
 	minFreeBytes uint64, amiName string, tags map[string]string,
 	targets awsutil.TargetList, skipList awsutil.TargetList,
-	unpackerName string, logger log.Logger) (
-	Results, error) {
+	unpackerName string, s3Bucket string, s3Folder string,
+	sharingAccountName string, logger log.Logger) (Results, error) {
 	pData := &publishData{
 		imageServerAddress: imageServerAddress,
 		streamName:         streamName,
@@ -141,6 +150,9 @@ func Publish(imageServerAddress string, streamName string, imageLeafName string,
 		amiName:            amiName,
 		tags:               tags,
 		unpackerName:       unpackerName,
+		s3BucketExpression: s3Bucket,
+		s3Folder:           s3Folder,
+		sharingAccountName: sharingAccountName,
 	}
 	return pData.publish(targets, skipList, logger)
 }

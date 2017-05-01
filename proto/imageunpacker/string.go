@@ -18,6 +18,8 @@ func (status StreamStatus) string() string {
 		return "updating"
 	case StatusStreamPreparing:
 		return "preparing"
+	case StatusStreamExporting:
+		return "exporting"
 	default:
 		return "UNKNOWN"
 	}

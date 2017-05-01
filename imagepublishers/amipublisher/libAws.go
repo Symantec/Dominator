@@ -2,10 +2,12 @@ package amipublisher
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"path"
 	"strings"
 	"time"
@@ -119,6 +121,22 @@ func createTags(awsService *ec2.EC2, resourceId string,
 	return err
 }
 
+func createTagSpecification(resourceType string,
+	tags awsutil.Tags) *ec2.TagSpecification {
+	if tags == nil {
+		return nil
+	}
+	awsTags := make([]*ec2.Tag, 0, len(tags))
+	for key, value := range tags {
+		awsTags = append(awsTags,
+			&ec2.Tag{Key: aws.String(key), Value: aws.String(value)})
+	}
+	return &ec2.TagSpecification{
+		ResourceType: aws.String(resourceType),
+		Tags:         awsTags,
+	}
+}
+
 func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
 	tags awsutil.Tags, logger log.Logger) (string, error) {
 	tags = tags.Copy()
@@ -132,18 +150,17 @@ func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
 		AvailabilityZone: availabilityZone,
 		Encrypted:        aws.Bool(true),
 		Size:             aws.Int64(sizeInGiB),
-		VolumeType:       aws.String("gp2"),
+		TagSpecifications: []*ec2.TagSpecification{
+			createTagSpecification(ec2.ResourceTypeVolume, tags),
+		},
+		VolumeType: aws.String("gp2"),
 	})
 	if err != nil {
 		return "", err
 	}
 	volumeIds := make([]string, 1)
 	volumeIds[0] = *volume.VolumeId
-	logger.Printf("Created: %s\n", *volume.VolumeId)
-	if err := createTags(awsService, *volume.VolumeId, tags); err != nil {
-		return "", err
-	}
-	logger.Printf("Tagged: %s, waiting...\n", *volume.VolumeId)
+	logger.Printf("Created: %s, waiting...\n", *volume.VolumeId)
 	err = awsService.WaitUntilVolumeAvailable(&ec2.DescribeVolumesInput{
 		VolumeIds: aws.StringSlice(volumeIds),
 	})
@@ -151,6 +168,33 @@ func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
 		return "", err
 	}
 	return *volume.VolumeId, nil
+}
+
+func deleteS3Directory(awsService *s3.S3, bucket, dir string) error {
+	out, err := awsService.ListObjects(&s3.ListObjectsInput{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(dir),
+	})
+	if err != nil {
+		fmt.Printf("error listing: %s: %s\n", dir, err)
+		return err
+	}
+	if len(out.Contents) < 1 {
+		return nil
+	}
+	objectIds := make([]*s3.ObjectIdentifier, 0, len(out.Contents))
+	for _, obj := range out.Contents {
+		objectIds = append(objectIds,
+			&s3.ObjectIdentifier{Key: obj.Key})
+	}
+	_, err = awsService.DeleteObjects(&s3.DeleteObjectsInput{
+		Bucket: aws.String(bucket),
+		Delete: &s3.Delete{Objects: objectIds},
+	})
+	if err != nil {
+		fmt.Printf("error deleting objects: %s\n", err)
+	}
+	return nil
 }
 
 func deleteSnapshot(awsService *ec2.EC2, snapshotId string) error {
@@ -248,6 +292,21 @@ func findLatestImage(images []*ec2.Image) (*ec2.Image, error) {
 		}
 	}
 	return youngestImage, nil
+}
+
+func getAccountId(awsService *ec2.EC2) (string, error) {
+	// TODO(rgooch): This relies on at least one instance existing. This doesn't
+	//               work in a fresh account. Figure out a better way.
+	out, err := awsService.DescribeInstances(&ec2.DescribeInstancesInput{
+		MaxResults: aws.Int64(5),
+	})
+	if err != nil {
+		return "", err
+	}
+	if len(out.Reservations) < 1 {
+		return "", errors.New("no instances found")
+	}
+	return aws.StringValue(out.Reservations[0].OwnerId), nil
 }
 
 func findMarketplaceImage(awsService *ec2.EC2, productCode string) (
@@ -430,7 +489,7 @@ func getVpc(awsService *ec2.EC2, tags awsutil.Tags) (*ec2.Vpc, error) {
 	return out.Vpcs[0], nil
 }
 
-func launchInstance(awsService *ec2.EC2, image *ec2.Image,
+func launchInstance(awsService *ec2.EC2, image *ec2.Image, tags awsutil.Tags,
 	vpcSearchTags, subnetSearchTags, securityGroupSearchTags awsutil.Tags,
 	instanceType string, sshKeyName string) (*ec2.Instance, error) {
 	vpc, err := getVpc(awsService, vpcSearchTags)
@@ -455,6 +514,9 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image,
 		MinCount:         aws.Int64(1),
 		SecurityGroupIds: []*string{sg.GroupId},
 		SubnetId:         subnet.SubnetId,
+		TagSpecifications: []*ec2.TagSpecification{
+			createTagSpecification(ec2.ResourceTypeInstance, tags),
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -469,9 +531,9 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image,
 	return instance, nil
 }
 
-func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
-	imageName string, tags awsutil.Tags, imageGiB uint64, logger log.Logger) (
-	string, error) {
+func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
+	amiName string, imageName string, tags awsutil.Tags, imageGiB uint64,
+	logger log.Logger) (string, error) {
 	rootDevName := "/dev/sda1"
 	blkDevMaps := make([]*ec2.BlockDeviceMapping, 1)
 	var volumeSize *int64
@@ -490,16 +552,21 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, amiName string,
 	if amiName == "" {
 		amiName = imageName
 	}
-	amiName = strings.Replace(amiName, ":", ".", -1)
-	ami, err := awsService.RegisterImage(&ec2.RegisterImageInput{
-		Architecture:        aws.String("x86_64"),
-		BlockDeviceMappings: blkDevMaps,
-		Description:         aws.String(imageName),
-		Name:                aws.String(amiName),
-		RootDeviceName:      aws.String(rootDevName),
-		SriovNetSupport:     aws.String("simple"),
-		VirtualizationType:  aws.String("hvm"),
-	})
+	params := &ec2.RegisterImageInput{
+		Architecture:       aws.String("x86_64"),
+		Description:        aws.String(imageName),
+		Name:               aws.String(strings.Replace(amiName, ":", ".", -1)),
+		RootDeviceName:     aws.String(rootDevName),
+		SriovNetSupport:    aws.String("simple"),
+		VirtualizationType: aws.String("hvm"),
+	}
+	if snapshotId != "" {
+		params.BlockDeviceMappings = blkDevMaps
+	}
+	if s3Manifest != "" {
+		params.ImageLocation = aws.String(s3Manifest)
+	}
+	ami, err := awsService.RegisterImage(params)
 	if err != nil {
 		return "", err
 	}

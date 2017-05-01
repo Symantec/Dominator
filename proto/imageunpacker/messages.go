@@ -11,6 +11,7 @@ const (
 	StatusStreamFetching   = 5
 	StatusStreamUpdating   = 6
 	StatusStreamPreparing  = 7
+	StatusStreamExporting  = 8
 )
 
 type DeviceInfo struct {
@@ -32,6 +33,14 @@ type AssociateStreamWithDeviceRequest struct {
 }
 
 type AssociateStreamWithDeviceResponse struct{}
+
+type ExportImageRequest struct {
+	StreamName  string
+	Type        string
+	Destination string
+}
+
+type ExportImageResponse struct{}
 
 type GetStatusRequest struct{}
 

@@ -107,7 +107,7 @@ func copyBootstrapImage(streamName string, targets awsutil.TargetList,
 			target.client.Close()
 		}
 	}
-	return nil
+	return err
 }
 
 func probeTarget(awsService *ec2.EC2, streamName string,
@@ -155,7 +155,7 @@ func (target *targetResult) bootstrap(streamName string,
 	if image == nil {
 		return errors.New("no marketplace image found")
 	}
-	instance, err := launchInstance(awsService, image, vpcSearchTags,
+	instance, err := launchInstance(awsService, image, nil, vpcSearchTags,
 		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName)
 	if err != nil {
 		return err
@@ -209,7 +209,8 @@ func (target *targetResult) bootstrap(streamName string,
 		"sudo dd bs=64k if=/dev/%s | gzip | ssh %s %s@%s \"%s\"",
 		sourceDevice.DeviceName, sshArgs, marketplaceLoginName,
 		instanceIP, destCommand)
-	logger.Printf("copying in image contents from %s\n", sourceTarget.region)
+	logger.Printf("copying image contents from %s in %s\n",
+		aws.StringValue(instance.PrivateIpAddress), sourceTarget.region)
 	startTime := time.Now()
 	cmd = makeSshCmd(sourceTarget.instance, sshKeyName, sourceCommand)
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -223,7 +224,7 @@ func (target *targetResult) bootstrap(streamName string,
 		return err
 	}
 	logger.Println("registering AMI...")
-	amiId, err := registerAmi(awsService, snapshotId, "",
+	amiId, err := registerAmi(awsService, snapshotId, "", "",
 		streamName+"/bootstrap", newImageTags, 0, logger)
 	if err != nil {
 		deleteSnapshot(awsService, snapshotId)
