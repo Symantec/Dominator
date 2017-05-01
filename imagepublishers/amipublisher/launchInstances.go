@@ -5,6 +5,7 @@ import (
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
@@ -89,7 +90,8 @@ func launchInstancesForImages(resources []Resource,
 	logger log.Logger) ([]InstanceResult, error) {
 	resultsChannel := make(chan InstanceResult, 1)
 	err := forEachResource(resources, false,
-		func(awsService *ec2.EC2, resource Resource, logger log.Logger) error {
+		func(session *session.Session, awsService *ec2.EC2, resource Resource,
+			logger log.Logger) error {
 			instanceId, privateIp, err := launchInstanceForImage(awsService,
 				resource, vpcSearchTags, subnetSearchTags,
 				securityGroupSearchTags, instanceType, sshKeyName, tags, logger)

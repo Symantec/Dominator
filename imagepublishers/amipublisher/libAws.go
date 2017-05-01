@@ -2,10 +2,12 @@ package amipublisher
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"path"
 	"strings"
 	"time"
@@ -166,6 +168,33 @@ func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
 		return "", err
 	}
 	return *volume.VolumeId, nil
+}
+
+func deleteS3Directory(awsService *s3.S3, bucket, dir string) error {
+	out, err := awsService.ListObjects(&s3.ListObjectsInput{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(dir),
+	})
+	if err != nil {
+		fmt.Printf("error listing: %s: %s\n", dir, err)
+		return err
+	}
+	if len(out.Contents) < 1 {
+		return nil
+	}
+	objectIds := make([]*s3.ObjectIdentifier, 0, len(out.Contents))
+	for _, obj := range out.Contents {
+		objectIds = append(objectIds,
+			&s3.ObjectIdentifier{Key: obj.Key})
+	}
+	_, err = awsService.DeleteObjects(&s3.DeleteObjectsInput{
+		Bucket: aws.String(bucket),
+		Delete: &s3.Delete{Objects: objectIds},
+	})
+	if err != nil {
+		fmt.Printf("error deleting objects: %s\n", err)
+	}
+	return nil
 }
 
 func deleteSnapshot(awsService *ec2.EC2, snapshotId string) error {

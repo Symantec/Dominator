@@ -9,7 +9,7 @@ import (
 )
 
 func forEachResource(resources []Resource, stopOnError bool,
-	resourceFunc func(*ec2.EC2, Resource, log.Logger) error,
+	resourceFunc func(*session.Session, *ec2.EC2, Resource, log.Logger) error,
 	logger log.Logger) error {
 	sessions := make(map[string]*session.Session)
 	awsServices := make(map[awsutil.Target]*ec2.EC2)
@@ -36,7 +36,7 @@ func forEachResource(resources []Resource, stopOnError bool,
 			awsService = awsutil.CreateService(session, resource.Region)
 			awsServices[target] = awsService
 		}
-		err := resourceFunc(awsService, resource,
+		err := resourceFunc(session, awsService, resource,
 			prefixlogger.New(resource.AccountName+": "+resource.Region+": ",
 				logger))
 		if err != nil {
