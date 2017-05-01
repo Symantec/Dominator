@@ -294,7 +294,7 @@ func findLatestImage(images []*ec2.Image) (*ec2.Image, error) {
 	return youngestImage, nil
 }
 
-func getAccountName(awsService *ec2.EC2) (string, error) {
+func getAccountId(awsService *ec2.EC2) (string, error) {
 	// TODO(rgooch): This relies on at least one instance existing. This doesn't
 	//               work in a fresh account. Figure out a better way.
 	out, err := awsService.DescribeInstances(&ec2.DescribeInstancesInput{

@@ -290,7 +290,7 @@ func (ss *sharingStateType) publish(awsService *ec2.EC2, result TargetResult) {
 
 func (ss *sharingStateType) harvest(awsService *ec2.EC2, region string,
 	tags awsutil.Tags, logger log.Logger) (*TargetResult, error) {
-	ownerId, err := getAccountName(awsService)
+	ownerId, err := getAccountId(awsService)
 	if err != nil {
 		return nil, err
 	}
