@@ -20,7 +20,7 @@ func addVolumes(targets awsutil.TargetList, skipList awsutil.TargetList,
 	// Collect errors.
 	for i := 0; i < numTargets; i++ {
 		e := <-errorsChannel
-		if e != nil && err != nil {
+		if e != nil && err == nil {
 			err = e
 		}
 	}
@@ -39,16 +39,19 @@ func addVolumeToTarget(awsService *ec2.EC2, tags awsutil.Tags,
 	unpackerInstance, srpcClient, err := getWorkingUnpacker(awsService,
 		unpackerName, logger)
 	if err != nil {
+		logger.Println(err)
 		return err
 	}
 	defer srpcClient.Close()
 	volumeId, err := addVolume(srpcClient, awsService, size, tags,
 		unpackerInstance, logger)
 	if err != nil {
+		logger.Println(err)
 		return err
 	}
 	status, err := uclient.GetStatus(srpcClient)
 	if err != nil {
+		logger.Println(err)
 		return err
 	}
 	logger.Printf("%s attached as device: %s\n",
