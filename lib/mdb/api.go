@@ -9,8 +9,11 @@ import (
 )
 
 type AwsMetadata struct {
-	InstanceId string
-	Tags       map[string]string // Key: tag key name, value: tag value.
+	AccountId   string
+	AccountName string
+	InstanceId  string
+	Region      string
+	Tags        map[string]string // Key: tag key name, value: tag value.
 }
 
 // Machine describes a single machine with a unique Hostname and optional

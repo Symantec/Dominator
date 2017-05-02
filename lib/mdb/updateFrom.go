@@ -27,7 +27,16 @@ func (dest *Machine) updateFrom(source Machine) {
 }
 
 func compareAwsMetadata(left, right *AwsMetadata) bool {
+	if left.AccountId != right.AccountId {
+		return false
+	}
+	if left.AccountName != right.AccountName {
+		return false
+	}
 	if left.InstanceId != right.InstanceId {
+		return false
+	}
+	if left.Region != right.Region {
 		return false
 	}
 	if len(left.Tags) != len(right.Tags) {

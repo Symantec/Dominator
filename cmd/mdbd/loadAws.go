@@ -58,7 +58,8 @@ func (g *awsGeneratorType) Generate(unused_datacentre string,
 	numTargets, err := awsutil.ForEachTarget(g.targets, nil,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			var result resultType
-			result.mdb, result.err = g.generateForTarget(awsService, logger)
+			result.mdb, result.err = g.generateForTarget(awsService, account,
+				region, logger)
 			resultsChannel <- result
 		},
 		logger)
@@ -89,7 +90,8 @@ func (g *awsGeneratorType) Generate(unused_datacentre string,
 	return &newMdb, err
 }
 
-func (g *awsGeneratorType) generateForTarget(svc *ec2.EC2, logger log.Logger) (
+func (g *awsGeneratorType) generateForTarget(svc *ec2.EC2, accountName string,
+	region string, logger log.Logger) (
 	*mdb.Mdb, error) {
 	filters, err := g.makeFilters()
 	if err != nil {
@@ -101,7 +103,7 @@ func (g *awsGeneratorType) generateForTarget(svc *ec2.EC2, logger log.Logger) (
 	if err != nil {
 		return nil, err
 	}
-	return extractMdb(resp), nil
+	return extractMdb(resp, accountName, region), nil
 }
 
 func (g *awsGeneratorType) makeFilters() ([]*ec2.Filter, error) {
@@ -126,16 +128,21 @@ func (g *awsGeneratorType) makeFilters() ([]*ec2.Filter, error) {
 	return filters, nil
 }
 
-func extractMdb(output *ec2.DescribeInstancesOutput) *mdb.Mdb {
+func extractMdb(output *ec2.DescribeInstancesOutput, accountName string,
+	region string) *mdb.Mdb {
 	var result mdb.Mdb
 	for _, reservation := range output.Reservations {
+		accountId := aws.StringValue(reservation.OwnerId)
 		for _, instance := range reservation.Instances {
 			if instance.PrivateDnsName != nil {
 				machine := mdb.Machine{
 					Hostname: *instance.PrivateDnsName,
 					AwsMetadata: &mdb.AwsMetadata{
-						InstanceId: *instance.InstanceId,
-						Tags:       make(map[string]string),
+						AccountId:   accountId,
+						AccountName: accountName,
+						InstanceId:  *instance.InstanceId,
+						Region:      region,
+						Tags:        make(map[string]string),
 					},
 				}
 				if instance.PrivateIpAddress != nil {
