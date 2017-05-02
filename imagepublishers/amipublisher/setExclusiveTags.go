@@ -43,11 +43,14 @@ func setExclusiveTagsForTarget(awsService *ec2.EC2, amiId string,
 		}
 	}
 	if nameTag == "" {
-		return fmt.Errorf("no \"Name\" tag for: %s", amiId)
+		err := fmt.Errorf("no \"Name\" tag for: %s", amiId)
+		logger.Println(err)
+		return err
 	}
 	images, err := getImages(awsService,
 		awsutil.Tags{"Name": nameTag, tagKey: ""})
 	if err != nil {
+		logger.Println(err)
 		return err
 	}
 	tagKeysToStrip := []string{tagKey, "Name"}
@@ -68,6 +71,7 @@ func setExclusiveTagsForTarget(awsService *ec2.EC2, amiId string,
 		}
 		err := deleteTagsFromResources(awsService, tagKeysToStrip, imageId)
 		if err != nil {
+			logger.Println(err)
 			return err
 		}
 		logger.Printf("deleted \"%s\" tag from: %s\n", tagKey, imageId)
