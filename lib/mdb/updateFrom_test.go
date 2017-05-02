@@ -43,31 +43,54 @@ func TestCompareAwsMetadata(t *testing.T) {
 		left, right *AwsMetadata
 		want        bool
 	}{
-		{&AwsMetadata{"i-0", nil}, &AwsMetadata{"i-0", nil}, true},
-		{&AwsMetadata{"i-0", nil}, &AwsMetadata{"i-1", nil}, false},
+		{ // No tags, same metadata.
+			&AwsMetadata{"aId-0", "aName-0", "i-0", "r-0", nil},
+			&AwsMetadata{"aId-0", "aName-0", "i-0", "r-0", nil}, true},
+		{ // No tags, different instance.
+			&AwsMetadata{"aId-0", "aName-0", "i-0", "r-0", nil},
+			&AwsMetadata{"aId-0", "aName-0", "i-1", "r-0", nil}, false},
+		{ // No tags, different AccountId.
+			&AwsMetadata{"aId-0", "aName-0", "i-0", "r-0", nil},
+			&AwsMetadata{"aId-1", "aName-0", "i-0", "r-0", nil}, false},
+		{ // No tags, different AccountName.
+			&AwsMetadata{"aId-0", "aName-0", "i-0", "r-0", nil},
+			&AwsMetadata{"aId-0", "aName-1", "i-0", "r-0", nil}, false},
+		{ // No tags, different Region.
+			&AwsMetadata{"aId-0", "aName-0", "i-0", "r-0", nil},
+			&AwsMetadata{"aId-0", "aName-0", "i-0", "r-1", nil}, false},
 		{ // One tag, the same.
-			&AwsMetadata{"i-2", tagsType{"k0": "v0"}},
-			&AwsMetadata{"i-2", tagsType{"k0": "v0"}},
+			&AwsMetadata{"aId-0", "aName-0", "i-2", "r-0",
+				tagsType{"k0": "v0"}},
+			&AwsMetadata{"aId-0", "aName-0", "i-2", "r-0",
+				tagsType{"k0": "v0"}},
 			true,
 		},
 		{ // One tag, different.
-			&AwsMetadata{"i-3", tagsType{"k0": "v0"}},
-			&AwsMetadata{"i-3", tagsType{"k0": "v1"}},
+			&AwsMetadata{"aId-0", "aName-0", "i-3", "r-0",
+				tagsType{"k0": "v0"}},
+			&AwsMetadata{"aId-0", "aName-0", "i-3", "r-0",
+				tagsType{"k0": "v1"}},
 			false,
 		},
 		{ // Two tags, the same.
-			&AwsMetadata{"i-4", tagsType{"k0": "v0", "k1": "v1"}},
-			&AwsMetadata{"i-4", tagsType{"k0": "v0", "k1": "v1"}},
+			&AwsMetadata{"aId-0", "aName-0", "i-4", "r-0",
+				tagsType{"k0": "v0", "k1": "v1"}},
+			&AwsMetadata{"aId-0", "aName-0", "i-4", "r-0",
+				tagsType{"k0": "v0", "k1": "v1"}},
 			true,
 		},
 		{ // Two tags added in a different order, the same
-			&AwsMetadata{"i-5", tagsType{"k0": "v0", "k1": "v1"}},
-			&AwsMetadata{"i-5", tagsType{"k1": "v1", "k0": "v0"}},
+			&AwsMetadata{"aId-0", "aName-0", "i-5", "r-0",
+				tagsType{"k0": "v0", "k1": "v1"}},
+			&AwsMetadata{"aId-0", "aName-0", "i-5", "r-0",
+				tagsType{"k1": "v1", "k0": "v0"}},
 			true,
 		},
 		{ // Two tags, values swapped.
-			&AwsMetadata{"i-6", tagsType{"k0": "v0", "k1": "v1"}},
-			&AwsMetadata{"i-6", tagsType{"k0": "v1", "k1": "v0"}},
+			&AwsMetadata{"aId-0", "aName-0", "i-6", "r-0",
+				tagsType{"k0": "v0", "k1": "v1"}},
+			&AwsMetadata{"aId-0", "aName-0", "i-6", "r-0",
+				tagsType{"k0": "v1", "k1": "v0"}},
 			false,
 		},
 	}
