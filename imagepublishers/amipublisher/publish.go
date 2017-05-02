@@ -98,9 +98,11 @@ func (pData *publishData) publishToTargetWrapper(awsService *ec2.EC2,
 func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	accountProfileName string, region string, sharingState *sharingStateType,
 	logger log.Logger) (*TargetResult, error) {
+	imageName := path.Join(pData.streamName, path.Base(pData.imageLeafName))
 	if sharingState != nil &&
 		sharingState.sharingAccountName != accountProfileName {
-		return sharingState.harvest(awsService, region, pData.tags, logger)
+		return sharingState.harvest(awsService, region, imageName, pData.tags,
+			logger)
 	}
 	unpackerInstance, srpcClient, err := getWorkingUnpacker(awsService,
 		pData.unpackerName, logger)
@@ -137,7 +139,6 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	if err != nil {
 		return nil, err
 	}
-	imageName := path.Join(pData.streamName, path.Base(pData.imageLeafName))
 	var snapshotId string
 	logger.Printf("Capturing: %s\n", pData.streamName)
 	var s3ManifestFile string
@@ -289,7 +290,8 @@ func (ss *sharingStateType) publish(awsService *ec2.EC2, result TargetResult) {
 }
 
 func (ss *sharingStateType) harvest(awsService *ec2.EC2, region string,
-	tags awsutil.Tags, logger log.Logger) (*TargetResult, error) {
+	imageName string, tags awsutil.Tags, logger log.Logger) (
+	*TargetResult, error) {
 	ownerId, err := getAccountId(awsService)
 	if err != nil {
 		return nil, err
@@ -319,6 +321,8 @@ func (ss *sharingStateType) harvest(awsService *ec2.EC2, region string,
 	if err != nil {
 		return nil, err
 	}
+	tags = tags.Copy()
+	tags["Name"] = path.Dir(imageName)
 	if err := createTags(awsService, result.AmiId, tags); err != nil {
 		return nil, err
 	}
