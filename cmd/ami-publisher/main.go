@@ -37,10 +37,14 @@ var (
 		"minimum number of free bytes in image")
 	s3Bucket = flag.String("s3Bucket", "",
 		"S3 bucket to upload bundle to (default is EBS-backed AMIs)")
+	s3Folder = flag.String("s3Folder", "",
+		"S3 folder to upload bundle to (default is EBS-backed AMIs)")
 	searchTags              = awsutil.Tags{"Preferred": "true"}
 	securityGroupSearchTags awsutil.Tags
-	skipTargets             awsutil.TargetList
-	sshKeyName              = flag.String("sshKeyName", "",
+	sharingAccountName      = flag.String("sharingAccountName", "",
+		"Account from which to share AMIs (for S3-backed)")
+	skipTargets awsutil.TargetList
+	sshKeyName  = flag.String("sshKeyName", "",
 		"Name of SSH key for instance")
 	subnetSearchTags awsutil.Tags = awsutil.Tags{"Network": "Private"}
 	tags             awsutil.Tags

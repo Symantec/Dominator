@@ -2,10 +2,12 @@ package amipublisher
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"path"
 	"strings"
 	"time"
@@ -168,6 +170,33 @@ func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
 	return *volume.VolumeId, nil
 }
 
+func deleteS3Directory(awsService *s3.S3, bucket, dir string) error {
+	out, err := awsService.ListObjects(&s3.ListObjectsInput{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(dir),
+	})
+	if err != nil {
+		fmt.Printf("error listing: %s: %s\n", dir, err)
+		return err
+	}
+	if len(out.Contents) < 1 {
+		return nil
+	}
+	objectIds := make([]*s3.ObjectIdentifier, 0, len(out.Contents))
+	for _, obj := range out.Contents {
+		objectIds = append(objectIds,
+			&s3.ObjectIdentifier{Key: obj.Key})
+	}
+	_, err = awsService.DeleteObjects(&s3.DeleteObjectsInput{
+		Bucket: aws.String(bucket),
+		Delete: &s3.Delete{Objects: objectIds},
+	})
+	if err != nil {
+		fmt.Printf("error deleting objects: %s\n", err)
+	}
+	return nil
+}
+
 func deleteSnapshot(awsService *ec2.EC2, snapshotId string) error {
 	for i := 0; i < 5; i++ {
 		_, err := awsService.DeleteSnapshot(&ec2.DeleteSnapshotInput{
@@ -263,6 +292,21 @@ func findLatestImage(images []*ec2.Image) (*ec2.Image, error) {
 		}
 	}
 	return youngestImage, nil
+}
+
+func getAccountId(awsService *ec2.EC2) (string, error) {
+	// TODO(rgooch): This relies on at least one instance existing. This doesn't
+	//               work in a fresh account. Figure out a better way.
+	out, err := awsService.DescribeInstances(&ec2.DescribeInstancesInput{
+		MaxResults: aws.Int64(5),
+	})
+	if err != nil {
+		return "", err
+	}
+	if len(out.Reservations) < 1 {
+		return "", errors.New("no instances found")
+	}
+	return aws.StringValue(out.Reservations[0].OwnerId), nil
 }
 
 func findMarketplaceImage(awsService *ec2.EC2, productCode string) (
@@ -487,7 +531,7 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image, tags awsutil.Tags,
 	return instance, nil
 }
 
-func registerAmi(awsService *ec2.EC2, snapshotId string, s3Bucket string,
+func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 	amiName string, imageName string, tags awsutil.Tags, imageGiB uint64,
 	logger log.Logger) (string, error) {
 	rootDevName := "/dev/sda1"
@@ -519,8 +563,8 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, s3Bucket string,
 	if snapshotId != "" {
 		params.BlockDeviceMappings = blkDevMaps
 	}
-	if s3Bucket != "" {
-		params.ImageLocation = aws.String(s3Bucket + "/image.manifest.xml")
+	if s3Manifest != "" {
+		params.ImageLocation = aws.String(s3Manifest)
 	}
 	ami, err := awsService.RegisterImage(params)
 	if err != nil {
