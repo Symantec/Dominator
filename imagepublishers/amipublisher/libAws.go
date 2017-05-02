@@ -245,6 +245,14 @@ func deleteVolume(awsService *ec2.EC2, volumeId string) error {
 	return err
 }
 
+func detachVolume(awsService *ec2.EC2, instanceId, volumeId string) error {
+	_, err := awsService.DetachVolume(&ec2.DetachVolumeInput{
+		InstanceId: aws.String(instanceId),
+		VolumeId:   aws.String(volumeId),
+	})
+	return err
+}
+
 func deregisterAmi(awsService *ec2.EC2, amiId string) error {
 	_, err := awsService.DeregisterImage(&ec2.DeregisterImageInput{
 		ImageId: aws.String(amiId),

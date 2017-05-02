@@ -163,6 +163,11 @@ func Publish(imageServerAddress string, streamName string, imageLeafName string,
 	return pData.publish(targets, skipList, logger)
 }
 
+func RemoveUnusedVolumes(targets awsutil.TargetList,
+	skipList awsutil.TargetList, unpackerName string, logger log.Logger) error {
+	return removeUnusedVolumes(targets, skipList, unpackerName, logger)
+}
+
 func SetExclusiveTags(resources []Resource, tagKey string, tagValue string,
 	logger log.Logger) error {
 	return setExclusiveTags(resources, tagKey, tagValue, logger)
