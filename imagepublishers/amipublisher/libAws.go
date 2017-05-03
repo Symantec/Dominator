@@ -19,14 +19,7 @@ func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 	for _, device := range instance.BlockDeviceMappings {
 		usedBlockDevices[aws.StringValue(device.DeviceName)] = struct{}{}
 	}
-	var blockDeviceName string
-	for c := 'b'; c <= 'z'; c++ {
-		name := "/dev/sd" + string(c)
-		if _, ok := usedBlockDevices[name]; !ok {
-			blockDeviceName = name
-			break
-		}
-	}
+	blockDeviceName := getFreeVolumeName(usedBlockDevices)
 	if blockDeviceName == "" {
 		return errors.New("no space for new block device")
 	}
@@ -315,6 +308,35 @@ func getAccountId(awsService *ec2.EC2) (string, error) {
 		return "", errors.New("no instances found")
 	}
 	return aws.StringValue(out.Reservations[0].OwnerId), nil
+}
+
+func getFreeVolumeName(usedBlockDevices map[string]struct{}) string {
+	// First try the "/dev/sdb" through "/dev/sdz" range.
+	for c := 'b'; c <= 'z'; c++ {
+		name := "/dev/sd" + string(c)
+		if _, ok := usedBlockDevices[name]; !ok {
+			return name
+		}
+	}
+	// Now try the "/dev/xvdba" through "/dev/xvdzz" range. Note that the entire
+	// range may not be supported.
+	var dev [2]byte
+	dev[0] = 'b'
+	dev[1] = 'a'
+	for {
+		name := "/dev/xvd" + string(dev[:])
+		if _, ok := usedBlockDevices[name]; !ok {
+			return name
+		}
+		dev[1]++
+		if dev[1] > 'z' {
+			dev[1] = 'a'
+			dev[0]++
+			if dev[0] > 'z' {
+				return ""
+			}
+		}
+	}
 }
 
 func findMarketplaceImage(awsService *ec2.EC2, productCode string) (
