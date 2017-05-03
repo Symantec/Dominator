@@ -82,6 +82,10 @@ func (objQ *ObjectAdderQueue) Add(reader io.Reader, length uint64) (
 	return objQ.add(reader, length)
 }
 
+func (objQ *ObjectAdderQueue) AddData(data []byte, hashVal hash.Hash) error {
+	return objQ.addData(data, hashVal)
+}
+
 func (objQ *ObjectAdderQueue) Close() error {
 	return objQ.close()
 }
