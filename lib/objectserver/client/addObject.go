@@ -46,8 +46,8 @@ func (objClient *ObjectClient) addObject(reader io.Reader, length uint64,
 	if err := decoder.Decode(&reply); err != nil {
 		return reply.Hash, false, err
 	}
-	if reply.Error != nil {
-		return reply.Hash, false, err
+	if reply.ErrorString != "" {
+		return reply.Hash, false, errors.New(reply.ErrorString)
 	}
 	if expectedHash != nil && *expectedHash != reply.Hash {
 		return reply.Hash, false, errors.New(fmt.Sprintf(

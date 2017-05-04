@@ -3,8 +3,8 @@ package client
 import (
 	"crypto/sha512"
 	"encoding/gob"
-	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
@@ -113,7 +113,7 @@ func readResponses(conn *srpc.Conn, getResponseChan <-chan bool,
 		var reply objectserver.AddObjectResponse
 		err := decoder.Decode(&reply)
 		if err == nil {
-			err = reply.Error
+			err = errors.New(reply.ErrorString)
 		}
 		errorChan <- err
 		if err != nil {
