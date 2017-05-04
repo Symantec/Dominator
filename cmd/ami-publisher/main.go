@@ -86,6 +86,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  list-unpackers")
 	fmt.Fprintln(os.Stderr, "  prepare-unpackers [stream-name]")
 	fmt.Fprintln(os.Stderr, "  publish stream-name image-leaf-name")
+	fmt.Fprintln(os.Stderr, "  remove-unused-volumes")
 	fmt.Fprintln(os.Stderr, "  set-exclusive-tags key value results-file...")
 	fmt.Fprintln(os.Stderr, "  set-tags-on-unpackers")
 	fmt.Fprintln(os.Stderr, "  start-instances")
@@ -115,6 +116,7 @@ var subcommands = []subcommand{
 	{"list-unpackers", 0, 0, listUnpackersSubcommand},
 	{"prepare-unpackers", 0, 1, prepareUnpackersSubcommand},
 	{"publish", 2, 2, publishSubcommand},
+	{"remove-unused-volumes", 0, 0, removeUnusedVolumesSubcommand},
 	{"set-exclusive-tags", 2, -1, setExclusiveTagsSubcommand},
 	{"set-tags-on-unpackers", 0, 0, setTagsSubcommand},
 	{"start-instances", 0, 0, startInstancesSubcommand},
