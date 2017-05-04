@@ -28,29 +28,37 @@ func (objSrv *ObjectServer) addObject(reader io.Reader, length uint64,
 	length = uint64(len(data))
 	filename := path.Join(objSrv.baseDir, objectcache.HashToFilename(hashVal))
 	// Check for existing object and collision.
+	if isNew, err := addOrCompare(hashVal, data, filename); err != nil {
+		return hashVal, false, err
+	} else {
+		objSrv.rwLock.Lock()
+		objSrv.sizesMap[hashVal] = uint64(len(data))
+		objSrv.rwLock.Unlock()
+		return hashVal, isNew, nil
+	}
+}
+
+func addOrCompare(hashVal hash.Hash, data []byte,
+	filename string) (bool, error) {
 	fi, err := os.Lstat(filename)
 	if err == nil {
 		if !fi.Mode().IsRegular() {
-			return hashVal, false, errors.New("Existing non-file: " + filename)
+			return false, errors.New("existing non-file: " + filename)
 		}
 		if err := collisionCheck(data, filename, fi.Size()); err != nil {
-			return hashVal, false, errors.New(
-				"Collision detected: " + err.Error())
+			return false, errors.New("collision detected: " + err.Error())
 		}
 		// No collision and no error: it's the same object. Go home early.
-		return hashVal, false, nil
+		return false, nil
 	}
 	if err = os.MkdirAll(path.Dir(filename), syscall.S_IRWXU); err != nil {
-		return hashVal, false, err
+		return false, err
 	}
 	if err := fsutil.CopyToFile(filename, filePerms, bytes.NewReader(data),
-		length); err != nil {
-		return hashVal, false, err
+		uint64(len(data))); err != nil {
+		return false, err
 	}
-	objSrv.rwLock.Lock()
-	objSrv.sizesMap[hashVal] = uint64(len(data))
-	objSrv.rwLock.Unlock()
-	return hashVal, true, nil
+	return true, nil
 }
 
 func collisionCheck(data []byte, filename string, size int64) error {
