@@ -22,7 +22,7 @@ func addObjects(conn *srpc.Conn, adder ObjectAdder, logger *log.Logger) error {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			}
-			return err
+			return errors.New("error decoding: " + err.Error())
 		}
 		if request.Length < 1 {
 			break
@@ -31,16 +31,17 @@ func addObjects(conn *srpc.Conn, adder ObjectAdder, logger *log.Logger) error {
 		response.Hash, response.Added, err =
 			adder.AddObject(conn, request.Length, request.ExpectedHash)
 		response.ErrorString = errors.ErrorToString(err)
-		if response.Added {
-			numAdded++
-		}
 		if err := encoder.Encode(response); err != nil {
-			return err
+			return errors.New("error encoding: " + err.Error())
 		}
 		if response.ErrorString != "" {
-			logger.Printf("AddObjects(): failed, %d of %d are new objects %s",
-				numAdded, numObj, response.ErrorString)
+			logger.Printf(
+				"AddObjects(): failed, %d of %d so far are new objects: %s",
+				numAdded, numObj+1, response.ErrorString)
 			return nil
+		}
+		if response.Added {
+			numAdded++
 		}
 	}
 	logger.Printf("AddObjects(): %d of %d are new objects", numAdded, numObj)
