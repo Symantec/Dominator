@@ -30,6 +30,14 @@ type ObjectServer interface {
 	GetObjects(hashes []hash.Hash) (ObjectsReader, error)
 }
 
+type StashingObjectServer interface {
+	CommitObject(hash.Hash) error
+	DeleteStashedObject(hashVal hash.Hash) error
+	ObjectServer
+	StashOrVerifyObject(io.Reader, uint64, *hash.Hash) (
+		hash.Hash, []byte, error)
+}
+
 func GetObject(objSrv ObjectServer, hashVal hash.Hash) (
 	uint64, io.ReadCloser, error) {
 	return getObject(objSrv, hashVal)
