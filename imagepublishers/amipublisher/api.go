@@ -132,10 +132,15 @@ func LaunchInstancesForImages(images []Resource,
 		tags, logger)
 }
 
+func ListStreams(targets awsutil.TargetList, skipList awsutil.TargetList,
+	unpackerName string, logger log.Logger) (map[string]struct{}, error) {
+	return listStreams(targets, skipList, unpackerName, logger)
+}
+
 func ListUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
-	name string, logger log.Logger) (
+	unpackerName string, logger log.Logger) (
 	[]TargetUnpackers, error) {
-	return listUnpackers(targets, skipList, name, logger)
+	return listUnpackers(targets, skipList, unpackerName, logger)
 }
 
 func PrepareUnpackers(streamName string, targets awsutil.TargetList,
