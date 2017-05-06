@@ -83,6 +83,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  import-key-pair name pub-key-file")
 	fmt.Fprintln(os.Stderr, "  launch-instances boot-image")
 	fmt.Fprintln(os.Stderr, "  launch-instances-for-images results-file...")
+	fmt.Fprintln(os.Stderr, "  list-streams")
 	fmt.Fprintln(os.Stderr, "  list-unpackers")
 	fmt.Fprintln(os.Stderr, "  prepare-unpackers [stream-name]")
 	fmt.Fprintln(os.Stderr, "  publish stream-name image-leaf-name")
@@ -113,6 +114,7 @@ var subcommands = []subcommand{
 	{"import-key-pair", 2, 2, importKeyPairSubcommand},
 	{"launch-instances", 1, 1, launchInstancesSubcommand},
 	{"launch-instances-for-images", 0, -1, launchInstancesForImagesSubcommand},
+	{"list-streams", 0, 0, listStreamsSubcommand},
 	{"list-unpackers", 0, 0, listUnpackersSubcommand},
 	{"prepare-unpackers", 0, 1, prepareUnpackersSubcommand},
 	{"publish", 2, 2, publishSubcommand},
