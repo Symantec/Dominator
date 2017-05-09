@@ -19,6 +19,9 @@ func (objSrv *ObjectServer) commitObject(hashVal hash.Hash) error {
 	stashFilename := path.Join(objSrv.baseDir, stashDirectory, hashName)
 	fi, err := os.Lstat(stashFilename)
 	if err != nil {
+		if length, _ := objSrv.checkObject(hashVal); length > 0 {
+			return nil // Previously committed: return success.
+		}
 		return err
 	}
 	if !fi.Mode().IsRegular() {
