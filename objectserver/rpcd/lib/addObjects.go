@@ -3,13 +3,13 @@ package lib
 import (
 	"encoding/gob"
 	"github.com/Symantec/Dominator/lib/errors"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
-	"log"
 )
 
-func addObjects(conn *srpc.Conn, adder ObjectAdder, logger *log.Logger) error {
+func addObjects(conn *srpc.Conn, adder ObjectAdder, logger log.Logger) error {
 	defer conn.Flush()
 	decoder := gob.NewDecoder(conn)
 	encoder := gob.NewEncoder(conn)
