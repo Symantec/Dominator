@@ -11,6 +11,7 @@ import (
 
 func addObjects(conn *srpc.Conn, adder ObjectAdder, logger log.Logger) error {
 	defer conn.Flush()
+	logger.Printf("AddObjects(%s) starting\n", conn.RemoteAddr())
 	decoder := gob.NewDecoder(conn)
 	encoder := gob.NewEncoder(conn)
 	numAdded := 0
