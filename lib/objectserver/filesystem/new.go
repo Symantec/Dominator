@@ -64,6 +64,9 @@ func scanDirectory(objSrv *ObjectServer, baseDir string, subpath string,
 		return err
 	}
 	for _, name := range names {
+		if len(name) > 0 && name[0] == '.' {
+			continue // Skip hidden paths.
+		}
 		fullPathName := path.Join(myPathName, name)
 		fi, err := os.Lstat(fullPathName)
 		if err != nil {
