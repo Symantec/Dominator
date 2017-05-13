@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/queue"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
@@ -19,12 +20,12 @@ func newObjectAdderQueue(client *srpc.Client) (*ObjectAdderQueue, error) {
 		return nil, err
 	}
 	objQ.encoder = gob.NewEncoder(objQ.conn)
-	getResponseChan := make(chan bool, 65536)
+	getResponseSendChan, getResponseReceiveChan := queue.NewEventQueue()
 	errorChan := make(chan error, 1024)
-	objQ.getResponseChan = getResponseChan
+	objQ.getResponseChan = getResponseSendChan
 	objQ.errorChan = errorChan
-	objQ.sendSemaphore = make(chan bool, 1)
-	go readResponses(objQ.conn, getResponseChan, errorChan)
+	objQ.sendSemaphore = make(chan struct{}, 1)
+	go readResponses(objQ.conn, getResponseReceiveChan, errorChan)
 	return &objQ, nil
 }
 
@@ -55,7 +56,7 @@ func (objQ *ObjectAdderQueue) addData(data []byte, hashVal hash.Hash) error {
 		return err
 	}
 	// Send in a goroutine to increase concurrency. A small win.
-	objQ.sendSemaphore <- true
+	objQ.sendSemaphore <- struct{}{}
 	go func() {
 		defer func() {
 			<-objQ.sendSemaphore
@@ -65,13 +66,14 @@ func (objQ *ObjectAdderQueue) addData(data []byte, hashVal hash.Hash) error {
 		request.ExpectedHash = &hashVal
 		objQ.encoder.Encode(request)
 		objQ.conn.Write(data)
-		objQ.getResponseChan <- true
+		objQ.getResponseChan <- struct{}{}
 	}()
 	return nil
 }
 
 func (objQ *ObjectAdderQueue) close() error {
-	objQ.sendSemaphore <- true // Wait for any sends in progress to complete.
+	// Wait for any sends in progress to complete.
+	objQ.sendSemaphore <- struct{}{}
 	var request objectserver.AddObjectRequest
 	err := objQ.encoder.Encode(request)
 	err = updateError(err, objQ.conn.Flush())
@@ -105,7 +107,7 @@ func (objQ *ObjectAdderQueue) consumeErrors(untilClose bool) error {
 	return nil
 }
 
-func readResponses(conn *srpc.Conn, getResponseChan <-chan bool,
+func readResponses(conn *srpc.Conn, getResponseChan <-chan struct{},
 	errorChan chan<- error) {
 	defer close(errorChan)
 	decoder := gob.NewDecoder(conn)
