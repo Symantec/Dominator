@@ -1,4 +1,4 @@
-package main
+package rpcd
 
 import (
 	"encoding/gob"
@@ -8,18 +8,18 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
-	fsdriver "github.com/Symantec/Dominator/lib/objectserver/filesystem"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"io"
-	"log"
 	"strings"
 	"time"
 )
 
 func replicator(address string, imdb *scanner.ImageDataBase,
-	objSrv *fsdriver.ObjectServer, archiveMode bool, logger *log.Logger) {
+	objSrv objectserver.FullObjectServer, archiveMode bool, logger log.Logger) {
 	initialTimeout := time.Second * 15
 	timeout := initialTimeout
 	var nextSleepStopTime time.Time
@@ -55,7 +55,7 @@ func replicator(address string, imdb *scanner.ImageDataBase,
 }
 
 func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
-	objSrv *fsdriver.ObjectServer, archiveMode bool, logger *log.Logger) error {
+	objSrv objectserver.FullObjectServer, archiveMode bool, logger log.Logger) error {
 	logger.Printf("Image replicator: connected to: %s\n", address)
 	replicationStartTime := time.Now()
 	decoder := gob.NewDecoder(conn)
@@ -86,7 +86,7 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 				initialImages[imageUpdate.Name] = struct{}{}
 			}
 			if err := addImage(address, imdb, objSrv, imageUpdate.Name,
-				logger); err != nil {
+				archiveMode, logger); err != nil {
 				return err
 			}
 		case imageserver.OperationDeleteImage:
@@ -110,7 +110,7 @@ func getUpdates(address string, conn *srpc.Conn, imdb *scanner.ImageDataBase,
 }
 
 func deleteMissingImages(imdb *scanner.ImageDataBase,
-	imagesToKeep map[string]struct{}, logger *log.Logger) {
+	imagesToKeep map[string]struct{}, logger log.Logger) {
 	missingImages := make([]string, 0)
 	for _, imageName := range imdb.ListImages() {
 		if _, ok := imagesToKeep[imageName]; !ok {
@@ -126,7 +126,8 @@ func deleteMissingImages(imdb *scanner.ImageDataBase,
 }
 
 func addImage(address string, imdb *scanner.ImageDataBase,
-	objSrv *fsdriver.ObjectServer, name string, logger *log.Logger) error {
+	objSrv objectserver.FullObjectServer, name string, archiveMode bool,
+	logger log.Logger) error {
 	timeout := time.Second * 60
 	if imdb.CheckImage(name) {
 		return nil
@@ -145,7 +146,7 @@ func addImage(address string, imdb *scanner.ImageDataBase,
 		return errors.New(name + ": not found")
 	}
 	logger.Printf("Replicator(%s): downloaded image\n", name)
-	if *archiveMode && !img.ExpiresAt.IsZero() && !*archiveExpiringImages {
+	if archiveMode && !img.ExpiresAt.IsZero() && !*archiveExpiringImages {
 		logger.Printf(
 			"Replicator(%s): ignoring expiring image in archiver mode\n",
 			name)
@@ -164,8 +165,8 @@ func addImage(address string, imdb *scanner.ImageDataBase,
 }
 
 func getMissingObjectsRetry(address string, imdb *scanner.ImageDataBase,
-	objSrv *fsdriver.ObjectServer, fs *filesystem.FileSystem,
-	logger *log.Logger) error {
+	objSrv objectserver.FullObjectServer, fs *filesystem.FileSystem,
+	logger log.Logger) error {
 	err := getMissingObjects(address, objSrv, fs, logger)
 	if err == nil {
 		return nil
@@ -194,8 +195,8 @@ func getMissingObjectsRetry(address string, imdb *scanner.ImageDataBase,
 	return getMissingObjects(address, objSrv, fs, logger)
 }
 
-func getMissingObjects(address string, objSrv *fsdriver.ObjectServer,
-	fs *filesystem.FileSystem, logger *log.Logger) error {
+func getMissingObjects(address string, objSrv objectserver.FullObjectServer,
+	fs *filesystem.FileSystem, logger log.Logger) error {
 	hashes := make([]hash.Hash, 0, fs.NumRegularInodes)
 	for _, inode := range fs.InodeTable {
 		if inode, ok := inode.(*filesystem.RegularInode); ok {
@@ -248,8 +249,8 @@ func getMissingObjects(address string, objSrv *fsdriver.ObjectServer,
 }
 
 func deleteUnreferencedObjects(imdb *scanner.ImageDataBase,
-	objSrv *fsdriver.ObjectServer, fs *filesystem.FileSystem, all bool,
-	logger *log.Logger) bool {
+	objSrv objectserver.FullObjectServer, fs *filesystem.FileSystem, all bool,
+	logger log.Logger) bool {
 	objectsMap := imdb.ListUnreferencedObjects()
 	for _, inode := range fs.InodeTable {
 		if inode, ok := inode.(*filesystem.RegularInode); ok {

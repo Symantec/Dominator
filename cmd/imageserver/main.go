@@ -18,10 +18,6 @@ import (
 )
 
 var (
-	archiveExpiringImages = flag.Bool("archiveExpiringImages", false,
-		"If true, replicate expiring images when in archive mode")
-	archiveMode = flag.Bool("archiveMode", false,
-		"If true, disable delete operations and require update server")
 	debug    = flag.Bool("debug", false, "If true, show debugging output")
 	imageDir = flag.String("imageDir", "/var/lib/imageserver",
 		"Name of image server data directory.")
@@ -48,10 +44,6 @@ func main() {
 	tricorder.RegisterFlags()
 	if os.Geteuid() == 0 {
 		fmt.Fprintln(os.Stderr, "Do not run the Image Server as root")
-		os.Exit(1)
-	}
-	if *archiveMode && *imageServerHostname == "" {
-		fmt.Fprintln(os.Stderr, "-imageServerHostname required in archive mode")
 		os.Exit(1)
 	}
 	circularBuffer := logbuf.New()
@@ -81,18 +73,23 @@ func main() {
 	tricorder.RegisterMetric("/image-count",
 		func() uint { return imdb.CountImages() },
 		units.None, "number of images")
-	imgSrvRpcHtmlWriter := imageserverRpcd.Setup(imdb, *imageServerHostname,
-		logger)
+	var imageServerAddress string
+	if *imageServerHostname != "" {
+		imageServerAddress = fmt.Sprintf("%s:%d", *imageServerHostname,
+			*imageServerPortNum)
+	}
+	imgSrvRpcHtmlWriter, err := imageserverRpcd.Setup(imdb, imageServerAddress,
+		objSrv, logger)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	objSrvRpcHtmlWriter := objectserverRpcd.Setup(objSrv, logger)
 	httpd.AddHtmlWriter(imdb)
 	httpd.AddHtmlWriter(&imageObjectServersType{imdb, objSrv})
 	httpd.AddHtmlWriter(imgSrvRpcHtmlWriter)
 	httpd.AddHtmlWriter(objSrvRpcHtmlWriter)
 	httpd.AddHtmlWriter(circularBuffer)
-	if *imageServerHostname != "" {
-		go replicator(fmt.Sprintf("%s:%d", *imageServerHostname,
-			*imageServerPortNum), imdb, objSrv, *archiveMode, logger)
-	}
 	if err = httpd.StartServer(*portNum, imdb, objSrv, false); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create http server: %s\n", err)
 		os.Exit(1)
