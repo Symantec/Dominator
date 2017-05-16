@@ -8,5 +8,9 @@ import (
 
 func (t *srpcType) AddObjects(conn *srpc.Conn) error {
 	defer runtime.GC() // An opportune time to take out the garbage.
-	return lib.AddObjects(conn, t.objectServer, t.logger)
+	if t.replicationMaster == "" {
+		return lib.AddObjects(conn, t.objectServer, t.logger)
+	}
+	return lib.AddObjectsWithMaster(conn, t.objectServer, t.replicationMaster,
+		t.logger)
 }

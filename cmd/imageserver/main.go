@@ -7,6 +7,7 @@ import (
 	imageserverRpcd "github.com/Symantec/Dominator/imageserver/rpcd"
 	"github.com/Symantec/Dominator/imageserver/scanner"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/log/debuglogger"
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/Dominator/lib/objectserver/filesystem"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
@@ -84,7 +85,8 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	objSrvRpcHtmlWriter := objectserverRpcd.Setup(objSrv, logger)
+	objSrvRpcHtmlWriter := objectserverRpcd.Setup(objSrv, imageServerAddress,
+		debuglogger.New(logger))
 	httpd.AddHtmlWriter(imdb)
 	httpd.AddHtmlWriter(&imageObjectServersType{imdb, objSrv})
 	httpd.AddHtmlWriter(imgSrvRpcHtmlWriter)

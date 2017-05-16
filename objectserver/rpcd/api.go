@@ -1,18 +1,19 @@
 package rpcd
 
 import (
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
-	"log"
 )
 
 type srpcType struct {
-	objectServer objectserver.ObjectServer
-	getSemaphore chan bool
-	logger       *log.Logger
+	objectServer      objectserver.StashingObjectServer
+	replicationMaster string
+	getSemaphore      chan bool
+	logger            log.DebugLogger
 }
 
 type htmlWriter struct {
@@ -23,9 +24,10 @@ func (hw *htmlWriter) WriteHtml(writer io.Writer) {
 	hw.writeHtml(writer)
 }
 
-func Setup(objSrv objectserver.ObjectServer, logger *log.Logger) *htmlWriter {
+func Setup(objSrv objectserver.StashingObjectServer, replicationMaster string,
+	logger log.DebugLogger) *htmlWriter {
 	getSemaphore := make(chan bool, 100)
-	srpcObj := &srpcType{objSrv, getSemaphore, logger}
+	srpcObj := &srpcType{objSrv, replicationMaster, getSemaphore, logger}
 	srpc.RegisterName("ObjectServer", srpcObj)
 	tricorder.RegisterMetric("/get-requests",
 		func() uint { return uint(len(getSemaphore)) },
