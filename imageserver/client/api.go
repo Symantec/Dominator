@@ -11,6 +11,10 @@ func AddImage(client *srpc.Client, name string, img *image.Image) error {
 	return addImage(client, name, img)
 }
 
+func AddImageTrusted(client *srpc.Client, name string, img *image.Image) error {
+	return addImageTrusted(client, name, img)
+}
+
 func CheckImage(client *srpc.Client, name string) (bool, error) {
 	return checkImage(client, name)
 }

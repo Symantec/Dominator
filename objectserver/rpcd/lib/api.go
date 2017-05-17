@@ -2,9 +2,10 @@ package lib
 
 import (
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"io"
-	"log"
 )
 
 type ObjectAdder interface {
@@ -12,6 +13,12 @@ type ObjectAdder interface {
 		hash.Hash, bool, error)
 }
 
-func AddObjects(conn *srpc.Conn, adder ObjectAdder, logger *log.Logger) error {
+func AddObjects(conn *srpc.Conn, adder ObjectAdder, logger log.Logger) error {
 	return addObjects(conn, adder, logger)
+}
+
+func AddObjectsWithMaster(conn *srpc.Conn,
+	objSrv objectserver.StashingObjectServer, masterAddress string,
+	logger log.DebugLogger) error {
+	return addObjectsWithMaster(conn, objSrv, masterAddress, logger)
 }

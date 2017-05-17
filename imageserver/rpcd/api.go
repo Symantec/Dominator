@@ -1,19 +1,33 @@
 package rpcd
 
 import (
+	"errors"
+	"flag"
 	"github.com/Symantec/Dominator/imageserver/scanner"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"io"
-	"log"
 	"sync"
+)
+
+var (
+	archiveExpiringImages = flag.Bool("archiveExpiringImages", false,
+		"If true, replicate expiring images when in archive mode")
+	archiveMode = flag.Bool("archiveMode", false,
+		"If true, disable delete operations and require update server")
 )
 
 type srpcType struct {
 	imageDataBase             *scanner.ImageDataBase
 	replicationMaster         string
-	logger                    *log.Logger
+	objSrv                    objectserver.FullObjectServer
+	archiveMode               bool
+	logger                    log.Logger
 	numReplicationClientsLock sync.RWMutex // Protect numReplicationClients.
 	numReplicationClients     uint
+	imagesBeingInjectedLock   sync.Mutex // Protect imagesBeingInjected.
+	imagesBeingInjected       map[string]struct{}
 }
 
 type htmlWriter srpcType
@@ -26,11 +40,23 @@ var replicationMessage = "cannot make changes while under replication control" +
 	", go to master: "
 
 func Setup(imdb *scanner.ImageDataBase, replicationMaster string,
-	lg *log.Logger) *htmlWriter {
-	srpcObj := srpcType{
-		imageDataBase:     imdb,
-		replicationMaster: replicationMaster,
-		logger:            lg}
-	srpc.RegisterName("ImageServer", &srpcObj)
-	return (*htmlWriter)(&srpcObj)
+	objSrv objectserver.FullObjectServer,
+	logger log.Logger) (*htmlWriter, error) {
+	if *archiveMode && replicationMaster == "" {
+		return nil, errors.New("replication master required in archive mode")
+	}
+	srpcObj := &srpcType{
+		imageDataBase:       imdb,
+		replicationMaster:   replicationMaster,
+		objSrv:              objSrv,
+		logger:              logger,
+		archiveMode:         *archiveMode,
+		imagesBeingInjected: make(map[string]struct{}),
+	}
+	srpc.RegisterName("ImageServer", srpcObj)
+	if replicationMaster != "" {
+		go srpcObj.replicator()
+	}
+
+	return (*htmlWriter)(srpcObj), nil
 }

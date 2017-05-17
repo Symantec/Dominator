@@ -15,9 +15,9 @@ type AddObjectRequest struct {
 } // Object data are streamed afterwards.
 
 type AddObjectResponse struct {
-	Error error
-	Hash  hash.Hash
-	Added bool // If true: object was added, else object already existed.
+	ErrorString string
+	Hash        hash.Hash
+	Added       bool // If true: object was added, else object already existed.
 }
 
 type CheckObjectsRequest struct {

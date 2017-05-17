@@ -12,7 +12,7 @@ import (
 func addObjectsSubcommand(objSrv objectserver.ObjectServer, args []string) {
 	if err := addObjects(fmt.Sprintf("%s:%d",
 		*objectServerHostname, *objectServerPortNum), args); err != nil {
-		fmt.Fprintf(os.Stderr, "Error adding obnects hash\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error adding objects hash: %s\n", err)
 		os.Exit(2)
 	}
 	os.Exit(0)

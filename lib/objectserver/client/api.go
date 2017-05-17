@@ -68,9 +68,9 @@ func (or *ObjectsReader) NextObject() (uint64, io.ReadCloser, error) {
 type ObjectAdderQueue struct {
 	conn            *srpc.Conn
 	encoder         *gob.Encoder
-	getResponseChan chan<- bool
+	getResponseChan chan<- struct{}
 	errorChan       <-chan error
-	sendSemaphore   chan bool
+	sendSemaphore   chan struct{}
 }
 
 func NewObjectAdderQueue(client *srpc.Client) (*ObjectAdderQueue, error) {
@@ -80,6 +80,10 @@ func NewObjectAdderQueue(client *srpc.Client) (*ObjectAdderQueue, error) {
 func (objQ *ObjectAdderQueue) Add(reader io.Reader, length uint64) (
 	hash.Hash, error) {
 	return objQ.add(reader, length)
+}
+
+func (objQ *ObjectAdderQueue) AddData(data []byte, hashVal hash.Hash) error {
+	return objQ.addData(data, hashVal)
 }
 
 func (objQ *ObjectAdderQueue) Close() error {

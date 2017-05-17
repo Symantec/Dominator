@@ -20,6 +20,12 @@ func NewObjectServer(baseDir string, logger log.Logger) (
 	return newObjectServer(baseDir, logger)
 }
 
+// AddObject will add an object. Object data are read from reader (length bytes
+// are read). The object hash is computed and compared with expectedHash if not
+// nil. The following are returned:
+//   computed hash value
+//   a boolean which is true if the object is new
+//   an error or nil if no error.
 func (objSrv *ObjectServer) AddObject(reader io.Reader, length uint64,
 	expectedHash *hash.Hash) (hash.Hash, bool, error) {
 	return objSrv.addObject(reader, length, expectedHash)
@@ -29,8 +35,17 @@ func (objSrv *ObjectServer) CheckObjects(hashes []hash.Hash) ([]uint64, error) {
 	return objSrv.checkObjects(hashes)
 }
 
+// CommitObject will commit (add) a previously stashed object.
+func (objSrv *ObjectServer) CommitObject(hashVal hash.Hash) error {
+	return objSrv.commitObject(hashVal)
+}
+
 func (objSrv *ObjectServer) DeleteObject(hashVal hash.Hash) error {
 	return objSrv.deleteObject(hashVal)
+}
+
+func (objSrv *ObjectServer) DeleteStashedObject(hashVal hash.Hash) error {
+	return objSrv.deleteStashedObject(hashVal)
 }
 
 func (objSrv *ObjectServer) GetObject(hashVal hash.Hash) (
@@ -55,6 +70,18 @@ func (objSrv *ObjectServer) NumObjects() uint64 {
 	objSrv.rwLock.RLock()
 	defer objSrv.rwLock.RUnlock()
 	return uint64(len(objSrv.sizesMap))
+}
+
+// StashOrVerifyObject will stash an object if it is new or it will verify if it
+// already exists. Object data are read from reader (length bytes are read). The
+// object hash is computed and compared with expectedHash if not nil.
+// The following are returned:
+//   computed hash value
+//   the object data if the object is new, otherwise nil
+//   an error or nil if no error.
+func (objSrv *ObjectServer) StashOrVerifyObject(reader io.Reader,
+	length uint64, expectedHash *hash.Hash) (hash.Hash, []byte, error) {
+	return objSrv.stashOrVerifyObject(reader, length, expectedHash)
 }
 
 type ObjectsReader struct {
