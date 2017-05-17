@@ -71,6 +71,12 @@ func (v TargetResult) MarshalJSON() ([]byte, error) {
 	return v.marshalJSON()
 }
 
+func AddVolumes(targets awsutil.TargetList, skipList awsutil.TargetList,
+	tags awsutil.Tags, unpackerName string, size uint64,
+	logger log.Logger) error {
+	return addVolumes(targets, skipList, tags, unpackerName, size, logger)
+}
+
 func CopyBootstrapImage(streamName string, targets awsutil.TargetList,
 	skipList awsutil.TargetList, marketplaceImage, marketplaceLoginName string,
 	newImageTags awsutil.Tags, unpackerName string,
@@ -126,10 +132,15 @@ func LaunchInstancesForImages(images []Resource,
 		tags, logger)
 }
 
+func ListStreams(targets awsutil.TargetList, skipList awsutil.TargetList,
+	unpackerName string, logger log.Logger) (map[string]struct{}, error) {
+	return listStreams(targets, skipList, unpackerName, logger)
+}
+
 func ListUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
-	name string, logger log.Logger) (
+	unpackerName string, logger log.Logger) (
 	[]TargetUnpackers, error) {
-	return listUnpackers(targets, skipList, name, logger)
+	return listUnpackers(targets, skipList, unpackerName, logger)
 }
 
 func PrepareUnpackers(streamName string, targets awsutil.TargetList,
@@ -155,6 +166,11 @@ func Publish(imageServerAddress string, streamName string, imageLeafName string,
 		sharingAccountName: sharingAccountName,
 	}
 	return pData.publish(targets, skipList, logger)
+}
+
+func RemoveUnusedVolumes(targets awsutil.TargetList,
+	skipList awsutil.TargetList, unpackerName string, logger log.Logger) error {
+	return removeUnusedVolumes(targets, skipList, unpackerName, logger)
 }
 
 func SetExclusiveTags(resources []Resource, tagKey string, tagValue string,

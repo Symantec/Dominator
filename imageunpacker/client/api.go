@@ -37,6 +37,10 @@ func PrepareForUnpack(srpcClient *srpc.Client, streamName string,
 		doNotWaitForResult)
 }
 
+func RemoveDevice(client *srpc.Client, deviceId string) error {
+	return removeDevice(client, deviceId)
+}
+
 func UnpackImage(srpcClient *srpc.Client, streamName,
 	imageLeafName string) error {
 	return unpackImage(srpcClient, streamName, imageLeafName)

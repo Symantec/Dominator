@@ -31,6 +31,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  prepare-for-capture stream-name")
 	fmt.Fprintln(os.Stderr, "  prepare-for-copy stream-name")
 	fmt.Fprintln(os.Stderr, "  prepare-for-unpack stream-name")
+	fmt.Fprintln(os.Stderr, "  remove-device DeviceId")
 	fmt.Fprintln(os.Stderr, "  unpack-image stream-name image-leaf-name")
 }
 
@@ -52,6 +53,7 @@ var subcommands = []subcommand{
 	{"prepare-for-capture", 1, 1, prepareForCaptureSubcommand},
 	{"prepare-for-copy", 1, 1, prepareForCopySubcommand},
 	{"prepare-for-unpack", 1, 1, prepareForUnpackSubcommand},
+	{"remove-device", 1, 1, removeDeviceSubcommand},
 	{"unpack-image", 2, 2, unpackImageSubcommand},
 }
 

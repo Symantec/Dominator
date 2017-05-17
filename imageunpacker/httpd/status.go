@@ -43,6 +43,7 @@ func (s state) writeDashboard(writer io.Writer) {
 	fmt.Fprintln(writer, "    <th>Image Stream</th>")
 	fmt.Fprintln(writer, "    <th>Device Id</th>")
 	fmt.Fprintln(writer, "    <th>Device Name</th>")
+	fmt.Fprintln(writer, "    <th>Size</th>")
 	fmt.Fprintln(writer, "    <th>Status</th>")
 	fmt.Fprintln(writer, "  </tr>")
 	streamNames := make([]string, 0, len(status.ImageStreams))
@@ -59,6 +60,12 @@ func (s state) writeDashboard(writer io.Writer) {
 		fmt.Fprintf(writer, "    <td>%s</td>\n", stream.DeviceId)
 		fmt.Fprintf(writer, "    <td>%s</td>\n",
 			status.Devices[stream.DeviceId].DeviceName)
+		size := status.Devices[stream.DeviceId].Size
+		sizeString := format.FormatBytes(size)
+		if size < 1 {
+			sizeString = ""
+		}
+		fmt.Fprintf(writer, "    <td>%s</td>\n", sizeString)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", stream.Status)
 		fmt.Fprintf(writer, "  </tr>\n")
 	}
@@ -69,6 +76,8 @@ func (s state) writeDashboard(writer io.Writer) {
 	fmt.Fprintln(writer, "    <th>Device Id</th>")
 	fmt.Fprintln(writer, "    <th>Device Name</th>")
 	fmt.Fprintln(writer, "    <th>Size</th>")
+	fmt.Fprintln(writer, "    <th>Image Stream</th>")
+	fmt.Fprintln(writer, "    <th>Status</th>")
 	fmt.Fprintln(writer, "  </tr>")
 	deviceIds := make([]string, 0, len(status.Devices))
 	for deviceId := range status.Devices {
@@ -76,12 +85,22 @@ func (s state) writeDashboard(writer io.Writer) {
 	}
 	sort.Strings(deviceIds)
 	for _, deviceId := range deviceIds {
+		deviceInfo := status.Devices[deviceId]
 		fmt.Fprintf(writer, "  <tr>\n")
 		fmt.Fprintf(writer, "    <td>%s</td>\n", deviceId)
+		fmt.Fprintf(writer, "    <td>%s</td>\n", deviceInfo.DeviceName)
 		fmt.Fprintf(writer, "    <td>%s</td>\n",
-			status.Devices[deviceId].DeviceName)
-		fmt.Fprintf(writer, "    <td>%s</td>\n",
-			format.FormatBytes(status.Devices[deviceId].Size))
+			format.FormatBytes(deviceInfo.Size))
+		streamName := deviceInfo.StreamName
+		if stream, ok := status.ImageStreams[streamName]; ok {
+			fmt.Fprintf(writer,
+				"    <td><a href=\"showFileSystem?%s\">%s</a></td>\n",
+				streamName, streamName)
+			fmt.Fprintf(writer, "    <td>%s</td>\n", stream.Status)
+		} else {
+			fmt.Fprintln(writer, "    <td></td>")
+			fmt.Fprintln(writer, "    <td></td>")
+		}
 		fmt.Fprintf(writer, "  </tr>\n")
 	}
 	fmt.Fprintln(writer, "</table><br>")
