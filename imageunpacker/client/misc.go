@@ -61,6 +61,13 @@ func prepareForUnpack(srpcClient *srpc.Client, streamName string,
 		&reply)
 }
 
+func removeDevice(srpcClient *srpc.Client, deviceId string) error {
+	request := proto.RemoveDeviceRequest{DeviceId: deviceId}
+	var reply proto.RemoveDeviceResponse
+	return srpcClient.RequestReply("ImageUnpacker.RemoveDevice", request,
+		&reply)
+}
+
 func unpackImage(srpcClient *srpc.Client, streamName,
 	imageLeafName string) error {
 	request := proto.UnpackImageRequest{
