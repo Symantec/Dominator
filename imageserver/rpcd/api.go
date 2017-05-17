@@ -21,9 +21,13 @@ var (
 type srpcType struct {
 	imageDataBase             *scanner.ImageDataBase
 	replicationMaster         string
+	objSrv                    objectserver.FullObjectServer
+	archiveMode               bool
 	logger                    log.Logger
 	numReplicationClientsLock sync.RWMutex // Protect numReplicationClients.
 	numReplicationClients     uint
+	imagesBeingInjectedLock   sync.Mutex // Protect imagesBeingInjected.
+	imagesBeingInjected       map[string]struct{}
 }
 
 type htmlWriter srpcType
@@ -42,13 +46,16 @@ func Setup(imdb *scanner.ImageDataBase, replicationMaster string,
 		return nil, errors.New("replication master required in archive mode")
 	}
 	srpcObj := &srpcType{
-		imageDataBase:     imdb,
-		replicationMaster: replicationMaster,
-		logger:            logger,
+		imageDataBase:       imdb,
+		replicationMaster:   replicationMaster,
+		objSrv:              objSrv,
+		logger:              logger,
+		archiveMode:         *archiveMode,
+		imagesBeingInjected: make(map[string]struct{}),
 	}
 	srpc.RegisterName("ImageServer", srpcObj)
 	if replicationMaster != "" {
-		go replicator(replicationMaster, imdb, objSrv, *archiveMode, logger)
+		go srpcObj.replicator()
 	}
 
 	return (*htmlWriter)(srpcObj), nil
