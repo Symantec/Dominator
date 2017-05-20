@@ -73,7 +73,7 @@ func launchInstanceInTarget(awsService *ec2.EC2,
 	}
 	instanceId := aws.StringValue(instance.InstanceId)
 	privateIp := aws.StringValue(instance.PrivateIpAddress)
-	logger.Printf("launched: %s with private IP: \n", instanceId, privateIp)
+	logger.Printf("launched: %s with private IP: %s\n", instanceId, privateIp)
 	err = awsService.WaitUntilInstanceRunning(&ec2.DescribeInstancesInput{
 		InstanceIds: aws.StringSlice([]string{instanceId}),
 	})

@@ -194,8 +194,9 @@ func (target *targetResult) bootstrap(streamName string,
 	remoteCommand := fmt.Sprintf("sudo chown %s /dev/%s",
 		marketplaceLoginName, deviceName)
 	cmd := makeSshCmd(instance, marketplaceLoginName, remoteCommand)
-	if err := cmd.Run(); err != nil {
-		return err
+	if out, err := cmd.CombinedOutput(); err != nil {
+		logger.Println(string(out))
+		return errors.New("error changing ownership of device: " + err.Error())
 	}
 	sshArgs := strings.Join([]string{
 		"-o CheckHostIP=no",
@@ -215,7 +216,7 @@ func (target *targetResult) bootstrap(streamName string,
 	cmd = makeSshCmd(sourceTarget.instance, sshKeyName, sourceCommand)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		logger.Println(string(out))
-		return err
+		return errors.New("error copying image contents: " + err.Error())
 	}
 	logger.Printf("copied in %s\n", format.Duration(time.Since(startTime)))
 	snapshotId, err := createSnapshot(awsService, volumeId, "bootstrap",
