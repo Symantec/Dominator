@@ -35,10 +35,16 @@ cat > "$tmpdir/image"
 ec2-bundle-image -c "$cert_file" -k "$key_file" -u "$account_id" \
   --image "$tmpdir/image" -d "$tmpdir" -r x86_64 --prefix image
 
-#ec2-upload-bundle -b "$destination" -m "$tmpdir/image.manifest.xml" \
-#  -a "$access_key_id" -s "$secret_access_key" --batch --retry
-
-# ec2-upload-bundle doesn't support eu-central-1 so do this the hard way.
+# Version 1.5.7 of ec2-upload-bundle doesn't support colons in the name, and
+# earlier versions don't support eu-central-1, so only use ec2-upload-bundle if
+# there are no colons, otherwise do it the hard (but slower) way.
+if ! echo "$destination" | fgrep -q :; then
+    ec2-upload-bundle -b "$destination" -m "$tmpdir/image.manifest.xml"    \
+                      -a "$AWS_ACCESS_KEY_ID" -s "$AWS_SECRET_ACCESS_KEY"  \
+		      --batch --retry --region "$region"
+    exit 0
+fi
+# Now do this the hard way :-(
 readonly bucket="${destination%%/*}"
 readonly destdir="${destination#*/}"
 for file in "$tmpdir/image.manifest.xml" "$tmpdir"/image.part.*; do
