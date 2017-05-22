@@ -13,6 +13,13 @@ type FullObjectServer interface {
 	NumObjects() uint64
 }
 
+type GarbageCollector func(bytesToDelete uint64) (
+	bytesDeleted uint64, err error)
+
+type GarbageCollectorSetter interface {
+	SetGarbageCollector(gc GarbageCollector)
+}
+
 type ObjectGetter interface {
 	GetObject(hashVal hash.Hash) (uint64, io.ReadCloser, error)
 }
