@@ -1,18 +1,29 @@
 package filesystem
 
 import (
+	"flag"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"io"
 	"sync"
+	"time"
+)
+
+var (
+	objectServerCleanupStartPercent = flag.Int(
+		"objectServerCleanupStartPercent", 95, "")
+	objectServerCleanupStopPercent = flag.Int("objectServerCleanupStopPercent",
+		90, "")
 )
 
 type ObjectServer struct {
-	baseDir  string
-	rwLock   sync.RWMutex         // Protect map mutations.
-	sizesMap map[hash.Hash]uint64 // Only set if object is known.
-	logger   log.Logger
+	baseDir               string
+	gc                    objectserver.GarbageCollector
+	logger                log.Logger
+	rwLock                sync.RWMutex         // Protect the following fields.
+	sizesMap              map[hash.Hash]uint64 // Only set if object is known.
+	lastGarbageCollection time.Time
 }
 
 func NewObjectServer(baseDir string, logger log.Logger) (
@@ -46,6 +57,11 @@ func (objSrv *ObjectServer) DeleteObject(hashVal hash.Hash) error {
 
 func (objSrv *ObjectServer) DeleteStashedObject(hashVal hash.Hash) error {
 	return objSrv.deleteStashedObject(hashVal)
+}
+
+func (objSrv *ObjectServer) SetGarbageCollector(
+	gc objectserver.GarbageCollector) {
+	objSrv.gc = gc
 }
 
 func (objSrv *ObjectServer) GetObject(hashVal hash.Hash) (

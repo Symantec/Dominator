@@ -23,15 +23,17 @@ func newObjectServer(baseDir string, logger log.Logger) (
 	if !fi.IsDir() {
 		return nil, errors.New(fmt.Sprintf("%s is not a directory\n", baseDir))
 	}
-	var objSrv ObjectServer
-	objSrv.baseDir = baseDir
-	objSrv.sizesMap = make(map[hash.Hash]uint64)
-	objSrv.logger = logger
+	objSrv := &ObjectServer{
+		baseDir:               baseDir,
+		logger:                logger,
+		sizesMap:              make(map[hash.Hash]uint64),
+		lastGarbageCollection: time.Now(),
+	}
 	state := concurrent.NewState(0)
 	startTime := time.Now()
 	var rusageStart, rusageStop syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
-	if err = scanDirectory(&objSrv, baseDir, "", state); err != nil {
+	if err = scanDirectory(objSrv, baseDir, "", state); err != nil {
 		return nil, err
 	}
 	if err := state.Reap(); err != nil {
@@ -48,7 +50,7 @@ func newObjectServer(baseDir string, logger log.Logger) (
 		time.Duration(rusageStart.Utime.Usec)*time.Microsecond
 	logger.Printf("Scanned %d object%s in %s (%s user CPUtime)\n",
 		len(objSrv.sizesMap), plural, time.Since(startTime), userTime)
-	return &objSrv, nil
+	return objSrv, nil
 }
 
 func scanDirectory(objSrv *ObjectServer, baseDir string, subpath string,
