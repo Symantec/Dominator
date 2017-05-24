@@ -14,10 +14,6 @@ import (
 
 const metadataFile = ".metadata"
 
-type Object struct {
-	length uint64
-}
-
 type notifiers map[<-chan string]chan<- string
 type makeDirectoryNotifiers map[<-chan image.Directory]chan<- image.Directory
 
