@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"syscall"
+	"time"
 )
 
 const (
@@ -33,6 +34,7 @@ func (objSrv *ObjectServer) addObject(reader io.Reader, length uint64,
 	} else {
 		objSrv.rwLock.Lock()
 		objSrv.sizesMap[hashVal] = uint64(len(data))
+		objSrv.lastMutationTime = time.Now()
 		objSrv.rwLock.Unlock()
 		return hashVal, isNew, nil
 	}

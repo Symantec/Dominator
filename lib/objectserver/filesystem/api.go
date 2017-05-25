@@ -24,6 +24,7 @@ type ObjectServer struct {
 	rwLock                sync.RWMutex         // Protect the following fields.
 	sizesMap              map[hash.Hash]uint64 // Only set if object is known.
 	lastGarbageCollection time.Time
+	lastMutationTime      time.Time
 }
 
 func NewObjectServer(baseDir string, logger log.Logger) (
@@ -72,6 +73,12 @@ func (objSrv *ObjectServer) GetObject(hashVal hash.Hash) (
 func (objSrv *ObjectServer) GetObjects(hashes []hash.Hash) (
 	objectserver.ObjectsReader, error) {
 	return objSrv.getObjects(hashes)
+}
+
+func (objSrv *ObjectServer) LastMutationTime() time.Time {
+	objSrv.rwLock.RLock()
+	defer objSrv.rwLock.RUnlock()
+	return objSrv.lastMutationTime
 }
 
 func (objSrv *ObjectServer) ListObjectSizes() map[hash.Hash]uint64 {
