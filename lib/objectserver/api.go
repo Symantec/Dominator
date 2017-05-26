@@ -3,11 +3,13 @@ package objectserver
 import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"io"
+	"time"
 )
 
 type FullObjectServer interface {
 	DeleteObject(hashVal hash.Hash) error
 	ObjectServer
+	LastMutationTime() time.Time
 	ListObjectSizes() map[hash.Hash]uint64
 	ListObjects() []hash.Hash
 	NumObjects() uint64
