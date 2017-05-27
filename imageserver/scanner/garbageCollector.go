@@ -3,10 +3,12 @@ package scanner
 import (
 	"bufio"
 	"encoding/gob"
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"io"
 	"os"
+	"path"
 	"time"
 )
 
@@ -23,11 +25,12 @@ type unreferencedObjectsEntry struct {
 }
 
 type unreferencedObjectsList struct {
-	length      uint64
-	totalBytes  uint64
-	oldest      *unreferencedObjectsEntry
-	newest      *unreferencedObjectsEntry
-	hashToEntry map[hash.Hash]*unreferencedObjectsEntry
+	length              uint64
+	totalBytes          uint64
+	oldest              *unreferencedObjectsEntry
+	newest              *unreferencedObjectsEntry
+	hashToEntry         map[hash.Hash]*unreferencedObjectsEntry
+	lastRegeneratedTime time.Time
 }
 
 func loadUnreferencedObjects(fName string) (*unreferencedObjectsList, error) {
@@ -118,4 +121,77 @@ func (list *unreferencedObjectsList) removeObject(hashVal hash.Hash) bool {
 	list.length--
 	list.totalBytes -= entry.object.Length
 	return true
+}
+
+func (imdb *ImageDataBase) maybeAddToUnreferencedObjectsList(
+	inodeTable filesystem.InodeTable) {
+	// First get a list of objects in the image being deleted.
+	objects := make(map[hash.Hash]uint64)
+	for _, inode := range inodeTable {
+		if inode, ok := inode.(*filesystem.RegularInode); ok {
+			objects[inode.Hash] = inode.Size
+		}
+	}
+	// Scan all remaining images and remove their objects from the list.
+	for _, image := range imdb.imageMap {
+		for _, inode := range image.FileSystem.InodeTable {
+			if inode, ok := inode.(*filesystem.RegularInode); ok {
+				delete(objects, inode.Hash)
+			}
+		}
+	}
+	for object, size := range objects {
+		imdb.unreferencedObjects.addObject(object, size)
+	}
+}
+
+func (imdb *ImageDataBase) removeFromUnreferencedObjectsList(
+	inodeTable filesystem.InodeTable) {
+	changed := false
+	for _, inode := range inodeTable {
+		if inode, ok := inode.(*filesystem.RegularInode); ok {
+			if imdb.unreferencedObjects.removeObject(inode.Hash) {
+				changed = true
+			}
+		}
+	}
+	if changed {
+		if err := imdb.writeUnreferencedObjectsList(); err != nil {
+			imdb.logger.Printf("Error writing unreferenced objects list: %s\n",
+				err)
+		}
+	}
+}
+
+func (imdb *ImageDataBase) writeUnreferencedObjectsList() error {
+	filename := path.Join(imdb.baseDir, unreferencedObjectsFile)
+	file, err := fsutil.CreateRenamingWriter(filename, filePerms)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+	return imdb.unreferencedObjects.write(writer)
+}
+
+func (imdb *ImageDataBase) garbageCollector() {
+}
+
+func (imdb *ImageDataBase) regenerateUnreferencedObjectsList() {
+	scanTime := time.Now()
+	objectsMap := imdb.objectServer.ListObjectSizes()
+	for _, imageName := range imdb.ListImages() {
+		image := imdb.GetImage(imageName)
+		if image == nil {
+			continue
+		}
+		for _, inode := range image.FileSystem.InodeTable {
+			if inode, ok := inode.(*filesystem.RegularInode); ok {
+				delete(objectsMap, inode.Hash)
+			}
+		}
+	}
+
+	imdb.unreferencedObjects.lastRegeneratedTime = scanTime
 }
