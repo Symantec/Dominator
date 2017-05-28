@@ -180,6 +180,7 @@ func (imdb *ImageDataBase) garbageCollector() {
 
 func (imdb *ImageDataBase) regenerateUnreferencedObjectsList() {
 	scanTime := time.Now()
+	// First generate list of currently unused objects.
 	objectsMap := imdb.objectServer.ListObjectSizes()
 	for _, imageName := range imdb.ListImages() {
 		image := imdb.GetImage(imageName)
@@ -192,6 +193,17 @@ func (imdb *ImageDataBase) regenerateUnreferencedObjectsList() {
 			}
 		}
 	}
-
+	// Now add unused objects to cached list.
+	for hashVal, length := range objectsMap {
+		imdb.unreferencedObjects.addObject(hashVal, length)
+	}
+	// Finally remove objects from cached list which are no longer unreferenced.
+	for entry := imdb.unreferencedObjects.oldest; entry != nil; {
+		hashVal := entry.object.Hash
+		entry = entry.next
+		if _, ok := objectsMap[hashVal]; ok {
+			imdb.unreferencedObjects.removeObject(hashVal)
+		}
+	}
 	imdb.unreferencedObjects.lastRegeneratedTime = scanTime
 }
