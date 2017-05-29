@@ -103,6 +103,14 @@ func (list *unreferencedObjectsList) addObject(hashVal hash.Hash,
 	}
 }
 
+func (list *unreferencedObjectsList) list() map[hash.Hash]uint64 {
+	objectsMap := make(map[hash.Hash]uint64, list.length)
+	for entry := list.oldest; entry != nil; entry = entry.next {
+		objectsMap[entry.object.Hash] = entry.object.Length
+	}
+	return objectsMap
+}
+
 func (list *unreferencedObjectsList) removeObject(hashVal hash.Hash) bool {
 	entry := list.hashToEntry[hashVal]
 	if entry == nil {
@@ -176,6 +184,13 @@ func (imdb *ImageDataBase) writeUnreferencedObjectsList() error {
 }
 
 func (imdb *ImageDataBase) garbageCollector() {
+}
+
+func (imdb *ImageDataBase) maybeRegenerateUnreferencedObjectsList() {
+	lastMutationTime := imdb.objectServer.LastMutationTime()
+	if lastMutationTime.After(imdb.unreferencedObjects.lastRegeneratedTime) {
+		imdb.regenerateUnreferencedObjectsList()
+	}
 }
 
 func (imdb *ImageDataBase) regenerateUnreferencedObjectsList() {
