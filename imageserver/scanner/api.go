@@ -13,6 +13,7 @@ import (
 //       behind the scanner code.
 
 const metadataFile = ".metadata"
+const unreferencedObjectsFile = ".unreferenced-objects"
 
 type notifiers map[<-chan string]chan<- string
 type makeDirectoryNotifiers map[<-chan image.Directory]chan<- image.Directory
@@ -20,12 +21,13 @@ type makeDirectoryNotifiers map[<-chan image.Directory]chan<- image.Directory
 type ImageDataBase struct {
 	sync.RWMutex
 	// Protected by lock.
-	baseDir         string
-	directoryMap    map[string]image.DirectoryMetadata
-	imageMap        map[string]*image.Image
-	addNotifiers    notifiers
-	deleteNotifiers notifiers
-	mkdirNotifiers  makeDirectoryNotifiers
+	baseDir             string
+	directoryMap        map[string]image.DirectoryMetadata
+	imageMap            map[string]*image.Image
+	addNotifiers        notifiers
+	deleteNotifiers     notifiers
+	mkdirNotifiers      makeDirectoryNotifiers
+	unreferencedObjects *unreferencedObjectsList
 	// Unprotected by lock.
 	objectServer objectserver.FullObjectServer
 	masterMode   bool
