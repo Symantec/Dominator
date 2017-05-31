@@ -28,6 +28,7 @@ func newObjectServer(baseDir string, logger log.Logger) (
 		logger:                logger,
 		sizesMap:              make(map[hash.Hash]uint64),
 		lastGarbageCollection: time.Now(),
+		lastMutationTime:      time.Now(),
 	}
 	state := concurrent.NewState(0)
 	startTime := time.Now()

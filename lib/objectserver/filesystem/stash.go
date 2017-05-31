@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"syscall"
+	"time"
 )
 
 var stashDirectory string = ".stash"
@@ -38,6 +39,7 @@ func (objSrv *ObjectServer) commitObject(hashVal hash.Hash) error {
 		return nil
 	} else {
 		objSrv.sizesMap[hashVal] = uint64(fi.Size())
+		objSrv.lastMutationTime = time.Now()
 		return os.Rename(stashFilename, filename)
 	}
 }
