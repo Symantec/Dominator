@@ -3,6 +3,7 @@ package scanner
 import (
 	"bufio"
 	"encoding/gob"
+	"errors"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
@@ -48,16 +49,15 @@ func loadUnreferencedObjects(fName string) (*unreferencedObjectsList, error) {
 	decoder := gob.NewDecoder(reader)
 	var length uint64
 	if err := decoder.Decode(&length); err != nil {
-		return nil, err
+		return nil, errors.New("error decoding list length: " + err.Error())
 	}
 	list := &unreferencedObjectsList{
-		length:      length,
 		hashToEntry: make(map[hash.Hash]*unreferencedObjectsEntry, length),
 	}
 	for count := uint64(0); count < length; count++ {
 		var object unreferencedObject
 		if err := decoder.Decode(&object); err != nil {
-			return nil, err
+			return nil, errors.New("error decoding object: " + err.Error())
 		}
 		entry := &unreferencedObjectsEntry{object: object}
 		list.addEntry(entry)
@@ -96,11 +96,13 @@ func (list *unreferencedObjectsList) addEntry(entry *unreferencedObjectsEntry) {
 }
 
 func (list *unreferencedObjectsList) addObject(hashVal hash.Hash,
-	length uint64) {
+	length uint64) bool {
 	if _, ok := list.hashToEntry[hashVal]; !ok {
 		object := unreferencedObject{hashVal, length, time.Now()}
 		list.addEntry(&unreferencedObjectsEntry{object: object})
+		return true
 	}
+	return false
 }
 
 func (list *unreferencedObjectsList) list() map[hash.Hash]uint64 {
@@ -148,8 +150,14 @@ func (imdb *ImageDataBase) maybeAddToUnreferencedObjectsList(
 			}
 		}
 	}
+	changed := false
 	for object, size := range objects {
-		imdb.unreferencedObjects.addObject(object, size)
+		if imdb.unreferencedObjects.addObject(object, size) {
+			changed = true
+		}
+	}
+	if changed {
+		imdb.saveUnreferencedObjectsList()
 	}
 }
 
@@ -164,10 +172,14 @@ func (imdb *ImageDataBase) removeFromUnreferencedObjectsList(
 		}
 	}
 	if changed {
-		if err := imdb.writeUnreferencedObjectsList(); err != nil {
-			imdb.logger.Printf("Error writing unreferenced objects list: %s\n",
-				err)
-		}
+		imdb.saveUnreferencedObjectsList()
+	}
+}
+
+func (imdb *ImageDataBase) saveUnreferencedObjectsList() {
+	if err := imdb.writeUnreferencedObjectsList(); err != nil {
+		imdb.logger.Printf("Error writing unreferenced objects list: %s\n",
+			err)
 	}
 }
 
@@ -183,42 +195,92 @@ func (imdb *ImageDataBase) writeUnreferencedObjectsList() error {
 	return imdb.unreferencedObjects.write(writer)
 }
 
-func (imdb *ImageDataBase) garbageCollector() {
+func (imdb *ImageDataBase) garbageCollector(bytesToDelete uint64) (
+	uint64, error) {
+	if bytesToDelete < 1 {
+		return 0, nil
+	}
+	imdb.Lock()
+	firstEntry := imdb.unreferencedObjects.oldest
+	entry := imdb.unreferencedObjects.oldest
+	var nObjects uint64
+	var nBytes uint64
+	for ; entry != nil && nBytes < bytesToDelete; entry = entry.next {
+		nObjects++
+		nBytes += entry.object.Length
+	}
+	imdb.unreferencedObjects.length -= nBytes
+	imdb.unreferencedObjects.totalBytes -= nObjects
+	imdb.unreferencedObjects.oldest = entry
+	if entry == nil {
+		imdb.unreferencedObjects.newest = nil
+	} else if entry.prev != nil {
+		entry.prev.next = nil
+		entry.prev = nil
+	}
+	imdb.Unlock()
+	if firstEntry == nil {
+		return 0, nil
+	}
+	nBytes = 0
+	var err error
+	for entry := firstEntry; entry != nil; entry = entry.next {
+		if e := imdb.objectServer.DeleteObject(entry.object.Hash); e != nil {
+			if err == nil {
+				err = e
+			}
+		} else {
+			nBytes += entry.object.Length
+		}
+	}
+	imdb.saveUnreferencedObjectsList()
+	return nBytes, err
 }
 
+// This grabs the lock.
 func (imdb *ImageDataBase) maybeRegenerateUnreferencedObjectsList() {
+	imdb.RLock()
+	lastRegeneratedTime := imdb.unreferencedObjects.lastRegeneratedTime
+	imdb.RUnlock()
 	lastMutationTime := imdb.objectServer.LastMutationTime()
-	if lastMutationTime.After(imdb.unreferencedObjects.lastRegeneratedTime) {
+	if lastMutationTime.After(lastRegeneratedTime) {
 		imdb.regenerateUnreferencedObjectsList()
 	}
 }
 
+// This grabs the lock.
 func (imdb *ImageDataBase) regenerateUnreferencedObjectsList() {
 	scanTime := time.Now()
 	// First generate list of currently unused objects.
 	objectsMap := imdb.objectServer.ListObjectSizes()
-	for _, imageName := range imdb.ListImages() {
-		image := imdb.GetImage(imageName)
-		if image == nil {
-			continue
-		}
+	imdb.Lock()
+	defer imdb.Unlock()
+	for _, image := range imdb.imageMap {
 		for _, inode := range image.FileSystem.InodeTable {
 			if inode, ok := inode.(*filesystem.RegularInode); ok {
 				delete(objectsMap, inode.Hash)
 			}
 		}
 	}
+	changed := false
 	// Now add unused objects to cached list.
 	for hashVal, length := range objectsMap {
-		imdb.unreferencedObjects.addObject(hashVal, length)
+		if imdb.unreferencedObjects.addObject(hashVal, length) {
+			changed = true
+		}
 	}
 	// Finally remove objects from cached list which are no longer unreferenced.
 	for entry := imdb.unreferencedObjects.oldest; entry != nil; {
 		hashVal := entry.object.Hash
 		entry = entry.next
-		if _, ok := objectsMap[hashVal]; ok {
-			imdb.unreferencedObjects.removeObject(hashVal)
+		if _, ok := objectsMap[hashVal]; !ok {
+			if imdb.unreferencedObjects.removeObject(hashVal) {
+				changed = true
+			}
 		}
+	}
+	if changed {
+		imdb.saveUnreferencedObjectsList()
 	}
 	imdb.unreferencedObjects.lastRegeneratedTime = scanTime
 }
