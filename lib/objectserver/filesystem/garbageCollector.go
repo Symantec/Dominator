@@ -35,8 +35,6 @@ func (objSrv *ObjectServer) garbageCollector() (uint64, error) {
 			format.FormatBytes(bytesDeleted), err)
 		return 0, err
 	}
-	objSrv.logger.Printf("Garbage collector deleted: %s\n",
-		format.FormatBytes(bytesDeleted))
 	return bytesDeleted, nil
 }
 
@@ -51,7 +49,8 @@ func (t *ObjectServer) getSpaceMetrics() (uint64, uint64, error) {
 			t.logger.Printf("error getting file-system stats: %s\n", err)
 			return 0, 0, err
 		}
-		return uint64(statbuf.Bfree), uint64(statbuf.Blocks), nil
+		return uint64(statbuf.Bfree) * uint64(statbuf.Bsize),
+			uint64(statbuf.Blocks) * uint64(statbuf.Bsize), nil
 	}
 }
 
