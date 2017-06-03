@@ -107,6 +107,10 @@ func (objSrv *ObjectServer) StashOrVerifyObject(reader io.Reader,
 	return objSrv.stashOrVerifyObject(reader, length, expectedHash)
 }
 
+func (objSrv *ObjectServer) WriteHtml(writer io.Writer) {
+	objSrv.writeHtml(writer)
+}
+
 type ObjectsReader struct {
 	objectServer *ObjectServer
 	hashes       []hash.Hash
