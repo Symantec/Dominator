@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"io"
@@ -209,8 +210,8 @@ func (imdb *ImageDataBase) garbageCollector(bytesToDelete uint64) (
 		nObjects++
 		nBytes += entry.object.Length
 	}
-	imdb.unreferencedObjects.length -= nBytes
-	imdb.unreferencedObjects.totalBytes -= nObjects
+	imdb.unreferencedObjects.length -= nObjects
+	imdb.unreferencedObjects.totalBytes -= nBytes
 	imdb.unreferencedObjects.oldest = entry
 	if entry == nil {
 		imdb.unreferencedObjects.newest = nil
@@ -234,6 +235,8 @@ func (imdb *ImageDataBase) garbageCollector(bytesToDelete uint64) (
 		}
 	}
 	imdb.saveUnreferencedObjectsList()
+	imdb.logger.Printf("Garbage collector deleted: %s in: %d objects\n",
+		format.FormatBytes(nBytes), nObjects)
 	return nBytes, err
 }
 
