@@ -23,7 +23,7 @@ func (imdb *ImageDataBase) scheduleExpiration(image *image.Image,
 		}
 		imdb.Lock()
 		defer imdb.Unlock()
-		imdb.deleteImageWithPossibleCleanup(name)
+		imdb.deleteImageAndUpdateUnreferencedObjectsList(name)
 	})
 	return false
 }

@@ -78,6 +78,10 @@ func (imdb *ImageDataBase) GetImage(name string) *image.Image {
 	return imdb.getImage(name)
 }
 
+func (imdb *ImageDataBase) GetUnreferencedObjectsStatistics() (uint64, uint64) {
+	return imdb.getUnreferencedObjectsStatistics()
+}
+
 func (imdb *ImageDataBase) ListDirectories() []image.Directory {
 	return imdb.listDirectories()
 }
