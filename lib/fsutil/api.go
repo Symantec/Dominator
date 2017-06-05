@@ -129,6 +129,7 @@ func (w *ChecksumWriter) WriteChecksum() error {
 type RenamingWriter struct {
 	*os.File
 	filename string
+	abort    bool
 }
 
 func CreateRenamingWriter(filename string, perm os.FileMode) (
@@ -138,4 +139,8 @@ func CreateRenamingWriter(filename string, perm os.FileMode) (
 
 func (w *RenamingWriter) Close() error {
 	return w.close()
+}
+
+func (w *RenamingWriter) Write(p []byte) (int, error) {
+	return w.write(p)
 }
