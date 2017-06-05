@@ -49,8 +49,9 @@ func (t *ObjectServer) getSpaceMetrics() (uint64, uint64, error) {
 			t.logger.Printf("error getting file-system stats: %s\n", err)
 			return 0, 0, err
 		}
-		return uint64(statbuf.Bfree) * uint64(statbuf.Bsize),
-			uint64(statbuf.Blocks) * uint64(statbuf.Bsize), nil
+		rootReservation := statbuf.Bfree - statbuf.Bavail
+		return uint64(statbuf.Bavail) * uint64(statbuf.Bsize),
+			uint64(statbuf.Blocks-rootReservation) * uint64(statbuf.Bsize), nil
 	}
 }
 
