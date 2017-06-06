@@ -11,7 +11,6 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"io"
-	"strings"
 	"time"
 )
 
@@ -146,7 +145,7 @@ func (t *srpcType) addImage(name string) error {
 		return nil
 	}
 	img.FileSystem.RebuildInodePointers()
-	if err := t.getMissingObjectsRetry(img.FileSystem); err != nil {
+	if err := t.getMissingObjects(img.FileSystem); err != nil {
 		return err
 	}
 	if err := t.imageDataBase.AddImage(img, name, nil); err != nil {
@@ -161,35 +160,6 @@ func (t *srpcType) checkImageBeingInjected(name string) bool {
 	defer t.imagesBeingInjectedLock.Unlock()
 	_, ok := t.imagesBeingInjected[name]
 	return ok
-}
-
-func (t *srpcType) getMissingObjectsRetry(fs *filesystem.FileSystem) error {
-	err := t.getMissingObjects(fs)
-	if err == nil {
-		return nil
-	}
-	if !strings.Contains(err.Error(), "no space left on device") {
-		return err
-	}
-	t.logger.Println(err)
-	if !t.deleteUnreferencedObjects(fs, false) {
-		return err
-	}
-	t.logger.Println(
-		"Replicator: retrying after deleting 10% of unreferenced objects")
-	err = t.getMissingObjects(fs)
-	if err == nil {
-		return nil
-	}
-	if !strings.Contains(err.Error(), "no space left on device") {
-		return err
-	}
-	if !t.deleteUnreferencedObjects(fs, true) {
-		return err
-	}
-	t.logger.Println(
-		"Replicator: retrying after deleting remaining unreferenced objects")
-	return t.getMissingObjects(fs)
 }
 
 func (t *srpcType) getMissingObjects(fs *filesystem.FileSystem) error {
@@ -242,40 +212,4 @@ func (t *srpcType) getMissingObjects(fs *filesystem.FileSystem) error {
 		len(missingObjects), format.FormatBytes(totalBytes), timeTaken,
 		format.FormatBytes(uint64(float64(totalBytes)/timeTaken.Seconds())))
 	return nil
-}
-
-func (t *srpcType) deleteUnreferencedObjects(fs *filesystem.FileSystem,
-	all bool) bool {
-	objectsMap := t.imageDataBase.ListUnreferencedObjects()
-	for _, inode := range fs.InodeTable {
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			delete(objectsMap, inode.Hash)
-		}
-	}
-	numToDelete := len(objectsMap)
-	if !all {
-		numToDelete = numToDelete / 10
-		if numToDelete < 1 {
-			numToDelete = numToDelete
-		}
-	}
-	if numToDelete < 1 {
-		return false
-	}
-	count := 0
-	var unreferencedBytes uint64
-	for hashVal, size := range objectsMap {
-		if err := t.objSrv.DeleteObject(hashVal); err != nil {
-			t.logger.Printf("Error deleting unreferenced object: %x\n", hashVal)
-			return false
-		}
-		unreferencedBytes += size
-		count++
-		if count >= numToDelete {
-			break
-		}
-	}
-	t.logger.Printf("Deleted %d unreferenced objects consuming %s\n",
-		numToDelete, format.FormatBytes(unreferencedBytes))
-	return true
 }
