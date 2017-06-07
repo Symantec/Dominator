@@ -10,9 +10,13 @@ func (objSrv *ObjectServer) garbageCollector() (uint64, error) {
 	if objSrv.gc == nil {
 		return 0, nil
 	}
+	objSrv.rwLock.Lock()
 	if time.Since(objSrv.lastGarbageCollection) < time.Second {
+		objSrv.rwLock.Unlock()
 		return 0, nil
 	}
+	objSrv.lastGarbageCollection = time.Now()
+	objSrv.rwLock.Unlock()
 	free, capacity, err := objSrv.getSpaceMetrics()
 	if err != nil {
 		return 0, err
@@ -27,8 +31,6 @@ func (objSrv *ObjectServer) garbageCollector() (uint64, error) {
 		return 0, nil
 	}
 	bytesToDelete := (cleanupStartPercent - cleanupStopPercent) * capacity / 100
-	objSrv.logger.Printf("Garbage collector deleting: %s\n",
-		format.FormatBytes(bytesToDelete))
 	bytesDeleted, err := objSrv.gc(bytesToDelete)
 	if err != nil {
 		objSrv.logger.Printf("Error collecting garbage, only deleted: %s: %s\n",
