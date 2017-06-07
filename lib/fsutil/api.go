@@ -138,6 +138,11 @@ func CreateRenamingWriter(filename string, perm os.FileMode) (
 }
 
 func (w *RenamingWriter) Close() error {
+	if err := recover(); err != nil {
+		w.abort = true
+		w.close()
+		panic(err)
+	}
 	return w.close()
 }
 
