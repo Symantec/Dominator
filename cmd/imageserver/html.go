@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
@@ -35,27 +34,13 @@ func (imageObjectServers *imageObjectServersType) WriteHtml(writer io.Writer) {
 		totalBytes += bytes
 	}
 	numObjects := len(objectsMap)
-	fmt.Fprintf(writer, "Number of objects: %d, consumimg %s<br>\n",
-		numObjects, format.FormatBytes(totalBytes))
-	for _, imageName := range imageObjectServers.imdb.ListImages() {
-		image := imageObjectServers.imdb.GetImage(imageName)
-		if image == nil {
-			continue
-		}
-		for _, inode := range image.FileSystem.InodeTable {
-			if inode, ok := inode.(*filesystem.RegularInode); ok {
-				delete(objectsMap, inode.Hash)
-			}
-		}
-	}
-	var unreferencedBytes uint64
-	for _, bytes := range objectsMap {
-		unreferencedBytes += bytes
-	}
+	imageObjectServers.objSrv.WriteHtml(writer)
+	numUnreferencedObjects, unreferencedBytes :=
+		imageObjectServers.imdb.GetUnreferencedObjectsStatistics()
 	unreferencedObjectsPercent := 0.0
 	if numObjects > 0 {
 		unreferencedObjectsPercent =
-			100.0 * float64(len(objectsMap)) / float64(numObjects)
+			100.0 * float64(numUnreferencedObjects) / float64(numObjects)
 	}
 	unreferencedBytesPercent := 0.0
 	if totalBytes > 0 {
@@ -71,6 +56,6 @@ func (imageObjectServers *imageObjectServersType) WriteHtml(writer io.Writer) {
 	fmt.Fprintf(writer,
 		"Number of unreferenced objects: %d (%.1f%%), "+
 			"consuming %s (%.1f%%)<br>\n",
-		len(objectsMap), unreferencedObjectsPercent,
+		numUnreferencedObjects, unreferencedObjectsPercent,
 		format.FormatBytes(unreferencedBytes), unreferencedBytesPercent)
 }
