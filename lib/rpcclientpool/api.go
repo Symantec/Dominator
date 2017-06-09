@@ -31,6 +31,7 @@
 package rpcclientpool
 
 import (
+	"github.com/Symantec/Dominator/lib/net"
 	"github.com/Symantec/Dominator/lib/resourcepool"
 	"net/rpc"
 )
@@ -75,6 +76,7 @@ type ClientResource struct {
 	address               string
 	http                  bool
 	path                  string
+	dialer                net.Dialer
 	resource              *resourcepool.Resource
 	privateClientResource privateClientResource
 	client                *Client
@@ -91,7 +93,18 @@ type ClientResource struct {
 // underlying connection may be kept open for later re-use. The Client is placed
 // on an internal list.
 func New(network, address string, http bool, path string) *ClientResource {
-	return newClientResource(network, address, http, path)
+	return newClientResource(network, address, http, path, defaultDialer)
+}
+
+// NewWithDialer works just like New but allows this rosurce to use a custom
+// dialer.
+func NewWithDialer(
+	network,
+	address string,
+	http bool,
+	path string,
+	dialer net.Dialer) *ClientResource {
+	return newClientResource(network, address, http, path, dialer)
 }
 
 // Get will return a Client. Get will wait until a resource is available or a
