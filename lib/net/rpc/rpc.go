@@ -10,6 +10,14 @@ import (
 	"net/rpc"
 )
 
+func dial(dialer net.Dialer, network, address string) (*rpc.Client, error) {
+	conn, err := dialer.Dial(network, address)
+	if err != nil {
+		return nil, err
+	}
+	return rpc.NewClient(conn), nil
+}
+
 func dialHTTPPath(dialer net.Dialer, network, address, path string) (
 	*rpc.Client, error) {
 	var err error
