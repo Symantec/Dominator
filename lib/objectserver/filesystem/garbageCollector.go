@@ -27,10 +27,10 @@ func (objSrv *ObjectServer) garbageCollector() (uint64, error) {
 		cleanupStopPercent = cleanupStartPercent - 1
 	}
 	utilisation := (capacity - free) * 100 / capacity
-	if utilisation <= cleanupStartPercent {
+	if utilisation < cleanupStartPercent {
 		return 0, nil
 	}
-	bytesToDelete := (cleanupStartPercent - cleanupStopPercent) * capacity / 100
+	bytesToDelete := (utilisation - cleanupStopPercent) * capacity / 100
 	bytesDeleted, err := objSrv.gc(bytesToDelete)
 	if err != nil {
 		objSrv.logger.Printf("Error collecting garbage, only deleted: %s: %s\n",
