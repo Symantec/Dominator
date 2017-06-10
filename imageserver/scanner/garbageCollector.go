@@ -8,11 +8,14 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
 	"io"
 	"os"
 	"path"
 	"time"
 )
+
+var timeFormat string = "02 Jan 2006 15:04:05.99 MST"
 
 type unreferencedObject struct {
 	Hash   hash.Hash
@@ -27,7 +30,6 @@ type unreferencedObjectsEntry struct {
 }
 
 type unreferencedObjectsList struct {
-	length              uint64
 	totalBytes          uint64
 	oldest              *unreferencedObjectsEntry
 	newest              *unreferencedObjectsEntry
@@ -69,16 +71,23 @@ func loadUnreferencedObjects(fName string) (*unreferencedObjectsList, error) {
 	return list, nil
 }
 
-func (list *unreferencedObjectsList) write(w io.Writer) error {
+func (list *unreferencedObjectsList) write(w io.Writer,
+	logger log.Logger) error {
 	writer := fsutil.NewChecksumWriter(w)
 	encoder := gob.NewEncoder(writer)
-	if err := encoder.Encode(list.length); err != nil {
+	if err := encoder.Encode(uint64(len(list.hashToEntry))); err != nil {
 		return err
 	}
+	nWritten := 0
 	for entry := list.oldest; entry != nil; entry = entry.next {
 		if err := encoder.Encode(entry.object); err != nil {
 			return err
 		}
+		nWritten++
+	}
+	if len(list.hashToEntry) != nWritten {
+		logger.Panicf("unref objects list length: %d != num entries: %d\n",
+			len(list.hashToEntry), nWritten)
 	}
 	return writer.WriteChecksum()
 }
@@ -92,7 +101,6 @@ func (list *unreferencedObjectsList) addEntry(entry *unreferencedObjectsEntry) {
 	}
 	list.newest = entry
 	list.hashToEntry[entry.object.Hash] = entry
-	list.length++
 	list.totalBytes += entry.object.Length
 }
 
@@ -107,7 +115,7 @@ func (list *unreferencedObjectsList) addObject(hashVal hash.Hash,
 }
 
 func (list *unreferencedObjectsList) list() map[hash.Hash]uint64 {
-	objectsMap := make(map[hash.Hash]uint64, list.length)
+	objectsMap := make(map[hash.Hash]uint64, len(list.hashToEntry))
 	for entry := list.oldest; entry != nil; entry = entry.next {
 		objectsMap[entry.object.Hash] = entry.object.Length
 	}
@@ -119,6 +127,7 @@ func (list *unreferencedObjectsList) removeObject(hashVal hash.Hash) bool {
 	if entry == nil {
 		return false
 	}
+	delete(list.hashToEntry, hashVal)
 	if entry.prev == nil {
 		list.oldest = entry.next
 	} else {
@@ -129,7 +138,6 @@ func (list *unreferencedObjectsList) removeObject(hashVal hash.Hash) bool {
 	} else {
 		entry.next.prev = entry.prev
 	}
-	list.length--
 	list.totalBytes -= entry.object.Length
 	return true
 }
@@ -157,9 +165,28 @@ func (imdb *ImageDataBase) maybeAddToUnreferencedObjectsList(
 			changed = true
 		}
 	}
-	if changed {
-		imdb.saveUnreferencedObjectsList()
-	}
+	// Run garbage collector and save new list in the background.
+	go func() {
+		var bytesToDelete uint64
+		maxUnrefData := uint64(*imageServerMaxUnrefData)
+		if maxUnrefData > 0 &&
+			imdb.unreferencedObjects.totalBytes > maxUnrefData {
+			bytesToDelete = imdb.unreferencedObjects.totalBytes - maxUnrefData
+		}
+		var maxAge time.Time
+		if *imageServerMaxUnrefAge > 0 {
+			maxAge = time.Now().Add(-*imageServerMaxUnrefAge)
+		}
+		if bytesToDelete > 0 || !maxAge.IsZero() {
+			nDeleted, _ := imdb.collectGarbage(bytesToDelete, maxAge)
+			if nDeleted > 0 {
+				return // Garbage collector saved unreferenced objects list.
+			}
+		}
+		if changed {
+			imdb.saveUnreferencedObjectsList(true)
+		}
+	}()
 }
 
 func (imdb *ImageDataBase) removeFromUnreferencedObjectsList(
@@ -173,11 +200,15 @@ func (imdb *ImageDataBase) removeFromUnreferencedObjectsList(
 		}
 	}
 	if changed {
-		imdb.saveUnreferencedObjectsList()
+		imdb.saveUnreferencedObjectsList(false)
 	}
 }
 
-func (imdb *ImageDataBase) saveUnreferencedObjectsList() {
+func (imdb *ImageDataBase) saveUnreferencedObjectsList(grabLock bool) {
+	if grabLock {
+		imdb.RLock()
+		defer imdb.RUnlock()
+	}
 	if err := imdb.writeUnreferencedObjectsList(); err != nil {
 		imdb.logger.Printf("Error writing unreferenced objects list: %s\n",
 			err)
@@ -193,25 +224,40 @@ func (imdb *ImageDataBase) writeUnreferencedObjectsList() error {
 	defer file.Close()
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
-	return imdb.unreferencedObjects.write(writer)
+	return imdb.unreferencedObjects.write(writer, imdb.logger)
 }
 
 func (imdb *ImageDataBase) garbageCollector(bytesToDelete uint64) (
 	uint64, error) {
-	if bytesToDelete < 1 {
+	return imdb.collectGarbage(bytesToDelete, time.Time{})
+}
+
+// This grabs and releases the lock.
+func (imdb *ImageDataBase) collectGarbage(bytesToDelete uint64,
+	deleteBefore time.Time) (uint64, error) {
+	if bytesToDelete < 1 && deleteBefore.IsZero() {
 		return 0, nil
 	}
-	imdb.Lock()
-	firstEntry := imdb.unreferencedObjects.oldest
-	entry := imdb.unreferencedObjects.oldest
-	var nObjects uint64
-	var nBytes uint64
-	for ; entry != nil && nBytes < bytesToDelete; entry = entry.next {
-		nObjects++
-		nBytes += entry.object.Length
+	if deleteBefore.IsZero() {
+		imdb.logger.Printf("Garbage collector deleting: %s\n",
+			format.FormatBytes(bytesToDelete))
+	} else {
+		imdb.logger.Printf("Garbage collector deleting: %s or before: %s\n",
+			format.FormatBytes(bytesToDelete), deleteBefore.Format(timeFormat))
 	}
-	imdb.unreferencedObjects.length -= nObjects
-	imdb.unreferencedObjects.totalBytes -= nBytes
+	imdb.Lock()
+	var firstEntryToDelete *unreferencedObjectsEntry
+	entry := imdb.unreferencedObjects.oldest
+	var nObjectsDeleted uint64
+	var nBytesDeleted uint64
+	for ; entry != nil && (nBytesDeleted < bytesToDelete ||
+		entry.object.Age.Before(deleteBefore)); entry = entry.next {
+		firstEntryToDelete = imdb.unreferencedObjects.oldest
+		delete(imdb.unreferencedObjects.hashToEntry, entry.object.Hash)
+		nObjectsDeleted++
+		nBytesDeleted += entry.object.Length
+	}
+	imdb.unreferencedObjects.totalBytes -= nBytesDeleted
 	imdb.unreferencedObjects.oldest = entry
 	if entry == nil {
 		imdb.unreferencedObjects.newest = nil
@@ -220,27 +266,28 @@ func (imdb *ImageDataBase) garbageCollector(bytesToDelete uint64) (
 		entry.prev = nil
 	}
 	imdb.Unlock()
-	if firstEntry == nil {
+	if firstEntryToDelete == nil {
+		imdb.logger.Println("Garbage collector: nothing to delete")
 		return 0, nil
 	}
-	nBytes = 0
+	nBytesDeleted = 0
 	var err error
-	for entry := firstEntry; entry != nil; entry = entry.next {
+	for entry := firstEntryToDelete; entry != nil; entry = entry.next {
 		if e := imdb.objectServer.DeleteObject(entry.object.Hash); e != nil {
 			if err == nil {
 				err = e
 			}
 		} else {
-			nBytes += entry.object.Length
+			nBytesDeleted += entry.object.Length
 		}
 	}
-	imdb.saveUnreferencedObjectsList()
+	imdb.saveUnreferencedObjectsList(true)
 	imdb.logger.Printf("Garbage collector deleted: %s in: %d objects\n",
-		format.FormatBytes(nBytes), nObjects)
-	return nBytes, err
+		format.FormatBytes(nBytesDeleted), nObjectsDeleted)
+	return nBytesDeleted, err
 }
 
-// This grabs the lock.
+// This grabs and releases the lock.
 func (imdb *ImageDataBase) maybeRegenerateUnreferencedObjectsList() {
 	imdb.RLock()
 	lastRegeneratedTime := imdb.unreferencedObjects.lastRegeneratedTime
@@ -251,7 +298,7 @@ func (imdb *ImageDataBase) maybeRegenerateUnreferencedObjectsList() {
 	}
 }
 
-// This grabs the lock.
+// This grabs and releases the lock.
 func (imdb *ImageDataBase) regenerateUnreferencedObjectsList() {
 	scanTime := time.Now()
 	// First generate list of currently unused objects.
@@ -283,7 +330,7 @@ func (imdb *ImageDataBase) regenerateUnreferencedObjectsList() {
 		}
 	}
 	if changed {
-		imdb.saveUnreferencedObjectsList()
+		imdb.saveUnreferencedObjectsList(false)
 	}
 	imdb.unreferencedObjects.lastRegeneratedTime = scanTime
 }

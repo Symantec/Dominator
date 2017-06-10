@@ -226,9 +226,10 @@ func (imdb *ImageDataBase) getImage(name string) *image.Image {
 
 func (imdb *ImageDataBase) getUnreferencedObjectsStatistics() (uint64, uint64) {
 	imdb.maybeRegenerateUnreferencedObjectsList()
-	imdb.Lock()
-	defer imdb.Unlock()
-	return imdb.unreferencedObjects.length, imdb.unreferencedObjects.totalBytes
+	imdb.RLock()
+	defer imdb.RUnlock()
+	return uint64(len(imdb.unreferencedObjects.hashToEntry)),
+		imdb.unreferencedObjects.totalBytes
 }
 
 func (imdb *ImageDataBase) listDirectories() []image.Directory {
@@ -254,8 +255,8 @@ func (imdb *ImageDataBase) listImages() []string {
 
 func (imdb *ImageDataBase) listUnreferencedObjects() map[hash.Hash]uint64 {
 	imdb.maybeRegenerateUnreferencedObjectsList()
-	imdb.Lock()
-	defer imdb.Unlock()
+	imdb.RLock()
+	defer imdb.RUnlock()
 	return imdb.unreferencedObjects.list()
 }
 

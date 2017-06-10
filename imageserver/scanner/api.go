@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"flag"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectserver"
@@ -14,6 +15,13 @@ import (
 
 const metadataFile = ".metadata"
 const unreferencedObjectsFile = ".unreferenced-objects"
+
+var (
+	imageServerMaxUnrefData = flag.Int64("imageServerMaxUnrefData", 0,
+		"maximum number of bytes of unreferenced objects before cleaning")
+	imageServerMaxUnrefAge = flag.Duration("imageServerMaxUnrefAge", 0,
+		"maximum age of unreferenced objects before cleaning")
+)
 
 type notifiers map[<-chan string]chan<- string
 type makeDirectoryNotifiers map[<-chan image.Directory]chan<- image.Directory
