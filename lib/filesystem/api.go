@@ -74,6 +74,10 @@ func (fs *FileSystem) Filter(filter *filter.Filter) *FileSystem {
 	return fs.filter(filter)
 }
 
+func (fs *FileSystem) GetObjects() map[hash.Hash]uint64 {
+	return fs.getObjects()
+}
+
 func (fs *FileSystem) HashToInodesTable() HashToInodesTable {
 	return fs.buildHashToInodesTable()
 }
