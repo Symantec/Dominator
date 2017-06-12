@@ -2,19 +2,27 @@ package rpcclientpool
 
 import (
 	"github.com/Symantec/Dominator/lib/connpool"
-	"net/rpc"
+	"github.com/Symantec/Dominator/lib/net"
+	"github.com/Symantec/Dominator/lib/net/rpc"
+	gonet "net"
+	gorpc "net/rpc"
+)
+
+var (
+	defaultDialer = &gonet.Dialer{}
 )
 
 func newClientResource(network, address string, http bool,
-	path string) *ClientResource {
+	path string, dialer net.Dialer) *ClientResource {
 	if path == "" {
-		path = rpc.DefaultRPCPath
+		path = gorpc.DefaultRPCPath
 	}
 	clientResource := &ClientResource{
 		network: network,
 		address: address,
 		http:    http,
 		path:    path,
+		dialer:  dialer,
 	}
 	clientResource.privateClientResource.clientResource = clientResource
 	rp := connpool.GetResourcePool()
@@ -32,12 +40,13 @@ func (cr *ClientResource) get(cancelChannel <-chan struct{}) (*Client, error) {
 
 func (pcr *privateClientResource) Allocate() error {
 	cr := pcr.clientResource
-	var rpcClient *rpc.Client
+	var rpcClient *gorpc.Client
 	var err error
 	if cr.http {
-		rpcClient, err = rpc.DialHTTPPath(cr.network, cr.address, cr.path)
+		rpcClient, err = rpc.DialHTTPPath(
+			cr.dialer, cr.network, cr.address, cr.path)
 	} else {
-		rpcClient, err = rpc.Dial(cr.network, cr.address)
+		rpcClient, err = rpc.Dial(cr.dialer, cr.network, cr.address)
 	}
 	if err != nil {
 		return err
