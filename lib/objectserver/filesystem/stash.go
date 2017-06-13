@@ -36,10 +36,16 @@ func (objSrv *ObjectServer) commitObject(hashVal hash.Hash) error {
 	defer objSrv.rwLock.Unlock()
 	if _, ok := objSrv.sizesMap[hashVal]; ok {
 		fsutil.ForceRemove(stashFilename)
+		// Run in a goroutine to keep outside of the lock.
+		go objSrv.addCallback(hashVal, uint64(fi.Size()), false)
 		return nil
 	} else {
 		objSrv.sizesMap[hashVal] = uint64(fi.Size())
 		objSrv.lastMutationTime = time.Now()
+		if objSrv.addCallback != nil {
+			// Run in a goroutine to keep outside of the lock.
+			go objSrv.addCallback(hashVal, uint64(fi.Size()), true)
+		}
 		return os.Rename(stashFilename, filename)
 	}
 }

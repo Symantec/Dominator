@@ -36,6 +36,9 @@ func (objSrv *ObjectServer) addObject(reader io.Reader, length uint64,
 		objSrv.sizesMap[hashVal] = uint64(len(data))
 		objSrv.lastMutationTime = time.Now()
 		objSrv.rwLock.Unlock()
+		if objSrv.addCallback != nil {
+			objSrv.addCallback(hashVal, uint64(len(data)), isNew)
+		}
 		return hashVal, isNew, nil
 	}
 }

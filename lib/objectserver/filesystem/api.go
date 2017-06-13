@@ -19,6 +19,7 @@ var (
 
 type ObjectServer struct {
 	baseDir               string
+	addCallback           objectserver.AddCallback
 	gc                    objectserver.GarbageCollector
 	logger                log.Logger
 	rwLock                sync.RWMutex         // Protect the following fields.
@@ -58,6 +59,10 @@ func (objSrv *ObjectServer) DeleteObject(hashVal hash.Hash) error {
 
 func (objSrv *ObjectServer) DeleteStashedObject(hashVal hash.Hash) error {
 	return objSrv.deleteStashedObject(hashVal)
+}
+
+func (objSrv *ObjectServer) SetAddCallback(callback objectserver.AddCallback) {
+	objSrv.addCallback = callback
 }
 
 func (objSrv *ObjectServer) SetGarbageCollector(
