@@ -15,6 +15,12 @@ type FullObjectServer interface {
 	NumObjects() uint64
 }
 
+type AddCallback func(hashVal hash.Hash, length uint64, isNew bool)
+
+type AddCallbackSetter interface {
+	SetAddCallback(callback AddCallback)
+}
+
 type GarbageCollector func(bytesToDelete uint64) (
 	bytesDeleted uint64, err error)
 
