@@ -104,6 +104,7 @@ func (list *unreferencedObjectsList) addEntry(entry *unreferencedObjectsEntry) {
 	list.totalBytes += entry.object.Length
 }
 
+// Returns true if object was added, else false if object was already on list.
 func (list *unreferencedObjectsList) addObject(hashVal hash.Hash,
 	length uint64) bool {
 	if _, ok := list.hashToEntry[hashVal]; !ok {
@@ -122,6 +123,7 @@ func (list *unreferencedObjectsList) list() map[hash.Hash]uint64 {
 	return objectsMap
 }
 
+// Returns true if object was removed, else false (if not on list).
 func (list *unreferencedObjectsList) removeObject(hashVal hash.Hash) bool {
 	entry := list.hashToEntry[hashVal]
 	if entry == nil {
@@ -143,14 +145,9 @@ func (list *unreferencedObjectsList) removeObject(hashVal hash.Hash) bool {
 }
 
 func (imdb *ImageDataBase) maybeAddToUnreferencedObjectsList(
-	inodeTable filesystem.InodeTable) {
+	fs *filesystem.FileSystem) {
 	// First get a list of objects in the image being deleted.
-	objects := make(map[hash.Hash]uint64)
-	for _, inode := range inodeTable {
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			objects[inode.Hash] = inode.Size
-		}
-	}
+	objects := fs.GetObjects()
 	// Scan all remaining images and remove their objects from the list.
 	for _, image := range imdb.imageMap {
 		for _, inode := range image.FileSystem.InodeTable {
@@ -166,12 +163,12 @@ func (imdb *ImageDataBase) maybeAddToUnreferencedObjectsList(
 		}
 	}
 	// Run garbage collector and save new list in the background.
+	unreferencedBytes := imdb.unreferencedObjects.totalBytes
 	go func() {
 		var bytesToDelete uint64
 		maxUnrefData := uint64(*imageServerMaxUnrefData)
-		if maxUnrefData > 0 &&
-			imdb.unreferencedObjects.totalBytes > maxUnrefData {
-			bytesToDelete = imdb.unreferencedObjects.totalBytes - maxUnrefData
+		if maxUnrefData > 0 && unreferencedBytes > maxUnrefData {
+			bytesToDelete = unreferencedBytes - maxUnrefData
 		}
 		var maxAge time.Time
 		if *imageServerMaxUnrefAge > 0 {
@@ -189,8 +186,15 @@ func (imdb *ImageDataBase) maybeAddToUnreferencedObjectsList(
 	}()
 }
 
-func (imdb *ImageDataBase) removeFromUnreferencedObjectsList(
+func (imdb *ImageDataBase) removeFromUnreferencedObjectsListAndSave(
 	inodeTable filesystem.InodeTable) {
+	if imdb.removeFromUnreferencedObjectsList(inodeTable) {
+		imdb.saveUnreferencedObjectsList(false)
+	}
+}
+
+func (imdb *ImageDataBase) removeFromUnreferencedObjectsList(
+	inodeTable filesystem.InodeTable) bool {
 	changed := false
 	for _, inode := range inodeTable {
 		if inode, ok := inode.(*filesystem.RegularInode); ok {
@@ -199,9 +203,7 @@ func (imdb *ImageDataBase) removeFromUnreferencedObjectsList(
 			}
 		}
 	}
-	if changed {
-		imdb.saveUnreferencedObjectsList(false)
-	}
+	return changed
 }
 
 func (imdb *ImageDataBase) saveUnreferencedObjectsList(grabLock bool) {
@@ -333,4 +335,16 @@ func (imdb *ImageDataBase) regenerateUnreferencedObjectsList() {
 		imdb.saveUnreferencedObjectsList(false)
 	}
 	imdb.unreferencedObjects.lastRegeneratedTime = scanTime
+}
+
+// This grabs and releases the lock.
+func (imdb *ImageDataBase) garbageCollectorAddCallback(hashVal hash.Hash,
+	length uint64, isNew bool) {
+	imdb.Lock()
+	defer imdb.Unlock()
+	// Move added objects (whether new or old) to the back of the unreferenced
+	// list if they are unreferenced, as they are likely to be referenced soon.
+	if imdb.unreferencedObjects.removeObject(hashVal) {
+		imdb.unreferencedObjects.addObject(hashVal, length)
+	}
 }

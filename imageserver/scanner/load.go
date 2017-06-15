@@ -67,6 +67,9 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 			err.Error())
 	}
 	imdb.regenerateUnreferencedObjectsList()
+	if ads, ok := objSrv.(objectserver.AddCallbackSetter); ok {
+		ads.SetAddCallback(imdb.garbageCollectorAddCallback)
+	}
 	if gcs, ok := objSrv.(objectserver.GarbageCollectorSetter); ok {
 		gcs.SetGarbageCollector(imdb.garbageCollector)
 	}

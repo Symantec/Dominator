@@ -28,7 +28,7 @@ type makeDirectoryNotifiers map[<-chan image.Directory]chan<- image.Directory
 
 type ImageDataBase struct {
 	sync.RWMutex
-	// Protected by lock.
+	// Protected by main lock.
 	baseDir             string
 	directoryMap        map[string]image.DirectoryMetadata
 	imageMap            map[string]*image.Image
@@ -36,7 +36,9 @@ type ImageDataBase struct {
 	deleteNotifiers     notifiers
 	mkdirNotifiers      makeDirectoryNotifiers
 	unreferencedObjects *unreferencedObjectsList
-	// Unprotected by lock.
+	// Unprotected by main lock.
+	pendingImageLock sync.Mutex
+	// Unprotected by any lock.
 	objectServer objectserver.FullObjectServer
 	masterMode   bool
 	logger       *log.Logger
@@ -80,6 +82,11 @@ func (imdb *ImageDataBase) DeleteImage(name string, username *string) error {
 func (imdb *ImageDataBase) DeleteUnreferencedObjects(percentage uint8,
 	bytes uint64) error {
 	return imdb.deleteUnreferencedObjects(percentage, bytes)
+}
+
+func (imdb *ImageDataBase) DoWithPendingImage(image *image.Image,
+	doFunc func() error) error {
+	return imdb.doWithPendingImage(image, doFunc)
 }
 
 func (imdb *ImageDataBase) GetImage(name string) *image.Image {

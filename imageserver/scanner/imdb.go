@@ -65,7 +65,8 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string,
 		encoder.Encode(image)
 		imdb.imageMap[name] = image
 		imdb.addNotifiers.sendPlain(name, "add", imdb.logger)
-		imdb.removeFromUnreferencedObjectsList(image.FileSystem.InodeTable)
+		imdb.removeFromUnreferencedObjectsListAndSave(
+			image.FileSystem.InodeTable)
 		return nil
 	}
 }
@@ -196,7 +197,7 @@ func (imdb *ImageDataBase) deleteImageAndUpdateUnreferencedObjectsList(
 	name string) {
 	img := imdb.imageMap[name]
 	delete(imdb.imageMap, name)
-	imdb.maybeAddToUnreferencedObjectsList(img.FileSystem.InodeTable)
+	imdb.maybeAddToUnreferencedObjectsList(img.FileSystem)
 }
 
 func (imdb *ImageDataBase) deleteUnreferencedObjects(percentage uint8,
@@ -216,6 +217,30 @@ func (imdb *ImageDataBase) deleteUnreferencedObjects(percentage uint8,
 		bytesCount += size
 	}
 	return nil
+}
+
+func (imdb *ImageDataBase) doWithPendingImage(image *image.Image,
+	doFunc func() error) error {
+	imdb.pendingImageLock.Lock()
+	defer imdb.pendingImageLock.Unlock()
+	imdb.Lock()
+	changed := imdb.removeFromUnreferencedObjectsList(
+		image.FileSystem.InodeTable)
+	imdb.Unlock()
+	err := doFunc()
+	imdb.Lock()
+	defer imdb.Unlock()
+	for _, img := range imdb.imageMap {
+		if img == image { // image was added, save if change happened above.
+			if changed {
+				imdb.saveUnreferencedObjectsList(false)
+			}
+			return err
+		}
+	}
+	// image was not added: "delete" it by maybe adding to unreferenced list.
+	imdb.maybeAddToUnreferencedObjectsList(image.FileSystem)
+	return err
 }
 
 func (imdb *ImageDataBase) getImage(name string) *image.Image {
