@@ -81,7 +81,8 @@ func (t *srpcType) getUpdates(conn *srpc.Conn) error {
 				initialImages[imageUpdate.Name] = struct{}{}
 			}
 			if err := t.addImage(imageUpdate.Name); err != nil {
-				return err
+				return errors.New("error adding image: " + imageUpdate.Name +
+					": " + err.Error())
 			}
 		case imageserver.OperationDeleteImage:
 			if t.archiveMode {
@@ -145,10 +146,16 @@ func (t *srpcType) addImage(name string) error {
 		return nil
 	}
 	img.FileSystem.RebuildInodePointers()
-	if err := t.getMissingObjects(img.FileSystem); err != nil {
-		return err
-	}
-	if err := t.imageDataBase.AddImage(img, name, nil); err != nil {
+	err = t.imageDataBase.DoWithPendingImage(img, func() error {
+		if err := t.getMissingObjects(img.FileSystem); err != nil {
+			return err
+		}
+		if err := t.imageDataBase.AddImage(img, name, nil); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
 		return err
 	}
 	t.logger.Printf("Replicator(%s): added image\n", name)
@@ -163,13 +170,10 @@ func (t *srpcType) checkImageBeingInjected(name string) bool {
 }
 
 func (t *srpcType) getMissingObjects(fs *filesystem.FileSystem) error {
-	hashes := make([]hash.Hash, 0, fs.NumRegularInodes)
-	for _, inode := range fs.InodeTable {
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			if inode.Size > 0 {
-				hashes = append(hashes, inode.Hash)
-			}
-		}
+	objectsMap := fs.GetObjects()
+	hashes := make([]hash.Hash, 0, len(objectsMap))
+	for hashVal := range objectsMap {
+		hashes = append(hashes, hashVal)
 	}
 	objectSizes, err := t.objSrv.CheckObjects(hashes)
 	if err != nil {
@@ -191,7 +195,7 @@ func (t *srpcType) getMissingObjects(fs *filesystem.FileSystem) error {
 	defer objClient.Close()
 	objectsReader, err := objClient.GetObjects(missingObjects)
 	if err != nil {
-		return err
+		return errors.New("error downloading objects: " + err.Error())
 	}
 	defer objectsReader.Close()
 	var totalBytes uint64
