@@ -73,6 +73,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 	if gcs, ok := objSrv.(objectserver.GarbageCollectorSetter); ok {
 		gcs.SetGarbageCollector(imdb.garbageCollector)
 	}
+	go imdb.periodicGarbageCollector()
 	return imdb, nil
 }
 

@@ -348,3 +348,30 @@ func (imdb *ImageDataBase) garbageCollectorAddCallback(hashVal hash.Hash,
 		imdb.unreferencedObjects.addObject(hashVal, length)
 	}
 }
+
+func (imdb *ImageDataBase) periodicGarbageCollector() {
+	if *imageServerMaxUnrefData < 1 && *imageServerMaxUnrefAge < 1 {
+		return
+	}
+	maxUnrefData := uint64(*imageServerMaxUnrefData)
+	for ; ; time.Sleep(time.Minute) {
+		var bytesToDelete uint64
+		var maxAge time.Time
+		imdb.RLock()
+		unreferencedBytes := imdb.unreferencedObjects.totalBytes
+		if maxUnrefData > 0 && unreferencedBytes > maxUnrefData {
+			bytesToDelete = unreferencedBytes - maxUnrefData
+		}
+		if *imageServerMaxUnrefAge > 0 &&
+			imdb.unreferencedObjects.oldest != nil {
+			ageLimit := time.Now().Add(-*imageServerMaxUnrefAge)
+			if imdb.unreferencedObjects.oldest.object.Age.Before(ageLimit) {
+				maxAge = ageLimit
+			}
+		}
+		imdb.RUnlock()
+		if bytesToDelete > 0 || !maxAge.IsZero() {
+			imdb.collectGarbage(bytesToDelete, maxAge)
+		}
+	}
+}
