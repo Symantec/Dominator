@@ -5,7 +5,6 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
@@ -66,6 +65,8 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string,
 		encoder.Encode(image)
 		imdb.imageMap[name] = image
 		imdb.addNotifiers.sendPlain(name, "add", imdb.logger)
+		imdb.removeFromUnreferencedObjectsListAndSave(
+			image.FileSystem.InodeTable)
 		return nil
 	}
 }
@@ -184,7 +185,7 @@ func (imdb *ImageDataBase) deleteImage(name string, username *string) error {
 		if err := os.Truncate(filename, 0); err != nil {
 			return err
 		}
-		imdb.deleteImageWithPossibleCleanup(name)
+		imdb.deleteImageAndUpdateUnreferencedObjectsList(name)
 		imdb.deleteNotifiers.sendPlain(name, "delete", imdb.logger)
 		return nil
 	} else {
@@ -192,40 +193,11 @@ func (imdb *ImageDataBase) deleteImage(name string, username *string) error {
 	}
 }
 
-func (imdb *ImageDataBase) deleteImageWithPossibleCleanup(name string) {
+func (imdb *ImageDataBase) deleteImageAndUpdateUnreferencedObjectsList(
+	name string) {
 	img := imdb.imageMap[name]
 	delete(imdb.imageMap, name)
-	if imdb.masterMode && img != nil {
-		go imdb.deletePossiblyUnreferencedObjects(img.FileSystem.InodeTable)
-	}
-}
-
-func (imdb *ImageDataBase) deletePossiblyUnreferencedObjects(
-	inodeTable filesystem.InodeTable) {
-	// First get a list of objects in the image being deleted.
-	objects := make(map[hash.Hash]struct{})
-	for _, inode := range inodeTable {
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			objects[inode.Hash] = struct{}{}
-		}
-	}
-	// Scan all remaining images and remove their objects from the list.
-	for _, imageName := range imdb.ListImages() {
-		image := imdb.GetImage(imageName)
-		if image == nil {
-			continue
-		}
-		for _, inode := range image.FileSystem.InodeTable {
-			if inode, ok := inode.(*filesystem.RegularInode); ok {
-				delete(objects, inode.Hash)
-			}
-		}
-	}
-	for object := range objects {
-		if err := imdb.objectServer.DeleteObject(object); err != nil {
-			imdb.logger.Printf("Error cleaning up: %x: %s\n", object, err)
-		}
-	}
+	imdb.maybeAddToUnreferencedObjectsList(img.FileSystem)
 }
 
 func (imdb *ImageDataBase) deleteUnreferencedObjects(percentage uint8,
@@ -247,10 +219,42 @@ func (imdb *ImageDataBase) deleteUnreferencedObjects(percentage uint8,
 	return nil
 }
 
+func (imdb *ImageDataBase) doWithPendingImage(image *image.Image,
+	doFunc func() error) error {
+	imdb.pendingImageLock.Lock()
+	defer imdb.pendingImageLock.Unlock()
+	imdb.Lock()
+	changed := imdb.removeFromUnreferencedObjectsList(
+		image.FileSystem.InodeTable)
+	imdb.Unlock()
+	err := doFunc()
+	imdb.Lock()
+	defer imdb.Unlock()
+	for _, img := range imdb.imageMap {
+		if img == image { // image was added, save if change happened above.
+			if changed {
+				imdb.saveUnreferencedObjectsList(false)
+			}
+			return err
+		}
+	}
+	// image was not added: "delete" it by maybe adding to unreferenced list.
+	imdb.maybeAddToUnreferencedObjectsList(image.FileSystem)
+	return err
+}
+
 func (imdb *ImageDataBase) getImage(name string) *image.Image {
 	imdb.RLock()
 	defer imdb.RUnlock()
 	return imdb.imageMap[name]
+}
+
+func (imdb *ImageDataBase) getUnreferencedObjectsStatistics() (uint64, uint64) {
+	imdb.maybeRegenerateUnreferencedObjectsList()
+	imdb.RLock()
+	defer imdb.RUnlock()
+	return uint64(len(imdb.unreferencedObjects.hashToEntry)),
+		imdb.unreferencedObjects.totalBytes
 }
 
 func (imdb *ImageDataBase) listDirectories() []image.Directory {
@@ -275,19 +279,10 @@ func (imdb *ImageDataBase) listImages() []string {
 }
 
 func (imdb *ImageDataBase) listUnreferencedObjects() map[hash.Hash]uint64 {
-	objectsMap := imdb.objectServer.ListObjectSizes()
-	for _, imageName := range imdb.ListImages() {
-		image := imdb.GetImage(imageName)
-		if image == nil {
-			continue
-		}
-		for _, inode := range image.FileSystem.InodeTable {
-			if inode, ok := inode.(*filesystem.RegularInode); ok {
-				delete(objectsMap, inode.Hash)
-			}
-		}
-	}
-	return objectsMap
+	imdb.maybeRegenerateUnreferencedObjectsList()
+	imdb.RLock()
+	defer imdb.RUnlock()
+	return imdb.unreferencedObjects.list()
 }
 
 func (imdb *ImageDataBase) makeDirectory(directory image.Directory,

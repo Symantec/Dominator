@@ -3,14 +3,29 @@ package objectserver
 import (
 	"github.com/Symantec/Dominator/lib/hash"
 	"io"
+	"time"
 )
 
 type FullObjectServer interface {
 	DeleteObject(hashVal hash.Hash) error
 	ObjectServer
+	LastMutationTime() time.Time
 	ListObjectSizes() map[hash.Hash]uint64
 	ListObjects() []hash.Hash
 	NumObjects() uint64
+}
+
+type AddCallback func(hashVal hash.Hash, length uint64, isNew bool)
+
+type AddCallbackSetter interface {
+	SetAddCallback(callback AddCallback)
+}
+
+type GarbageCollector func(bytesToDelete uint64) (
+	bytesDeleted uint64, err error)
+
+type GarbageCollectorSetter interface {
+	SetGarbageCollector(gc GarbageCollector)
 }
 
 type ObjectGetter interface {

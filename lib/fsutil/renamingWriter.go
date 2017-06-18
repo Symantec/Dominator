@@ -22,5 +22,17 @@ func (w *RenamingWriter) close() error {
 	if err := w.File.Close(); err != nil {
 		return err
 	}
+	if w.abort {
+		return nil
+	}
 	return os.Rename(tmpFilename, w.filename)
+}
+
+func (w *RenamingWriter) write(p []byte) (int, error) {
+	if nWritten, err := w.File.Write(p); err != nil {
+		w.abort = true
+		return nWritten, err
+	} else {
+		return nWritten, nil
+	}
 }

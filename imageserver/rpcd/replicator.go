@@ -11,7 +11,6 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"io"
-	"strings"
 	"time"
 )
 
@@ -82,7 +81,8 @@ func (t *srpcType) getUpdates(conn *srpc.Conn) error {
 				initialImages[imageUpdate.Name] = struct{}{}
 			}
 			if err := t.addImage(imageUpdate.Name); err != nil {
-				return err
+				return errors.New("error adding image: " + imageUpdate.Name +
+					": " + err.Error())
 			}
 		case imageserver.OperationDeleteImage:
 			if t.archiveMode {
@@ -146,10 +146,16 @@ func (t *srpcType) addImage(name string) error {
 		return nil
 	}
 	img.FileSystem.RebuildInodePointers()
-	if err := t.getMissingObjectsRetry(img.FileSystem); err != nil {
-		return err
-	}
-	if err := t.imageDataBase.AddImage(img, name, nil); err != nil {
+	err = t.imageDataBase.DoWithPendingImage(img, func() error {
+		if err := t.getMissingObjects(img.FileSystem); err != nil {
+			return err
+		}
+		if err := t.imageDataBase.AddImage(img, name, nil); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
 		return err
 	}
 	t.logger.Printf("Replicator(%s): added image\n", name)
@@ -163,43 +169,11 @@ func (t *srpcType) checkImageBeingInjected(name string) bool {
 	return ok
 }
 
-func (t *srpcType) getMissingObjectsRetry(fs *filesystem.FileSystem) error {
-	err := t.getMissingObjects(fs)
-	if err == nil {
-		return nil
-	}
-	if !strings.Contains(err.Error(), "no space left on device") {
-		return err
-	}
-	t.logger.Println(err)
-	if !t.deleteUnreferencedObjects(fs, false) {
-		return err
-	}
-	t.logger.Println(
-		"Replicator: retrying after deleting 10% of unreferenced objects")
-	err = t.getMissingObjects(fs)
-	if err == nil {
-		return nil
-	}
-	if !strings.Contains(err.Error(), "no space left on device") {
-		return err
-	}
-	if !t.deleteUnreferencedObjects(fs, true) {
-		return err
-	}
-	t.logger.Println(
-		"Replicator: retrying after deleting remaining unreferenced objects")
-	return t.getMissingObjects(fs)
-}
-
 func (t *srpcType) getMissingObjects(fs *filesystem.FileSystem) error {
-	hashes := make([]hash.Hash, 0, fs.NumRegularInodes)
-	for _, inode := range fs.InodeTable {
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			if inode.Size > 0 {
-				hashes = append(hashes, inode.Hash)
-			}
-		}
+	objectsMap := fs.GetObjects()
+	hashes := make([]hash.Hash, 0, len(objectsMap))
+	for hashVal := range objectsMap {
+		hashes = append(hashes, hashVal)
 	}
 	objectSizes, err := t.objSrv.CheckObjects(hashes)
 	if err != nil {
@@ -221,7 +195,7 @@ func (t *srpcType) getMissingObjects(fs *filesystem.FileSystem) error {
 	defer objClient.Close()
 	objectsReader, err := objClient.GetObjects(missingObjects)
 	if err != nil {
-		return err
+		return errors.New("error downloading objects: " + err.Error())
 	}
 	defer objectsReader.Close()
 	var totalBytes uint64
@@ -242,40 +216,4 @@ func (t *srpcType) getMissingObjects(fs *filesystem.FileSystem) error {
 		len(missingObjects), format.FormatBytes(totalBytes), timeTaken,
 		format.FormatBytes(uint64(float64(totalBytes)/timeTaken.Seconds())))
 	return nil
-}
-
-func (t *srpcType) deleteUnreferencedObjects(fs *filesystem.FileSystem,
-	all bool) bool {
-	objectsMap := t.imageDataBase.ListUnreferencedObjects()
-	for _, inode := range fs.InodeTable {
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			delete(objectsMap, inode.Hash)
-		}
-	}
-	numToDelete := len(objectsMap)
-	if !all {
-		numToDelete = numToDelete / 10
-		if numToDelete < 1 {
-			numToDelete = numToDelete
-		}
-	}
-	if numToDelete < 1 {
-		return false
-	}
-	count := 0
-	var unreferencedBytes uint64
-	for hashVal, size := range objectsMap {
-		if err := t.objSrv.DeleteObject(hashVal); err != nil {
-			t.logger.Printf("Error deleting unreferenced object: %x\n", hashVal)
-			return false
-		}
-		unreferencedBytes += size
-		count++
-		if count >= numToDelete {
-			break
-		}
-	}
-	t.logger.Printf("Deleted %d unreferenced objects consuming %s\n",
-		numToDelete, format.FormatBytes(unreferencedBytes))
-	return true
 }

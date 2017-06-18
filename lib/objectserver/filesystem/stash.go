@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"syscall"
+	"time"
 )
 
 var stashDirectory string = ".stash"
@@ -35,9 +36,16 @@ func (objSrv *ObjectServer) commitObject(hashVal hash.Hash) error {
 	defer objSrv.rwLock.Unlock()
 	if _, ok := objSrv.sizesMap[hashVal]; ok {
 		fsutil.ForceRemove(stashFilename)
+		// Run in a goroutine to keep outside of the lock.
+		go objSrv.addCallback(hashVal, uint64(fi.Size()), false)
 		return nil
 	} else {
 		objSrv.sizesMap[hashVal] = uint64(fi.Size())
+		objSrv.lastMutationTime = time.Now()
+		if objSrv.addCallback != nil {
+			// Run in a goroutine to keep outside of the lock.
+			go objSrv.addCallback(hashVal, uint64(fi.Size()), true)
+		}
 		return os.Rename(stashFilename, filename)
 	}
 }
@@ -68,7 +76,7 @@ func (objSrv *ObjectServer) stashOrVerifyObject(reader io.Reader,
 	}
 	// Check for existing stashed object and collision.
 	stashFilename := path.Join(objSrv.baseDir, stashDirectory, hashName)
-	if _, err := addOrCompare(hashVal, data, stashFilename); err != nil {
+	if _, err := objSrv.addOrCompare(hashVal, data, stashFilename); err != nil {
 		return hashVal, nil, err
 	} else {
 		return hashVal, data, nil

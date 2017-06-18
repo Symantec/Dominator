@@ -1,18 +1,31 @@
 package filesystem
 
 import (
+	"flag"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"io"
 	"sync"
+	"time"
+)
+
+var (
+	objectServerCleanupStartPercent = flag.Int(
+		"objectServerCleanupStartPercent", 95, "")
+	objectServerCleanupStopPercent = flag.Int("objectServerCleanupStopPercent",
+		90, "")
 )
 
 type ObjectServer struct {
-	baseDir  string
-	rwLock   sync.RWMutex         // Protect map mutations.
-	sizesMap map[hash.Hash]uint64 // Only set if object is known.
-	logger   log.Logger
+	baseDir               string
+	addCallback           objectserver.AddCallback
+	gc                    objectserver.GarbageCollector
+	logger                log.Logger
+	rwLock                sync.RWMutex         // Protect the following fields.
+	sizesMap              map[hash.Hash]uint64 // Only set if object is known.
+	lastGarbageCollection time.Time
+	lastMutationTime      time.Time
 }
 
 func NewObjectServer(baseDir string, logger log.Logger) (
@@ -48,6 +61,15 @@ func (objSrv *ObjectServer) DeleteStashedObject(hashVal hash.Hash) error {
 	return objSrv.deleteStashedObject(hashVal)
 }
 
+func (objSrv *ObjectServer) SetAddCallback(callback objectserver.AddCallback) {
+	objSrv.addCallback = callback
+}
+
+func (objSrv *ObjectServer) SetGarbageCollector(
+	gc objectserver.GarbageCollector) {
+	objSrv.gc = gc
+}
+
 func (objSrv *ObjectServer) GetObject(hashVal hash.Hash) (
 	uint64, io.ReadCloser, error) {
 	return objectserver.GetObject(objSrv, hashVal)
@@ -56,6 +78,12 @@ func (objSrv *ObjectServer) GetObject(hashVal hash.Hash) (
 func (objSrv *ObjectServer) GetObjects(hashes []hash.Hash) (
 	objectserver.ObjectsReader, error) {
 	return objSrv.getObjects(hashes)
+}
+
+func (objSrv *ObjectServer) LastMutationTime() time.Time {
+	objSrv.rwLock.RLock()
+	defer objSrv.rwLock.RUnlock()
+	return objSrv.lastMutationTime
 }
 
 func (objSrv *ObjectServer) ListObjectSizes() map[hash.Hash]uint64 {
@@ -82,6 +110,10 @@ func (objSrv *ObjectServer) NumObjects() uint64 {
 func (objSrv *ObjectServer) StashOrVerifyObject(reader io.Reader,
 	length uint64, expectedHash *hash.Hash) (hash.Hash, []byte, error) {
 	return objSrv.stashOrVerifyObject(reader, length, expectedHash)
+}
+
+func (objSrv *ObjectServer) WriteHtml(writer io.Writer) {
+	objSrv.writeHtml(writer)
 }
 
 type ObjectsReader struct {

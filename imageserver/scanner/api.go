@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"flag"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/objectserver"
@@ -13,24 +14,31 @@ import (
 //       behind the scanner code.
 
 const metadataFile = ".metadata"
+const unreferencedObjectsFile = ".unreferenced-objects"
 
-type Object struct {
-	length uint64
-}
+var (
+	imageServerMaxUnrefData = flag.Int64("imageServerMaxUnrefData", 0,
+		"maximum number of bytes of unreferenced objects before cleaning")
+	imageServerMaxUnrefAge = flag.Duration("imageServerMaxUnrefAge", 0,
+		"maximum age of unreferenced objects before cleaning")
+)
 
 type notifiers map[<-chan string]chan<- string
 type makeDirectoryNotifiers map[<-chan image.Directory]chan<- image.Directory
 
 type ImageDataBase struct {
 	sync.RWMutex
-	// Protected by lock.
-	baseDir         string
-	directoryMap    map[string]image.DirectoryMetadata
-	imageMap        map[string]*image.Image
-	addNotifiers    notifiers
-	deleteNotifiers notifiers
-	mkdirNotifiers  makeDirectoryNotifiers
-	// Unprotected by lock.
+	// Protected by main lock.
+	baseDir             string
+	directoryMap        map[string]image.DirectoryMetadata
+	imageMap            map[string]*image.Image
+	addNotifiers        notifiers
+	deleteNotifiers     notifiers
+	mkdirNotifiers      makeDirectoryNotifiers
+	unreferencedObjects *unreferencedObjectsList
+	// Unprotected by main lock.
+	pendingImageLock sync.Mutex
+	// Unprotected by any lock.
 	objectServer objectserver.FullObjectServer
 	masterMode   bool
 	logger       *log.Logger
@@ -76,8 +84,17 @@ func (imdb *ImageDataBase) DeleteUnreferencedObjects(percentage uint8,
 	return imdb.deleteUnreferencedObjects(percentage, bytes)
 }
 
+func (imdb *ImageDataBase) DoWithPendingImage(image *image.Image,
+	doFunc func() error) error {
+	return imdb.doWithPendingImage(image, doFunc)
+}
+
 func (imdb *ImageDataBase) GetImage(name string) *image.Image {
 	return imdb.getImage(name)
+}
+
+func (imdb *ImageDataBase) GetUnreferencedObjectsStatistics() (uint64, uint64) {
+	return imdb.getUnreferencedObjectsStatistics()
 }
 
 func (imdb *ImageDataBase) ListDirectories() []image.Directory {

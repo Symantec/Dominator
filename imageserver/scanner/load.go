@@ -60,6 +60,20 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 		logger.Printf("Loaded %d image%s in %s (%s user CPUtime)\n",
 			imdb.CountImages(), plural, time.Since(startTime), userTime)
 	}
+	imdb.unreferencedObjects, err = loadUnreferencedObjects(
+		path.Join(baseDir, unreferencedObjectsFile))
+	if err != nil {
+		return nil, errors.New("error loading unreferenced objects list: " +
+			err.Error())
+	}
+	imdb.regenerateUnreferencedObjectsList()
+	if ads, ok := objSrv.(objectserver.AddCallbackSetter); ok {
+		ads.SetAddCallback(imdb.garbageCollectorAddCallback)
+	}
+	if gcs, ok := objSrv.(objectserver.GarbageCollectorSetter); ok {
+		gcs.SetGarbageCollector(imdb.garbageCollector)
+	}
+	go imdb.periodicGarbageCollector()
 	return imdb, nil
 }
 

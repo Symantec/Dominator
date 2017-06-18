@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"syscall"
+	"time"
 )
 
 const (
@@ -28,17 +29,21 @@ func (objSrv *ObjectServer) addObject(reader io.Reader, length uint64,
 	length = uint64(len(data))
 	filename := path.Join(objSrv.baseDir, objectcache.HashToFilename(hashVal))
 	// Check for existing object and collision.
-	if isNew, err := addOrCompare(hashVal, data, filename); err != nil {
+	if isNew, err := objSrv.addOrCompare(hashVal, data, filename); err != nil {
 		return hashVal, false, err
 	} else {
 		objSrv.rwLock.Lock()
 		objSrv.sizesMap[hashVal] = uint64(len(data))
+		objSrv.lastMutationTime = time.Now()
 		objSrv.rwLock.Unlock()
+		if objSrv.addCallback != nil {
+			objSrv.addCallback(hashVal, uint64(len(data)), isNew)
+		}
 		return hashVal, isNew, nil
 	}
 }
 
-func addOrCompare(hashVal hash.Hash, data []byte,
+func (objSrv *ObjectServer) addOrCompare(hashVal hash.Hash, data []byte,
 	filename string) (bool, error) {
 	fi, err := os.Lstat(filename)
 	if err == nil {
@@ -51,6 +56,7 @@ func addOrCompare(hashVal hash.Hash, data []byte,
 		// No collision and no error: it's the same object. Go home early.
 		return false, nil
 	}
+	objSrv.garbageCollector()
 	if err = os.MkdirAll(path.Dir(filename), syscall.S_IRWXU); err != nil {
 		return false, err
 	}

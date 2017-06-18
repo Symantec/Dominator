@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
@@ -38,11 +39,24 @@ func (objSrv *srpcType) GetObjects(conn *srpc.Conn) error {
 		return encoder.Encode(response)
 	}
 	// First a quick check for existence. If any objects missing, fail request.
-	for index, hash := range request.Hashes {
+	var firstMissingObject *hash.Hash
+	numMissingObjects := 0
+	for index, hashVal := range request.Hashes {
 		if response.ObjectSizes[index] < 1 {
-			response.ResponseString = fmt.Sprintf("unknown object: %x", hash)
-			return encoder.Encode(response)
+			firstMissingObject = &hashVal
+			numMissingObjects++
 		}
+	}
+	if firstMissingObject != nil {
+		if numMissingObjects == 1 {
+			response.ResponseString = fmt.Sprintf("unknown object: %x",
+				*firstMissingObject)
+		} else {
+			response.ResponseString = fmt.Sprintf(
+				"first of %d unknown objects: %x", numMissingObjects,
+				*firstMissingObject)
+		}
+		return encoder.Encode(response)
 	}
 	objectsReader, err := objSrv.objectServer.GetObjects(request.Hashes)
 	if err != nil {
@@ -54,7 +68,7 @@ func (objSrv *srpcType) GetObjects(conn *srpc.Conn) error {
 		return err
 	}
 	conn.Flush()
-	for _, hash := range request.Hashes {
+	for _, hashVal := range request.Hashes {
 		length, reader, err := objectsReader.NextObject()
 		if err != nil {
 			objSrv.logger.Println(err)
@@ -68,7 +82,7 @@ func (objSrv *srpcType) GetObjects(conn *srpc.Conn) error {
 		}
 		if nCopied != int64(length) {
 			txt := fmt.Sprintf("Expected length: %d, got: %d for: %x",
-				length, nCopied, hash)
+				length, nCopied, hashVal)
 			objSrv.logger.Printf(txt)
 			return errors.New(txt)
 		}
