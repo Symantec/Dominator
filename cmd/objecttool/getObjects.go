@@ -14,7 +14,7 @@ import (
 
 func getObjectsSubcommand(objSrv objectserver.ObjectServer, args []string) {
 	if err := getObjects(objSrv, args[0], args[1]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting objects\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error getting objects: %s\n", err)
 		os.Exit(2)
 	}
 	os.Exit(0)
