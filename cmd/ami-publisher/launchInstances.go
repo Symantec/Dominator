@@ -64,7 +64,8 @@ func launchInstancesForImages(resourcesFiles []string,
 	tags["Name"] = *instanceName
 	if *expiresIn > 0 {
 		expirationTime := time.Now().Add(*expiresIn)
-		tags["ExpiresAt"] = expirationTime.UTC().Format("2006-01-02:15:04:05")
+		tags["ExpiresAt"] = expirationTime.UTC().Format(
+			amipublisher.ExpiresAtFormat)
 	}
 	results, err := amipublisher.LaunchInstancesForImages(resources,
 		vpcSearchTags, subnetSearchTags, securityGroupSearchTags,
