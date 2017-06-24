@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-const expiresAtFormat = "2006-01-02:15:04:05"
-
 func expireResources(targets awsutil.TargetList, skipList awsutil.TargetList,
 	logger log.Logger) error {
 	currentTime := time.Now() // Need a common "now" time.
@@ -127,7 +125,7 @@ func hasExpired(tags []*ec2.Tag, currentTime time.Time) bool {
 		if *tag.Key != "ExpiresAt" {
 			continue
 		}
-		expirationTime, err := time.Parse(expiresAtFormat, *tag.Value)
+		expirationTime, err := time.Parse(ExpiresAtFormat, *tag.Value)
 		if err != nil {
 			continue
 		}

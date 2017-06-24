@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const ExpiresAtFormat = "2006-01-02 15:04:05"
+
 type InstanceResult struct {
 	awsutil.Target
 	InstanceId string

@@ -103,12 +103,21 @@ func forEachRegionInAccount(awsSession *session.Session,
 			return
 		}
 	}
+	if _, ok := skipTargets[Target{accountName, ""}]; ok {
+		logger.Println(accountName + ": skipping account")
+		resultsChannel <- resultsType{0, nil}
+		return
+	}
 	// Start goroutine for each target ((account,region) tuple).
 	numRegions := 0
 	for _, region := range regions {
 		logger := prefixlogger.New(accountName+": "+region+": ", logger)
 		if _, ok := skipTargets[Target{accountName, region}]; ok {
 			logger.Println("skipping target")
+			continue
+		}
+		if _, ok := skipTargets[Target{"", region}]; ok {
+			logger.Println("skipping region")
 			continue
 		}
 		var awsService *ec2.EC2
