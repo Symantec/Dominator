@@ -50,7 +50,8 @@ func partitionAndMkFs(deviceName string) error {
 	if err != nil {
 		return fmt.Errorf("error partitioning: %s: %s", err, output)
 	}
-	cmd = exec.Command("mkfs.ext4", "-L", "rootfs", "/dev/"+deviceName+"1")
+	cmd = exec.Command("mkfs.ext4", "-L", "rootfs", "-i", "8192",
+		"/dev/"+deviceName+"1")
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("error making file-system: %s: %s", err, output)
