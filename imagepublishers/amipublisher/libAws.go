@@ -60,6 +60,11 @@ func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 		if err != nil {
 			return err
 		}
+		if len(desc.Volumes[0].Attachments) != 0 {
+			logger.Printf("attachments: %d\n",
+				len(desc.Volumes[0].Attachments))
+			continue
+		}
 		state := *desc.Volumes[0].Attachments[0].State
 		logger.Printf("state: \"%s\"\n", state)
 		if state == ec2.VolumeAttachmentStateAttached {
@@ -601,8 +606,13 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 		return "", err
 	}
 	logger.Printf("Created: %s\n", *ami.ImageId)
-	imageIds := make([]string, 1)
-	imageIds[0] = *ami.ImageId
+	imageIds := []string{*ami.ImageId}
+	err = awsService.WaitUntilImageExists(&ec2.DescribeImagesInput{
+		ImageIds: aws.StringSlice(imageIds),
+	})
+	if err != nil {
+		return "", err
+	}
 	tags = tags.Copy()
 	tags["Name"] = path.Dir(imageName)
 	if err := createTags(awsService, *ami.ImageId, tags); err != nil {
