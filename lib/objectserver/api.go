@@ -32,6 +32,10 @@ type ObjectGetter interface {
 	GetObject(hashVal hash.Hash) (uint64, io.ReadCloser, error)
 }
 
+type ObjectsGetter interface {
+	GetObjects(hashes []hash.Hash) (ObjectsReader, error)
+}
+
 type ObjectsReader interface {
 	Close() error
 	NextObject() (uint64, io.ReadCloser, error)
@@ -42,7 +46,7 @@ type ObjectServer interface {
 		hash.Hash, bool, error)
 	CheckObjects(hashes []hash.Hash) ([]uint64, error)
 	ObjectGetter
-	GetObjects(hashes []hash.Hash) (ObjectsReader, error)
+	ObjectsGetter
 }
 
 type StashingObjectServer interface {
