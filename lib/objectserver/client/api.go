@@ -52,13 +52,13 @@ func (objClient *ObjectClient) SetExclusiveGetObjects(exclusive bool) {
 
 type ObjectsReader struct {
 	sizes     []uint64
-	client    *srpc.Client
-	reader    io.Reader
+	client    *ObjectClient
+	reader    *srpc.Conn
 	nextIndex int64
 }
 
 func (or *ObjectsReader) Close() error {
-	return or.client.Close()
+	return or.close()
 }
 
 func (or *ObjectsReader) NextObject() (uint64, io.ReadCloser, error) {
