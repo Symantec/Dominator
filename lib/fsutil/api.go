@@ -13,12 +13,21 @@ var (
 	ErrorChecksumMismatch = errors.New("checksum mismatch")
 )
 
+func CopyFile(destFilename, sourceFilename string, mode os.FileMode) error {
+	return copyFile(destFilename, sourceFilename, mode)
+}
+
 // CopyToFile will create a new file, write length bytes from reader to the
 // file and then atomically renames the file to destFilename. If there are any
 // errors, then destFilename is unchanged.
 func CopyToFile(destFilename string, perm os.FileMode, reader io.Reader,
 	length uint64) error {
 	return copyToFile(destFilename, perm, reader, length)
+}
+
+// CopyTree will copy a directory tree.
+func CopyTree(destDir, sourceDir string) error {
+	return copyTree(destDir, sourceDir)
 }
 
 // ForceLink creates newname as a hard link to the oldname file. It first
