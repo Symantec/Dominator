@@ -6,12 +6,26 @@ import (
 	"github.com/Symantec/Dominator/lib/objectserver"
 )
 
+type ComputedFile struct {
+	Filename string
+	Source   string
+}
+
 // CopyMtimes will copy modification times for files from the source to the
 // destination if the file data and metadata (other than mtime) are identical.
 // Directory entry inode pointers are invalidated by this operation, so this
 // should be followed by a call to dest.RebuildInodePointers().
 func CopyMtimes(source, dest *filesystem.FileSystem) {
 	copyMtimes(source, dest)
+}
+
+func LoadComputedFiles(filename string) ([]ComputedFile, error) {
+	return loadComputedFiles(filename)
+}
+
+func SpliceComputedFiles(fs *filesystem.FileSystem,
+	computedFileList []ComputedFile) error {
+	return spliceComputedFiles(fs, computedFileList)
 }
 
 func Unpack(fs *filesystem.FileSystem, objectsGetter objectserver.ObjectsGetter,
