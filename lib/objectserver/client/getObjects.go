@@ -28,7 +28,7 @@ func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (
 	encoder.Encode(request)
 	conn.Flush()
 	var objectsReader ObjectsReader
-	objectsReader.client = client
+	objectsReader.client = objClient
 	objectsReader.reader = conn
 	decoder := gob.NewDecoder(objectsReader.reader)
 	err = decoder.Decode(&reply)
@@ -41,6 +41,14 @@ func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (
 	objectsReader.nextIndex = -1
 	objectsReader.sizes = reply.ObjectSizes
 	return &objectsReader, nil
+}
+
+func (or *ObjectsReader) close() error {
+	err := or.reader.Close()
+	if e := or.client.Close(); err == nil {
+		err = e
+	}
+	return err
 }
 
 func (or *ObjectsReader) nextObject() (uint64, io.ReadCloser, error) {

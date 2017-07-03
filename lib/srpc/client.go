@@ -174,7 +174,7 @@ func (client *Client) close() error {
 }
 
 func (client *Client) ping() error {
-	conn, err := client.call("\n")
+	conn, err := client.call("")
 	if err != nil {
 		return err
 	}

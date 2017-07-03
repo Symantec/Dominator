@@ -326,7 +326,8 @@ func handleConnection(conn *Conn) {
 			}
 			continue
 		}
-		if serviceMethod == "\n" {
+		serviceMethod = serviceMethod[:len(serviceMethod)-1]
+		if serviceMethod == "" {
 			// Received a "ping" request, send response.
 			if _, err := conn.WriteString("\n"); err != nil {
 				log.Println(err)
@@ -334,7 +335,6 @@ func handleConnection(conn *Conn) {
 			}
 			continue
 		}
-		serviceMethod = serviceMethod[:len(serviceMethod)-1]
 		method, err := conn.findMethod(serviceMethod)
 		if err != nil {
 			if _, err := conn.WriteString(err.Error() + "\n"); err != nil {

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Symantec/Dominator/imageserver/client"
-	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/image"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -61,40 +61,6 @@ func copyMtimes(imageSClient *srpc.Client, img *image.Image,
 	if err != nil {
 		return err
 	}
-	inodeToFilenamesTable := fs.InodeToFilenamesTable()
-	oldFilenameToInodeTable := oldFs.FilenameToInodeTable()
-	for inum, inode := range fs.InodeTable {
-		filenames := inodeToFilenamesTable[inum]
-		var oldInode filesystem.GenericInode
-		for _, filename := range filenames {
-			if oldInum, ok := oldFilenameToInodeTable[filename]; ok {
-				oldInode = oldFs.InodeTable[oldInum]
-				break
-			}
-		}
-		if oldInode == nil {
-			continue
-		}
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			if oldInode, ok := oldInode.(*filesystem.RegularInode); ok {
-				newInode := *inode
-				newInode.MtimeNanoSeconds = oldInode.MtimeNanoSeconds
-				newInode.MtimeSeconds = oldInode.MtimeSeconds
-				if filesystem.CompareRegularInodes(&newInode, oldInode, nil) {
-					fs.InodeTable[inum] = &newInode
-				}
-			}
-		}
-		if inode, ok := inode.(*filesystem.SpecialInode); ok {
-			if oldInode, ok := oldInode.(*filesystem.SpecialInode); ok {
-				newInode := *inode
-				newInode.MtimeNanoSeconds = oldInode.MtimeNanoSeconds
-				newInode.MtimeSeconds = oldInode.MtimeSeconds
-				if filesystem.CompareSpecialInodes(&newInode, oldInode, nil) {
-					fs.InodeTable[inum] = &newInode
-				}
-			}
-		}
-	}
+	util.CopyMtimes(oldFs, fs)
 	return nil
 }
