@@ -2,6 +2,7 @@ package fsutil
 
 import (
 	"errors"
+	"github.com/Symantec/Dominator/lib/log/testlogger"
 	"io"
 	"io/ioutil"
 	"os"
@@ -39,8 +40,9 @@ func TestWatchFileCwd(t *testing.T) {
 }
 
 func testWatchFile(t *testing.T, dirname string) {
+	logger := testlogger.New(t)
 	pathNotExist := path.Join(dirname, "never-exists")
-	ch := WatchFile(pathNotExist, nil)
+	ch := WatchFile(pathNotExist, logger)
 	rc, err := watchTimeout(ch, time.Millisecond)
 	if err != errorTimeout {
 		rc.Close()
@@ -52,7 +54,7 @@ func testWatchFile(t *testing.T, dirname string) {
 		t.Fatal(err)
 	}
 	file.Close()
-	ch = WatchFile(pathExists, nil)
+	ch = WatchFile(pathExists, logger)
 	rc, err = watchTimeout(ch, time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
@@ -68,7 +70,7 @@ func testWatchFile(t *testing.T, dirname string) {
 		}
 		file.Close()
 	}()
-	ch = WatchFile(pathExistsLater, nil)
+	ch = WatchFile(pathExistsLater, logger)
 	rc, err = watchTimeout(ch, time.Millisecond*10)
 	if err != errorTimeout {
 		t.Fatal("Expected timeout error for non-existant file")
