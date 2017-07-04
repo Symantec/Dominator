@@ -161,6 +161,7 @@ func (m *Manager) loadImage(imageClient *srpc.Client, name string) (
 			name, err)
 		return imageClient, nil, err
 	}
+	img.FileSystem = img.FileSystem.Filter(img.Filter) // Apply filter.
 	// Build cache data now to avoid potential concurrent builds later.
 	img.FileSystem.InodeToFilenamesTable()
 	img.FileSystem.FilenameToInodeTable()
