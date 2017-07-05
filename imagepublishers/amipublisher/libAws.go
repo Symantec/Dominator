@@ -60,7 +60,7 @@ func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 		if err != nil {
 			return err
 		}
-		if len(desc.Volumes[0].Attachments) != 0 {
+		if len(desc.Volumes[0].Attachments) < 1 {
 			logger.Printf("attachments: %d\n",
 				len(desc.Volumes[0].Attachments))
 			continue
