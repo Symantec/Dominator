@@ -382,6 +382,7 @@ func getInstances(awsService *ec2.EC2, nameTag string) (
 	states := []string{
 		ec2.InstanceStateNamePending,
 		ec2.InstanceStateNameRunning,
+		ec2.InstanceStateNameStopping,
 		ec2.InstanceStateNameStopped,
 	}
 	out, err := awsService.DescribeInstances(&ec2.DescribeInstancesInput{
