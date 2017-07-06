@@ -60,7 +60,7 @@ func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 		if err != nil {
 			return err
 		}
-		if len(desc.Volumes[0].Attachments) != 0 {
+		if len(desc.Volumes[0].Attachments) < 1 {
 			logger.Printf("attachments: %d\n",
 				len(desc.Volumes[0].Attachments))
 			continue
@@ -382,6 +382,7 @@ func getInstances(awsService *ec2.EC2, nameTag string) (
 	states := []string{
 		ec2.InstanceStateNamePending,
 		ec2.InstanceStateNameRunning,
+		ec2.InstanceStateNameStopping,
 		ec2.InstanceStateNameStopped,
 	}
 	out, err := awsService.DescribeInstances(&ec2.DescribeInstancesInput{
