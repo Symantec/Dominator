@@ -33,6 +33,12 @@ type Image struct {
 	ExpiresAt    time.Time
 }
 
+// ListObjects will return a list of all objects (including those for
+// annotations for an image).
+func (image *Image) ListObjects() []hash.Hash {
+	return image.listObjects()
+}
+
 // Verify will perform some self-consistency checks on the image. If a problem
 // is found, an error is returned.
 func (image *Image) Verify() error {
