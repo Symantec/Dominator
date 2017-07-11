@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	iclient "github.com/Symantec/Dominator/imageserver/client"
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 	"time"
@@ -32,14 +30,7 @@ func (t *srpcType) AddImageTrusted(conn *srpc.Conn,
 		return errors.New("nil file-system")
 	}
 	// Verify all objects are available.
-	hashes := make([]hash.Hash, 0, request.Image.FileSystem.NumRegularInodes)
-	for _, inode := range request.Image.FileSystem.InodeTable {
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			if inode.Size > 0 {
-				hashes = append(hashes, inode.Hash)
-			}
-		}
-	}
+	hashes := request.Image.ListObjects()
 	objectSizes, err := t.imageDataBase.ObjectServer().CheckObjects(hashes)
 	if err != nil {
 		return err
