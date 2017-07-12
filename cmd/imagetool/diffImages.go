@@ -8,6 +8,7 @@ import (
 	imgclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filesystem/scanner"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
@@ -49,6 +50,8 @@ func getTypedImage(typedName string) (*filesystem.FileSystem, error) {
 		return nil, errors.New("not a typed name: " + typedName)
 	}
 	switch name := typedName[2:]; typedName[0] {
+	case 'd':
+		return scanDirectory(name)
 	case 'f':
 		return readFileSystem(name)
 	case 'i':
@@ -61,6 +64,14 @@ func getTypedImage(typedName string) (*filesystem.FileSystem, error) {
 	default:
 		return nil, errors.New("unknown image type: " + typedName[:1])
 	}
+}
+
+func scanDirectory(name string) (*filesystem.FileSystem, error) {
+	sfs, err := scanner.ScanFileSystem(name, nil, nil, nil, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &sfs.FileSystem, nil
 }
 
 func readFileSystem(name string) (*filesystem.FileSystem, error) {

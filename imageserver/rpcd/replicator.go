@@ -4,9 +4,9 @@ import (
 	"encoding/gob"
 	"errors"
 	imgclient "github.com/Symantec/Dominator/imageserver/client"
-	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/image"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
@@ -147,7 +147,7 @@ func (t *srpcType) addImage(name string) error {
 	}
 	img.FileSystem.RebuildInodePointers()
 	err = t.imageDataBase.DoWithPendingImage(img, func() error {
-		if err := t.getMissingObjects(img.FileSystem); err != nil {
+		if err := t.getMissingObjects(img); err != nil {
 			return err
 		}
 		if err := t.imageDataBase.AddImage(img, name, nil); err != nil {
@@ -169,12 +169,8 @@ func (t *srpcType) checkImageBeingInjected(name string) bool {
 	return ok
 }
 
-func (t *srpcType) getMissingObjects(fs *filesystem.FileSystem) error {
-	objectsMap := fs.GetObjects()
-	hashes := make([]hash.Hash, 0, len(objectsMap))
-	for hashVal := range objectsMap {
-		hashes = append(hashes, hashVal)
-	}
+func (t *srpcType) getMissingObjects(img *image.Image) error {
+	hashes := img.ListObjects()
 	objectSizes, err := t.objSrv.CheckObjects(hashes)
 	if err != nil {
 		return err

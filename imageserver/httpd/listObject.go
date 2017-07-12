@@ -12,6 +12,7 @@ func listObject(writer io.Writer, objSrv *filesystem.ObjectServer,
 	_, reader, err := objSrv.GetObject(*hashP)
 	if err != nil {
 		fmt.Fprintln(writer, err)
+		return
 	}
 	defer reader.Close()
 	fmt.Fprintln(writer, "<pre>")
