@@ -35,6 +35,7 @@ type CpuSharer interface {
 type FifoCpuSharer struct {
 	semaphore     chan struct{}
 	mutex         sync.Mutex
+	grabTimeout   time.Duration
 	lastIdleEvent time.Time
 	numIdleEvents uint64
 	Statistics    Statistics
@@ -49,6 +50,13 @@ func NewFifoCpuSharer() *FifoCpuSharer {
 // GetStatistics will update and return the Statistics.
 func (s *FifoCpuSharer) GetStatistics() Statistics {
 	return s.getStatistics()
+}
+
+// SetGrabTimeout will change the timeout for the GrabCpu method. A negative
+// value for timeout means no timeout. After the timeout a panic is generated.
+// A full stack trace is written to os.Stderr.
+func (s *FifoCpuSharer) SetGrabTimeout(timeout time.Duration) {
+	s.setGrabTimeout(timeout)
 }
 
 func (s *FifoCpuSharer) Go(goFunc func()) {
