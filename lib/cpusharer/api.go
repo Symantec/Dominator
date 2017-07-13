@@ -67,6 +67,12 @@ func (s *FifoCpuSharer) GrabCpu() {
 	s.grabCpu()
 }
 
+// GrabSemaphore will safely grab the provided semaphore, releasing and
+// re-aquiring the CPU if the semaphore blocks. Use this to avoid deadlocks.
+func (s *FifoCpuSharer) GrabSemaphore(semaphore chan<- struct{}) {
+	grabSemaphore(s, semaphore)
+}
+
 func (s *FifoCpuSharer) ReleaseCpu() {
 	<-s.semaphore
 }
