@@ -99,13 +99,13 @@ func (herd *Herd) mdbUpdateGetLock(mdb *mdb.Mdb) (
 	clientResourcesToDelete := make([]*srpc.ClientResource, 0)
 	for subHostname := range subsToDelete {
 		sub := herd.subsByName[subHostname]
-		sub.busyFlagMutex.Lock()
+		sub.deletingFlagMutex.Lock()
 		sub.deleting = true
 		if sub.clientResource != nil {
 			clientResourcesToDelete = append(clientResourcesToDelete,
 				sub.clientResource)
 		}
-		sub.busyFlagMutex.Unlock()
+		sub.deletingFlagMutex.Unlock()
 		herd.computedFilesManager.Remove(subHostname)
 		delete(herd.subsByName, subHostname)
 		numDeleted++

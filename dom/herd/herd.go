@@ -36,6 +36,7 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	herd.pollSemaphore = make(chan struct{}, numPollSlots)
 	herd.pushSemaphore = make(chan struct{}, runtime.NumCPU())
 	herd.cpuSharer = cpusharer.NewFifoCpuSharer()
+	herd.cpuSharer.SetGrabTimeout(time.Minute * 15)
 	herd.currentScanStartTime = time.Now()
 	herd.setupMetrics(metricsDir)
 	return &herd
