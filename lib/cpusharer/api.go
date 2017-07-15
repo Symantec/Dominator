@@ -33,12 +33,14 @@ type CpuSharer interface {
 }
 
 type FifoCpuSharer struct {
-	semaphore     chan struct{}
-	mutex         sync.Mutex
-	grabTimeout   time.Duration
-	lastIdleEvent time.Time
-	numIdleEvents uint64
-	Statistics    Statistics
+	semaphore        chan struct{}
+	mutex            sync.Mutex
+	grabTimeout      time.Duration
+	lastAcquireEvent time.Time
+	lastIdleEvent    time.Time
+	lastYieldEvent   time.Time
+	numIdleEvents    uint64
+	Statistics       Statistics
 }
 
 // NewFifoCpuSharer creates a simple FIFO CpuSharer. CPU access is granted in
@@ -74,7 +76,7 @@ func (s *FifoCpuSharer) GrabSemaphore(semaphore chan<- struct{}) {
 }
 
 func (s *FifoCpuSharer) ReleaseCpu() {
-	<-s.semaphore
+	s.releaseCpu()
 }
 
 func (s *FifoCpuSharer) Sleep(duration time.Duration) {
@@ -82,8 +84,10 @@ func (s *FifoCpuSharer) Sleep(duration time.Duration) {
 }
 
 type Statistics struct {
-	LastIdleEvent time.Time
-	NumCpuRunning uint
-	NumCpu        uint
-	NumIdleEvents uint64
+	LastAcquireEvent time.Time
+	LastIdleEvent    time.Time
+	LastYieldEvent   time.Time
+	NumCpuRunning    uint
+	NumCpu           uint
+	NumIdleEvents    uint64
 }
