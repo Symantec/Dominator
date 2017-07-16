@@ -76,6 +76,56 @@ func (s *FifoCpuSharer) grabCpu() {
 	}
 }
 
+func (s *FifoCpuSharer) grabIdleCpu(minIdleTime, timeout time.Duration) bool {
+	var timeoutTime time.Time
+	if timeout >= 0 {
+		timeoutTime = time.Now().Add(timeout)
+	}
+	for timeout < 0 || time.Now().Before(timeoutTime) {
+		select {
+		case s.semaphore <- struct{}{}: // A CPU was idle.
+			if minIdleTime > 0 {
+				<-s.semaphore // Yield CPU and maybe check again later.
+				if timeout >= 0 {
+					if minIdleTime > time.Until(timeoutTime) {
+						return false
+					}
+				}
+				time.Sleep(minIdleTime)
+				select {
+				case s.semaphore <- struct{}{}: // A CPU was idle.
+				default: // No idle CPU: try agin.
+					continue
+				}
+			}
+			s.mutex.Lock()
+			defer s.mutex.Unlock()
+			s.lastAcquireEvent = time.Now()
+			s.lastIdleEvent = s.lastAcquireEvent
+			s.numIdleEvents++
+			return true
+		default: // No CPU is available yet: wait with possible timeout.
+			if timeout < 0 {
+				s.semaphore <- struct{}{}
+			} else {
+				timer := time.NewTimer(time.Until(timeoutTime))
+				select {
+				case s.semaphore <- struct{}{}: // A CPU became available.
+					if !timer.Stop() {
+						<-timer.C
+					}
+				case <-timer.C:
+					return false // Timeout.
+				}
+			}
+			// Yield CPU and give someone else a chance to ensure really idle.
+			<-s.semaphore
+			runtime.Gosched()
+		}
+	}
+	return false
+}
+
 func (s *FifoCpuSharer) releaseCpu() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()

@@ -69,6 +69,10 @@ func (s *FifoCpuSharer) GrabCpu() {
 	s.grabCpu()
 }
 
+func (s *FifoCpuSharer) GrabIdleCpu(minIdleTime, timeout time.Duration) bool {
+	return s.grabIdleCpu(minIdleTime, timeout)
+}
+
 // GrabSemaphore will safely grab the provided semaphore, releasing and
 // re-aquiring the CPU if the semaphore blocks. Use this to avoid deadlocks.
 func (s *FifoCpuSharer) GrabSemaphore(semaphore chan<- struct{}) {
