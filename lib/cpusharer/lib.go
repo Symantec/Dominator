@@ -18,8 +18,8 @@ func grabSemaphore(s CpuSharer, semaphore chan<- struct{}) {
 }
 
 func startGoroutine(s CpuSharer, goFunc func()) {
+	s.GrabCpu()
 	go func() {
-		s.GrabCpu()
 		goFunc()
 		s.ReleaseCpu()
 	}()
