@@ -65,6 +65,10 @@ func (s *FifoCpuSharer) Go(goFunc func()) {
 	startGoroutine(s, goFunc)
 }
 
+func (s *FifoCpuSharer) GoWhenAvailable(goFunc func()) {
+	startGoroutineWhenAvailable(s, goFunc)
+}
+
 func (s *FifoCpuSharer) GrabCpu() {
 	s.grabCpu()
 }
