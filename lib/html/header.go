@@ -12,6 +12,13 @@ import (
 )
 
 var (
+	// The version and build time of the application.
+	// Set with --ldflags and -X
+	Version   = ""
+	BuildTime = ""
+)
+
+var (
 	timeFormat string = "02 Jan 2006 15:04:05.99 MST"
 
 	startTime  time.Time
@@ -32,6 +39,12 @@ func getRusage() (time.Time, time.Time) {
 }
 
 func writeHeader(writer io.Writer, req *http.Request, noGC bool) {
+	if Version != "" {
+		fmt.Fprintf(writer, "Version: %s<br>\n", Version)
+	}
+	if BuildTime != "" {
+		fmt.Fprintf(writer, "Build time: %s<br>\n", BuildTime)
+	}
 	fmt.Fprintf(writer, "Start time: %s<br>\n", startTime.Format(timeFormat))
 	uptime := time.Since(startTime) + time.Millisecond*50
 	uptime = (uptime / time.Millisecond / 100) * time.Millisecond * 100
