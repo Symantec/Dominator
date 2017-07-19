@@ -69,6 +69,11 @@ func (s *FifoCpuSharer) GoWhenAvailable(goFunc func()) {
 	startGoroutineWhenAvailable(s, goFunc)
 }
 
+func (s *FifoCpuSharer) GoWhenIdle(minIdleTime, timeout time.Duration,
+	goFunc func()) bool {
+	return s.goWhenIdle(minIdleTime, timeout, goFunc)
+}
+
 func (s *FifoCpuSharer) GrabCpu() {
 	s.grabCpu()
 }

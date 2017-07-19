@@ -30,6 +30,18 @@ func (s *FifoCpuSharer) getStatistics() Statistics {
 	return s.Statistics
 }
 
+func (s *FifoCpuSharer) goWhenIdle(minIdleTime, timeout time.Duration,
+	goFunc func()) bool {
+	if !s.grabIdleCpu(minIdleTime, timeout) {
+		return false
+	}
+	go func() {
+		goFunc()
+		s.ReleaseCpu()
+	}()
+	return true
+}
+
 func (s *FifoCpuSharer) grabCpu() {
 	select {
 	case s.semaphore <- struct{}{}: // A CPU is immediately available.
