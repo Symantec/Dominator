@@ -78,10 +78,12 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 	stats := herd.cpuSharer.GetStatistics()
 	timeSinceLastIdleEvent := time.Since(stats.LastIdleEvent)
 	fmt.Fprintf(writer,
-		"CPU slots: %d out of %d; idle events: %d, last: %s, time since: %s<br>\n",
+		"CPU slots: %d out of %d; idle events: %d, last: %s, time since: %s, last acquire: %s, last yield: %s<br>\n",
 		stats.NumCpuRunning, stats.NumCpu, stats.NumIdleEvents,
 		stats.LastIdleEvent.Format(timeFormat),
-		format.Duration(timeSinceLastIdleEvent))
+		format.Duration(timeSinceLastIdleEvent),
+		format.Duration(time.Since(stats.LastAcquireEvent)),
+		format.Duration(time.Since(stats.LastYieldEvent)))
 }
 
 func (herd *Herd) writeDisableStatus(writer io.Writer) {

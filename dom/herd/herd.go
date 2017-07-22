@@ -36,6 +36,7 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	herd.pollSemaphore = make(chan struct{}, numPollSlots)
 	herd.pushSemaphore = make(chan struct{}, runtime.NumCPU())
 	herd.cpuSharer = cpusharer.NewFifoCpuSharer()
+	herd.cpuSharer.SetGrabTimeout(time.Minute * 15)
 	herd.currentScanStartTime = time.Now()
 	herd.setupMetrics(metricsDir)
 	return &herd
@@ -97,7 +98,7 @@ func (herd *Herd) pollNextSub() bool {
 	if sub.busy { // Quick lockless check.
 		return false
 	}
-	herd.cpuSharer.Go(func() {
+	herd.cpuSharer.GoWhenIdle(0, -1, func() {
 		if !sub.tryMakeBusy() {
 			return
 		}

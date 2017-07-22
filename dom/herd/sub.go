@@ -100,9 +100,15 @@ func (sub *Sub) connectAndPoll() {
 	if sub.processFileUpdates() {
 		sub.generationCount = 0 // Force a full poll.
 	}
+	sub.deletingFlagMutex.Lock()
 	if sub.deleting {
+		sub.deletingFlagMutex.Unlock()
 		return
 	}
+	if sub.clientResource == nil {
+		sub.clientResource = srpc.NewClientResource("tcp", sub.address())
+	}
+	sub.deletingFlagMutex.Unlock()
 	previousStatus := sub.status
 	timer := time.AfterFunc(time.Second, func() {
 		sub.publishedStatus = sub.status
@@ -112,11 +118,6 @@ func (sub *Sub) connectAndPoll() {
 		sub.publishedStatus = sub.status
 	}()
 	sub.lastConnectionStartTime = time.Now()
-	sub.busyFlagMutex.Lock()
-	if sub.clientResource == nil {
-		sub.clientResource = srpc.NewClientResource("tcp", sub.address())
-	}
-	sub.busyFlagMutex.Unlock()
 	srpcClient, err := sub.clientResource.GetHTTPWithDialer(sub.cancelChannel,
 		libnet.NewCpuSharingDialer(&net.Dialer{
 			Timeout: time.Second * time.Duration(*subConnectTimeout)},
@@ -198,6 +199,8 @@ func (sub *Sub) loadConfiguration() {
 	if newRequiredImageName != sub.requiredImageName {
 		sub.computedInodes = nil
 	}
+	sub.herd.cpuSharer.ReleaseCpu()
+	defer sub.herd.cpuSharer.GrabCpu()
 	sub.requiredImageName = newRequiredImageName
 	sub.requiredImage = sub.herd.imageManager.GetNoError(sub.requiredImageName)
 	sub.plannedImageName = sub.mdb.PlannedImage
@@ -210,14 +213,17 @@ func (sub *Sub) processFileUpdates() bool {
 		image := sub.requiredImage
 		if image != nil && sub.computedInodes == nil {
 			sub.computedInodes = make(map[string]*filesystem.RegularInode)
-			sub.busyFlagMutex.Lock()
+			sub.deletingFlagMutex.Lock()
 			if sub.deleting {
-				sub.busyFlagMutex.Unlock()
+				sub.deletingFlagMutex.Unlock()
 				return false
 			}
+			computedFiles := sub.getComputedFiles(image)
+			sub.herd.cpuSharer.ReleaseCpu()
 			sub.herd.computedFilesManager.Update(
-				filegenclient.Machine{sub.mdb, sub.getComputedFiles(image)})
-			sub.busyFlagMutex.Unlock()
+				filegenclient.Machine{sub.mdb, computedFiles})
+			sub.herd.cpuSharer.GrabCpu()
+			sub.deletingFlagMutex.Unlock()
 		}
 		select {
 		case fileInfos := <-sub.fileUpdateChannel:
@@ -543,7 +549,7 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, image *image.Image,
 		returnStatus = statusFetching
 	}
 	if len(objectsToPush) > 0 {
-		sub.herd.pushSemaphore <- struct{}{}
+		sub.herd.cpuSharer.GrabSemaphore(sub.herd.pushSemaphore)
 		defer func() { <-sub.herd.pushSemaphore }()
 		sub.status = statusPushing
 		err := lib.PushObjects(subObj, objectsToPush, logger)
