@@ -98,7 +98,7 @@ func (herd *Herd) pollNextSub() bool {
 	if sub.busy { // Quick lockless check.
 		return false
 	}
-	herd.cpuSharer.Go(func() {
+	herd.cpuSharer.GoWhenIdle(0, -1, func() {
 		if !sub.tryMakeBusy() {
 			return
 		}
