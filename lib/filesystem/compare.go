@@ -7,6 +7,11 @@ import (
 	"syscall"
 )
 
+type timespec struct {
+	Sec  int64
+	Nsec int32
+}
+
 func compareFileSystems(left, right *FileSystem, logWriter io.Writer) bool {
 	if len(left.InodeTable) != len(right.InodeTable) {
 		if logWriter != nil {
@@ -188,11 +193,11 @@ func compareRegularInodesMetadata(left, right *RegularInode,
 		}
 		return false
 	}
-	var leftMtime, rightMtime syscall.Timespec
+	var leftMtime, rightMtime timespec
 	leftMtime.Sec = left.MtimeSeconds
-	leftMtime.Nsec = int64(left.MtimeNanoSeconds)
+	leftMtime.Nsec = left.MtimeNanoSeconds
 	rightMtime.Sec = right.MtimeSeconds
-	rightMtime.Nsec = int64(right.MtimeNanoSeconds)
+	rightMtime.Nsec = right.MtimeNanoSeconds
 	if leftMtime != rightMtime {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "Mtime: left vs. right: %v vs. %v\n",
@@ -357,11 +362,11 @@ func compareSpecialInodesMetadata(left, right *SpecialInode,
 		}
 		return false
 	}
-	var leftMtime, rightMtime syscall.Timespec
+	var leftMtime, rightMtime timespec
 	leftMtime.Sec = left.MtimeSeconds
-	leftMtime.Nsec = int64(left.MtimeNanoSeconds)
+	leftMtime.Nsec = left.MtimeNanoSeconds
 	rightMtime.Sec = right.MtimeSeconds
-	rightMtime.Nsec = int64(right.MtimeNanoSeconds)
+	rightMtime.Nsec = right.MtimeNanoSeconds
 	if leftMtime != rightMtime {
 		if logWriter != nil {
 			fmt.Fprintf(logWriter, "Mtime: left vs. right: %v vs. %v\n",
