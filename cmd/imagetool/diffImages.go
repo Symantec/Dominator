@@ -47,7 +47,8 @@ func diffTypedImages(tool string, lName string, rName string) {
 
 func getTypedImage(typedName string) (*filesystem.FileSystem, error) {
 	if len(typedName) < 3 || typedName[1] != ':' {
-		return nil, errors.New("not a typed name: " + typedName)
+		imageSClient, _ := getClients()
+		return getFsOfImage(imageSClient, typedName)
 	}
 	switch name := typedName[2:]; typedName[0] {
 	case 'd':

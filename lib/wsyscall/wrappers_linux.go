@@ -8,13 +8,13 @@ import (
 func convertStat(dest *Stat_t, source *syscall.Stat_t) {
 	dest.Dev = source.Dev
 	dest.Ino = source.Ino
-	dest.Nlink = source.Nlink
+	dest.Nlink = uint64(source.Nlink)
 	dest.Mode = source.Mode
 	dest.Uid = source.Uid
 	dest.Gid = source.Gid
 	dest.Rdev = source.Rdev
 	dest.Size = source.Size
-	dest.Blksize = source.Blksize
+	dest.Blksize = int64(source.Blksize)
 	dest.Blocks = source.Blocks
 	dest.Atim = source.Atim
 	dest.Mtim = source.Mtim
