@@ -20,6 +20,17 @@ const (
 	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
 )
 
+func createFile(filename string) error {
+	if file, err := os.Create(filename); err != nil {
+		return err
+	} else {
+		// Don't wait for finaliser to close, otherwise we can have too many
+		// open files.
+		file.Close()
+		return nil
+	}
+}
+
 func unpack(fs *filesystem.FileSystem, objectsGetter objectserver.ObjectsGetter,
 	dirname string, logger log.Logger) error {
 	inodesDir := dirname + ".inodes"
@@ -122,7 +133,7 @@ func writeInodes(inodeTable filesystem.InodeTable, inodesDir string) error {
 		switch inode := inode.(type) {
 		case *filesystem.RegularInode:
 			if inode.Size < 1 {
-				if _, err := os.Create(filename); err != nil {
+				if err := createFile(filename); err != nil {
 					return err
 				}
 			}
@@ -130,7 +141,7 @@ func writeInodes(inodeTable filesystem.InodeTable, inodesDir string) error {
 				return err
 			}
 		case *filesystem.ComputedRegularInode:
-			if _, err := os.Create(filename); err != nil {
+			if err := createFile(filename); err != nil {
 				return err
 			}
 			tmpInode := &filesystem.RegularInode{
