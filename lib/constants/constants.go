@@ -7,6 +7,7 @@ const (
 	BasicFileGenServerPortNumber = 6972
 	SimpleMdbServerPortNumber    = 6973
 	ImageUnpackerPortNumber      = 6974
+	ImaginatorPortNumber         = 6975
 
 	DefaultCpuPercent          = 50
 	DefaultNetworkSpeedPercent = 10
