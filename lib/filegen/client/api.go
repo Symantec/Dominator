@@ -6,11 +6,17 @@ import (
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
+	"sync"
 )
 
 type ComputedFile struct {
 	Pathname string
 	Source   string
+}
+
+type gauge struct {
+	sync.Mutex
+	value uint64
 }
 
 type Machine struct {
@@ -44,6 +50,7 @@ type Manager struct {
 	serverMessageChannel   chan *serverMessageType
 	sourceReconnectChannel chan<- string
 	objectWaiters          map[hash.Hash][]chan<- hash.Hash
+	numObjectWaiters       gauge
 	logger                 log.Logger
 }
 

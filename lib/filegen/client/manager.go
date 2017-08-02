@@ -8,6 +8,8 @@ import (
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
+	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
 	"time"
 )
@@ -25,6 +27,9 @@ func newManager(objSrv objectserver.ObjectServer, logger log.Logger) *Manager {
 		sourceReconnectChannel: sourceReconnectChannel,
 		objectWaiters:          make(map[hash.Hash][]chan<- hash.Hash),
 		logger:                 logger}
+	tricorder.RegisterMetric("filegen/client/num-object-waiters",
+		&m.numObjectWaiters.value, units.None,
+		"number of goroutines waiting for objects")
 	go m.manage(sourceReconnectChannel)
 	return m
 }

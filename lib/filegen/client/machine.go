@@ -113,7 +113,7 @@ func (m *Manager) handleYieldResponse(machine *machineType,
 	}
 	if len(objectsToWaitFor) > 0 {
 		go waitForObjectsAndSendUpdate(waiterChannel, objectsToWaitFor,
-			machine.updateChannel, files)
+			machine.updateChannel, files, &m.numObjectWaiters)
 	} else {
 		machine.updateChannel <- files
 	}
@@ -121,8 +121,11 @@ func (m *Manager) handleYieldResponse(machine *machineType,
 
 func waitForObjectsAndSendUpdate(objectChannel <-chan hash.Hash,
 	objectsToWaitFor map[hash.Hash]struct{},
-	updateChannel chan<- []proto.FileInfo, files []proto.FileInfo) {
+	updateChannel chan<- []proto.FileInfo, files []proto.FileInfo,
+	numObjectWaiters *gauge) {
+	numObjectWaiters.increment()
 	defer func() {
+		numObjectWaiters.decrement()
 		recover() // If updateChannel is closed, it means the machine went away.
 	}()
 	for hashVal := range objectChannel {
@@ -131,4 +134,16 @@ func waitForObjectsAndSendUpdate(objectChannel <-chan hash.Hash,
 			updateChannel <- files // This will panic if the machine went away.
 		}
 	}
+}
+
+func (g *gauge) decrement() {
+	g.Lock()
+	g.value--
+	g.Unlock()
+}
+
+func (g *gauge) increment() {
+	g.Lock()
+	g.value++
+	g.Unlock()
 }
