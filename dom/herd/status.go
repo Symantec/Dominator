@@ -9,6 +9,10 @@ import (
 )
 
 func (herd *Herd) statusHandler(w http.ResponseWriter, req *http.Request) {
+	if req.URL.Path != "/" {
+		http.NotFound(w, req)
+		return
+	}
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
 	fmt.Fprintln(writer, "<title>Dominator status page</title>")
