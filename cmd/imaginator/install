@@ -1,0 +1,10 @@
+#! /bin/bash --posix
+
+set -o nounset
+
+cd "${0%/*}"
+
+. ./scripts/install.lib
+
+#$echo cp -p scripts/image-pusher/* /usr/local/etc || exit
+install_all image-builder
