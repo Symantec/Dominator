@@ -1,0 +1,120 @@
+{
+    "BootstrapStreams": {
+        "bootstrap/CentOS-6": {
+	    "BootstrapCommand": [
+		"yumbootstrap",
+		"--repo",
+		"http://mirror.company.com/centos-6",
+		"centos-6",
+		"$dir"
+	    ],
+	    "FilterLines": [
+		"/etc/fstab",
+		"/var/log/.*"
+	    ],
+	    "PackagerType": "rpm"
+	},
+	"bootstrap/CentOS-7": {
+	    "BootstrapCommand": [
+		"yumbootstrap",
+		"--repo",
+		"http://mirror.company.com/centos-7",
+		"centos-7",
+		"$dir"
+	    ],
+	    "FilterLines": [
+		"/etc/fstab",
+		"/var/log/.*"
+	    ],
+	    "PackagerType": "rpm"
+	},
+	"bootstrap/Debian-9": {
+	    "BootstrapCommand": [
+		"debootstrap",
+		"--arch=amd64",
+		"stretch",
+		"$dir",
+		"http://mirror.company.com/debian"
+	    ],
+	    "PackagerType": "deb",
+	    "FilterLines": [
+		"/etc/hostname",
+		"/etc/machine-id",
+		"/var/log/.*"
+	    ]
+	},
+        "bootstrap/Ubuntu-14.04": {
+	    "BootstrapCommand": [
+		"debootstrap",
+		"--arch=amd64",
+		"trusty",
+		"$dir",
+		"http://mirror.company.com/ubuntu"
+	    ],
+	    "FilterLines": [
+		"/etc/fstab",
+		"/etc/hostname",
+		"/var/log/.*"
+	    ],
+	    "PackagerType": "deb"
+	}
+    },
+    "ImageStreamsUrl": "file:///etc/image-builder/image-streams.json",
+    "PackagerTypes": {
+	"deb": {
+	    "CleanCommand": [
+		"apt-get",
+		"clean"
+	    ],
+	    "InstallCommand": [
+		"apt-get",
+		"-q",
+		"-y",
+		"--no-install-recommends",
+		"install"
+	    ],
+	    "UpdateCommand": [
+		"apt-get",
+		"-q",
+		"-y",
+		"update"
+	    ],
+	    "UpgradeCommand": [
+		"apt-get",
+		"-q",
+		"-y",
+		"-o",
+		"Dpkg::Options::=--force-confold",
+		"dist-upgrade"
+	    ],
+	    "Verbatim": [
+		"export DEBIAN_FRONTEND=noninteractive"
+	    ]
+	},
+	"rpm": {
+	    "CleanCommand": [
+		"yum",
+		"clean",
+		"packages"
+	    ],
+	    "InstallCommand": [
+		"yum",
+		"-q",
+		"-y",
+		"install"
+	    ],
+	    "UpdateCommand": [
+		"yum",
+		"-q",
+		"-y",
+		"makecache"
+	    ],
+	    "UpgradeCommand": [
+		"yum",
+		"-q",
+		"-y",
+		"update"
+	    ]
+	}
+    }
+}

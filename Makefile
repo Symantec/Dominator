@@ -17,6 +17,9 @@ image-unpacker.tarball:
 imageserver.tarball:
 	@./scripts/make-tarball imageserver -C $(ETCDIR) ssl
 
+imaginator.tarball:
+	@./scripts/make-tarball imaginator -C $(ETCDIR) ssl
+
 mdbd.tarball:
 	@./scripts/make-tarball mdbd
 

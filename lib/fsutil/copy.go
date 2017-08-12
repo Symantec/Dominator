@@ -24,12 +24,19 @@ func copyToFile(destFilename string, perm os.FileMode, reader io.Reader,
 	defer os.Remove(tmpFilename)
 	defer destFile.Close()
 	var nCopied int64
-	if nCopied, err = io.Copy(destFile, reader); err != nil {
-		return fmt.Errorf("error copying: %s", err)
-	}
-	if nCopied != int64(length) {
-		return fmt.Errorf("expected length: %d, got: %d for: %s\n",
-			length, nCopied, tmpFilename)
+	iLength := int64(length)
+	if length < 1 {
+		if _, err := io.Copy(destFile, reader); err != nil {
+			return fmt.Errorf("error copying: %s", err)
+		}
+	} else {
+		if nCopied, err = io.CopyN(destFile, reader, iLength); err != nil {
+			return fmt.Errorf("error copying: %s", err)
+		}
+		if nCopied != iLength {
+			return fmt.Errorf("expected length: %d, got: %d for: %s\n",
+				length, nCopied, tmpFilename)
+		}
 	}
 	return os.Rename(tmpFilename, destFilename)
 }
@@ -98,12 +105,5 @@ func copyFile(destFilename, sourceFilename string, mode os.FileMode) error {
 		return errors.New(sourceFilename + ": " + err.Error())
 	}
 	defer sourceFile.Close()
-	destFile, err := os.OpenFile(destFilename,
-		os.O_CREATE|os.O_TRUNC|os.O_WRONLY, mode)
-	if err != nil {
-		return err
-	}
-	defer destFile.Close()
-	_, err = io.Copy(destFile, sourceFile)
-	return err
+	return copyToFile(destFilename, mode, sourceFile, 0)
 }
