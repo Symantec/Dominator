@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/format"
 	"io"
 	"os"
 	"path"
@@ -158,7 +159,7 @@ func (lb *LogBuffer) enforceQuota() error {
 		return err
 	}
 	sort.Strings(names)
-	var usage uint64
+	var usage, numBytesDeleted, numFilesDeleted uint64
 	deletedLatestFile := false
 	deleteRemainingFiles := false
 	latestFile := true
@@ -178,6 +179,8 @@ func (lb *LogBuffer) enforceQuota() error {
 			}
 			if size+usage > lb.quota || deleteRemainingFiles {
 				os.Remove(filename)
+				numBytesDeleted += uint64(fi.Size())
+				numFilesDeleted++
 				deleteRemainingFiles = true
 				if latestFile {
 					deletedLatestFile = true
@@ -213,6 +216,16 @@ func (lb *LogBuffer) enforceQuota() error {
 		os.Remove(tmpSymlink)
 		os.Symlink(filename, tmpSymlink)
 		os.Rename(tmpSymlink, symlink)
+	}
+	if numBytesDeleted > 0 {
+		now := time.Now()
+		year, month, day := now.Date()
+		hour, minute, second := now.Clock()
+		nWritten, _ := fmt.Fprintf(lb.writer,
+			"%d/%02d/%02d %02d:%02d:%02d Deleted %s in %d files\n",
+			year, month, day, hour, minute, second,
+			format.FormatBytes(numBytesDeleted), numFilesDeleted)
+		lb.usage += uint64(nWritten)
 	}
 	return nil
 }
