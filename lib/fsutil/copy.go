@@ -41,7 +41,9 @@ func copyToFile(destFilename string, perm os.FileMode, reader io.Reader,
 	return os.Rename(tmpFilename, destFilename)
 }
 
-func copyTree(destDir, sourceDir string) error {
+func copyTree(destDir, sourceDir string,
+	copyFunc func(destFilename, sourceFilename string,
+		mode os.FileMode) error) error {
 	file, err := os.Open(sourceDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -68,11 +70,12 @@ func copyTree(destDir, sourceDir string) error {
 					return err
 				}
 			}
-			if err := copyTree(destFilename, sourceFilename); err != nil {
+			err := copyTree(destFilename, sourceFilename, copyFunc)
+			if err != nil {
 				return err
 			}
 		case syscall.S_IFREG:
-			err := copyFile(destFilename, sourceFilename,
+			err := copyFunc(destFilename, sourceFilename,
 				os.FileMode(stat.Mode)&os.ModePerm)
 			if err != nil {
 				return err

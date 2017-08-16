@@ -28,7 +28,15 @@ func CopyToFile(destFilename string, perm os.FileMode, reader io.Reader,
 
 // CopyTree will copy a directory tree.
 func CopyTree(destDir, sourceDir string) error {
-	return copyTree(destDir, sourceDir)
+	return copyTree(destDir, sourceDir, copyFile)
+}
+
+// CopyTreeWithCopyFunc is similar to CopyTree except it uses a specified copy
+// function for copying regular files.
+func CopyTreeWithCopyFunc(destDir, sourceDir string,
+	copyFunc func(destFilename, sourceFilename string,
+		mode os.FileMode) error) error {
+	return copyTree(destDir, sourceDir, copyFunc)
 }
 
 // ForceLink creates newname as a hard link to the oldname file. It first
