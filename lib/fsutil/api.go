@@ -13,6 +13,12 @@ var (
 	ErrorChecksumMismatch = errors.New("checksum mismatch")
 )
 
+// CompareFiles will read and compare the content of two files and return true
+// if they are the same else false.
+func CompareFiles(leftFilename, rightFilename string) (bool, error) {
+	return compareFiles(leftFilename, rightFilename)
+}
+
 func CopyFile(destFilename, sourceFilename string, mode os.FileMode) error {
 	return copyFile(destFilename, sourceFilename, mode)
 }
