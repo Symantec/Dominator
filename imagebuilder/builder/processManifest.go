@@ -96,12 +96,30 @@ func processManifest(manifestDir, rootDir string, buildLog io.Writer) error {
 func copyFiles(manifestDir, dirname, rootDir string, buildLog io.Writer) error {
 	startTime := time.Now()
 	sourceDir := path.Join(manifestDir, dirname)
-	if err := fsutil.CopyTree(rootDir, sourceDir); err != nil {
+	cf := func(destFilename, sourceFilename string, mode os.FileMode) error {
+		return copyFile(destFilename, sourceFilename, mode, len(manifestDir)+1,
+			buildLog)
+	}
+	if err := fsutil.CopyTreeWithCopyFunc(rootDir, sourceDir, cf); err != nil {
 		return fmt.Errorf("error copying %s: %s", dirname, err)
 	}
 	fmt.Fprintf(buildLog, "\nCopied %s tree in %s\n",
 		dirname, format.Duration(time.Since(startTime)))
 	return nil
+}
+
+func copyFile(destFilename, sourceFilename string, mode os.FileMode,
+	prefixLength int, buildLog io.Writer) error {
+	same, err := fsutil.CompareFiles(destFilename, sourceFilename)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	if same {
+		fmt.Fprintf(buildLog, "Same contents for: %s\n",
+			sourceFilename[prefixLength:])
+		return nil
+	}
+	return fsutil.CopyFile(destFilename, sourceFilename, mode)
 }
 
 func installPackages(manifestDir, rootDir string, buildLog io.Writer) error {
