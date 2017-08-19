@@ -74,8 +74,8 @@ func Load(confUrl, variablesFile, stateDir, imageServerAddress string,
 }
 
 func (b *Builder) BuildImage(streamName string, expiresIn time.Duration,
-	gitBranch string) (string, []byte, error) {
-	return b.buildImage(streamName, expiresIn, gitBranch)
+	gitBranch string, maxSourceAge time.Duration) (string, []byte, error) {
+	return b.buildImage(streamName, expiresIn, gitBranch, maxSourceAge)
 }
 
 func (b *Builder) GetCurrentBuildLog(streamName string) ([]byte, error) {
