@@ -12,8 +12,8 @@ import (
 
 type imageBuilder interface {
 	build(b *Builder, client *srpc.Client, streamName string,
-		expiresIn time.Duration, gitBranch string, buildLog *bytes.Buffer,
-		logger log.Logger) (string, error)
+		expiresIn time.Duration, gitBranch string, maxSourceAge time.Duration,
+		buildLog *bytes.Buffer, logger log.Logger) (string, error)
 }
 
 type bootstrapStream struct {
@@ -51,6 +51,9 @@ type packagerType struct {
 	UpgradeCommand []string
 	Verbatim       []string
 }
+
+type unpackImageFunction func(client *srpc.Client, streamName, rootDir string,
+	logger log.Logger) (string, error)
 
 type Builder struct {
 	stateDir                  string
@@ -94,7 +97,7 @@ func BuildImageFromManifest(client *srpc.Client, manifestDir, streamName string,
 	expiresIn time.Duration, buildLog *bytes.Buffer, logger log.Logger) (
 	string, error) {
 	return buildImageFromManifest(client, manifestDir, streamName, expiresIn,
-		buildLog, logger)
+		unpackImageSimple, buildLog, logger)
 }
 
 func BuildTreeFromManifest(client *srpc.Client, manifestDir string,

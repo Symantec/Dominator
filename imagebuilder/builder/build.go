@@ -63,7 +63,7 @@ func (b *Builder) build(client *srpc.Client, streamName string,
 	b.currentBuildLogs[streamName] = buildLog
 	b.buildResultsLock.Unlock()
 	name, err := builder.build(b, client, streamName, expiresIn, gitBranch,
-		buildLog, buildLogger)
+		maxSourceAge, buildLog, buildLogger)
 	teelogger.New(b.logger, buildLogger).Printf("Total build duration: %s\n",
 		format.Duration(time.Since(startTime)))
 	b.buildResultsLock.Lock()

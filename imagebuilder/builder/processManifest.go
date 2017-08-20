@@ -24,14 +24,15 @@ const (
 )
 
 func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
-	rootDir string, buildLog *bytes.Buffer, logger log.Logger) (
-	manifestType, error) {
+	unpackImageFunc unpackImageFunction, rootDir string, buildLog *bytes.Buffer,
+	logger log.Logger) (manifestType, error) {
 	manifestFile := path.Join(manifestDir, "manifest")
 	var manifest manifestType
 	if err := json.ReadFromFile(manifestFile, &manifest); err != nil {
 		return manifestType{}, err
 	}
-	imageName, err := unpackImage(client, manifest.SourceImage, rootDir, logger)
+	imageName, err := unpackImageFunc(client, manifest.SourceImage, rootDir,
+		logger)
 	if err != nil {
 		return manifestType{},
 			errors.New("error unpacking image: " + err.Error())

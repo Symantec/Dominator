@@ -26,7 +26,8 @@ type manifestType struct {
 
 func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 	streamName string, expiresIn time.Duration, gitBranch string,
-	buildLog *bytes.Buffer, logger log.Logger) (string, error) {
+	maxSourceAge time.Duration, buildLog *bytes.Buffer, logger log.Logger) (
+	string, error) {
 	manifestRoot, err := ioutil.TempDir("",
 		strings.Replace(streamName, "/", "_", -1)+".manifest")
 	if err != nil {
@@ -54,7 +55,12 @@ func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 		format.Duration(time.Since(startTime)))
 	manifestDirectory := os.Expand(stream.ManifestDirectory, variableFunc)
 	name, err := buildImageFromManifest(client, streamName,
-		path.Join(manifestRoot, manifestDirectory), expiresIn, buildLog, logger)
+		path.Join(manifestRoot, manifestDirectory), expiresIn,
+		func(client *srpc.Client, streamName, rootDir string,
+			logger log.Logger) (string, error) {
+			return unpackImage(client, streamName, b, maxSourceAge, rootDir,
+				logger)
+		}, buildLog, logger)
 	if err != nil {
 		return "", err
 	}
@@ -62,8 +68,8 @@ func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 }
 
 func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
-	expiresIn time.Duration, buildLog *bytes.Buffer, logger log.Logger) (
-	string, error) {
+	expiresIn time.Duration, unpackImageFunc unpackImageFunction,
+	buildLog *bytes.Buffer, logger log.Logger) (string, error) {
 	// First load all the various manifest files (fail early on error).
 	computedFilesList, err := util.LoadComputedFiles(
 		path.Join(manifestDir, "computed-files.json"))
@@ -92,8 +98,8 @@ func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
 		return "", err
 	}
 	defer os.RemoveAll(rootDir)
-	manifest, err := unpackImageAndProcessManifest(client, manifestDir, rootDir,
-		buildLog, logger)
+	manifest, err := unpackImageAndProcessManifest(client, manifestDir,
+		unpackImageFunc, rootDir, buildLog, logger)
 	if err != nil {
 		return "", err
 	}
@@ -115,8 +121,8 @@ func buildTreeFromManifest(client *srpc.Client, manifestDir string,
 	if err != nil {
 		return "", err
 	}
-	_, err = unpackImageAndProcessManifest(client, manifestDir, rootDir,
-		buildLog, logger)
+	_, err = unpackImageAndProcessManifest(client, manifestDir,
+		unpackImageSimple, rootDir, buildLog, logger)
 	if err != nil {
 		os.RemoveAll(rootDir)
 		return "", err
@@ -124,7 +130,13 @@ func buildTreeFromManifest(client *srpc.Client, manifestDir string,
 	return rootDir, nil
 }
 
-func unpackImage(client *srpc.Client, streamName, rootDir string,
+func unpackImageSimple(client *srpc.Client, streamName, rootDir string,
+	logger log.Logger) (string, error) {
+	return unpackImage(client, streamName, nil, 0, rootDir, logger)
+}
+
+func unpackImage(client *srpc.Client, streamName string, builder *Builder,
+	maxSourceAge time.Duration, rootDir string,
 	logger log.Logger) (string, error) {
 	imageName, sourceImage, err := getLatestImage(client, streamName)
 	if err != nil {
