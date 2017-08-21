@@ -45,6 +45,7 @@ func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
 		return "", err
 	}
 	defer os.RemoveAll(rootDir)
+	fmt.Fprintf(buildLog, "Created image working directory: %s\n", rootDir)
 	for _, arg := range stream.BootstrapCommand {
 		if arg == "$dir" {
 			arg = rootDir

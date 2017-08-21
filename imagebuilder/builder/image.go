@@ -98,6 +98,7 @@ func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
 		return "", err
 	}
 	defer os.RemoveAll(rootDir)
+	fmt.Fprintf(buildLog, "Created image working directory: %s\n", rootDir)
 	manifest, err := unpackImageAndProcessManifest(client, manifestDir,
 		unpackImageFunc, rootDir, buildLog, logger)
 	if err != nil {

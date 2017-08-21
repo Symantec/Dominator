@@ -64,6 +64,9 @@ func (b *Builder) build(client *srpc.Client, streamName string,
 	b.buildResultsLock.Unlock()
 	name, err := builder.build(b, client, streamName, expiresIn, gitBranch,
 		maxSourceAge, buildLog, buildLogger)
+	if err != nil {
+		buildLogger.Printf("Error building image: %s\n", err)
+	}
 	teelogger.New(b.logger, buildLogger).Printf("Total build duration: %s\n",
 		format.Duration(time.Since(startTime)))
 	b.buildResultsLock.Lock()
