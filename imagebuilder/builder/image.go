@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
@@ -58,8 +59,8 @@ func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 		path.Join(manifestRoot, manifestDirectory), expiresIn,
 		func(client *srpc.Client, streamName, rootDir string,
 			logger log.Logger) (string, error) {
-			return unpackImage(client, streamName, b, maxSourceAge, rootDir,
-				logger)
+			return unpackImage(client, streamName, b, maxSourceAge, expiresIn,
+				rootDir, logger)
 		}, buildLog, logger)
 	if err != nil {
 		return "", err
@@ -133,18 +134,48 @@ func buildTreeFromManifest(client *srpc.Client, manifestDir string,
 
 func unpackImageSimple(client *srpc.Client, streamName, rootDir string,
 	logger log.Logger) (string, error) {
-	return unpackImage(client, streamName, nil, 0, rootDir, logger)
+	return unpackImage(client, streamName, nil, 0, 0, rootDir, logger)
 }
 
 func unpackImage(client *srpc.Client, streamName string, builder *Builder,
-	maxSourceAge time.Duration, rootDir string,
+	maxSourceAge, expiresIn time.Duration, rootDir string,
 	logger log.Logger) (string, error) {
 	imageName, sourceImage, err := getLatestImage(client, streamName)
 	if err != nil {
 		return "", err
 	}
 	if sourceImage == nil {
-		return "", errors.New("no images for stream: " + streamName)
+		if builder == nil {
+			return "", errors.New("no images for stream: " + streamName)
+		}
+		logger.Printf("No source image: %s, attempting to build one\n",
+			streamName)
+		imageName, _, err = builder.build(client, streamName, expiresIn,
+			"master", maxSourceAge)
+		if err != nil {
+			return "", err
+		}
+		sourceImage, err = imageclient.GetImage(client, imageName)
+		if err != nil {
+			return "", err
+		}
+		logger.Printf("Built new source image: %s\n", imageName)
+	}
+	if maxSourceAge > 0 && time.Since(sourceImage.CreatedOn) > maxSourceAge &&
+		builder != nil {
+		logger.Printf("Image: %s is too old, attempting to build a new one\n",
+			imageName)
+		imageName, _, err = builder.build(client, streamName, expiresIn,
+			"master", maxSourceAge)
+		if err != nil {
+			return "", err
+		}
+		sourceImage, err = imageclient.GetImage(client, imageName)
+		if err != nil {
+			return "", err
+		}
+		logger.Printf("Built new source image: %s\n", imageName)
+		sourceImage.FileSystem.RebuildInodePointers()
 	}
 	objClient := objectclient.AttachObjectClient(client)
 	defer objClient.Close()
