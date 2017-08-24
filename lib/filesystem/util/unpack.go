@@ -61,7 +61,8 @@ func unpack(fs *filesystem.FileSystem, objectsGetter objectserver.ObjectsGetter,
 	}
 	startBuildTime := time.Now()
 	writeDuration := startBuildTime.Sub(startWriteTime)
-	if err := buildTree(&fs.DirectoryInode, dirname, inodesDir); err != nil {
+	err = buildTree(&fs.DirectoryInode, dirname, "", inodesDir)
+	if err != nil {
 		return err
 	}
 	buildDuration := time.Since(startBuildTime)
@@ -172,19 +173,23 @@ func writeInodes(inodeTable filesystem.InodeTable, inodesDir string) error {
 }
 
 func buildTree(directory *filesystem.DirectoryInode,
-	myPathName, inodesDir string) error {
+	rootDir, mySubPathName, inodesDir string) error {
 	for _, dirent := range directory.EntryList {
 		oldPath := path.Join(inodesDir, fmt.Sprintf("%d", dirent.InodeNumber))
-		newPath := path.Join(myPathName, dirent.Name)
-		if inode, ok := dirent.Inode().(*filesystem.DirectoryInode); ok {
-			if err := os.Rename(oldPath, newPath); err != nil {
+		newSubPath := path.Join(mySubPathName, dirent.Name)
+		newFullPath := path.Join(rootDir, newSubPath)
+		if inode := dirent.Inode(); inode == nil {
+			panic("no inode pointer for: " + newSubPath)
+		} else if inode, ok := inode.(*filesystem.DirectoryInode); ok {
+			if err := os.Rename(oldPath, newFullPath); err != nil {
 				return err
 			}
-			if err := buildTree(inode, newPath, inodesDir); err != nil {
+			err := buildTree(inode, rootDir, newSubPath, inodesDir)
+			if err != nil {
 				return err
 			}
 		} else {
-			if err := os.Link(oldPath, newPath); err != nil {
+			if err := os.Link(oldPath, newFullPath); err != nil {
 				if !os.IsNotExist(err) {
 					return err
 				}

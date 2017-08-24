@@ -23,7 +23,7 @@ func (b *Builder) rebuildImages(minInterval time.Duration) {
 		}
 		sleepUntil = time.Now().Add(minInterval)
 		for _, streamName := range b.imageStreamsToAutoRebuild {
-			_, _, err := b.build(client, streamName, minInterval*2, "")
+			_, _, err := b.build(client, streamName, minInterval*2, "", 0)
 			if err != nil {
 				b.logger.Printf("Error building image: %s: %s\n",
 					streamName, err)
@@ -34,20 +34,23 @@ func (b *Builder) rebuildImages(minInterval time.Duration) {
 }
 
 func (b *Builder) buildImage(streamName string,
-	expiresIn time.Duration, gitBranch string) (string, []byte, error) {
+	expiresIn time.Duration, gitBranch string, maxSourceAge time.Duration) (
+	string, []byte, error) {
 	client, err := srpc.DialHTTP("tcp", b.imageServerAddress, 0)
 	if err != nil {
 		return "", nil, err
 	}
 	defer client.Close()
-	name, buildLog, err := b.build(client, streamName, expiresIn, gitBranch)
+	name, buildLog, err := b.build(client, streamName, expiresIn, gitBranch,
+		maxSourceAge)
 	log := make([]byte, len(buildLog))
 	copy(log, buildLog)
 	return name, log, err
 }
 
 func (b *Builder) build(client *srpc.Client, streamName string,
-	expiresIn time.Duration, gitBranch string) (string, []byte, error) {
+	expiresIn time.Duration, gitBranch string, maxSourceAge time.Duration) (
+	string, []byte, error) {
 	startTime := time.Now()
 	builder := b.getImageBuilder(streamName)
 	if builder == nil {
@@ -60,7 +63,10 @@ func (b *Builder) build(client *srpc.Client, streamName string,
 	b.currentBuildLogs[streamName] = buildLog
 	b.buildResultsLock.Unlock()
 	name, err := builder.build(b, client, streamName, expiresIn, gitBranch,
-		buildLog, buildLogger)
+		maxSourceAge, buildLog, buildLogger)
+	if err != nil {
+		buildLogger.Printf("Error building image: %s\n", err)
+	}
 	teelogger.New(b.logger, buildLogger).Printf("Total build duration: %s\n",
 		format.Duration(time.Since(startTime)))
 	b.buildResultsLock.Lock()

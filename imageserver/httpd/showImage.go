@@ -53,8 +53,9 @@ func (s state) showImageHandler(w http.ResponseWriter, req *http.Request) {
 			imageName, len(image.Triggers.Triggers))
 	}
 	if !image.ExpiresAt.IsZero() {
-		fmt.Fprintf(writer, "Expires at: %s<br>\n",
-			image.ExpiresAt.In(time.Local).Format(timeFormat))
+		fmt.Fprintf(writer, "Expires at: %s (in %s)<br>\n",
+			image.ExpiresAt.In(time.Local).Format(timeFormat),
+			format.Duration(time.Until(image.ExpiresAt)))
 	}
 	showAnnotation(writer, image.ReleaseNotes, imageName, "Release notes",
 		"listReleaseNotes")
@@ -64,7 +65,9 @@ func (s state) showImageHandler(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(writer, "Created by: %s\n<br>", image.CreatedBy)
 	}
 	if !image.CreatedOn.IsZero() {
-		fmt.Fprintf(writer, "Created on: %s\n<br>", image.CreatedOn)
+		fmt.Fprintf(writer, "Created on: %s (%s old)\n<br>",
+			image.CreatedOn.In(time.Local).Format(timeFormat),
+			format.Duration(time.Since(image.CreatedOn)))
 	}
 	fmt.Fprintln(writer, "</body>")
 }

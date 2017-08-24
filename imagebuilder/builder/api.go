@@ -12,8 +12,8 @@ import (
 
 type imageBuilder interface {
 	build(b *Builder, client *srpc.Client, streamName string,
-		expiresIn time.Duration, gitBranch string, buildLog *bytes.Buffer,
-		logger log.Logger) (string, error)
+		expiresIn time.Duration, gitBranch string, maxSourceAge time.Duration,
+		buildLog *bytes.Buffer, logger log.Logger) (string, error)
 }
 
 type bootstrapStream struct {
@@ -52,6 +52,9 @@ type packagerType struct {
 	Verbatim       []string
 }
 
+type unpackImageFunction func(client *srpc.Client, streamName, rootDir string,
+	logger log.Logger) (string, error)
+
 type Builder struct {
 	stateDir                  string
 	imageServerAddress        string
@@ -74,8 +77,8 @@ func Load(confUrl, variablesFile, stateDir, imageServerAddress string,
 }
 
 func (b *Builder) BuildImage(streamName string, expiresIn time.Duration,
-	gitBranch string) (string, []byte, error) {
-	return b.buildImage(streamName, expiresIn, gitBranch)
+	gitBranch string, maxSourceAge time.Duration) (string, []byte, error) {
+	return b.buildImage(streamName, expiresIn, gitBranch, maxSourceAge)
 }
 
 func (b *Builder) GetCurrentBuildLog(streamName string) ([]byte, error) {
@@ -94,7 +97,7 @@ func BuildImageFromManifest(client *srpc.Client, manifestDir, streamName string,
 	expiresIn time.Duration, buildLog *bytes.Buffer, logger log.Logger) (
 	string, error) {
 	return buildImageFromManifest(client, manifestDir, streamName, expiresIn,
-		buildLog, logger)
+		unpackImageSimple, buildLog, logger)
 }
 
 func BuildTreeFromManifest(client *srpc.Client, manifestDir string,

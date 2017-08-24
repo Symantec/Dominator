@@ -25,6 +25,8 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
+	maxSourceAge = flag.Duration("maxSourceAge", time.Hour,
+		"Maximum age of a source image before it is rebuilt")
 
 	minimumExpiration = 15 * time.Minute
 )

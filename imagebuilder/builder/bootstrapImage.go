@@ -35,7 +35,7 @@ var environmentToCopy = map[string]struct{}{
 }
 
 func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
-	streamName string, expiresIn time.Duration, _ string,
+	streamName string, expiresIn time.Duration, _ string, _ time.Duration,
 	buildLog *bytes.Buffer, logger log.Logger) (string, error) {
 	startTime := time.Now()
 	args := make([]string, 0, len(stream.BootstrapCommand))
@@ -45,6 +45,7 @@ func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
 		return "", err
 	}
 	defer os.RemoveAll(rootDir)
+	fmt.Fprintf(buildLog, "Created image working directory: %s\n", rootDir)
 	for _, arg := range stream.BootstrapCommand {
 		if arg == "$dir" {
 			arg = rootDir

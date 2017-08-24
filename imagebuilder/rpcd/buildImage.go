@@ -8,7 +8,7 @@ import (
 func (t *srpcType) BuildImage(conn *srpc.Conn, request proto.BuildImageRequest,
 	reply *proto.BuildImageResponse) error {
 	name, buildLog, err := t.builder.BuildImage(request.StreamName,
-		request.ExpiresIn, request.GitBranch)
+		request.ExpiresIn, request.GitBranch, request.MaxSourceAge)
 	reply.ImageName = name
 	reply.BuildLog = buildLog
 	if err != nil {
