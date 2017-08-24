@@ -10,8 +10,9 @@ import (
 func buildImageSubcommand(args []string, logger log.Logger) {
 	srpcClient := getImaginatorClient()
 	request := proto.BuildImageRequest{
-		StreamName: args[0],
-		ExpiresIn:  *expiresIn,
+		StreamName:   args[0],
+		ExpiresIn:    *expiresIn,
+		MaxSourceAge: *maxSourceAge,
 	}
 	if len(args) > 1 {
 		request.GitBranch = args[1]
