@@ -160,6 +160,7 @@ func unpackImage(client *srpc.Client, streamName string, builder *Builder,
 			return "", err
 		}
 		logger.Printf("Built new source image: %s\n", imageName)
+		sourceImage.FileSystem.RebuildInodePointers()
 	}
 	if maxSourceAge > 0 && time.Since(sourceImage.CreatedOn) > maxSourceAge &&
 		builder != nil {
