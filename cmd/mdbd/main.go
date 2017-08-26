@@ -39,21 +39,45 @@ func printUsage() {
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Drivers:")
 	fmt.Fprintln(os.Stderr,
-		"  aws: Amazon AWS endpoint. First arg is datacenter like 'us-east-1'.")
+		"  aws: region account")
 	fmt.Fprintln(os.Stderr,
-		"       Second arg is the profile to use out of ~/.aws/credentials which")
+		"    Query Amazon AWS")
 	fmt.Fprintln(os.Stderr,
-		"       contains the amazon aws credentials. For additional")
+		"    region: a datacentre like 'us-east-1'")
 	fmt.Fprintln(os.Stderr,
-		"       information see:")
+		"    account: the profile to use out of ~/.aws/credentials which")
 	fmt.Fprintln(os.Stderr,
-		"       http://docs.aws.amazon.com/sdk-for-go/latest/v1/developerguide/sdkforgo-dg.pdf")
+		"             contains the amazon aws credentials. For additional")
 	fmt.Fprintln(os.Stderr,
-		"  cis: Cloud Intelligence Service endpoint")
+		"             information see:")
 	fmt.Fprintln(os.Stderr,
-		"  ds.host.fqdn: JSON with map of map of hosts with fqdn entries")
+		"             http://docs.aws.amazon.com/sdk-for-go/latest/v1/developerguide/sdkforgo-dg.pdf")
 	fmt.Fprintln(os.Stderr,
-		"  text: each line contains: host required-image planned-image")
+		"  aws-filtered: targets filter-tags-file")
+	fmt.Fprintln(os.Stderr,
+		"    Query Amazon AWS")
+	fmt.Fprintln(os.Stderr,
+		"    targets: a list of targets, i.e. 'prod,us-east-1;dev,us-east-1'")
+	fmt.Fprintln(os.Stderr,
+		"    filter-tags-file: a JSON file of tags to filter for")
+	fmt.Fprintln(os.Stderr,
+		"  aws-local")
+	fmt.Fprintln(os.Stderr,
+		"    Query Amazon AWS for all acccounts for the local region")
+	fmt.Fprintln(os.Stderr,
+		"  cis: url")
+	fmt.Fprintln(os.Stderr,
+		"    url: Cloud Intelligence Service endpoint search query")
+	fmt.Fprintln(os.Stderr,
+		"  ds.host.fqdn: url")
+	fmt.Fprintln(os.Stderr,
+		"    url: URL which yields JSON with map of map of hosts with fqdn entries")
+	fmt.Fprintln(os.Stderr,
+		"  text: url")
+	fmt.Fprintln(os.Stderr,
+		"    url: URL which yields lines. Each line contains:")
+	fmt.Fprintln(os.Stderr,
+		"         host required-image [planned-image]")
 }
 
 type driver struct {

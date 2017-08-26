@@ -46,6 +46,14 @@ Since *mdbd* does not need root privileges, the init script runs
 (`/var/lib/Dominator/mdb.sources.list` by default) specifies the data sources
 to be collected from.
 
+To directly query AWS for all running instances in a region, you would use the
+following configuration file. It will query all the accounts for which you have
+API keys in your `~/.aws/credentials` file:
+
+```
+aws-local
+```
+
 An example configuration file which specifies to collect MDB data from CIS
 (Cloud Intelligence Service, being developed at Symantec) for the `us-east-1`
 cluster is:
