@@ -31,6 +31,13 @@ type Image struct {
 	BuildLog     *Annotation
 	CreatedOn    time.Time
 	ExpiresAt    time.Time
+	Packages     []Package
+}
+
+type Package struct {
+	Name    string
+	Size    uint64 // Bytes.
+	Version string
 }
 
 // ListObjects will return a list of all objects (including those for
