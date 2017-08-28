@@ -34,6 +34,7 @@ func StartServer(portNum uint, imdb *scanner.ImageDataBase,
 	http.HandleFunc("/listFilter", myState.listFilterHandler)
 	http.HandleFunc("/listImage", myState.listImageHandler)
 	http.HandleFunc("/listImages", myState.listImagesHandler)
+	http.HandleFunc("/listPackages", myState.listPackagesHandler)
 	http.HandleFunc("/listReleaseNotes", myState.listReleaseNotesHandler)
 	http.HandleFunc("/listTriggers", myState.listTriggersHandler)
 	http.HandleFunc("/showImage", myState.showImageHandler)

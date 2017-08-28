@@ -69,6 +69,11 @@ func (s state) showImageHandler(w http.ResponseWriter, req *http.Request) {
 			image.CreatedOn.In(time.Local).Format(timeFormat),
 			format.Duration(time.Since(image.CreatedOn)))
 	}
+	if len(image.Packages) > 0 {
+		fmt.Fprintf(writer,
+			"Packages: <a href=\"listPackages?%s\">%d</a><br>\n",
+			imageName, len(image.Packages))
+	}
 	fmt.Fprintln(writer, "</body>")
 }
 
