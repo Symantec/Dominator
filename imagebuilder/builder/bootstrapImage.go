@@ -102,7 +102,14 @@ func (packager *packagerType) writePackageInstaller(rootDir string) error {
 	writePackagerCommand(writer, "clean", packager.CleanCommand)
 	fmt.Fprintln(writer, `[ "$cmd" = "copy-in" ] && exec cat > "$1"`)
 	writePackagerCommand(writer, "install", packager.InstallCommand)
+	writePackagerCommand(writer, "list", packager.ListCommand.ArgList)
 	fmt.Fprintln(writer, `[ "$cmd" = "run" ] && exec "$@"`)
+	multiplier := packager.ListCommand.SizeMultiplier
+	if multiplier < 1 {
+		multiplier = 1
+	}
+	fmt.Fprintf(writer,
+		"[ \"$cmd\" = \"show-size-multiplier\" ] && exec echo %d\n", multiplier)
 	writePackagerCommand(writer, "update", packager.UpdateCommand)
 	writePackagerCommand(writer, "upgrade", packager.UpgradeCommand)
 	fmt.Fprintln(writer, "echo \"Invalid command: $cmd\"")
@@ -114,8 +121,23 @@ func writePackagerCommand(writer io.Writer, cmd string, command []string) {
 	if len(command) < 1 {
 		fmt.Fprintf(writer, "[ \"$cmd\" = \"%s\" ] && exit 0\n", cmd)
 	} else {
-		fmt.Fprintf(writer, "[ \"$cmd\" = \"%s\" ] && exec %s \"$@\"\n",
-			cmd, strings.Join(command, " "))
+		fmt.Fprintf(writer, "[ \"$cmd\" = \"%s\" ] && exec", cmd)
+		for _, arg := range command {
+			writeArgument(writer, arg)
+		}
+		fmt.Fprintf(writer, " \"$@\"\n")
+	}
+}
+
+func writeArgument(writer io.Writer, arg string) {
+	if len(strings.Fields(arg)) < 2 {
+		fmt.Fprintf(writer, " %s", arg)
+	} else {
+		lenArg := len(arg)
+		if lenArg > 0 && arg[lenArg-1] == '\n' {
+			arg = arg[:lenArg-1] + `\n`
+		}
+		fmt.Fprintf(writer, " '%s'", arg)
 	}
 }
 

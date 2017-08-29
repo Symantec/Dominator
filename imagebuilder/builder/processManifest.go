@@ -68,7 +68,6 @@ func processManifest(manifestDir, rootDir string, buildLog io.Writer) error {
 		return err
 	}
 	if err := installPackages(manifestDir, rootDir, buildLog); err != nil {
-		//runInTarget(os.Stdin, os.Stderr, rootDir, "/bin/bash", "--posix")
 		return errors.New("error installing packages: " + err.Error())
 	}
 	err = copyFiles(manifestDir, "post-install-files", rootDir, buildLog)
