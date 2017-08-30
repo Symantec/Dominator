@@ -48,7 +48,8 @@ func writeHeader(writer io.Writer, req *http.Request, noGC bool) {
 		fmt.Fprintf(writer, "Allocated memory: %s<br>\n",
 			format.FormatBytes(memStatsBeforeGC.Alloc))
 		fmt.Fprintf(writer, "System memory: %s<br>\n",
-			format.FormatBytes(memStatsBeforeGC.Sys))
+			format.FormatBytes(
+				memStatsBeforeGC.Sys-memStatsBeforeGC.HeapReleased))
 	} else {
 		var memStatsAfterGC runtime.MemStats
 		runtime.GC()
@@ -57,8 +58,10 @@ func writeHeader(writer io.Writer, req *http.Request, noGC bool) {
 			format.FormatBytes(memStatsBeforeGC.Alloc),
 			format.FormatBytes(memStatsAfterGC.Alloc))
 		fmt.Fprintf(writer, "System memory: %s (%s after GC)<br>\n",
-			format.FormatBytes(memStatsBeforeGC.Sys),
-			format.FormatBytes(memStatsAfterGC.Sys))
+			format.FormatBytes(
+				memStatsBeforeGC.Sys-memStatsBeforeGC.HeapReleased),
+			format.FormatBytes(
+				memStatsAfterGC.Sys-memStatsAfterGC.HeapReleased))
 	}
 	fmt.Fprintln(writer, "Raw <a href=\"metrics\">metrics</a><br>")
 	if req != nil {
