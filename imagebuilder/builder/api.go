@@ -44,11 +44,19 @@ type imageStreamsConfigurationType struct {
 	Streams map[string]*imageStreamType `json:",omitempty"`
 }
 
+type argList []string
+
+type listCommandType struct {
+	ArgList        argList
+	SizeMultiplier uint64
+}
+
 type packagerType struct {
-	CleanCommand   []string
-	InstallCommand []string
-	UpdateCommand  []string
-	UpgradeCommand []string
+	CleanCommand   argList
+	InstallCommand argList
+	ListCommand    listCommandType
+	UpdateCommand  argList
+	UpgradeCommand argList
 	Verbatim       []string
 }
 

@@ -18,6 +18,7 @@ import (
 	"github.com/Symantec/Dominator/lib/triggers"
 	"io"
 	"path"
+	"sort"
 	"time"
 )
 
@@ -41,6 +42,10 @@ func addImage(client *srpc.Client, streamName, dirname string,
 	imageFilter *filter.Filter,
 	trig *triggers.Triggers, expiresIn time.Duration,
 	buildLog *bytes.Buffer, logger log.Logger) (string, error) {
+	packages, err := listPackages(dirname)
+	if err != nil {
+		return "", err
+	}
 	buildStartTime := time.Now()
 	fs, err := buildFileSystem(client, dirname, scanFilter)
 	if err != nil {
@@ -77,6 +82,7 @@ func addImage(client *srpc.Client, streamName, dirname string,
 		FileSystem: fs,
 		Filter:     imageFilter,
 		Triggers:   trig,
+		Packages:   packages,
 	}
 	if expiresIn > 0 {
 		img.ExpiresAt = time.Now().Add(expiresIn)
@@ -89,6 +95,59 @@ func addImage(client *srpc.Client, streamName, dirname string,
 		return "", errors.New("remote error: " + err.Error())
 	}
 	return name, nil
+}
+
+func listPackages(rootDir string) ([]image.Package, error) {
+	output := new(bytes.Buffer)
+	err := runInTarget(nil, output, rootDir, packagerPathname,
+		"show-size-multiplier")
+	if err != nil {
+		return nil, err
+	}
+	var sizeMultiplier uint64
+	nScanned, err := fmt.Fscanf(output, "%d", &sizeMultiplier)
+	if err != nil {
+		return nil, err
+	}
+	if nScanned != 1 {
+		return nil, errors.New("malformed size multiplier")
+	}
+	output.Reset()
+	err = runInTarget(nil, output, rootDir, packagerPathname, "list")
+	if err != nil {
+		return nil, err
+	}
+	packageMap := make(map[string]image.Package)
+	for {
+		var name, version string
+		var size uint64
+		nScanned, err := fmt.Fscanf(output, "%s %s %d\n",
+			&name, &version, &size)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+		if nScanned != 3 {
+			return nil, errors.New("malformed line")
+		}
+		packageMap[name] = image.Package{
+			Name:    name,
+			Size:    size * sizeMultiplier,
+			Version: version,
+		}
+	}
+	packageNames := make([]string, 0, len(packageMap))
+	for name := range packageMap {
+		packageNames = append(packageNames, name)
+	}
+	sort.Strings(packageNames)
+	var packages []image.Package
+	for _, name := range packageNames {
+		packages = append(packages, packageMap[name])
+	}
+	return packages, nil
 }
 
 func buildFileSystem(client *srpc.Client, dirname string,

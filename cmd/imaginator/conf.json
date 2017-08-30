@@ -73,6 +73,15 @@
 		"--no-install-recommends",
 		"install"
 	    ],
+	    "ListCommand": {
+		"ArgList": [
+		    dpkg-query",
+		    "-f",
+		    "${binary:Package ${Version} ${Installed-Size}",
+		    "--show"
+		],
+		"SizeMultiplier": 1024
+	    },
 	    "UpdateCommand": [
 		"apt-get",
 		"-q",
@@ -103,6 +112,14 @@
 		"-y",
 		"install"
 	    ],
+	    "ListCommand": {
+		"ArgList": [
+		    "rpm",
+		    "-qa",
+		    "--queryformat,
+		    "%{NAME} %{VERSION} %{SIZE}\n"
+		]
+	    },
 	    "UpdateCommand": [
 		"yum",
 		"-q",
