@@ -11,55 +11,70 @@ import (
 	"time"
 )
 
+type cpuStats struct {
+	realTime time.Time
+	userTime time.Time
+	sysTime  time.Time
+}
+
 var (
 	timeFormat string = "02 Jan 2006 15:04:05.99 MST"
 
-	startTime  time.Time
-	startUtime time.Time
-	startStime time.Time
+	startCpuStats *cpuStats = getCpuStats()
+	lastCpuStats  *cpuStats = startCpuStats
 )
 
-func init() {
-	startTime = time.Now()
-	startUtime, startStime = getRusage()
-}
-
-func getRusage() (time.Time, time.Time) {
-	var rusage syscall.Rusage
-	syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
-	return time.Unix(int64(rusage.Utime.Sec), int64(rusage.Utime.Usec)*1000),
-		time.Unix(int64(rusage.Stime.Sec), int64(rusage.Stime.Usec)*1000)
+func writeCpuStats(writer io.Writer, prefix string, start, current *cpuStats) {
+	userCpuTime := current.userTime.Sub(start.userTime)
+	sysCpuTime := current.sysTime.Sub(start.sysTime)
+	realTime := current.realTime.Sub(start.realTime)
+	cpuTime := userCpuTime + sysCpuTime
+	fmt.Fprintf(writer,
+		"    <td>%s CPU Time: %.1f%% (User: %s Sys: %s)</td>\n",
+		prefix, float64(cpuTime*100)/float64(realTime), userCpuTime, sysCpuTime)
 }
 
 func writeHeader(writer io.Writer, req *http.Request, noGC bool) {
-	fmt.Fprintf(writer, "Start time: %s<br>\n", startTime.Format(timeFormat))
-	uptime := time.Since(startTime) + time.Millisecond*50
+	currentCpuStats := getCpuStats()
+	fmt.Fprintln(writer,
+		`<table border="1" bordercolor=#e0e0e0 style="border-collapse: collapse">`)
+	fmt.Fprintf(writer, "  <tr>\n")
+	fmt.Fprintf(writer, "    <td>Start time: %s</td>\n",
+		startCpuStats.realTime.Format(timeFormat))
+	uptime := currentCpuStats.realTime.Sub(startCpuStats.realTime)
+	uptime += time.Millisecond * 50
 	uptime = (uptime / time.Millisecond / 100) * time.Millisecond * 100
-	fmt.Fprintf(writer, "Uptime: %s<br>\n", format.Duration(uptime))
-	uTime, sTime := getRusage()
-	userCpuTime := uTime.Sub(startUtime)
-	sysCpuTime := sTime.Sub(startStime)
-	cpuTime := userCpuTime + sysCpuTime
-	fmt.Fprintf(writer, "CPU Time: %.1f%% (User: %s Sys: %s)<br>\n",
-		float64(cpuTime*100)/float64(uptime), userCpuTime, sysCpuTime)
+	fmt.Fprintf(writer, "    <td>Uptime: %s</td>\n", format.Duration(uptime))
+	fmt.Fprintf(writer, "  </tr>\n")
+	fmt.Fprintf(writer, "  <tr>\n")
+	writeCpuStats(writer, "Total", startCpuStats, currentCpuStats)
+	writeCpuStats(writer, "Recent", lastCpuStats, currentCpuStats)
+	lastCpuStats = currentCpuStats
+	fmt.Fprintf(writer, "  </tr>\n")
+	fmt.Fprintf(writer, "  <tr>\n")
 	var memStatsBeforeGC runtime.MemStats
 	runtime.ReadMemStats(&memStatsBeforeGC)
 	if noGC {
-		fmt.Fprintf(writer, "Allocated memory: %s<br>\n",
+		fmt.Fprintf(writer, "    <td>Allocated memory: %s</td>\n",
 			format.FormatBytes(memStatsBeforeGC.Alloc))
-		fmt.Fprintf(writer, "System memory: %s<br>\n",
-			format.FormatBytes(memStatsBeforeGC.Sys))
+		fmt.Fprintf(writer, "    <td>System memory: %s</td>\n",
+			format.FormatBytes(
+				memStatsBeforeGC.Sys-memStatsBeforeGC.HeapReleased))
 	} else {
 		var memStatsAfterGC runtime.MemStats
 		runtime.GC()
 		runtime.ReadMemStats(&memStatsAfterGC)
-		fmt.Fprintf(writer, "Allocated memory: %s (%s after GC)<br>\n",
+		fmt.Fprintf(writer, "    <td>Allocated memory: %s (%s after GC)</td>\n",
 			format.FormatBytes(memStatsBeforeGC.Alloc),
 			format.FormatBytes(memStatsAfterGC.Alloc))
-		fmt.Fprintf(writer, "System memory: %s (%s after GC)<br>\n",
-			format.FormatBytes(memStatsBeforeGC.Sys),
-			format.FormatBytes(memStatsAfterGC.Sys))
+		fmt.Fprintf(writer, "    <td>System memory: %s (%s after GC)</td>\n",
+			format.FormatBytes(
+				memStatsBeforeGC.Sys-memStatsBeforeGC.HeapReleased),
+			format.FormatBytes(
+				memStatsAfterGC.Sys-memStatsAfterGC.HeapReleased))
 	}
+	fmt.Fprintf(writer, "  </tr>\n")
+	fmt.Fprintf(writer, "</table>\n")
 	fmt.Fprintln(writer, "Raw <a href=\"metrics\">metrics</a><br>")
 	if req != nil {
 		protocol := "http"
@@ -71,4 +86,20 @@ func writeHeader(writer io.Writer, req *http.Request, noGC bool) {
 			"Local <a href=\"%s://%s:6910/\">system health agent</a>",
 			protocol, host)
 	}
+}
+
+func getCpuStats() *cpuStats {
+	uTime, sTime := getRusage()
+	return &cpuStats{
+		realTime: time.Now(),
+		userTime: uTime,
+		sysTime:  sTime,
+	}
+}
+
+func getRusage() (time.Time, time.Time) {
+	var rusage syscall.Rusage
+	syscall.Getrusage(syscall.RUSAGE_SELF, &rusage)
+	return time.Unix(int64(rusage.Utime.Sec), int64(rusage.Utime.Usec)*1000),
+		time.Unix(int64(rusage.Stime.Sec), int64(rusage.Stime.Usec)*1000)
 }
