@@ -1,0 +1,39 @@
+package serverlogger
+
+import (
+	"flag"
+	"github.com/Symantec/Dominator/lib/log/debuglogger"
+	"github.com/Symantec/Dominator/lib/logbuf"
+	"io"
+)
+
+var (
+	initialLogDebugLevel = flag.Int("initialLogDebugLevel", -1,
+		"initial debug log level")
+)
+
+type Logger struct {
+	*debuglogger.Logger
+	circularBuffer *logbuf.LogBuffer
+}
+
+// New will create a Logger which has an internal log buffer (see the
+// lib/logbuf package). It implements the log.DebugLogger interface.
+// By default, the max debug level is -1, meaning all debug logs are dropped
+// (ignored)
+func New() *Logger {
+	return newLogger()
+}
+
+// Flush flushes the open log file (if one is open). This should only be called
+// just prior to process termination. The log file is automatically flushed
+// after short periods of inactivity.
+func (l *Logger) Flush() error {
+	return l.circularBuffer.Flush()
+}
+
+// WriteHtml will write the contents of the internal log buffer to writer, with
+// appropriate HTML markups.
+func (l *Logger) WriteHtml(writer io.Writer) {
+	l.circularBuffer.WriteHtml(writer)
+}
