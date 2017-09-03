@@ -2,9 +2,11 @@ package serverlogger
 
 import (
 	"flag"
+	"fmt"
 	"github.com/Symantec/Dominator/lib/log/debuglogger"
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"io"
+	"os"
 )
 
 var (
@@ -23,6 +25,21 @@ type Logger struct {
 // (ignored)
 func New() *Logger {
 	return newLogger()
+}
+
+func (l *Logger) Fatal(v ...interface{}) {
+	msg := fmt.Sprint(v...)
+	l.Print(msg)
+	l.circularBuffer.Flush()
+	os.Exit(1)
+}
+
+func (l *Logger) Fatalf(format string, v ...interface{}) {
+	l.Fatal(fmt.Sprintf(format, v...))
+}
+
+func (l *Logger) Fatalln(v ...interface{}) {
+	l.Fatal(fmt.Sprintln(v...))
 }
 
 // Flush flushes the open log file (if one is open). This should only be called
