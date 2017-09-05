@@ -22,9 +22,12 @@ type Logger struct {
 // New will create a Logger which has an internal log buffer (see the
 // lib/logbuf package). It implements the log.DebugLogger interface.
 // By default, the max debug level is -1, meaning all debug logs are dropped
-// (ignored)
-func New() *Logger {
-	return newLogger()
+// (ignored).
+// The name of the new logger is given by name. This name is used to remotely
+// identify the logger for RPC methods such as Logger.SetDebugLevel. The first
+// or primary logger should be created with name "" (the empty string).
+func New(name string) *Logger {
+	return newLogger(name)
 }
 
 func (l *Logger) Fatal(v ...interface{}) {
