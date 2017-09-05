@@ -4,9 +4,9 @@ import (
 	"flag"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"io"
-	"log"
 	"sync"
 )
 
@@ -41,11 +41,11 @@ type ImageDataBase struct {
 	// Unprotected by any lock.
 	objectServer objectserver.FullObjectServer
 	masterMode   bool
-	logger       *log.Logger
+	logger       log.Logger
 }
 
 func LoadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
-	masterMode bool, logger *log.Logger) (*ImageDataBase, error) {
+	masterMode bool, logger log.Logger) (*ImageDataBase, error) {
 	return loadImageDataBase(baseDir, objSrv, masterMode, logger)
 }
 

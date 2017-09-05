@@ -8,8 +8,8 @@ import (
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/log"
 	"io"
-	"log"
 	"os"
 	"os/user"
 	"path"
@@ -380,7 +380,7 @@ func (imdb *ImageDataBase) unregisterMakeDirectoryNotifier(
 }
 
 func (n notifiers) sendPlain(name string, operation string,
-	logger *log.Logger) {
+	logger log.Logger) {
 	if len(n) < 1 {
 		return
 	} else {
@@ -399,7 +399,7 @@ func (n notifiers) sendPlain(name string, operation string,
 }
 
 func (n makeDirectoryNotifiers) sendMakeDirectory(dir image.Directory,
-	logger *log.Logger) {
+	logger log.Logger) {
 	if len(n) < 1 {
 		return
 	} else {

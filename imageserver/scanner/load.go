@@ -7,9 +7,9 @@ import (
 	"github.com/Symantec/Dominator/lib/concurrent"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"io"
-	"log"
 	"os"
 	"path"
 	"syscall"
@@ -17,7 +17,7 @@ import (
 )
 
 func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
-	masterMode bool, logger *log.Logger) (*ImageDataBase, error) {
+	masterMode bool, logger log.Logger) (*ImageDataBase, error) {
 	fi, err := os.Stat(baseDir)
 	if err != nil {
 		return nil, errors.New(
@@ -78,7 +78,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 }
 
 func (imdb *ImageDataBase) scanDirectory(dirname string,
-	state *concurrent.State, logger *log.Logger) error {
+	state *concurrent.State, logger log.Logger) error {
 	directoryMetadata, err := imdb.readDirectoryMetadata(dirname)
 	if err != nil {
 		return err
@@ -143,7 +143,7 @@ func (imdb *ImageDataBase) readDirectoryMetadata(dirname string) (
 	return metadata, reader.VerifyChecksum()
 }
 
-func (imdb *ImageDataBase) loadFile(filename string, logger *log.Logger) error {
+func (imdb *ImageDataBase) loadFile(filename string, logger log.Logger) error {
 	pathname := path.Join(imdb.baseDir, filename)
 	file, err := os.Open(pathname)
 	if err != nil {
