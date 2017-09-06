@@ -17,5 +17,8 @@ type DebugLogger interface {
 	Debugf(level uint8, format string, v ...interface{})
 	Debugln(level uint8, v ...interface{})
 	Logger
+}
+
+type DebugLogLevelSetter interface {
 	SetLevel(maxLevel int16)
 }
