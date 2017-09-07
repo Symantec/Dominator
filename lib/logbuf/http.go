@@ -120,6 +120,10 @@ func showRecentLinks(w io.Writer, recentFirstString string) {
 		recentFirstString)
 	fmt.Fprintf(w, "           <a href=\"logs/showLast?1w%s\">week</a>\n",
 		recentFirstString)
+	fmt.Fprintf(w, "           <a href=\"logs/showLast?1M%s\">month</a>\n",
+		recentFirstString)
+	fmt.Fprintf(w, "           <a href=\"logs/showLast?1y%s\">year</a>\n",
+		recentFirstString)
 }
 
 func (lb *LogBuffer) httpDumpHandler(w http.ResponseWriter, req *http.Request) {
@@ -201,6 +205,11 @@ func (lb *LogBuffer) httpShowLastHandler(w http.ResponseWriter,
 			unit = time.Hour * 24
 		case 'w':
 			unit = time.Hour * 24 * 7
+		case 'M':
+			// TODO(rgooch): Fix this crude approximation.
+			unit = time.Hour * 24 * 31
+		case 'y':
+			unit = time.Hour * 24 * 365
 		default:
 			continue
 		}

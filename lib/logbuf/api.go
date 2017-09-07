@@ -110,8 +110,8 @@ func (lb *LogBuffer) Write(p []byte) (n int, err error) {
 	return lb.write(p)
 }
 
-// WriteHtml will write the contents of the log buffer to w, with appropriate
-// HTML markups.
+// WriteHtml will write the contents of the log buffer to writer, with
+// appropriate HTML markups.
 func (lb *LogBuffer) WriteHtml(writer io.Writer) {
 	lb.writeHtml(writer)
 }
