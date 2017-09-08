@@ -5,6 +5,10 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
+type flusher interface {
+	Flush() error
+}
+
 type Logger struct {
 	one log.Logger
 	two log.Logger
@@ -17,18 +21,27 @@ func New(one, two log.Logger) *Logger {
 func (l *Logger) Fatal(v ...interface{}) {
 	msg := fmt.Sprint(v...)
 	l.one.Print(msg)
+	if fl, ok := l.one.(flusher); ok {
+		fl.Flush()
+	}
 	l.two.Fatal(msg)
 }
 
 func (l *Logger) Fatalf(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
 	l.one.Print(msg)
+	if fl, ok := l.one.(flusher); ok {
+		fl.Flush()
+	}
 	l.two.Fatal(msg)
 }
 
 func (l *Logger) Fatalln(v ...interface{}) {
 	msg := fmt.Sprintln(v...)
 	l.one.Print(msg)
+	if fl, ok := l.one.(flusher); ok {
+		fl.Flush()
+	}
 	l.two.Fatal(msg)
 }
 
