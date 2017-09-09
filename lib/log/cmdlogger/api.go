@@ -7,8 +7,8 @@ import (
 
 var (
 	logDatestamps = flag.Bool("logDatestamps", false,
-		"if true, prefix logs with datestamps")
-	logDebugLevel = flag.Int("logDebugLevel", -1, "debug log level")
+		"If true, prefix logs with datestamps")
+	logDebugLevel = flag.Int("logDebugLevel", -1, "Debug log level")
 )
 
 // New will create a debuglogger.Logger which writes to the standard error.
