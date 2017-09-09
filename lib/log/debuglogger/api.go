@@ -12,7 +12,7 @@ type Logger struct {
 // New will create a Logger from an existing log.Logger, adding methods for
 // debug logs. Debug messages will be logged or ignored depending on their debug
 // level. By default, the max debug level is -1, meaning all debug logs are
-// dropped (ignored)
+// dropped (ignored).
 func New(logger log.Logger) *Logger {
 	return &Logger{-1, logger}
 }
