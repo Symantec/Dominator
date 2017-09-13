@@ -7,16 +7,14 @@ import (
 	"github.com/Symantec/Dominator/dom/herd"
 	"github.com/Symantec/Dominator/dom/rpcd"
 	"github.com/Symantec/Dominator/lib/constants"
-	liblog "github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/log/debuglogger"
-	"github.com/Symantec/Dominator/lib/logbuf"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/mdb/mdbd"
 	objectserver "github.com/Symantec/Dominator/lib/objectserver/filesystem"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/Dominator/lib/wsyscall"
 	"github.com/Symantec/tricorder/go/tricorder"
-	"log"
 	_ "net/http/pprof"
 	"os"
 	"os/user"
@@ -109,7 +107,7 @@ func pathJoin(first, second string) string {
 	return path.Join(first, second)
 }
 
-func newObjectServer(objectsDir string, logger liblog.DebugLogger) (
+func newObjectServer(objectsDir string, logger log.DebugLogger) (
 	*objectserver.ObjectServer, error) {
 	fi, err := os.Stat(objectsDir)
 	if err != nil {
@@ -125,13 +123,12 @@ func newObjectServer(objectsDir string, logger liblog.DebugLogger) (
 func main() {
 	flag.Parse()
 	tricorder.RegisterFlags()
-	circularBuffer := logbuf.New()
-	logger := debuglogger.New(log.New(circularBuffer, "", log.LstdFlags))
+	logger := serverlogger.New("")
 	if err := setupserver.SetupTls(); err != nil {
-		logger.Println(err)
-		circularBuffer.Flush()
-		if !*permitInsecureMode {
-			os.Exit(1)
+		if *permitInsecureMode {
+			logger.Println(err)
+		} else {
+			logger.Fatalln(err)
 		}
 	}
 	rlim := syscall.Rlimit{*fdLimit, *fdLimit}
@@ -169,7 +166,7 @@ func main() {
 	}
 	herd := herd.NewHerd(fmt.Sprintf("%s:%d", *imageServerHostname,
 		*imageServerPortNum), objectServer, metricsDir, logger)
-	herd.AddHtmlWriter(circularBuffer)
+	herd.AddHtmlWriter(logger)
 	rpcd.Setup(herd, logger)
 	if err = herd.StartServer(*portNum, true); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
