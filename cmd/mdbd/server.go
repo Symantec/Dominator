@@ -3,23 +3,23 @@ package main
 import (
 	"encoding/gob"
 	"errors"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/mdbserver"
 	"io"
-	"log"
 	"sync"
 )
 
 type rpcType struct {
 	currentMdb *mdb.Mdb
-	logger     *log.Logger
+	logger     log.Logger
 	rwMutex    sync.RWMutex
 	// Protected by lock.
 	updateChannels map[*srpc.Conn]chan<- mdbserver.MdbUpdate
 }
 
-func startRpcd(logger *log.Logger) *rpcType {
+func startRpcd(logger log.Logger) *rpcType {
 	rpcObj := &rpcType{
 		logger:         logger,
 		updateChannels: make(map[*srpc.Conn]chan<- mdbserver.MdbUpdate),
