@@ -4,16 +4,16 @@ import (
 	"errors"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver/memory"
 	"io"
-	"log"
 	"time"
 )
 
 type fileGenerator struct {
 	objectServer    *memory.ObjectServer
-	logger          *log.Logger
+	logger          log.Logger
 	hash            *hash.Hash
 	length          uint64
 	notifierChannel chan<- string
@@ -29,7 +29,7 @@ func (m *Manager) registerFileForPath(pathname string, sourceFile string) {
 
 }
 
-func (fgen *fileGenerator) generate(machine mdb.Machine, logger *log.Logger) (
+func (fgen *fileGenerator) generate(machine mdb.Machine, logger log.Logger) (
 	hash.Hash, uint64, time.Time, error) {
 	if fgen.hash == nil {
 		return hash.Hash{}, 0, time.Time{}, errors.New("no hash yet")

@@ -1,18 +1,18 @@
 package filegen
 
 import (
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver/memory"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
-	"log"
 )
 
 type rpcType struct {
 	manager *Manager
 }
 
-func newManager(logger *log.Logger) *Manager {
+func newManager(logger log.Logger) *Manager {
 	m := new(Manager)
 	m.pathManagers = make(map[string]*pathManager)
 	m.machineData = make(map[string]mdb.Machine)
