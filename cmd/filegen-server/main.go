@@ -8,10 +8,9 @@ import (
 	"github.com/Symantec/Dominator/lib/filegen/httpd"
 	"github.com/Symantec/Dominator/lib/filegen/util"
 	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/logbuf"
+	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/tricorder/go/tricorder"
-	"log"
 	"os"
 	"syscall"
 )
@@ -26,8 +25,7 @@ var (
 )
 
 func printUsage() {
-	fmt.Fprintln(os.Stderr,
-		"Usage: filegen-server [flags...] directory...")
+	fmt.Fprintln(os.Stderr, "Usage: filegen-server [flags...] directory...")
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "directory: tree of source files")
@@ -41,13 +39,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Do not run the filegen server as root")
 		os.Exit(1)
 	}
-	circularBuffer := logbuf.New()
-	logger := log.New(circularBuffer, "", log.LstdFlags)
+	logger := serverlogger.New("")
 	if err := setupserver.SetupTls(); err != nil {
-		logger.Println(err)
-		circularBuffer.Flush()
-		if !*permitInsecureMode {
-			os.Exit(1)
+		if *permitInsecureMode {
+			logger.Println(err)
+		} else {
+			logger.Fatalln(err)
 		}
 	}
 	manager := filegen.New(logger)
@@ -67,7 +64,7 @@ func main() {
 		}()
 	}
 	httpd.AddHtmlWriter(manager)
-	httpd.AddHtmlWriter(circularBuffer)
+	httpd.AddHtmlWriter(logger)
 	for _, pathname := range flag.Args() {
 		if err := registerSourceDirectory(manager, pathname, "/"); err != nil {
 			fmt.Fprintln(os.Stderr, err)
