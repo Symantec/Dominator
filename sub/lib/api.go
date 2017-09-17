@@ -2,14 +2,14 @@ package lib
 
 import (
 	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
-	"log"
 	"time"
 )
 
 type TriggersRunner func(triggers []*triggers.Trigger, action string,
-	logger *log.Logger) bool
+	logger log.Logger) bool
 
 type uType struct {
 	rootDirectoryName  string
@@ -17,7 +17,7 @@ type uType struct {
 	skipFilter         *filter.Filter
 	runTriggers        TriggersRunner
 	disableTriggers    bool
-	logger             *log.Logger
+	logger             log.Logger
 	lastError          error
 	hadTriggerFailures bool
 	fsChangeDuration   time.Duration
@@ -26,7 +26,7 @@ type uType struct {
 func Update(request sub.UpdateRequest, rootDirectoryName string,
 	objectsDir string, oldTriggers *triggers.Triggers,
 	skipFilter *filter.Filter, triggersRunner TriggersRunner,
-	logger *log.Logger) (
+	logger log.Logger) (
 	bool, time.Duration, error) {
 	if skipFilter == nil {
 		skipFilter = new(filter.Filter)
