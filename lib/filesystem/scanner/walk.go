@@ -4,17 +4,18 @@ import (
 	"crypto/sha512"
 	"errors"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/filter"
-	"github.com/Symantec/Dominator/lib/fsrateio"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/wsyscall"
 	"io"
 	"os"
 	"path"
 	"runtime"
 	"sort"
 	"syscall"
+
+	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Symantec/Dominator/lib/fsrateio"
+	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/wsyscall"
 )
 
 var myCountGC int
@@ -32,7 +33,7 @@ func makeRegularInode(stat *wsyscall.Stat_t) *filesystem.RegularInode {
 	inode.Mode = filesystem.FileMode(stat.Mode)
 	inode.Uid = stat.Uid
 	inode.Gid = stat.Gid
-	inode.MtimeSeconds = stat.Mtim.Sec
+	inode.MtimeSeconds = int64(stat.Mtim.Sec)
 	inode.MtimeNanoSeconds = int32(stat.Mtim.Nsec)
 	inode.Size = uint64(stat.Size)
 	return &inode
@@ -50,7 +51,7 @@ func makeSpecialInode(stat *wsyscall.Stat_t) *filesystem.SpecialInode {
 	inode.Mode = filesystem.FileMode(stat.Mode)
 	inode.Uid = stat.Uid
 	inode.Gid = stat.Gid
-	inode.MtimeSeconds = stat.Mtim.Sec
+	inode.MtimeSeconds = int64(stat.Mtim.Sec)
 	inode.MtimeNanoSeconds = int32(stat.Mtim.Nsec)
 	inode.Rdev = stat.Rdev
 	return &inode

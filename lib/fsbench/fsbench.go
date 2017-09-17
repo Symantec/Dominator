@@ -1,23 +1,23 @@
 package fsbench
 
 import (
-	"github.com/Symantec/Dominator/lib/wsyscall"
 	"io/ioutil"
 	"os"
 	"path"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/wsyscall"
 )
 
 const (
-	O_DIRECT    = 00040000
 	BUFLEN      = 1024 * 1024
 	MAX_TO_READ = 1024 * 1024 * 128
 )
 
 func openDirect(name string, flag int, perm os.FileMode) (file *os.File,
 	err error) {
-	return os.OpenFile(name, flag|O_DIRECT, perm)
+	return os.OpenFile(name, flag|syscall.O_DIRECT, perm)
 }
 
 func GetDevnumForFile(name string) (devnum uint64, err error) {
