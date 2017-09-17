@@ -1,13 +1,12 @@
 package fsbench
 
 import (
+	"github.com/Symantec/Dominator/lib/wsyscall"
 	"io/ioutil"
 	"os"
 	"path"
 	"syscall"
 	"time"
-
-	"github.com/Symantec/Dominator/lib/wsyscall"
 )
 
 const (

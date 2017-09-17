@@ -4,18 +4,17 @@ import (
 	"crypto/sha512"
 	"errors"
 	"fmt"
+	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Symantec/Dominator/lib/fsrateio"
+	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/wsyscall"
 	"io"
 	"os"
 	"path"
 	"runtime"
 	"sort"
 	"syscall"
-
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/filter"
-	"github.com/Symantec/Dominator/lib/fsrateio"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/wsyscall"
 )
 
 var myCountGC int
