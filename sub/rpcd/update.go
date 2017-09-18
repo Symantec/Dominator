@@ -7,11 +7,11 @@ import (
 	"flag"
 	"fmt"
 	jsonlib "github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/lib"
-	"log"
 	"os"
 	"os/exec"
 	"time"
@@ -122,7 +122,7 @@ func (t *rpcType) clearUpdateInProgress() {
 }
 
 func runTriggers(triggers []*triggers.Trigger, action string,
-	logger *log.Logger) bool {
+	logger log.Logger) bool {
 	hadFailures := false
 	needRestart := false
 	logPrefix := ""
@@ -176,7 +176,7 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 	return hadFailures
 }
 
-func runCommand(logger *log.Logger, name string, args ...string) bool {
+func runCommand(logger log.Logger, name string, args ...string) bool {
 	cmd := exec.Command(name, args...)
 	if logs, err := cmd.CombinedOutput(); err != nil {
 		errMsg := "error running: " + name
