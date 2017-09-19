@@ -10,7 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/html"
-	"github.com/Symantec/Dominator/lib/logbuf"
+	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/memstats"
 	"github.com/Symantec/Dominator/lib/netspeed"
 	"github.com/Symantec/Dominator/lib/rateio"
@@ -23,7 +23,6 @@ import (
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
-	"log"
 	"os"
 	"os/signal"
 	"path"
@@ -279,13 +278,12 @@ func main() {
 		os.Exit(1)
 	}
 	runtime.GOMAXPROCS(int(*maxThreads))
-	circularBuffer := logbuf.New()
-	logger := log.New(circularBuffer, "", log.LstdFlags)
+	logger := serverlogger.New("")
 	if err := setupserver.SetupTls(); err != nil {
-		logger.Println(err)
-		circularBuffer.Flush()
-		if !*permitInsecureMode {
-			os.Exit(1)
+		if *permitInsecureMode {
+			logger.Println(err)
+		} else {
+			logger.Fatalln(err)
 		}
 	}
 	bytesPerSecond, blocksPerSecond, firstScan, ok := getCachedFsSpeed(
@@ -368,7 +366,7 @@ func main() {
 		httpd.AddHtmlWriter(rpcdHtmlWriter)
 		httpd.AddHtmlWriter(&fsh)
 		httpd.AddHtmlWriter(&configuration)
-		httpd.AddHtmlWriter(circularBuffer)
+		httpd.AddHtmlWriter(logger)
 		html.RegisterHtmlWriterForPattern("/dumpFileSystem",
 			"Scanned File System",
 			&DumpableFileSystemHistory{&fsh})
@@ -386,14 +384,14 @@ func main() {
 			select {
 			case <-sighupChannel:
 				logger.Printf("Caught SIGHUP: re-execing with: %v\n", os.Args)
-				circularBuffer.Flush()
+				logger.Flush()
 				err = syscall.Exec(os.Args[0], os.Args, os.Environ())
 				if err != nil {
 					logger.Printf("Unable to Exec:%s: %s\n", os.Args[0], err)
 				}
 			case <-sigtermChannel:
 				logger.Printf("Caught SIGTERM: performing graceful cleanup\n")
-				circularBuffer.Flush()
+				logger.Flush()
 				gracefulCleanup()
 			case fs := <-fsChannel:
 				if *showStats {
