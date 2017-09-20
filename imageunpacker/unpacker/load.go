@@ -3,7 +3,7 @@ package unpacker
 import (
 	"bufio"
 	"encoding/json"
-	"log"
+	"github.com/Symantec/Dominator/lib/log"
 	"os"
 	"path"
 	"syscall"
@@ -15,7 +15,7 @@ const (
 		syscall.S_IROTH | syscall.S_IXOTH
 )
 
-func load(baseDir string, imageServerAddress string, logger *log.Logger) (
+func load(baseDir string, imageServerAddress string, logger log.Logger) (
 	*Unpacker, error) {
 	if err := os.MkdirAll(path.Join(baseDir, "mnt"), dirPerms); err != nil {
 		return nil, err
