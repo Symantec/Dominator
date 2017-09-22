@@ -2,10 +2,10 @@ package unpacker
 
 import (
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"io"
-	"log"
 	"sync"
 	"time"
 )
@@ -63,14 +63,14 @@ type streamManagerState struct {
 type Unpacker struct {
 	baseDir            string
 	imageServerAddress string
-	logger             *log.Logger
+	logger             log.Logger
 	rwMutex            sync.RWMutex // Protect below.
 	pState             persistentState
 	scannedDevices     map[string]struct{}
 	lastUsedTime       time.Time
 }
 
-func Load(baseDir string, imageServerAddress string, logger *log.Logger) (
+func Load(baseDir string, imageServerAddress string, logger log.Logger) (
 	*Unpacker, error) {
 	return load(baseDir, imageServerAddress, logger)
 }

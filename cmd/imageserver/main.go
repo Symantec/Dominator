@@ -7,14 +7,12 @@ import (
 	imageserverRpcd "github.com/Symantec/Dominator/imageserver/rpcd"
 	"github.com/Symantec/Dominator/imageserver/scanner"
 	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/lib/log/debuglogger"
-	"github.com/Symantec/Dominator/lib/logbuf"
+	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/objectserver/filesystem"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	objectserverRpcd "github.com/Symantec/Dominator/objectserver/rpcd"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
-	"log"
 	"os"
 )
 
@@ -47,19 +45,17 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Do not run the Image Server as root")
 		os.Exit(1)
 	}
-	circularBuffer := logbuf.New()
-	logger := log.New(circularBuffer, "", log.LstdFlags)
+	logger := serverlogger.New("")
 	if err := setupserver.SetupTls(); err != nil {
-		logger.Println(err)
-		circularBuffer.Flush()
-		if !*permitInsecureMode {
-			os.Exit(1)
+		if *permitInsecureMode {
+			logger.Println(err)
+		} else {
+			logger.Fatalln(err)
 		}
 	}
 	objSrv, err := filesystem.NewObjectServer(*objectDir, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot create ObjectServer: %s\n", err)
-		os.Exit(1)
+		logger.Fatalf("Cannot create ObjectServer: %s\n", err)
 	}
 	masterMode := true
 	if *imageServerHostname != "" {
@@ -68,8 +64,7 @@ func main() {
 	imdb, err := scanner.LoadImageDataBase(*imageDir, objSrv, masterMode,
 		logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot load image database: %s\n", err)
-		os.Exit(1)
+		logger.Fatalf("Cannot load image database: %s\n", err)
 	}
 	tricorder.RegisterMetric("/image-count",
 		func() uint { return imdb.CountImages() },
@@ -82,18 +77,16 @@ func main() {
 	imgSrvRpcHtmlWriter, err := imageserverRpcd.Setup(imdb, imageServerAddress,
 		objSrv, logger)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		logger.Fatalln(err)
 	}
 	objSrvRpcHtmlWriter := objectserverRpcd.Setup(objSrv, imageServerAddress,
-		debuglogger.New(logger))
+		logger)
 	httpd.AddHtmlWriter(imdb)
 	httpd.AddHtmlWriter(&imageObjectServersType{imdb, objSrv})
 	httpd.AddHtmlWriter(imgSrvRpcHtmlWriter)
 	httpd.AddHtmlWriter(objSrvRpcHtmlWriter)
-	httpd.AddHtmlWriter(circularBuffer)
+	httpd.AddHtmlWriter(logger)
 	if err = httpd.StartServer(*portNum, imdb, objSrv, false); err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to create http server: %s\n", err)
-		os.Exit(1)
+		logger.Fatalf("Unable to create http server: %s\n", err)
 	}
 }

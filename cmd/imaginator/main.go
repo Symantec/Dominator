@@ -7,10 +7,9 @@ import (
 	"github.com/Symantec/Dominator/imagebuilder/httpd"
 	"github.com/Symantec/Dominator/imagebuilder/rpcd"
 	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/lib/logbuf"
+	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/tricorder/go/tricorder"
-	"log"
 	"os"
 	"syscall"
 	"time"
@@ -46,35 +45,28 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Must run the Image Builder as root")
 		os.Exit(1)
 	}
-	circularBuffer := logbuf.New()
-	logger := log.New(circularBuffer, "", log.LstdFlags)
+	logger := serverlogger.New("")
 	if err := setupserver.SetupTls(); err != nil {
-		logger.Println(err)
-		circularBuffer.Flush()
-		os.Exit(1)
+		logger.Fatalln(err)
 	}
 	if err := os.MkdirAll(*stateDir, dirPerms); err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot create state directory: %s\n", err)
-		os.Exit(1)
+		logger.Fatalf("Cannot create state directory: %s\n", err)
 	}
 	builderObj, err := builder.Load(*configurationUrl, *variablesFile,
 		*stateDir,
 		fmt.Sprintf("%s:%d", *imageServerHostname, *imageServerPortNum),
 		*imageRebuildInterval, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot start builder: %s\n", err)
-		os.Exit(1)
+		logger.Fatalf("Cannot start builder: %s\n", err)
 	}
 	rpcHtmlWriter, err := rpcd.Setup(builderObj, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot start builder: %s\n", err)
-		os.Exit(1)
+		logger.Fatalf("Cannot start builder: %s\n", err)
 	}
 	httpd.AddHtmlWriter(builderObj)
 	httpd.AddHtmlWriter(rpcHtmlWriter)
-	httpd.AddHtmlWriter(circularBuffer)
+	httpd.AddHtmlWriter(logger)
 	if err = httpd.StartServer(*portNum, builderObj, false); err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to create http server: %s\n", err)
-		os.Exit(1)
+		logger.Fatalf("Unable to create http server: %s\n", err)
 	}
 }

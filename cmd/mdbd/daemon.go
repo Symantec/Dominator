@@ -5,10 +5,10 @@ import (
 	"encoding/gob"
 	"errors"
 	"github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
-	"log"
 	"os"
 	"path"
 	"reflect"
@@ -44,7 +44,7 @@ func init() {
 
 func runDaemon(generators []generator, mdbFileName, hostnameRegex string,
 	datacentre string, fetchInterval uint, updateFunc func(old, new *mdb.Mdb),
-	logger *log.Logger, debug bool) {
+	logger log.Logger, debug bool) {
 	var prevMdb *mdb.Mdb
 	var hostnameRE *regexp.Regexp
 	var err error
@@ -94,7 +94,7 @@ func sleepUntil(wakeTime time.Time) {
 }
 
 func loadFromAll(generators []generator, datacentre string,
-	logger *log.Logger) (*mdb.Mdb, error) {
+	logger log.Logger) (*mdb.Mdb, error) {
 	machineMap := make(map[string]mdb.Machine)
 	startTime := time.Now()
 	var rusageStart, rusageStop syscall.Rusage

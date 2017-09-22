@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/logbuf"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/tricorder/go/tricorder"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -110,7 +110,7 @@ func writePidfile() {
 	fmt.Fprintln(file, os.Getpid())
 }
 
-func handleSignals(logger *log.Logger) {
+func handleSignals(logger log.Logger) {
 	if *pidfile == "" {
 		return
 	}
@@ -136,8 +136,7 @@ func main() {
 	flag.Usage = printUsage
 	flag.Parse()
 	tricorder.RegisterFlags()
-	circularBuffer := logbuf.New()
-	logger := log.New(circularBuffer, "", log.LstdFlags)
+	logger := serverlogger.New("")
 	// We have to have inputs.
 	if *sourcesFile == "" {
 		printUsage()
@@ -159,7 +158,7 @@ func main() {
 	if err != nil {
 		showErrorAndDie(err)
 	}
-	httpSrv.AddHtmlWriter(circularBuffer)
+	httpSrv.AddHtmlWriter(logger)
 	rpcd := startRpcd(logger)
 	go runDaemon(generators, *mdbFile, *hostnameRegex, *datacentre,
 		*fetchInterval, func(old, new *mdb.Mdb) {

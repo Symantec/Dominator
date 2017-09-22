@@ -11,11 +11,11 @@ package filegen
 
 import (
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver/memory"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"io"
-	"log"
 	"sync"
 	"time"
 )
@@ -27,7 +27,7 @@ import (
 // It returns the data, a time.Time indicating when the data are valid until
 // (a zero time indicates the data are valid forever) and an error.
 type FileGenerator interface {
-	Generate(machine mdb.Machine, logger *log.Logger) (
+	Generate(machine mdb.Machine, logger log.Logger) (
 		data []byte, validUntil time.Time, err error)
 }
 
@@ -52,12 +52,12 @@ type Manager struct {
 	clients      map[<-chan *proto.ServerMessage]chan<- *proto.ServerMessage
 	// Not protected by lock.
 	objectServer *memory.ObjectServer
-	logger       *log.Logger
+	logger       log.Logger
 }
 
 // New creates a new *Manager. Only one should be created per application.
 // The logger will be used to log problems.
-func New(logger *log.Logger) *Manager {
+func New(logger log.Logger) *Manager {
 	return newManager(logger)
 }
 

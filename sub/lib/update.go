@@ -5,11 +5,11 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
 	"io"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -141,7 +141,7 @@ func (t *uType) makeInodes(inodesToMake []sub.Inode,
 
 func makeRegularInode(fullPathname string,
 	inode *filesystem.RegularInode, multiplyUsedObjects map[hash.Hash]uint64,
-	objectsDir string, logger *log.Logger) error {
+	objectsDir string, logger log.Logger) error {
 	var objectPathname string
 	if inode.Size > 0 {
 		objectPathname = path.Join(objectsDir,
@@ -184,7 +184,7 @@ func makeRegularInode(fullPathname string,
 }
 
 func makeSymlinkInode(fullPathname string,
-	inode *filesystem.SymlinkInode, logger *log.Logger) error {
+	inode *filesystem.SymlinkInode, logger log.Logger) error {
 	if err := inode.Write(fullPathname); err != nil {
 		logger.Println(err)
 		return err
@@ -194,7 +194,7 @@ func makeSymlinkInode(fullPathname string,
 }
 
 func makeSpecialInode(fullPathname string, inode *filesystem.SpecialInode,
-	logger *log.Logger) error {
+	logger log.Logger) error {
 	if err := inode.Write(fullPathname); err != nil {
 		logger.Println(err)
 		return err

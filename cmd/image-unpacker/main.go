@@ -7,10 +7,9 @@ import (
 	"github.com/Symantec/Dominator/imageunpacker/rpcd"
 	"github.com/Symantec/Dominator/imageunpacker/unpacker"
 	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/lib/logbuf"
+	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/tricorder/go/tricorder"
-	"log"
 	"os"
 	"syscall"
 )
@@ -39,12 +38,9 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Must run the Image Unpacker as root")
 		os.Exit(1)
 	}
-	circularBuffer := logbuf.New()
-	logger := log.New(circularBuffer, "", log.LstdFlags)
+	logger := serverlogger.New("")
 	if err := setupserver.SetupTls(); err != nil {
-		logger.Println(err)
-		circularBuffer.Flush()
-		os.Exit(1)
+		logger.Fatalln(err)
 	}
 	if err := os.MkdirAll(*stateDir, dirPerms); err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot create state directory: %s\n", err)
@@ -59,7 +55,7 @@ func main() {
 	rpcHtmlWriter := rpcd.Setup(unpackerObj, logger)
 	httpd.AddHtmlWriter(unpackerObj)
 	httpd.AddHtmlWriter(rpcHtmlWriter)
-	httpd.AddHtmlWriter(circularBuffer)
+	httpd.AddHtmlWriter(logger)
 	if err = httpd.StartServer(*portNum, unpackerObj, false); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create http server: %s\n", err)
 		os.Exit(1)

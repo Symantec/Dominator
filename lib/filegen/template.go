@@ -5,11 +5,11 @@ import (
 	"errors"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver/memory"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"text/template"
 	"time"
@@ -17,7 +17,7 @@ import (
 
 type templateGenerator struct {
 	objectServer    *memory.ObjectServer
-	logger          *log.Logger
+	logger          log.Logger
 	template        *template.Template
 	notifierChannel chan<- string
 }
@@ -44,7 +44,7 @@ func (m *Manager) registerTemplateFileForPath(pathname string,
 }
 
 func (tgen *templateGenerator) generate(machine mdb.Machine,
-	logger *log.Logger) (
+	logger log.Logger) (
 	hash.Hash, uint64, time.Time, error) {
 	if tgen.template == nil {
 		return hash.Hash{}, 0, time.Time{}, errors.New("no template data yet")

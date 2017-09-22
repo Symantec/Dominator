@@ -3,16 +3,16 @@ package filegen
 import (
 	"bytes"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver/memory"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
-	"log"
 	"sort"
 	"time"
 )
 
 type hashGenerator interface {
-	generate(machine mdb.Machine, logger *log.Logger) (
+	generate(machine mdb.Machine, logger log.Logger) (
 		hashVal hash.Hash, length uint64, validUntil time.Time, err error)
 }
 
@@ -132,7 +132,7 @@ func (m *Manager) getRegisteredPaths() []string {
 }
 
 func (g *hashGeneratorWrapper) generate(machine mdb.Machine,
-	logger *log.Logger) (
+	logger log.Logger) (
 	hash.Hash, uint64, time.Time, error) {
 	data, validUntil, err := g.dataGenerator.Generate(machine, logger)
 	if err != nil {

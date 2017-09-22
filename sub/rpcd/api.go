@@ -1,13 +1,13 @@
 package rpcd
 
 import (
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
-	"log"
 	"sync"
 )
 
@@ -21,7 +21,7 @@ type rpcType struct {
 	oldTriggersFilename          string
 	rescanObjectCacheFunction    func()
 	disableScannerFunc           func(disableScanner bool)
-	logger                       *log.Logger
+	logger                       log.Logger
 	rwLock                       sync.RWMutex
 	getFilesLock                 sync.Mutex
 	fetchInProgress              bool // Fetch() & Update() mutually exclusive.
@@ -37,7 +37,7 @@ type rpcType struct {
 type addObjectsHandlerType struct {
 	objectsDir           string
 	scannerConfiguration *scanner.Configuration
-	logger               *log.Logger
+	logger               log.Logger
 }
 
 type HtmlWriter struct {
@@ -49,7 +49,7 @@ func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 	netReaderContext *rateio.ReaderContext,
 	netbenchFname string, oldTriggersFname string,
 	disableScannerFunction func(disableScanner bool),
-	rescanObjectCacheFunction func(), logger *log.Logger) *HtmlWriter {
+	rescanObjectCacheFunction func(), logger log.Logger) *HtmlWriter {
 	rpcObj := &rpcType{
 		scannerConfiguration:      configuration,
 		fileSystemHistory:         fsh,
