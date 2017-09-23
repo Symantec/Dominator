@@ -1,6 +1,3 @@
-/*
-	Package format provides convenience functions for formatting.
-*/
 package format
 
 import (
