@@ -6,7 +6,6 @@ import (
 	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/verstr"
-
 	"os"
 )
 
