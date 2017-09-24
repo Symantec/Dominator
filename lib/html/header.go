@@ -18,8 +18,6 @@ type cpuStats struct {
 }
 
 var (
-	timeFormat string = "02 Jan 2006 15:04:05.99 MST"
-
 	startCpuStats *cpuStats = getCpuStats()
 	lastCpuStats  *cpuStats = startCpuStats
 )
@@ -40,7 +38,7 @@ func writeHeader(writer io.Writer, req *http.Request, noGC bool) {
 		`<table border="1" bordercolor=#e0e0e0 style="border-collapse: collapse">`)
 	fmt.Fprintf(writer, "  <tr>\n")
 	fmt.Fprintf(writer, "    <td>Start time: %s</td>\n",
-		startCpuStats.realTime.Format(timeFormat))
+		startCpuStats.realTime.Format(format.TimeFormatSeconds))
 	uptime := currentCpuStats.realTime.Sub(startCpuStats.realTime)
 	uptime += time.Millisecond * 50
 	uptime = (uptime / time.Millisecond / 100) * time.Millisecond * 100
