@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
@@ -140,7 +139,7 @@ func unpackImageSimple(client *srpc.Client, streamName, rootDir string,
 func unpackImage(client *srpc.Client, streamName string, builder *Builder,
 	maxSourceAge, expiresIn time.Duration, rootDir string,
 	logger log.Logger) (string, error) {
-	imageName, sourceImage, err := getLatestImage(client, streamName)
+	imageName, sourceImage, err := getLatestImage(client, streamName, logger)
 	if err != nil {
 		return "", err
 	}
@@ -155,7 +154,7 @@ func unpackImage(client *srpc.Client, streamName string, builder *Builder,
 		if err != nil {
 			return "", err
 		}
-		sourceImage, err = imageclient.GetImage(client, imageName)
+		sourceImage, err = getImage(client, imageName, logger)
 		if err != nil {
 			return "", err
 		}
@@ -171,7 +170,7 @@ func unpackImage(client *srpc.Client, streamName string, builder *Builder,
 		if err != nil {
 			return "", err
 		}
-		sourceImage, err = imageclient.GetImage(client, imageName)
+		sourceImage, err = getImage(client, imageName, logger)
 		if err != nil {
 			return "", err
 		}

@@ -72,10 +72,10 @@ func addImage(client *srpc.Client, streamName, dirname string,
 	if err := objClient.Close(); err != nil {
 		return "", err
 	}
-	if _, oldImage, err := getLatestImage(client, streamName); err != nil {
+	if _, oImg, err := getLatestImage(client, streamName, logger); err != nil {
 		return "", err
-	} else if oldImage != nil {
-		util.CopyMtimes(oldImage.FileSystem, fs)
+	} else if oImg != nil {
+		util.CopyMtimes(oImg.FileSystem, fs)
 	}
 	img := &image.Image{
 		BuildLog:   &image.Annotation{Object: &hashVal},
