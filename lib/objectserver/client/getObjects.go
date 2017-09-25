@@ -4,10 +4,11 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/proto/objectserver"
 	"io"
 	"io/ioutil"
+
+	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/proto/objectserver"
 )
 
 func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (

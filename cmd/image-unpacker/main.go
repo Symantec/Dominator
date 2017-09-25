@@ -3,6 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"syscall"
+
 	"github.com/Symantec/Dominator/imageunpacker/httpd"
 	"github.com/Symantec/Dominator/imageunpacker/rpcd"
 	"github.com/Symantec/Dominator/imageunpacker/unpacker"
@@ -10,8 +13,6 @@ import (
 	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/tricorder/go/tricorder"
-	"os"
-	"syscall"
 )
 
 const (

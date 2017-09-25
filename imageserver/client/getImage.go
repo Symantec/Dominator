@@ -1,10 +1,11 @@
 package client
 
 import (
+	"time"
+
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
-	"time"
 )
 
 func getImage(client *srpc.Client, name string, timeout time.Duration) (

@@ -3,9 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/dominator"
-	"os"
 )
 
 func enableUpdatesSubcommand(client *srpc.Client, args []string) {

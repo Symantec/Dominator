@@ -2,10 +2,11 @@ package main
 
 import (
 	"bufio"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/sub/client"
 	"io"
 	"os"
+
+	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/sub/client"
 )
 
 func getFileSubcommand(getSubClient getSubClientFunc, args []string) {

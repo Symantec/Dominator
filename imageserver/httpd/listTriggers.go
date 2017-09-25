@@ -3,8 +3,9 @@ package httpd
 import (
 	"bufio"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/json"
 	"net/http"
+
+	"github.com/Symantec/Dominator/lib/json"
 )
 
 func (s state) listTriggersHandler(w http.ResponseWriter, req *http.Request) {

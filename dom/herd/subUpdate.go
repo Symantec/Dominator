@@ -1,10 +1,11 @@
 package herd
 
 import (
-	"github.com/Symantec/Dominator/dom/lib"
-	subproto "github.com/Symantec/Dominator/proto/sub"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/dom/lib"
+	subproto "github.com/Symantec/Dominator/proto/sub"
 )
 
 // Returns (idle, missing), idle=true if no update needs to be performed.

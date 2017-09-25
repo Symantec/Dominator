@@ -2,10 +2,11 @@ package unpacker
 
 import (
 	"bytes"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/json"
 	"path"
 	"syscall"
+
+	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/json"
 )
 
 const filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP |

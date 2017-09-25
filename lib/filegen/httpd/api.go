@@ -2,10 +2,11 @@ package httpd
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/filegen"
 	"io"
 	"net"
 	"net/http"
+
+	"github.com/Symantec/Dominator/lib/filegen"
 )
 
 type HtmlWriter interface {

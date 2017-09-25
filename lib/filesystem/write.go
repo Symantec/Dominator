@@ -2,10 +2,11 @@ package filesystem
 
 import (
 	"errors"
-	"github.com/Symantec/Dominator/lib/fsutil"
 	"os"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/fsutil"
 )
 
 var modePerm FileMode = syscall.S_IRWXU | syscall.S_IRWXG | syscall.S_IRWXO

@@ -2,10 +2,11 @@ package cpusharer
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/format"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/format"
 )
 
 func newFifoCpuSharer() *FifoCpuSharer {

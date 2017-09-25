@@ -1,11 +1,12 @@
 package lib
 
 import (
+	"time"
+
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
-	"time"
 )
 
 type TriggersRunner func(triggers []*triggers.Trigger, action string,

@@ -3,12 +3,13 @@ package main
 import (
 	"encoding/gob"
 	"errors"
+	"io"
+	"sync"
+
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/mdbserver"
-	"io"
-	"sync"
 )
 
 type rpcType struct {

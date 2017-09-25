@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
-	"github.com/Symantec/Dominator/lib/log"
 	"os"
 	"path"
+
+	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
+	"github.com/Symantec/Dominator/lib/log"
 )
 
 func copyBootstrapImageSubcommand(args []string, logger log.Logger) {

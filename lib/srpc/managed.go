@@ -2,6 +2,7 @@ package srpc
 
 import (
 	"crypto/tls"
+
 	"github.com/Symantec/Dominator/lib/connpool"
 )
 

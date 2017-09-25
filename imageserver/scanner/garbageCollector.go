@@ -4,15 +4,16 @@ import (
 	"bufio"
 	"encoding/gob"
 	"errors"
+	"io"
+	"os"
+	"path"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
-	"io"
-	"os"
-	"path"
-	"time"
 )
 
 var timeFormat string = "02 Jan 2006 15:04:05.99 MST"

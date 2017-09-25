@@ -2,11 +2,12 @@ package main
 
 import (
 	"errors"
-	"github.com/Symantec/Dominator/lib/log"
 	"io/ioutil"
 	"net/http"
 	"runtime"
 	"strings"
+
+	"github.com/Symantec/Dominator/lib/log"
 )
 
 var metadataServer = "http://169.254.169.254/"

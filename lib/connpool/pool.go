@@ -1,9 +1,10 @@
 package connpool
 
 import (
-	"github.com/Symantec/Dominator/lib/resourcepool"
 	"sync"
 	"syscall"
+
+	"github.com/Symantec/Dominator/lib/resourcepool"
 )
 
 var (

@@ -1,9 +1,10 @@
 package client
 
 import (
+	"path"
+
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
-	"path"
 )
 
 func associateStreamWithDevice(srpcClient *srpc.Client, streamName string,

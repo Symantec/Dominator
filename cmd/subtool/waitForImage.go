@@ -2,11 +2,12 @@ package main
 
 import (
 	"errors"
-	"github.com/Symantec/Dominator/proto/sub"
-	"github.com/Symantec/Dominator/sub/client"
 	"log"
 	"os"
 	"time"
+
+	"github.com/Symantec/Dominator/proto/sub"
+	"github.com/Symantec/Dominator/sub/client"
 )
 
 func waitForImageSubcommand(getSubClient getSubClientFunc, args []string) {

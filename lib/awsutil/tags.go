@@ -2,10 +2,11 @@ package awsutil
 
 import (
 	"errors"
+	"strings"
+
 	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"strings"
 )
 
 func (tag Tag) makeFilter() *ec2.Filter {

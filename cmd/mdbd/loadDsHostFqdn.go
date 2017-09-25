@@ -3,9 +3,10 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"io"
+
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
-	"io"
 )
 
 func newDsHostFqdnGenerator(args []string) (generator, error) {

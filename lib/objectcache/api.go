@@ -1,8 +1,9 @@
 package objectcache
 
 import (
-	"github.com/Symantec/Dominator/lib/hash"
 	"io"
+
+	"github.com/Symantec/Dominator/lib/hash"
 )
 
 type ObjectCache []hash.Hash

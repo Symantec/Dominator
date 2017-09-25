@@ -1,10 +1,11 @@
 package rateio
 
 import (
-	"github.com/Symantec/tricorder/go/tricorder"
-	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
 	"time"
+
+	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
 )
 
 type ReadIOMeasurer interface {

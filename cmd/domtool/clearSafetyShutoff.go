@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/dominator"
-	"os"
 )
 
 func clearSafetyShutoffSubcommand(client *srpc.Client, args []string) {

@@ -38,9 +38,10 @@
 package connpool
 
 import (
-	"github.com/Symantec/Dominator/lib/resourcepool"
 	"net"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/resourcepool"
 )
 
 // Dialer implements a dialer that can be use to create connections.

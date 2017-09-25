@@ -1,9 +1,10 @@
 package objectserver
 
 import (
-	"github.com/Symantec/Dominator/lib/hash"
 	"io"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/hash"
 )
 
 type FullObjectServer interface {

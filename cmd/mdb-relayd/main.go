@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/mdb"
-	"github.com/Symantec/Dominator/lib/mdb/mdbd"
-	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"log"
 	"os"
 	"reflect"
+
+	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Symantec/Dominator/lib/mdb/mdbd"
+	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 )
 
 var (

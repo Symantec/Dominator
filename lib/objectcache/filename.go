@@ -2,6 +2,7 @@ package objectcache
 
 import (
 	"fmt"
+
 	"github.com/Symantec/Dominator/lib/hash"
 )
 

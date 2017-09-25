@@ -1,9 +1,10 @@
 package filesystem
 
 import (
-	"github.com/Symantec/Dominator/lib/format"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/format"
 )
 
 func (objSrv *ObjectServer) garbageCollector() (uint64, error) {

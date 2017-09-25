@@ -1,9 +1,10 @@
 package cpulimiter
 
 import (
-	"github.com/Symantec/Dominator/lib/wsyscall"
 	"runtime"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/wsyscall"
 )
 
 var minCheckInterval = time.Millisecond * 10

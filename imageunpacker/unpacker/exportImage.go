@@ -4,8 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/format"
-	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"os"
 	"os/exec"
 	"os/user"
@@ -13,6 +11,9 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/format"
+	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 )
 
 var (

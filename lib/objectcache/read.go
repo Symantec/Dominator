@@ -4,9 +4,10 @@ import (
 	"crypto/sha512"
 	"errors"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/hash"
 	"io"
 	"io/ioutil"
+
+	"github.com/Symantec/Dominator/lib/hash"
 )
 
 func readObject(reader io.Reader, length uint64, expectedHash *hash.Hash) (

@@ -1,13 +1,14 @@
 package unpacker
 
 import (
+	"io"
+	"sync"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
-	"io"
-	"sync"
-	"time"
 )
 
 const (

@@ -2,13 +2,14 @@ package filegen
 
 import (
 	"errors"
+	"io"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver/memory"
-	"io"
-	"time"
 )
 
 type fileGenerator struct {

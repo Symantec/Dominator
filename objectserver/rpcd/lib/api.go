@@ -1,11 +1,12 @@
 package lib
 
 import (
+	"io"
+
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"io"
 )
 
 type ObjectAdder interface {

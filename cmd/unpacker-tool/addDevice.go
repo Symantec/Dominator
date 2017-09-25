@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	uclient "github.com/Symantec/Dominator/imageunpacker/client"
-	"github.com/Symantec/Dominator/lib/srpc"
 	"io"
 	"os"
 	"os/exec"
+
+	uclient "github.com/Symantec/Dominator/imageunpacker/client"
+	"github.com/Symantec/Dominator/lib/srpc"
 )
 
 func addDeviceSubcommand(client *srpc.Client, args []string) {

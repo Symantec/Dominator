@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/filegen"
 	"os"
 	"path"
+
+	"github.com/Symantec/Dominator/lib/filegen"
 )
 
 func registerSourceDirectory(manager *filegen.Manager, baseDir string,

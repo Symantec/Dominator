@@ -3,10 +3,11 @@ package serverlogger
 import (
 	"flag"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/log/debuglogger"
-	"github.com/Symantec/Dominator/lib/logbuf"
 	"io"
 	"os"
+
+	"github.com/Symantec/Dominator/lib/log/debuglogger"
+	"github.com/Symantec/Dominator/lib/logbuf"
 )
 
 var (

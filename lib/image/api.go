@@ -1,11 +1,12 @@
 package image
 
 import (
+	"time"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/triggers"
-	"time"
 )
 
 type Annotation struct {

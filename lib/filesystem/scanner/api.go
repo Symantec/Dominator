@@ -1,12 +1,13 @@
 package scanner
 
 import (
+	"io"
+
 	"github.com/Symantec/Dominator/lib/cpulimiter"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/hash"
-	"io"
 )
 
 type Hasher interface {

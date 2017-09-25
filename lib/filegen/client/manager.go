@@ -3,6 +3,9 @@ package client
 import (
 	"bytes"
 	"encoding/gob"
+	"io"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
@@ -10,8 +13,6 @@ import (
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
-	"io"
-	"time"
 )
 
 func newManager(objSrv objectserver.ObjectServer, logger log.Logger) *Manager {

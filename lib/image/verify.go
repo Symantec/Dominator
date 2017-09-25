@@ -2,8 +2,9 @@ package image
 
 import (
 	"errors"
-	"github.com/Symantec/Dominator/lib/filesystem"
 	"path"
+
+	"github.com/Symantec/Dominator/lib/filesystem"
 )
 
 func (image *Image) verify() error {

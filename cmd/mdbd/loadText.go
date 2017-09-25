@@ -2,10 +2,11 @@ package main
 
 import (
 	"bufio"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/mdb"
 	"io"
 	"strings"
+
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/mdb"
 )
 
 func newTextGenerator(args []string) (generator, error) {

@@ -4,6 +4,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"os"
+	"path"
+	"syscall"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
@@ -13,11 +19,6 @@ import (
 	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
-	"io"
-	"os"
-	"path"
-	"syscall"
-	"time"
 )
 
 const filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP

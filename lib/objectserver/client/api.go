@@ -2,10 +2,11 @@ package client
 
 import (
 	"encoding/gob"
+	"io"
+
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"io"
 )
 
 type ObjectClient struct {

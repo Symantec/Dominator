@@ -3,13 +3,14 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"os"
-	"strconv"
-	"strings"
 )
 
 func addReplaceImageSubcommand(args []string) {

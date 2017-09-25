@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+
 	"github.com/Symantec/Dominator/lib/awsutil"
 	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"

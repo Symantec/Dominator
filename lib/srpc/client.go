@@ -5,15 +5,16 @@ import (
 	"crypto/tls"
 	"encoding/gob"
 	"errors"
-	"github.com/Symantec/Dominator/lib/connpool"
-	"github.com/Symantec/tricorder/go/tricorder"
-	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/connpool"
+	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
 )
 
 var (

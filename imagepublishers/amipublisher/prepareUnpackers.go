@@ -2,6 +2,9 @@ package amipublisher
 
 import (
 	"errors"
+	"strconv"
+	"time"
+
 	uclient "github.com/Symantec/Dominator/imageunpacker/client"
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/constants"
@@ -9,8 +12,6 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"strconv"
-	"time"
 )
 
 func prepareUnpackers(streamName string, targets awsutil.TargetList,

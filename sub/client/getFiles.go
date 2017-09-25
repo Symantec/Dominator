@@ -2,9 +2,10 @@ package client
 
 import (
 	"encoding/gob"
+	"io"
+
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
-	"io"
 )
 
 func getFiles(client *srpc.Client, filenames []string,

@@ -2,9 +2,10 @@ package fsrateio
 
 import (
 	"fmt"
+	"syscall"
+
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/rateio"
-	"syscall"
 )
 
 type ReadMeasurer struct {

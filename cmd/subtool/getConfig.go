@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/sub/client"
-	"os"
 )
 
 func getConfigSubcommand(getSubClient getSubClientFunc, args []string) {

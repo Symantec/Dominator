@@ -5,18 +5,19 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	jsonwriter "github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/mdb"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/mdbserver"
 	"io"
 	"os"
 	"path"
 	"reflect"
 	"sort"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/fsutil"
+	jsonwriter "github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/proto/mdbserver"
 )
 
 func startMdbDaemon(mdbFileName string, logger log.Logger) <-chan *mdb.Mdb {

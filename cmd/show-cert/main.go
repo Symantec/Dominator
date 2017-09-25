@@ -4,10 +4,11 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/x509util"
 	"io/ioutil"
 	"os"
 	"sort"
+
+	"github.com/Symantec/Dominator/lib/x509util"
 )
 
 func printUsage() {

@@ -3,12 +3,13 @@ package main
 import (
 	"bufio"
 	"errors"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/mdb"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/mdb"
 )
 
 type makeGeneratorFunc func([]string) (generator, error)

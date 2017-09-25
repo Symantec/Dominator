@@ -4,12 +4,13 @@ import (
 	"crypto/sha512"
 	"encoding/gob"
 	"fmt"
+	"io"
+
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/queue"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
-	"io"
 )
 
 func newObjectAdderQueue(client *srpc.Client) (*ObjectAdderQueue, error) {

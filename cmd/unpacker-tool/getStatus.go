@@ -3,10 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/Symantec/Dominator/imageunpacker/client"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"os"
 )
 
 func getStatusSubcommand(srpcClient *srpc.Client, args []string) {

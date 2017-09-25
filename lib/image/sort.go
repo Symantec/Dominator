@@ -1,8 +1,9 @@
 package image
 
 import (
-	"github.com/Symantec/Dominator/lib/verstr"
 	"sort"
+
+	"github.com/Symantec/Dominator/lib/verstr"
 )
 
 type directoryList []Directory

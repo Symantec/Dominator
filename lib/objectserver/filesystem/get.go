@@ -2,11 +2,12 @@ package filesystem
 
 import (
 	"errors"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
 	"os"
 	"path"
+
+	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/objectcache"
 )
 
 func (objSrv *ObjectServer) getObjects(hashes []hash.Hash) (

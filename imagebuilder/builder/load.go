@@ -5,11 +5,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"time"
+
 	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/url/urlutil"
-	"sort"
-	"time"
 )
 
 func load(confUrl, variablesFile, stateDir, imageServerAddress string,

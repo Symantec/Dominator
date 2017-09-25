@@ -3,12 +3,13 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/html"
-	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/mdb"
 	"io"
 	"net"
 	"net/http"
+
+	"github.com/Symantec/Dominator/lib/html"
+	"github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/mdb"
 )
 
 type HtmlWriter interface {

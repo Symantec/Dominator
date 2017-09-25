@@ -3,9 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"os"
 )
 
 func copyImageSubcommand(args []string) {

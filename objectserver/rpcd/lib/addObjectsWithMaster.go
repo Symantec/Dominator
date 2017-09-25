@@ -4,6 +4,8 @@ import (
 	"container/list"
 	"encoding/gob"
 	"fmt"
+	"io"
+
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
@@ -11,7 +13,6 @@ import (
 	oclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/objectserver"
-	"io"
 )
 
 func addObjectsWithMaster(conn *srpc.Conn,

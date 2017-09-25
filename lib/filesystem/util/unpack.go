@@ -3,16 +3,17 @@ package util
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path"
+	"syscall"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
-	"os"
-	"path"
-	"syscall"
-	"time"
 )
 
 const (

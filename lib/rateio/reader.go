@@ -2,9 +2,10 @@ package rateio
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/format"
 	"io"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/format"
 )
 
 const (

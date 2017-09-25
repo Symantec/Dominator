@@ -3,6 +3,9 @@ package rpcd
 import (
 	"encoding/gob"
 	"errors"
+	"io"
+	"time"
+
 	imgclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/hash"
@@ -10,8 +13,6 @@ import (
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
-	"io"
-	"time"
 )
 
 func (t *srpcType) replicator() {

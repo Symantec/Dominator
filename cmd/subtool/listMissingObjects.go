@@ -3,11 +3,12 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/Symantec/Dominator/dom/lib"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
-	"os"
 )
 
 func listMissingObjectsSubcommand(getSubClient getSubClientFunc,

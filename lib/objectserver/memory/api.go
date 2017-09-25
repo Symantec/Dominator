@@ -1,10 +1,11 @@
 package memory
 
 import (
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/objectserver"
 	"io"
 	"sync"
+
+	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/objectserver"
 )
 
 type ObjectServer struct {

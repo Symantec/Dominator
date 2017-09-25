@@ -3,6 +3,10 @@ package herd
 import (
 	"errors"
 	"flag"
+	"os"
+	"runtime"
+	"time"
+
 	"github.com/Symantec/Dominator/dom/images"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/cpusharer"
@@ -12,9 +16,6 @@ import (
 	"github.com/Symantec/Dominator/lib/url"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/tricorder/go/tricorder"
-	"os"
-	"runtime"
-	"time"
 )
 
 var (

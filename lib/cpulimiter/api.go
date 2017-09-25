@@ -1,9 +1,10 @@
 package cpulimiter
 
 import (
-	"github.com/Symantec/Dominator/lib/wsyscall"
 	"sync"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/wsyscall"
 )
 
 type CpuLimiter struct {

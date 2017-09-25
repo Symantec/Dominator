@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+
 	"github.com/Symantec/Dominator/imageserver/httpd"
 	imageserverRpcd "github.com/Symantec/Dominator/imageserver/rpcd"
 	"github.com/Symantec/Dominator/imageserver/scanner"
@@ -13,7 +15,6 @@ import (
 	objectserverRpcd "github.com/Symantec/Dominator/objectserver/rpcd"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
-	"os"
 )
 
 var (

@@ -15,11 +15,12 @@ import (
 	"bufio"
 	"crypto/tls"
 	"errors"
-	"github.com/Symantec/Dominator/lib/connpool"
-	"github.com/Symantec/Dominator/lib/resourcepool"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/connpool"
+	"github.com/Symantec/Dominator/lib/resourcepool"
 )
 
 var (

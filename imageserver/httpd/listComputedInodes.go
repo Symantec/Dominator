@@ -3,10 +3,11 @@ package httpd
 import (
 	"bufio"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/filesystem"
 	"io"
 	"net/http"
 	"path"
+
+	"github.com/Symantec/Dominator/lib/filesystem"
 )
 
 func (s state) listComputedInodesHandler(w http.ResponseWriter,

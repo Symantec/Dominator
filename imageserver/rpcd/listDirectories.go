@@ -2,6 +2,7 @@ package rpcd
 
 import (
 	"encoding/gob"
+
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
 )

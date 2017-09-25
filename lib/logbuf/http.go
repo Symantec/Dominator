@@ -3,8 +3,6 @@ package logbuf
 import (
 	"bufio"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/url"
-	_ "github.com/Symantec/tricorder/go/healthserver"
 	"io"
 	"net/http"
 	"os"
@@ -13,6 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/url"
+	_ "github.com/Symantec/tricorder/go/healthserver"
 )
 
 type countingWriter struct {

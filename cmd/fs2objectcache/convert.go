@@ -2,12 +2,13 @@ package main
 
 import (
 	"crypto/sha512"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/objectcache"
 	"io"
 	"os"
 	"path"
+
+	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/objectcache"
 )
 
 func convertToObject(pathname, objectsDir string) error {

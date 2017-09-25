@@ -3,10 +3,11 @@ package httpd
 import (
 	"bufio"
 	"fmt"
+	"net/http"
+
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/url"
-	"net/http"
 )
 
 func (s state) listPackagesHandler(w http.ResponseWriter, req *http.Request) {

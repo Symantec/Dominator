@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
-	libjson "github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/log"
 	"os"
 	"path"
 	"strings"
 	"time"
+
+	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
+	libjson "github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/log"
 )
 
 func publishSubcommand(args []string, logger log.Logger) {

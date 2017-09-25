@@ -2,6 +2,7 @@ package setupclient
 
 import (
 	"crypto/tls"
+
 	"github.com/Symantec/Dominator/lib/srpc"
 )
 

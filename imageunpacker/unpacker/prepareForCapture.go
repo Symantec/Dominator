@@ -4,14 +4,15 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"os"
 	"os/exec"
 	"path"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/fsutil"
+	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 )
 
 var (

@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/Symantec/Dominator/lib/log"
 	proto "github.com/Symantec/Dominator/proto/imaginator"
-	"os"
 )
 
 func buildImageSubcommand(args []string, logger log.Logger) {

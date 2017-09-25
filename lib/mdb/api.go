@@ -4,8 +4,9 @@
 package mdb
 
 import (
-	"github.com/Symantec/Dominator/lib/verstr"
 	"io"
+
+	"github.com/Symantec/Dominator/lib/verstr"
 )
 
 type AwsMetadata struct {

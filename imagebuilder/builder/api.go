@@ -2,12 +2,13 @@ package builder
 
 import (
 	"bytes"
-	"github.com/Symantec/Dominator/lib/filter"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
 	"io"
 	"sync"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/srpc"
 )
 
 type imageBuilder interface {

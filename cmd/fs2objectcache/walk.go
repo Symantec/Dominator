@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/Symantec/Dominator/lib/concurrent"
 	"os"
 	"path"
 	"sync"
 	"syscall"
+
+	"github.com/Symantec/Dominator/lib/concurrent"
 )
 
 type stateType struct {

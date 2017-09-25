@@ -1,8 +1,9 @@
 package filesystem
 
 import (
-	"github.com/Symantec/Dominator/lib/filter"
 	"path"
+
+	"github.com/Symantec/Dominator/lib/filter"
 )
 
 func (fs *FileSystem) filter(filter *filter.Filter) *FileSystem {

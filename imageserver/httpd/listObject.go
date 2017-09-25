@@ -2,9 +2,10 @@ package httpd
 
 import (
 	"fmt"
+	"io"
+
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectserver/filesystem"
-	"io"
 )
 
 func listObject(writer io.Writer, objSrv *filesystem.ObjectServer,

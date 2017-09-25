@@ -2,6 +2,7 @@ package prefixlogger
 
 import (
 	"fmt"
+
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/debuglogger"
 )

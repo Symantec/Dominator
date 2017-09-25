@@ -4,6 +4,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"net"
+	"strings"
+	"time"
+
 	"github.com/Symantec/Dominator/dom/lib"
 	"github.com/Symantec/Dominator/lib/constants"
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
@@ -16,10 +21,6 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
-	"io"
-	"net"
-	"strings"
-	"time"
 )
 
 var (

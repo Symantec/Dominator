@@ -2,6 +2,7 @@ package imageserver
 
 import (
 	"encoding/gob"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 )
 

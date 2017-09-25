@@ -1,6 +1,10 @@
 package herd
 
 import (
+	"io"
+	"sync"
+	"time"
+
 	"github.com/Symantec/Dominator/dom/images"
 	"github.com/Symantec/Dominator/lib/cpusharer"
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
@@ -14,9 +18,6 @@ import (
 	filegenproto "github.com/Symantec/Dominator/proto/filegenerator"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/tricorder/go/tricorder"
-	"io"
-	"sync"
-	"time"
 )
 
 type subStatus uint

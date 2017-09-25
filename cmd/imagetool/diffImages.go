@@ -5,6 +5,10 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+
 	imgclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
@@ -13,9 +17,6 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 	subclient "github.com/Symantec/Dominator/sub/client"
-	"io/ioutil"
-	"os"
-	"os/exec"
 )
 
 func diffSubcommand(args []string) {

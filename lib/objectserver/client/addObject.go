@@ -4,9 +4,10 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"io"
+
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/proto/objectserver"
-	"io"
 )
 
 func (objClient *ObjectClient) addObject(reader io.Reader, length uint64,

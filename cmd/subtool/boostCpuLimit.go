@@ -1,9 +1,10 @@
 package main
 
 import (
+	"os"
+
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/sub/client"
-	"os"
 )
 
 func boostCpuLimitSubcommand(getSubClient getSubClientFunc, args []string) {

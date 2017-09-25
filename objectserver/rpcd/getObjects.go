@@ -4,11 +4,12 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"io"
+	"sync"
+
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
-	"io"
-	"sync"
 )
 
 var exclusive sync.RWMutex

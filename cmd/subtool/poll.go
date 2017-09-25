@@ -3,12 +3,13 @@ package main
 import (
 	"encoding/gob"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
-	"os"
-	"time"
 )
 
 func pollSubcommand(getSubClient getSubClientFunc, args []string) {

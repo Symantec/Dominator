@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
 	"github.com/Symantec/Dominator/lib/log"
-	"os"
 )
 
 func setTagsSubcommand(args []string, logger log.Logger) {

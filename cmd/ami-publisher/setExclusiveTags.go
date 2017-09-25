@@ -3,10 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
 	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
-	"os"
 )
 
 func setExclusiveTagsSubcommand(args []string, logger log.Logger) {

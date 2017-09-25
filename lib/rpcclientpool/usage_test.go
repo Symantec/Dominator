@@ -1,11 +1,12 @@
 package rpcclientpool
 
 import (
-	"github.com/Symantec/Dominator/lib/resourcepool"
 	"net"
 	"net/http"
 	"net/rpc"
 	"testing"
+
+	"github.com/Symantec/Dominator/lib/resourcepool"
 )
 
 var serverAddress string

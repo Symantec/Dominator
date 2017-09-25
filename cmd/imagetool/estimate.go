@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"os"
 )
 
 func estimateImageUsageSubcommand(args []string) {

@@ -2,11 +2,12 @@ package lib
 
 import (
 	"encoding/gob"
+	"io"
+
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/objectserver"
-	"io"
 )
 
 func addObjects(conn *srpc.Conn, adder ObjectAdder, logger log.Logger) error {

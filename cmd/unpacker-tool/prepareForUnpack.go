@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/Symantec/Dominator/imageunpacker/client"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"os"
 )
 
 func prepareForUnpackSubcommand(srpcClient *srpc.Client, args []string) {

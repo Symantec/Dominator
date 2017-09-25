@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/srpc"
 	"os"
+
+	"github.com/Symantec/Dominator/lib/srpc"
 )
 
 func showImageSubcommand(args []string) {
