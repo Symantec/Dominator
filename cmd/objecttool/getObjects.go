@@ -3,13 +3,14 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
+	"os"
+	"syscall"
+
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectserver"
-	"io"
-	"os"
-	"syscall"
 )
 
 func getObjectsSubcommand(objSrv objectserver.ObjectServer, args []string) {

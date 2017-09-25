@@ -2,15 +2,16 @@ package rpcd
 
 import (
 	"bytes"
+	"io"
+	"os"
+	"path"
+	"syscall"
+
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/objectserver/rpcd/lib"
-	"io"
-	"os"
-	"path"
-	"syscall"
 )
 
 const (

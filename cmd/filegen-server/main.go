@@ -3,6 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"syscall"
+
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filegen"
 	"github.com/Symantec/Dominator/lib/filegen/httpd"
@@ -11,8 +14,6 @@ import (
 	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/tricorder/go/tricorder"
-	"os"
-	"syscall"
 )
 
 var (

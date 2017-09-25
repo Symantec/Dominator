@@ -4,8 +4,9 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/constants"
 	"strings"
+
+	"github.com/Symantec/Dominator/lib/constants"
 )
 
 func getPermittedMethods(cert *x509.Certificate) (map[string]struct{}, error) {

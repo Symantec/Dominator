@@ -3,11 +3,12 @@ package httpd
 import (
 	"bufio"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/verstr"
-	"io"
-	"net/http"
 )
 
 func (s state) listImagesHandler(w http.ResponseWriter, req *http.Request) {

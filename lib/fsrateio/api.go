@@ -1,10 +1,11 @@
 package fsrateio
 
 import (
+	"io"
+
 	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
-	"io"
 )
 
 type ReaderContext struct {

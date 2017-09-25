@@ -2,15 +2,16 @@ package herd
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/url"
-	"io"
-	"net/http"
-	"strings"
-	"time"
 )
 
 func (herd *Herd) showAliveSubsHandler(w io.Writer, req *http.Request) {

@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
 	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
-	"os"
 )
 
 func deleteTagsSubcommand(args []string, logger log.Logger) {

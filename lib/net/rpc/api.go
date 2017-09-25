@@ -1,8 +1,9 @@
 package rpc
 
 import (
-	"github.com/Symantec/Dominator/lib/net"
 	"net/rpc"
+
+	"github.com/Symantec/Dominator/lib/net"
 )
 
 // DialHTTPPath works like DialHTTPPath in net/rpc but accepts a custom

@@ -1,11 +1,12 @@
 package filesystem
 
 import (
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/objectcache"
 	"os"
 	"path"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/objectcache"
 )
 
 func (objSrv *ObjectServer) deleteObject(hashVal hash.Hash) error {

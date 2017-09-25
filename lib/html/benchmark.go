@@ -3,11 +3,12 @@ package html
 import (
 	"bufio"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/wsyscall"
 	"io"
 	"net/http"
 	"runtime"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/wsyscall"
 )
 
 func benchmarkedHandler(handler func(io.Writer,

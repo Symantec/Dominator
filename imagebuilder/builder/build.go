@@ -3,11 +3,12 @@ package builder
 import (
 	"bytes"
 	"errors"
+	stdlog "log"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/log/teelogger"
 	"github.com/Symantec/Dominator/lib/srpc"
-	stdlog "log"
-	"time"
 )
 
 func (b *Builder) rebuildImages(minInterval time.Duration) {

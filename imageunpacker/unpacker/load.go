@@ -3,11 +3,12 @@ package unpacker
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/Symantec/Dominator/lib/log"
 	"os"
 	"path"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/log"
 )
 
 const (

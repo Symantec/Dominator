@@ -2,6 +2,7 @@ package rpcd
 
 import (
 	"errors"
+
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 )

@@ -2,9 +2,10 @@ package html
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/format"
 	"io"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/format"
 )
 
 func writeFooter(writer io.Writer) {

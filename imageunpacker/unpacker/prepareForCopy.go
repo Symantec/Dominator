@@ -2,9 +2,10 @@ package unpacker
 
 import (
 	"errors"
-	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"path"
 	"syscall"
+
+	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 )
 
 func (u *Unpacker) prepareForCopy(streamName string) error {

@@ -4,16 +4,17 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/concurrent"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/objectserver"
 	"io"
 	"os"
 	"path"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/concurrent"
+	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/objectserver"
 )
 
 func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,

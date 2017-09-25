@@ -2,12 +2,13 @@ package scanner
 
 import (
 	"flag"
+	"io"
+	"sync"
+
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
-	"io"
-	"sync"
 )
 
 // TODO: the types should probably be moved into a separate package, leaving

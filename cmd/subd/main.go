@@ -3,6 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"os"
+	"os/signal"
+	"path"
+	"runtime"
+	"strconv"
+	"syscall"
+
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/cpulimiter"
 	"github.com/Symantec/Dominator/lib/filter"
@@ -22,13 +30,6 @@ import (
 	"github.com/Symantec/Dominator/sub/scanner"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
-	"io"
-	"os"
-	"os/signal"
-	"path"
-	"runtime"
-	"strconv"
-	"syscall"
 )
 
 var (

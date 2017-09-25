@@ -1,9 +1,10 @@
 package imageserver
 
 import (
+	"time"
+
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
-	"time"
 )
 
 type AddImageRequest struct {

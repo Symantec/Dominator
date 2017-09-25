@@ -4,12 +4,13 @@ import (
 	"archive/tar"
 	"errors"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/filter"
 	"io"
 	"path"
 	"strings"
 	"syscall"
+
+	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filter"
 )
 
 type decoderData struct {

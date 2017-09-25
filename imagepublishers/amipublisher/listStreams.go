@@ -1,12 +1,13 @@
 package amipublisher
 
 import (
+	"io/ioutil"
+	stdlog "log"
+
 	uclient "github.com/Symantec/Dominator/imageunpacker/client"
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"io/ioutil"
-	stdlog "log"
 )
 
 var nullLogger = stdlog.New(ioutil.Discard, "", 0)

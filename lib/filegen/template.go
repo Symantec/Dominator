@@ -3,16 +3,17 @@ package filegen
 import (
 	"bytes"
 	"errors"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/mdb"
-	"github.com/Symantec/Dominator/lib/objectserver/memory"
 	"io"
 	"io/ioutil"
 	"os"
 	"text/template"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Symantec/Dominator/lib/objectserver/memory"
 )
 
 type templateGenerator struct {

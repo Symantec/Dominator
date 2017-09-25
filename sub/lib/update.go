@@ -2,6 +2,13 @@ package lib
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"path"
+	"strings"
+	"syscall"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
@@ -9,12 +16,6 @@ import (
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
-	"io"
-	"os"
-	"path"
-	"strings"
-	"syscall"
-	"time"
 )
 
 func (t *uType) update(request sub.UpdateRequest,

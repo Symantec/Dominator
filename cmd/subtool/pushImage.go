@@ -3,6 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"time"
+
 	"github.com/Symantec/Dominator/dom/lib"
 	imgclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
@@ -17,9 +21,6 @@ import (
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
-	"io"
-	"os"
-	"time"
 )
 
 type nullObjectGetterType struct{}

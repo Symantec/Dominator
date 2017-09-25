@@ -1,9 +1,10 @@
 package connpool
 
 import (
-	"github.com/Symantec/Dominator/lib/resourcepool"
 	"net"
 	"testing"
+
+	"github.com/Symantec/Dominator/lib/resourcepool"
 )
 
 var serverAddress string

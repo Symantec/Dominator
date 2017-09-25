@@ -5,15 +5,16 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/log"
 	"io"
 	"os"
 	"os/user"
 	"path"
 	"syscall"
+
+	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/log"
 )
 
 const (

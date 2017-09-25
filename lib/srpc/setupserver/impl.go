@@ -5,10 +5,11 @@ import (
 	"crypto/x509"
 	"flag"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/srpc"
 	"io/ioutil"
 	"os"
 	"path"
+
+	"github.com/Symantec/Dominator/lib/srpc"
 )
 
 var (

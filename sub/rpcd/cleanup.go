@@ -2,11 +2,12 @@ package rpcd
 
 import (
 	"errors"
+	"path"
+
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
-	"path"
 )
 
 func (t *rpcType) Cleanup(conn *srpc.Conn, request sub.CleanupRequest,

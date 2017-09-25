@@ -2,10 +2,11 @@ package scanner
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/hash"
 	"io"
 	"os"
 	"path"
+
+	"github.com/Symantec/Dominator/lib/hash"
 )
 
 func (fs *FileSystem) getObject(hashVal hash.Hash) (

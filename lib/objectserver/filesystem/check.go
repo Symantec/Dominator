@@ -3,10 +3,11 @@ package filesystem
 import (
 	"errors"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/objectcache"
 	"os"
 	"path"
+
+	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/objectcache"
 )
 
 func (objSrv *ObjectServer) checkObjects(hashes []hash.Hash) ([]uint64, error) {

@@ -2,6 +2,7 @@ package unpacker
 
 import (
 	"errors"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 )
 

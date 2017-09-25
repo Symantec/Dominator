@@ -1,8 +1,9 @@
 package filter
 
 import (
-	"github.com/Symantec/Dominator/lib/fsutil"
 	"regexp"
+
+	"github.com/Symantec/Dominator/lib/fsutil"
 )
 
 func load(filename string) (*Filter, error) {

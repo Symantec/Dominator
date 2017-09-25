@@ -2,10 +2,11 @@ package httpd
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/imagebuilder/builder"
 	"io"
 	"net"
 	"net/http"
+
+	"github.com/Symantec/Dominator/imagebuilder/builder"
 )
 
 type HtmlWriter interface {

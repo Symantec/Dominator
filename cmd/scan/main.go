@@ -7,6 +7,11 @@ import (
 	"encoding/gob"
 	"flag"
 	"fmt"
+	"os"
+	"runtime"
+	"syscall"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsbench"
@@ -14,10 +19,6 @@ import (
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/memstats"
 	"github.com/Symantec/Dominator/sub/scanner"
-	"os"
-	"runtime"
-	"syscall"
-	"time"
 )
 
 var (

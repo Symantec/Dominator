@@ -2,12 +2,13 @@ package filesystem
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/filter"
 	"io"
 	"path"
 	"runtime"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/filter"
 )
 
 const (

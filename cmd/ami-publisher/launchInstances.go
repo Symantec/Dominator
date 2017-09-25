@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path"
+	"time"
+
 	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
 	"github.com/Symantec/Dominator/lib/awsutil"
 	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
-	"os"
-	"path"
-	"time"
 )
 
 func launchInstancesSubcommand(args []string, logger log.Logger) {

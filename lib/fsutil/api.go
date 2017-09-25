@@ -2,11 +2,12 @@ package fsutil
 
 import (
 	"errors"
-	"github.com/Symantec/Dominator/lib/log"
 	"hash"
 	"io"
 	"os"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/log"
 )
 
 var (

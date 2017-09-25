@@ -3,9 +3,10 @@ package herd
 import (
 	"bufio"
 	"fmt"
+	"net/http"
+
 	"github.com/Symantec/Dominator/lib/html"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"net/http"
 )
 
 func (herd *Herd) statusHandler(w http.ResponseWriter, req *http.Request) {

@@ -4,6 +4,15 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	_ "net/http/pprof"
+	"os"
+	"os/user"
+	"path"
+	"runtime"
+	"strconv"
+	"syscall"
+	"time"
+
 	"github.com/Symantec/Dominator/dom/herd"
 	"github.com/Symantec/Dominator/dom/rpcd"
 	"github.com/Symantec/Dominator/lib/constants"
@@ -15,14 +24,6 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/Dominator/lib/wsyscall"
 	"github.com/Symantec/tricorder/go/tricorder"
-	_ "net/http/pprof"
-	"os"
-	"os/user"
-	"path"
-	"runtime"
-	"strconv"
-	"syscall"
-	"time"
 )
 
 const dirPerms = syscall.S_IRWXU

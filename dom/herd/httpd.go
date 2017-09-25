@@ -2,9 +2,10 @@ package herd
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/html"
 	"net"
 	"net/http"
+
+	"github.com/Symantec/Dominator/lib/html"
 )
 
 func (herd *Herd) startServer(portNum uint, daemon bool) error {

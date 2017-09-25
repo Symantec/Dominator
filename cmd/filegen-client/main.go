@@ -3,6 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"os"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/log/cmdlogger"
 	"github.com/Symantec/Dominator/lib/mdb"
@@ -10,9 +14,6 @@ import (
 	"github.com/Symantec/Dominator/lib/objectserver/memory"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
-	"io"
-	"os"
-	"time"
 )
 
 var (

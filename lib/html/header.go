@@ -2,13 +2,14 @@ package html
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/format"
 	"io"
 	"net/http"
 	"runtime"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/format"
 )
 
 type cpuStats struct {

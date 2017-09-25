@@ -1,14 +1,15 @@
 package builder
 
 import (
+	"path"
+	"time"
+
 	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/verstr"
-	"path"
-	"time"
 )
 
 func getLatestImage(client *srpc.Client, imageStream string,

@@ -1,8 +1,9 @@
 package mdb
 
 import (
-	"github.com/Symantec/Dominator/lib/json"
 	"io"
+
+	"github.com/Symantec/Dominator/lib/json"
 )
 
 func (mdb *Mdb) debugWrite(w io.Writer) error {

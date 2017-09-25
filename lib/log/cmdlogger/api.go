@@ -2,6 +2,7 @@ package cmdlogger
 
 import (
 	"flag"
+
 	"github.com/Symantec/Dominator/lib/log/debuglogger"
 )
 

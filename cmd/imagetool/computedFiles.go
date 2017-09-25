@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filesystem/util"
 )

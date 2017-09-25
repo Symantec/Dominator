@@ -3,12 +3,13 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/fsbench"
-	"github.com/Symantec/Dominator/lib/fsrateio"
 	"io"
 	"os"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/fsbench"
+	"github.com/Symantec/Dominator/lib/fsrateio"
 )
 
 // Benchmark the read speed of the underlying block device for a given file.

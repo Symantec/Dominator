@@ -1,9 +1,10 @@
 package rpcd
 
 import (
+	"time"
+
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
-	"time"
 )
 
 func (t *srpcType) GetImage(conn *srpc.Conn,

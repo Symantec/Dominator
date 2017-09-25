@@ -3,14 +3,15 @@ package filesystem
 import (
 	"errors"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/concurrent"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/objectcache"
 	"os"
 	"path"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/concurrent"
+	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/objectcache"
 )
 
 func newObjectServer(baseDir string, logger log.Logger) (

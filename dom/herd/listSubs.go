@@ -3,9 +3,10 @@ package herd
 import (
 	"bufio"
 	"fmt"
+	"net/http"
+
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/url"
-	"net/http"
 )
 
 func (herd *Herd) listReachableSubsHandler(w http.ResponseWriter,

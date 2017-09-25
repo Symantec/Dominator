@@ -4,11 +4,6 @@ import (
 	"bufio"
 	"encoding/gob"
 	"errors"
-	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/mdb"
-	"github.com/Symantec/tricorder/go/tricorder"
-	"github.com/Symantec/tricorder/go/tricorder/units"
 	"os"
 	"path"
 	"reflect"
@@ -17,6 +12,12 @@ import (
 	"sort"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
 )
 
 var (

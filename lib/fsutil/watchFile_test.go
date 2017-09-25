@@ -2,13 +2,14 @@ package fsutil
 
 import (
 	"errors"
-	"github.com/Symantec/Dominator/lib/log/testlogger"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/log/testlogger"
 )
 
 var errorTimeout = errors.New("timeout")

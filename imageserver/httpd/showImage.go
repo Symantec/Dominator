@@ -3,11 +3,12 @@ package httpd
 import (
 	"bufio"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/image"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/image"
 )
 
 var timeFormat string = "02 Jan 2006 15:04:05.99 MST"

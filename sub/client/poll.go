@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/gob"
 	"errors"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/srpc"

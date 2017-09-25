@@ -5,9 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/gob"
 	"errors"
-	"github.com/Symantec/Dominator/lib/x509util"
-	"github.com/Symantec/tricorder/go/tricorder"
-	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
 	"log"
 	"net"
@@ -18,6 +15,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/x509util"
+	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
 )
 
 const (

@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	json "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/triggers"
-	"os"
 )
 
 func mergeTriggersSubcommand(args []string) {

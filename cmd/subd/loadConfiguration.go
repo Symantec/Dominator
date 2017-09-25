@@ -1,12 +1,13 @@
 package main
 
 import (
+	"os"
+	"path"
+
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/verstr"
 	"github.com/Symantec/Dominator/proto/sub"
-	"os"
-	"path"
 )
 
 func loadConfiguration(confDir string, conf *sub.Configuration,

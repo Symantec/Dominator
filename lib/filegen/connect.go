@@ -3,12 +3,13 @@ package filegen
 import (
 	"encoding/gob"
 	"errors"
-	"github.com/Symantec/Dominator/lib/mdb"
-	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/filegenerator"
 	"io"
 	"io/ioutil"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Symantec/Dominator/lib/srpc"
+	proto "github.com/Symantec/Dominator/proto/filegenerator"
 )
 
 func (t *rpcType) Connect(conn *srpc.Conn) error {

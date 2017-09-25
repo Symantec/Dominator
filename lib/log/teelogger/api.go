@@ -2,6 +2,7 @@ package teelogger
 
 import (
 	"fmt"
+
 	"github.com/Symantec/Dominator/lib/log"
 )
 

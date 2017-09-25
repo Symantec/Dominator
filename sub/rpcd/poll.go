@@ -2,10 +2,11 @@ package rpcd
 
 import (
 	"encoding/gob"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/sub"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/proto/sub"
 )
 
 var startTime time.Time = time.Now()

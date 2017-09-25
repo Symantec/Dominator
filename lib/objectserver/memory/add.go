@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectcache"
-	"io"
 )
 
 func (objSrv *ObjectServer) addObject(reader io.Reader, length uint64,

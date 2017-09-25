@@ -1,11 +1,12 @@
 package herd
 
 import (
+	"reflect"
+	"time"
+
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"reflect"
-	"time"
 )
 
 func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {

@@ -32,6 +32,9 @@ subd.tarball:
 format:
 	gofmt -s -w .
 
+format-imports:
+	goimports -w .
+
 
 test:
 	@find * -name '*_test.go' |\

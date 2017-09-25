@@ -2,6 +2,11 @@ package unpacker
 
 import (
 	"errors"
+	"io"
+	"os"
+	"path"
+	"time"
+
 	domlib "github.com/Symantec/Dominator/dom/lib"
 	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
@@ -16,10 +21,6 @@ import (
 	unpackproto "github.com/Symantec/Dominator/proto/imageunpacker"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	sublib "github.com/Symantec/Dominator/sub/lib"
-	"io"
-	"os"
-	"path"
-	"time"
 )
 
 func (u *Unpacker) unpackImage(streamName string, imageLeafName string) error {

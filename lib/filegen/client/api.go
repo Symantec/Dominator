@@ -1,12 +1,13 @@
 package client
 
 import (
+	"sync"
+
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
-	"sync"
 )
 
 type ComputedFile struct {

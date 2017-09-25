@@ -1,11 +1,12 @@
 package fsutil
 
 import (
-	"github.com/Symantec/Dominator/lib/log"
 	"io"
 	"os"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/log"
 )
 
 var stopped bool

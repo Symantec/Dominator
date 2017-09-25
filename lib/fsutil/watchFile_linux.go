@@ -1,12 +1,13 @@
 package fsutil
 
 import (
-	"github.com/Symantec/Dominator/lib/log"
-	"gopkg.in/fsnotify.v0"
 	"io"
 	"os"
 	"path"
 	"sync"
+
+	"github.com/Symantec/Dominator/lib/log"
+	"gopkg.in/fsnotify.v0"
 )
 
 var (

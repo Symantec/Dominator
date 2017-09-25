@@ -1,11 +1,12 @@
 package main
 
 import (
+	"os"
+	"strconv"
+
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/logger"
-	"os"
-	"strconv"
 )
 
 func debugSubcommand(client *srpc.Client, args []string, logger log.Logger) {

@@ -1,10 +1,11 @@
 package scanner
 
 import (
-	"github.com/Symantec/Dominator/lib/image"
 	"os"
 	"path"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/image"
 )
 
 func (imdb *ImageDataBase) scheduleExpiration(image *image.Image,

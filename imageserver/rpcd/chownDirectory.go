@@ -2,9 +2,10 @@ package rpcd
 
 import (
 	"errors"
+	"os/user"
+
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
-	"os/user"
 )
 
 func (t *srpcType) ChownDirectory(conn *srpc.Conn,

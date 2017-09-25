@@ -2,8 +2,9 @@ package filesystem
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/format"
 	"io"
+
+	"github.com/Symantec/Dominator/lib/format"
 )
 
 func (objSrv *ObjectServer) writeHtml(writer io.Writer) {

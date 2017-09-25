@@ -3,14 +3,15 @@ package lib
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"testing"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log/testlogger"
 	subproto "github.com/Symantec/Dominator/proto/sub"
-	"reflect"
-	"testing"
 )
 
 type fileInfo struct {

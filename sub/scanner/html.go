@@ -2,9 +2,10 @@ package scanner
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/format"
 	"io"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/format"
 )
 
 func (fsh *FileSystemHistory) writeHtml(writer io.Writer) {

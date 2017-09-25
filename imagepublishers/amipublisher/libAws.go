@@ -3,14 +3,15 @@ package amipublisher
 import (
 	"errors"
 	"fmt"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"path"
-	"strings"
-	"time"
 )
 
 func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,

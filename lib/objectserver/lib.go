@@ -1,8 +1,9 @@
 package objectserver
 
 import (
-	"github.com/Symantec/Dominator/lib/hash"
 	"io"
+
+	"github.com/Symantec/Dominator/lib/hash"
 )
 
 func getObject(objSrv ObjectServer, hashVal hash.Hash) (

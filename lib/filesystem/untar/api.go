@@ -2,10 +2,11 @@ package untar
 
 import (
 	"archive/tar"
+	"io"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
-	"io"
 )
 
 type Hasher interface {

@@ -1,8 +1,9 @@
 package untar
 
 import (
-	"github.com/Symantec/Dominator/lib/filesystem"
 	"sort"
+
+	"github.com/Symantec/Dominator/lib/filesystem"
 )
 
 type directoryEntryList []*filesystem.DirectoryEntry

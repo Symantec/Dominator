@@ -3,9 +3,10 @@ package memory
 import (
 	"bytes"
 	"errors"
-	"github.com/Symantec/Dominator/lib/hash"
 	"io"
 	"io/ioutil"
+
+	"github.com/Symantec/Dominator/lib/hash"
 )
 
 func (objSrv *ObjectServer) getObjects(hashes []hash.Hash) (

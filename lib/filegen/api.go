@@ -10,14 +10,15 @@
 package filegen
 
 import (
+	"io"
+	"sync"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/objectserver/memory"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
-	"io"
-	"sync"
-	"time"
 )
 
 // FileGenerator is the interface that wraps the Generate method.

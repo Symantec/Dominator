@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/imageserver/client"
 	"os"
+
+	"github.com/Symantec/Dominator/imageserver/client"
 )
 
 func deleteImageSubcommand(args []string) {

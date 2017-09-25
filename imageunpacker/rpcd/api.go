@@ -1,11 +1,12 @@
 package rpcd
 
 import (
+	"io"
+	"sync"
+
 	"github.com/Symantec/Dominator/imageunpacker/unpacker"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"io"
-	"sync"
 )
 
 type srpcType struct {

@@ -2,10 +2,11 @@ package rpcd
 
 import (
 	"encoding/gob"
+	"io"
+
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
-	"io"
 )
 
 func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {

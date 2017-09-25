@@ -2,10 +2,11 @@ package filesystem
 
 import (
 	"fmt"
+	"io"
+
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/hash"
-	"io"
 )
 
 type NumLinksTable map[uint64]int

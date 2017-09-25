@@ -2,9 +2,10 @@ package memstats
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/format"
 	"io"
 	"runtime"
+
+	"github.com/Symantec/Dominator/lib/format"
 )
 
 func writeNamedStat(writer io.Writer, name string, value uint64) {

@@ -3,6 +3,7 @@ package client
 import (
 	"errors"
 	"fmt"
+
 	"github.com/Symantec/Dominator/lib/srpc"
 )
 

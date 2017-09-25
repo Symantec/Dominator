@@ -1,9 +1,10 @@
 package client
 
 import (
+	"reflect"
+
 	"github.com/Symantec/Dominator/lib/hash"
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
-	"reflect"
 )
 
 var zeroHash hash.Hash

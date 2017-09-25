@@ -2,10 +2,11 @@ package filegen
 
 import (
 	"bytes"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
-	"time"
 )
 
 type jsonType struct{}

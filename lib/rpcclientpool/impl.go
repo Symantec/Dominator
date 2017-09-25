@@ -1,11 +1,12 @@
 package rpcclientpool
 
 import (
+	gonet "net"
+	gorpc "net/rpc"
+
 	"github.com/Symantec/Dominator/lib/connpool"
 	"github.com/Symantec/Dominator/lib/net"
 	"github.com/Symantec/Dominator/lib/net/rpc"
-	gonet "net"
-	gorpc "net/rpc"
 )
 
 var (

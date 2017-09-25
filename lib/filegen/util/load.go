@@ -2,9 +2,10 @@ package util
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/Symantec/Dominator/lib/filegen"
 	"github.com/Symantec/Dominator/lib/fsutil"
-	"strings"
 )
 
 type configFunc func(*filegen.Manager, string, []string) error

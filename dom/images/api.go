@@ -1,9 +1,10 @@
 package images
 
 import (
+	"sync"
+
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
-	"sync"
 )
 
 type Manager struct {

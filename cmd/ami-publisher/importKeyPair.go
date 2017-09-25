@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
-	"github.com/Symantec/Dominator/lib/log"
 	"io/ioutil"
 	"os"
+
+	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
+	"github.com/Symantec/Dominator/lib/log"
 )
 
 func importKeyPairSubcommand(args []string, logger log.Logger) {

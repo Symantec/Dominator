@@ -3,6 +3,11 @@ package amipublisher
 import (
 	"errors"
 	"fmt"
+	"os/exec"
+	"strings"
+	"sync"
+	"time"
+
 	uclient "github.com/Symantec/Dominator/imageunpacker/client"
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/format"
@@ -11,10 +16,6 @@ import (
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"os/exec"
-	"strings"
-	"sync"
-	"time"
 )
 
 type targetResult struct {

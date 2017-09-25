@@ -3,11 +3,12 @@ package rpc
 import (
 	"bufio"
 	"errors"
-	"github.com/Symantec/Dominator/lib/net"
 	"io"
 	gonet "net"
 	"net/http"
 	"net/rpc"
+
+	"github.com/Symantec/Dominator/lib/net"
 )
 
 func dial(dialer net.Dialer, network, address string) (*rpc.Client, error) {

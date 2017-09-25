@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/tricorder/go/tricorder"
-	"github.com/Symantec/tricorder/go/tricorder/units"
 	"io"
 	"syscall"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Symantec/tricorder/go/tricorder/units"
 )
 
 var statisticsComputeBucketer *tricorder.Bucketer

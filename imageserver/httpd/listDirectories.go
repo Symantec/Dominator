@@ -3,9 +3,10 @@ package httpd
 import (
 	"bufio"
 	"fmt"
-	"github.com/Symantec/Dominator/lib/image"
 	"io"
 	"net/http"
+
+	"github.com/Symantec/Dominator/lib/image"
 )
 
 func (s state) listDirectoriesHandler(w http.ResponseWriter,

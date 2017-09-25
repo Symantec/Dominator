@@ -3,15 +3,16 @@ package unpacker
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path"
+	"time"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filesystem/scanner"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/wsyscall"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
-	"os"
-	"path"
-	"time"
 )
 
 func (u *Unpacker) prepareForUnpack(streamName string, skipIfPrepared bool,

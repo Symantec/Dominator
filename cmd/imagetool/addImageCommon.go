@@ -6,6 +6,13 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"strings"
+	"syscall"
+	"time"
+
 	"github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filesystem/scanner"
@@ -19,12 +26,6 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/lib/wsyscall"
-	"io"
-	"os"
-	"os/exec"
-	"strings"
-	"syscall"
-	"time"
 )
 
 type hasher struct {

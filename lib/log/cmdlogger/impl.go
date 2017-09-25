@@ -1,9 +1,10 @@
 package cmdlogger
 
 import (
-	"github.com/Symantec/Dominator/lib/log/debuglogger"
 	"log"
 	"os"
+
+	"github.com/Symantec/Dominator/lib/log/debuglogger"
 )
 
 func newLogger() *debuglogger.Logger {

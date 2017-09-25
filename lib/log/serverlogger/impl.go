@@ -2,13 +2,14 @@ package serverlogger
 
 import (
 	"errors"
+	"log"
+	"strings"
+	"sync"
+
 	"github.com/Symantec/Dominator/lib/log/debuglogger"
 	"github.com/Symantec/Dominator/lib/logbuf"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/logger"
-	"log"
-	"strings"
-	"sync"
 )
 
 type loggerMapT struct {

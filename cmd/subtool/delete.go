@@ -1,9 +1,10 @@
 package main
 
 import (
+	"os"
+
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
-	"os"
 )
 
 func deleteSubcommand(getSubClient getSubClientFunc, args []string) {

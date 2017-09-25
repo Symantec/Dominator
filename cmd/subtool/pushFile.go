@@ -1,13 +1,14 @@
 package main
 
 import (
+	"os"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 	objclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/triggers"
 	"github.com/Symantec/Dominator/lib/wsyscall"
 	"github.com/Symantec/Dominator/proto/sub"
 	"github.com/Symantec/Dominator/sub/client"
-	"os"
 )
 
 func pushFileSubcommand(getSubClient getSubClientFunc, args []string) {

@@ -2,6 +2,10 @@ package amipublisher
 
 import (
 	"errors"
+	"os"
+	"path"
+	"sync"
+
 	iclient "github.com/Symantec/Dominator/imageserver/client"
 	uclient "github.com/Symantec/Dominator/imageunpacker/client"
 	"github.com/Symantec/Dominator/lib/awsutil"
@@ -11,9 +15,6 @@ import (
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"os"
-	"path"
-	"sync"
 )
 
 type sharingStateType struct {

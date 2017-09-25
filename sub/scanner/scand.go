@@ -1,9 +1,10 @@
 package scanner
 
 import (
-	"github.com/Symantec/Dominator/lib/log"
 	"runtime"
 	"syscall"
+
+	"github.com/Symantec/Dominator/lib/log"
 )
 
 var disableScanRequest chan bool

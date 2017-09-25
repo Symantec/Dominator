@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/Symantec/Dominator/imagebuilder/builder"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/log"
 	"io"
 	"os"
 	"syscall"
+
+	"github.com/Symantec/Dominator/imagebuilder/builder"
+	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/log"
 )
 
 const filePerms = syscall.S_IRUSR | syscall.S_IRGRP | syscall.S_IROTH
