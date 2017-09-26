@@ -27,12 +27,15 @@ const (
 )
 
 var environmentToCopy = map[string]struct{}{
-	"HOME":    struct{}{},
-	"PATH":    struct{}{},
-	"LOGNAME": struct{}{},
-	"TZ":      struct{}{},
-	"SHELL":   struct{}{},
-	"USER":    struct{}{},
+	"PATH":  struct{}{},
+	"TZ":    struct{}{},
+	"SHELL": struct{}{},
+}
+
+var environmentToSet = map[string]string{
+	"HOME":    "/",
+	"LOGNAME": "root",
+	"USER":    "root",
 }
 
 func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
@@ -172,6 +175,9 @@ func stripVariables(input []string, varsToCopy map[string]struct{}) []string {
 				output = append(output, nameValue)
 			}
 		}
+	}
+	for name, value := range environmentToSet {
+		output = append(output, name+"="+value)
 	}
 	sort.Strings(output)
 	return output
