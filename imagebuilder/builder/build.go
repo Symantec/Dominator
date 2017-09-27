@@ -60,6 +60,8 @@ func (b *Builder) build(client *srpc.Client, streamName string,
 	b.logger.Printf("Building new image for stream: %s\n", streamName)
 	buildLog := &bytes.Buffer{}
 	buildLogger := stdlog.New(buildLog, "", 0)
+	buildLogger.Printf("Starting build for %s at %s\n",
+		streamName, startTime.Format(format.TimeFormatSeconds))
 	b.buildResultsLock.Lock()
 	b.currentBuildLogs[streamName] = buildLog
 	b.buildResultsLock.Unlock()
