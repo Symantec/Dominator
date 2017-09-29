@@ -169,7 +169,7 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	if err != nil {
 		return nil, err
 	}
-	logger.Println("Registering AMI...")
+	logger.Printf("Registering AMI from: %s...\n", snapshotId)
 	volumeSize := status.Devices[volumeId].Size >> 30
 	imageBytes := usageEstimate + pData.minFreeBytes
 	imageGiB := imageBytes >> 30
