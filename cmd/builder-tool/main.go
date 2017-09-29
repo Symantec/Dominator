@@ -14,6 +14,8 @@ import (
 )
 
 var (
+	alwaysShowBuildLog = flag.Bool("alwaysShowBuildLog", false,
+		"If true, show build log even for successful builds")
 	imaginatorHostname = flag.String("imaginatorHostname", "localhost",
 		"Hostname of image build server")
 	imaginatorPortNum = flag.Uint("imaginatorPortNum",

@@ -29,6 +29,11 @@ func buildImageSubcommand(args []string, logger log.Logger) {
 		os.Stderr.Write(reply.BuildLog)
 		os.Exit(1)
 	}
+	if *alwaysShowBuildLog {
+		fmt.Fprintln(os.Stderr, "Start of build log ==========================")
+		os.Stderr.Write(reply.BuildLog)
+		fmt.Fprintln(os.Stderr, "End of build log ============================")
+	}
 	fmt.Println(reply.ImageName)
 	os.Exit(0)
 }
