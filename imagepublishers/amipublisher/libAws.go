@@ -627,6 +627,7 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 	if err != nil {
 		return "", err
 	}
+	logger.Printf("AMI: %s available\n", *ami.ImageId)
 	return *ami.ImageId, nil
 }
 
