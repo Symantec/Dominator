@@ -592,6 +592,7 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 	params := &ec2.RegisterImageInput{
 		Architecture:       aws.String("x86_64"),
 		Description:        aws.String(imageName),
+		EnaSupport:         aws.Bool(true),
 		Name:               aws.String(strings.Replace(amiName, ":", ".", -1)),
 		RootDeviceName:     aws.String(rootDevName),
 		SriovNetSupport:    aws.String("simple"),
