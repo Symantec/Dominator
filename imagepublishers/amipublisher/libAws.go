@@ -249,6 +249,12 @@ func detachVolume(awsService *ec2.EC2, instanceId, volumeId string) error {
 		InstanceId: aws.String(instanceId),
 		VolumeId:   aws.String(volumeId),
 	})
+	if err != nil {
+		return err
+	}
+	err = awsService.WaitUntilVolumeAvailable(&ec2.DescribeVolumesInput{
+		VolumeIds: aws.StringSlice([]string{volumeId}),
+	})
 	return err
 }
 
