@@ -36,6 +36,8 @@ var (
 		"Maximum idle time for image unpacker instances")
 	minFreeBytes = flag.Uint64("minFreeBytes", 1<<28,
 		"minimum number of free bytes in image")
+	replaceInstances = flag.Bool("replaceInstances", false,
+		"If true, replace old instances when launching, else skip on old")
 	s3Bucket = flag.String("s3Bucket", "",
 		"S3 bucket to upload bundle to (default is EBS-backed AMIs)")
 	s3Folder = flag.String("s3Folder", "",
