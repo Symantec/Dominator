@@ -2,8 +2,11 @@ package amipublisher
 
 import (
 	"errors"
+	"strconv"
+	"time"
 
 	"github.com/Symantec/Dominator/lib/awsutil"
+	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -13,8 +16,8 @@ import (
 func launchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
 	imageSearchTags, vpcSearchTags, subnetSearchTags,
 	securityGroupSearchTags awsutil.Tags, instanceType string,
-	sshKeyName string, tags map[string]string, logger log.Logger) (
-	[]InstanceResult, error) {
+	sshKeyName string, tags map[string]string, replaceInstances bool,
+	logger log.Logger) ([]InstanceResult, error) {
 	if imageSearchTags["Name"] == "" {
 		return nil, errors.New("no image Name search tag")
 	}
@@ -23,7 +26,8 @@ func launchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			instanceId, privateIp, err := launchInstanceInTarget(awsService,
 				imageSearchTags, vpcSearchTags, subnetSearchTags,
-				securityGroupSearchTags, instanceType, sshKeyName, tags, logger)
+				securityGroupSearchTags, instanceType, sshKeyName, tags,
+				replaceInstances, logger)
 			if err != nil {
 				logger.Println(err)
 			}
@@ -51,13 +55,15 @@ func launchInstanceInTarget(awsService *ec2.EC2,
 	imageSearchTags, vpcSearchTags, subnetSearchTags,
 	securityGroupSearchTags awsutil.Tags,
 	instanceType string, sshKeyName string, tags awsutil.Tags,
-	logger log.Logger) (string, string, error) {
-	instances, err := getInstances(awsService, tags["Name"])
+	replaceInstances bool, logger log.Logger) (string, string, error) {
+	oldInstances, err := getInstances(awsService, tags["Name"])
 	if err != nil {
 		return "", "", err
 	}
-	if len(instances) > 0 {
-		return "", "", nil
+	if len(oldInstances) > 0 {
+		if !replaceInstances {
+			return "", "", nil
+		}
 	}
 	image, err := findImage(awsService, imageSearchTags)
 	if err != nil {
@@ -79,9 +85,30 @@ func launchInstanceInTarget(awsService *ec2.EC2,
 		InstanceIds: aws.StringSlice([]string{instanceId}),
 	})
 	if err != nil {
+		if err := libTerminateInstances(awsService, instanceId); err != nil {
+			logger.Printf("error terminating: %s\n", err)
+		}
 		return "", "", err
 	}
-	logger.Printf("running: %s\n", instanceId)
+	logger.Printf("running: %s, connecting...\n", instanceId)
+	address := privateIp + ":" + strconv.Itoa(constants.ImageUnpackerPortNumber)
+	retryUntil := time.Now().Add(time.Minute * 10)
+	srpcClient, err := connectToUnpacker(address, retryUntil, logger)
+	if err != nil {
+		if err := libTerminateInstances(awsService, instanceId); err != nil {
+			logger.Printf("error terminating: %s\n", err)
+		}
+		return "", "", err
+	}
+	srpcClient.Close()
+	if len(oldInstances) > 0 {
+		ids := getInstanceIds(oldInstances)
+		if err := libTerminateInstances(awsService, ids...); err != nil {
+			logger.Printf("error terminating: %s\n", err)
+		} else {
+			logger.Println("terminated old instance(s): ", ids)
+		}
+	}
 	return instanceId, privateIp, nil
 }
 

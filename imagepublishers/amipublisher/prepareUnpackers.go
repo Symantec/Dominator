@@ -79,7 +79,7 @@ func getWorkingUnpacker(awsService *ec2.EC2, name string, logger log.Logger) (
 	}
 	address := *unpackerInstance.PrivateIpAddress + ":" +
 		strconv.Itoa(constants.ImageUnpackerPortNumber)
-	logger.Printf("discovered unpacker: %s at %s\n",
+	logger.Printf("discovered unpacker: %s at %s, connecting...\n",
 		*unpackerInstance.InstanceId, address)
 	retryUntil := launchTime.Add(time.Minute * 10)
 	if time.Until(retryUntil) < time.Minute {
@@ -98,12 +98,12 @@ func connectToUnpacker(address string, retryUntil time.Time,
 	for {
 		srpcClient, err := srpc.DialHTTP("tcp", address, time.Second*10)
 		if err == nil {
+			logger.Printf("connected: %s\n", address)
 			return srpcClient, nil
 		}
 		if time.Now().After(retryUntil) {
 			return nil, errors.New("timed out waiting for unpacker to start")
 		}
-		logger.Println(err)
 		time.Sleep(time.Second * 5)
 	}
 }

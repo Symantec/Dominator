@@ -69,16 +69,6 @@ func removeUnusedVolumesFromTarget(awsService *ec2.EC2, unpackerName string,
 			}
 			continue
 		}
-		dvi := &ec2.DescribeVolumesInput{
-			VolumeIds: aws.StringSlice([]string{volumeId}),
-		}
-		if err := awsService.WaitUntilVolumeAvailable(dvi); err != nil {
-			logger.Println(err)
-			if firstError == nil {
-				firstError = err
-			}
-			continue
-		}
 		logger.Printf("%s detached from: %s\n", volumeId, instanceId)
 		if err := deleteVolume(awsService, volumeId); err != nil {
 			logger.Println(err)

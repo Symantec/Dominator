@@ -26,7 +26,7 @@ func launchInstances(bootImage string, logger log.Logger) error {
 	searchTags["Name"] = bootImage
 	results, err := amipublisher.LaunchInstances(targets, skipTargets,
 		searchTags, vpcSearchTags, subnetSearchTags, securityGroupSearchTags,
-		*instanceType, *sshKeyName, tags, logger)
+		*instanceType, *sshKeyName, tags, *replaceInstances, logger)
 	if err != nil {
 		return err
 	}

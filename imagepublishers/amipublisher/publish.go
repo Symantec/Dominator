@@ -169,7 +169,7 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 	if err != nil {
 		return nil, err
 	}
-	logger.Println("Registering AMI...")
+	logger.Printf("Registering AMI from: %s...\n", snapshotId)
 	volumeSize := status.Devices[volumeId].Size >> 30
 	imageBytes := usageEstimate + pData.minFreeBytes
 	imageGiB := imageBytes >> 30
@@ -202,11 +202,13 @@ func selectVolume(srpcClient *srpc.Client, awsService *ec2.EC2,
 		return proto.GetStatusResponse{}, err
 	}
 	// Check if associated device is large enough.
+	var oldVolumeId string
 	if streamInfo, ok := status.ImageStreams[streamName]; ok {
 		if deviceInfo, ok := status.Devices[streamInfo.DeviceId]; ok {
 			if minBytes <= deviceInfo.Size {
 				return status, nil
 			}
+			oldVolumeId = streamInfo.DeviceId
 		}
 	}
 	// Search for an unassociated device which is large enough.
@@ -229,6 +231,20 @@ func selectVolume(srpcClient *srpc.Client, awsService *ec2.EC2,
 	err = uclient.AssociateStreamWithDevice(srpcClient, streamName, volumeId)
 	if err != nil {
 		return proto.GetStatusResponse{}, err
+	}
+	if oldVolumeId != "" { // Remove old volume.
+		logger.Printf("detaching old volume: %s\n", oldVolumeId)
+		if err := uclient.RemoveDevice(srpcClient, oldVolumeId); err != nil {
+			return proto.GetStatusResponse{}, err
+		}
+		instId := aws.StringValue(instance.InstanceId)
+		if err := detachVolume(awsService, instId, oldVolumeId); err != nil {
+			return proto.GetStatusResponse{}, err
+		}
+		logger.Printf("deleting old volume: %s\n", oldVolumeId)
+		if err := deleteVolume(awsService, oldVolumeId); err != nil {
+			return proto.GetStatusResponse{}, err
+		}
 	}
 	return uclient.GetStatus(srpcClient)
 }

@@ -249,6 +249,12 @@ func detachVolume(awsService *ec2.EC2, instanceId, volumeId string) error {
 		InstanceId: aws.String(instanceId),
 		VolumeId:   aws.String(volumeId),
 	})
+	if err != nil {
+		return err
+	}
+	err = awsService.WaitUntilVolumeAvailable(&ec2.DescribeVolumesInput{
+		VolumeIds: aws.StringSlice([]string{volumeId}),
+	})
 	return err
 }
 
@@ -592,6 +598,7 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 	params := &ec2.RegisterImageInput{
 		Architecture:       aws.String("x86_64"),
 		Description:        aws.String(imageName),
+		EnaSupport:         aws.Bool(true),
 		Name:               aws.String(strings.Replace(amiName, ":", ".", -1)),
 		RootDeviceName:     aws.String(rootDevName),
 		SriovNetSupport:    aws.String("simple"),
@@ -627,6 +634,7 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 	if err != nil {
 		return "", err
 	}
+	logger.Printf("AMI: %s available\n", *ami.ImageId)
 	return *ami.ImageId, nil
 }
 
