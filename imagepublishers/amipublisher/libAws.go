@@ -559,6 +559,7 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image, tags awsutil.Tags,
 		SubnetId:         subnet.SubnetId,
 		TagSpecifications: []*ec2.TagSpecification{
 			createTagSpecification(ec2.ResourceTypeInstance, tags),
+			createTagSpecification(ec2.ResourceTypeVolume, tags),
 		},
 	})
 	if err != nil {
