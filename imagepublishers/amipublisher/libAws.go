@@ -373,8 +373,13 @@ func findMarketplaceImage(awsService *ec2.EC2, productCode string) (
 }
 
 func getImages(awsService *ec2.EC2, tags awsutil.Tags) ([]*ec2.Image, error) {
+	filters := tags.MakeFilters()
+	filters = append(filters, &ec2.Filter{
+		Name:   aws.String("is-public"),
+		Values: aws.StringSlice([]string{"false"}),
+	})
 	out, err := awsService.DescribeImages(
-		&ec2.DescribeImagesInput{Filters: tags.MakeFilters()})
+		&ec2.DescribeImagesInput{Filters: filters})
 	if err != nil {
 		return nil, err
 	}

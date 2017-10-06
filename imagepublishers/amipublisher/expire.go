@@ -27,20 +27,28 @@ func expireResources(targets awsutil.TargetList, skipList awsutil.TargetList,
 
 func expireRegionResources(awsService *ec2.EC2, currentTime time.Time,
 	logger log.Logger) {
-	filters := make([]*ec2.Filter, 1)
-	values := make([]string, 1)
-	values[0] = "ExpiresAt"
-	filters[0] = &ec2.Filter{
-		Name:   aws.String("tag-key"),
-		Values: aws.StringSlice(values),
-	}
 	images, err := awsService.DescribeImages(&ec2.DescribeImagesInput{
-		Filters: filters,
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("tag-key"),
+				Values: aws.StringSlice([]string{"ExpiresAt"}),
+			},
+			{
+				Name:   aws.String("is-public"),
+				Values: aws.StringSlice([]string{"false"}),
+			},
+		},
 	})
 	if err == nil {
 		for _, image := range images.Images {
 			expireImage(awsService, image, currentTime, logger)
 		}
+	}
+	filters := []*ec2.Filter{
+		{
+			Name:   aws.String("tag-key"),
+			Values: aws.StringSlice([]string{"ExpiresAt"}),
+		},
 	}
 	instances, err := awsService.DescribeInstances(&ec2.DescribeInstancesInput{
 		Filters: filters,
