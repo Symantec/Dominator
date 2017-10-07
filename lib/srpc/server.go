@@ -235,8 +235,17 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	unsecuredConn, bufrw, err := w.(http.Hijacker).Hijack()
+	hijacker, ok := w.(http.Hijacker)
+	if !ok {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("not a hijacker ", req.RemoteAddr)
+		return
+	}
+	unsecuredConn, bufrw, err := hijacker.Hijack()
 	if err != nil {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("rpc hijacking ", req.RemoteAddr, ": ", err.Error())
 		return
 	}
