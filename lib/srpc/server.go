@@ -2,7 +2,9 @@ package srpc
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/gob"
 	"errors"
 	"io"
@@ -235,6 +237,18 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	if tlsRequired && req.TLS != nil {
+		if serverTlsConfig == nil ||
+			!checkVerifiedChains(req.TLS.VerifiedChains,
+				serverTlsConfig.ClientCAs) {
+			serverMetricsMutex.Lock()
+			numRejectedServerConnections++
+			serverMetricsMutex.Unlock()
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+	}
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -266,14 +280,22 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 	}
 	myConn := &Conn{remoteAddr: req.RemoteAddr}
 	if doTls {
-		tlsConn := tls.Server(unsecuredConn, serverTlsConfig)
-		defer tlsConn.Close()
-		if err := tlsConn.Handshake(); err != nil {
-			serverMetricsMutex.Lock()
-			numRejectedServerConnections++
-			serverMetricsMutex.Unlock()
-			log.Println(err)
-			return
+		var tlsConn *tls.Conn
+		if req.TLS == nil {
+			tlsConn = tls.Server(unsecuredConn, serverTlsConfig)
+			defer tlsConn.Close()
+			if err := tlsConn.Handshake(); err != nil {
+				serverMetricsMutex.Lock()
+				numRejectedServerConnections++
+				serverMetricsMutex.Unlock()
+				log.Println(err)
+				return
+			}
+		} else {
+			if tlsConn, ok = unsecuredConn.(*tls.Conn); !ok {
+				log.Println("not really a TLS connection")
+				return
+			}
 		}
 		myConn.isEncrypted = true
 		myConn.username, myConn.permittedMethods, err = getAuth(
@@ -295,6 +317,19 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 	serverMetricsMutex.Lock()
 	numOpenServerConnections--
 	serverMetricsMutex.Unlock()
+}
+
+func checkVerifiedChains(verifiedChains [][]*x509.Certificate,
+	certPool *x509.CertPool) bool {
+	for _, vChain := range verifiedChains {
+		vSubject := vChain[0].RawIssuer
+		for _, cSubject := range certPool.Subjects() {
+			if bytes.Compare(vSubject, cSubject) == 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func getAuth(state tls.ConnectionState) (string, map[string]struct{}, error) {
