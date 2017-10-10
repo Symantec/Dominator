@@ -22,6 +22,7 @@ var (
 	clientMetricsMutex        sync.Mutex
 	numInUseClientConnections uint64
 	numOpenClientConnections  uint64
+	errorNotFound             = errors.New("HTTP method not found")
 )
 
 func init() {
@@ -47,11 +48,10 @@ func registerClientMetrics() {
 	}
 }
 
-func dialHTTP(network, address string, tlsConfig *tls.Config,
-	dialer connpool.Dialer) (*Client, error) {
+func dial(network, address string, dialer connpool.Dialer) (net.Conn, error) {
 	hostPort := strings.SplitN(address, ":", 2)
 	address = strings.SplitN(hostPort[0], "*", 2)[0] + ":" + hostPort[1]
-	unsecuredConn, err := dialer.Dial(network, address)
+	conn, err := dialer.Dial(network, address)
 	if err != nil {
 		if strings.Contains(err.Error(), ErrorConnectionRefused.Error()) {
 			return nil, ErrorConnectionRefused
@@ -61,48 +61,105 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 		}
 		return nil, err
 	}
-	if tcpConn, ok := unsecuredConn.(*net.TCPConn); ok {
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		if err := tcpConn.SetKeepAlive(true); err != nil {
+			conn.Close()
 			return nil, err
 		}
 		if err := tcpConn.SetKeepAlivePeriod(time.Minute * 5); err != nil {
+			conn.Close()
 			return nil, err
 		}
+	}
+	return conn, nil
+}
+
+func dialHTTP(network, address string, tlsConfig *tls.Config,
+	dialer connpool.Dialer) (*Client, error) {
+	unsecuredConn, err := dial(network, address, dialer)
+	if err != nil {
+		return nil, err
 	}
 	path := rpcPath
 	if tlsConfig != nil {
 		path = tlsRpcPath
 	}
-	io.WriteString(unsecuredConn, "CONNECT "+path+" HTTP/1.0\n\n")
-	// Require successful HTTP response before switching to SRPC protocol.
-	resp, err := http.ReadResponse(bufio.NewReader(unsecuredConn),
-		&http.Request{Method: "CONNECT"})
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode == http.StatusNotFound &&
-		tlsConfig != nil &&
-		tlsConfig.InsecureSkipVerify {
-		// Fall back to insecure connection.
-		return dialHTTP(network, address, nil, dialer)
-	}
-	if resp.StatusCode == http.StatusMethodNotAllowed {
-		return nil, ErrorMissingCertificate
-	}
-	if resp.Status != connectString {
-		return nil, errors.New("unexpected HTTP response: " + resp.Status)
+	if err := doHTTPConnect(unsecuredConn, path); err != nil {
+		unsecuredConn.Close()
+		if strings.Contains(err.Error(), "malformed HTTP response") {
+			// The server may do TLS on all connections: try that.
+			if tlsConfig == nil {
+				return nil, err
+			}
+			unsecuredConn, err := dial(network, address, dialer)
+			if err != nil {
+				return nil, err
+			}
+			tlsConn := tls.Client(unsecuredConn, tlsConfig)
+			if err := tlsConn.Handshake(); err != nil {
+				unsecuredConn.Close()
+				if strings.Contains(err.Error(), ErrorBadCertificate.Error()) {
+					return nil, ErrorBadCertificate
+				}
+				return nil, err
+			}
+			if err := doHTTPConnect(tlsConn, tlsRpcPath); err != nil {
+				tlsConn.Close()
+				return nil, err
+			}
+			return newClient(tlsConn, true), nil
+		} else if err == errorNotFound &&
+			tlsConfig != nil &&
+			tlsConfig.InsecureSkipVerify {
+			// Fall back to insecure connection.
+			unsecuredConn, err := dial(network, address, dialer)
+			if err != nil {
+				return nil, err
+			}
+			if err := doHTTPConnect(unsecuredConn, rpcPath); err != nil {
+				unsecuredConn.Close()
+				return nil, err
+			}
+			return newClient(unsecuredConn, false), nil
+		} else {
+			return nil, err
+		}
 	}
 	if tlsConfig == nil {
 		return newClient(unsecuredConn, false), nil
 	}
 	tlsConn := tls.Client(unsecuredConn, tlsConfig)
 	if err := tlsConn.Handshake(); err != nil {
+		unsecuredConn.Close()
 		if strings.Contains(err.Error(), ErrorBadCertificate.Error()) {
 			return nil, ErrorBadCertificate
 		}
 		return nil, err
 	}
 	return newClient(tlsConn, true), nil
+}
+
+func doHTTPConnect(conn net.Conn, path string) error {
+	io.WriteString(conn, "CONNECT "+path+" HTTP/1.0\n\n")
+	// Require successful HTTP response before switching to SRPC protocol.
+	resp, err := http.ReadResponse(bufio.NewReader(conn),
+		&http.Request{Method: "CONNECT"})
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return errorNotFound
+	}
+	if resp.StatusCode == http.StatusUnauthorized {
+		return ErrorBadCertificate
+	}
+	if resp.StatusCode == http.StatusMethodNotAllowed {
+		return ErrorMissingCertificate
+	}
+	if resp.StatusCode != http.StatusOK || resp.Status != connectString {
+		return errors.New("unexpected HTTP response: " + resp.Status)
+	}
+	return nil
 }
 
 func newClient(conn net.Conn, isEncrypted bool) *Client {
