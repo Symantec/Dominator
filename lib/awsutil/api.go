@@ -33,7 +33,7 @@ type roleConfig struct {
 }
 
 // LoadCredentials loads credentials from ~/.aws/credentials and roles from
-// ~/.aws.roles which may be used later.
+// ~/.aws/roles which may be used later.
 func LoadCredentials() (*CredentialsStore, error) {
 	return loadCredentials()
 }
