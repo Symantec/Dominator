@@ -8,9 +8,24 @@ import (
 )
 
 func listAccountNames() ([]string, error) {
-	filename := path.Join(os.Getenv("HOME"), ".aws", "credentials")
-	file, err := os.Open(filename)
-	if err != nil {
+	var accountNames []string
+	if names, err := listFile("credentials", "aws_access_key_id"); err != nil {
+		return nil, err
+	} else {
+		accountNames = append(accountNames, names...)
+	}
+	if names, err := listFile("config", "role_arn"); err != nil {
+		return nil, err
+	} else {
+		accountNames = append(accountNames, names...)
+	}
+	return accountNames, nil
+}
+
+func listFile(filename string, identifierKeyName string) ([]string, error) {
+	pathname := path.Join(os.Getenv("HOME"), ".aws", filename)
+	file, err := os.Open(pathname)
+	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
 	defer file.Close()
@@ -27,7 +42,12 @@ func listAccountNames() ([]string, error) {
 			continue
 		}
 		if line[0] == '[' && line[len(line)-1] == ']' {
-			lastAccountName = line[1 : len(line)-1]
+			fields := strings.Fields(line[1 : len(line)-1])
+			if len(fields) == 1 {
+				lastAccountName = fields[0]
+			} else if len(fields) == 2 && fields[0] == "profile" {
+				lastAccountName = fields[0]
+			}
 			continue
 		}
 		if lastAccountName == "" {
@@ -39,7 +59,7 @@ func listAccountNames() ([]string, error) {
 		}
 		key := strings.TrimSpace(splitString[0])
 		value := strings.TrimSpace(splitString[1])
-		if key != "aws_access_key_id" {
+		if key != identifierKeyName {
 			continue
 		}
 		if _, ok := accessKeyIds[value]; !ok {

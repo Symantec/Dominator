@@ -18,24 +18,29 @@ func CreateSession(accountProfileName string) (*session.Session, error) {
 }
 
 // CredentialsStore records AWS credentials (IAM users and roles) for multiple
-// accounts. Methods are not safe to use concurrently.
+// accounts.
 type CredentialsStore struct {
-	accountNames   []string
-	rolesList      map[string]roleConfig       // Key: account name.
-	sessionMap     map[string]*session.Session // Key: account name.
-	accountRegions map[string][]string         // Key: account name.
-}
-
-type roleConfig struct {
-	SourceAccountName string
-	AccountId         string
-	RoleName          string
+	accountNames    []string
+	sessionMap      map[string]*session.Session // Key: account name.
+	accountRegions  map[string][]string         // Key: account name.
+	accountIdToName map[string]string           // Key: account ID.
+	accountNameToId map[string]string           // Key: account name.
 }
 
 // LoadCredentials loads credentials from ~/.aws/credentials and roles from
-// ~/.aws/roles which may be used later.
+// ~/.aws/config which may be used later.
 func LoadCredentials() (*CredentialsStore, error) {
 	return loadCredentials()
+}
+
+// AccountIdToName will return an account name given an account ID.
+func (cs *CredentialsStore) AccountIdToName(accountId string) string {
+	return cs.accountIdToName[accountId]
+}
+
+// AccountNameToId will return an account ID given an account name.
+func (cs *CredentialsStore) AccountNameToId(accountName string) string {
+	return cs.accountNameToId[accountName]
 }
 
 // ForEachTarget will iterate over a set of targets ((account,region) tuples)
@@ -59,19 +64,19 @@ func (cs *CredentialsStore) ForEachTarget(targets TargetList,
 // account. The name of the account should be given by accountName.
 // A *session.Session is returned which may be used to bind to AWS services
 // (i.e. EC2).
-func (cs *CredentialsStore) GetSessionForAccount(accountName string) (
-	*session.Session, error) {
-	return cs.getSessionForAccount(accountName)
+func (cs *CredentialsStore) GetSessionForAccount(
+	accountName string) *session.Session {
+	return cs.sessionMap[accountName]
 }
 
 // GetEC2Service will get an EC2 service handle for an account and region.
-func (cs *CredentialsStore) GetEC2Service(accountName, regionName string) (
-	*ec2.EC2, error) {
-	return cs.getEC2Service(accountName, regionName)
+func (cs *CredentialsStore) GetEC2Service(accountName,
+	regionName string) *ec2.EC2 {
+	return CreateService(cs.GetSessionForAccount(accountName), regionName)
 }
 
 // ListAccountsWithCredentials will list all accounts for which credentials
-// should be available.
+// are available.
 func (cs *CredentialsStore) ListAccountsWithCredentials() []string {
 	return cs.listAccountsWithCredentials()
 }

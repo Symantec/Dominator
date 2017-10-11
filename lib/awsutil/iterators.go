@@ -58,12 +58,6 @@ func (cs *CredentialsStore) forEachTarget(targets TargetList,
 			accountMap[target.AccountName] = regions
 		}
 	}
-	// Ensure all credentials are available.
-	for accountName := range accountMap {
-		if _, err := cs.GetSessionForAccount(accountName); err != nil {
-			return 0, err
-		}
-	}
 	accountResultsChannel := make(chan resultsType, 1)
 	var numTargets int
 	var waitChannel chan struct{}
@@ -84,7 +78,7 @@ func (cs *CredentialsStore) forEachTarget(targets TargetList,
 		for region := range regionMap {
 			regionList = append(regionList, region)
 		}
-		awsSession, _ := cs.GetSessionForAccount(accountName)
+		awsSession := cs.GetSessionForAccount(accountName)
 		go cs.forEachRegionInAccount(awsSession, accountName, regionList,
 			accountResultsChannel, skipTargets, targetFunc, waitChannel, logger)
 	}

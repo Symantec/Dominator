@@ -1,87 +1,95 @@
 package awsutil
 
 import (
-	"fmt"
-	"os"
-	"path"
 	"sort"
+	"strings"
 
-	"github.com/Symantec/Dominator/lib/json"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/iam"
 )
+
+type sessionResult struct {
+	accountName string
+	accountId   string
+	awsSession  *session.Session
+	err         error
+}
+
+func createCredentials(accountNames []string) (*CredentialsStore, error) {
+	sort.Strings(accountNames)
+	cs := &CredentialsStore{
+		accountNames:    accountNames,
+		sessionMap:      make(map[string]*session.Session),
+		accountRegions:  make(map[string][]string),
+		accountIdToName: make(map[string]string),
+		accountNameToId: make(map[string]string),
+	}
+	resultsChannel := make(chan sessionResult, len(accountNames))
+	for _, accountName := range accountNames {
+		go func(accountName string) {
+			resultsChannel <- createSession(accountName)
+		}(accountName)
+	}
+	var firstError error
+	for range accountNames {
+		result := <-resultsChannel
+		if result.err != nil {
+			if firstError != nil {
+				firstError = result.err
+			}
+		} else {
+			cs.sessionMap[result.accountName] = result.awsSession
+			cs.accountIdToName[result.accountId] = result.accountName
+			cs.accountNameToId[result.accountName] = result.accountId
+		}
+	}
+	if firstError != nil {
+		return nil, firstError
+	}
+	return cs, nil
+}
+
+func createSession(accountName string) sessionResult {
+	awsSession, err := CreateSession(accountName)
+	if err != nil {
+		return sessionResult{err: err}
+	}
+	iamService := iam.New(awsSession)
+	var accountId string
+	if out, err := iamService.GetUser(&iam.GetUserInput{}); err != nil {
+		splitError := strings.Fields(err.Error())
+		if len(splitError) > 3 && splitError[0] == "AccessDenied:" &&
+			splitError[1] == "User:" {
+			if arnV, e := arn.Parse(splitError[2]); e != nil {
+				return sessionResult{err: err}
+			} else {
+				accountId = arnV.AccountID
+			}
+		} else {
+			return sessionResult{err: err}
+		}
+	} else {
+		if arnV, err := arn.Parse(aws.StringValue(out.User.Arn)); err != nil {
+			return sessionResult{err: err}
+		} else {
+			accountId = arnV.AccountID
+		}
+	}
+	return sessionResult{
+		accountName: accountName,
+		accountId:   accountId,
+		awsSession:  awsSession,
+	}
+}
 
 func loadCredentials() (*CredentialsStore, error) {
 	accountNames, err := listAccountNames()
 	if err != nil {
 		return nil, err
 	}
-	rolesList, err := loadRoles()
-	if err != nil {
-		return nil, err
-	}
-	for accountName := range rolesList {
-		accountNames = append(accountNames, accountName)
-	}
-	sort.Strings(accountNames)
-	return &CredentialsStore{
-		accountNames:   accountNames,
-		rolesList:      rolesList,
-		sessionMap:     make(map[string]*session.Session),
-		accountRegions: make(map[string][]string),
-	}, nil
-}
-
-func loadRoles() (map[string]roleConfig, error) {
-	filename := path.Join(os.Getenv("HOME"), ".aws", "roles")
-	var rolesList map[string]roleConfig
-	if err := json.ReadFromFile(filename, &rolesList); err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return rolesList, nil
-}
-
-func (cs *CredentialsStore) getSessionForAccount(accountName string) (
-	*session.Session, error) {
-	if awsSession, ok := cs.sessionMap[accountName]; ok {
-		return awsSession, nil
-	}
-	if roleConfig, ok := cs.rolesList[accountName]; ok {
-		awsSession, err := cs.getSessionForAccount(roleConfig.SourceAccountName)
-		if err != nil {
-			return nil, err
-		}
-		arn := fmt.Sprintf("arn:aws:iam::%s:role/%s",
-			roleConfig.AccountId, roleConfig.RoleName)
-		credentials := stscreds.NewCredentials(awsSession, arn)
-		awsSession, err = session.NewSession(
-			aws.NewConfig().WithCredentials(credentials))
-		if err != nil {
-			return nil, err
-		}
-		cs.sessionMap[accountName] = awsSession
-		return awsSession, nil
-	}
-	awsSession, err := CreateSession(accountName)
-	if err != nil {
-		return nil, err
-	}
-	cs.sessionMap[accountName] = awsSession
-	return awsSession, nil
-}
-
-func (cs *CredentialsStore) getEC2Service(accountName, regionName string) (
-	*ec2.EC2, error) {
-	awsSession, err := cs.getSessionForAccount(accountName)
-	if err != nil {
-		return nil, err
-	}
-	return CreateService(awsSession, regionName), nil
+	return createCredentials(accountNames)
 }
 
 func (cs *CredentialsStore) listAccountsWithCredentials() []string {
@@ -93,10 +101,7 @@ func (cs *CredentialsStore) listRegionsForAccount(accountName string) (
 	if regions, ok := cs.accountRegions[accountName]; ok {
 		return regions, nil
 	}
-	awsService, err := cs.getEC2Service(accountName, "us-east-1")
-	if err != nil {
-		return nil, err
-	}
+	awsService := cs.GetEC2Service(accountName, "us-east-1")
 	regions, err := listRegions(awsService)
 	if err != nil {
 		return nil, err
