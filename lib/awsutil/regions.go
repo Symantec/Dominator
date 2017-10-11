@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -61,5 +62,6 @@ func listRegions(awsService *ec2.EC2) ([]string, error) {
 	for _, region := range out.Regions {
 		regionNames = append(regionNames, aws.StringValue(region.RegionName))
 	}
+	sort.Strings(regionNames)
 	return regionNames, nil
 }

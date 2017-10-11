@@ -17,8 +17,74 @@ func CreateSession(accountProfileName string) (*session.Session, error) {
 		SharedConfigState: session.SharedConfigEnable})
 }
 
+// CredentialsStore records AWS credentials (IAM users and roles) for multiple
+// accounts. Methods are not safe to use concurrently.
+type CredentialsStore struct {
+	accountNames   []string
+	rolesList      map[string]roleConfig       // Key: account name.
+	sessionMap     map[string]*session.Session // Key: account name.
+	accountRegions map[string][]string         // Key: account name.
+}
+
+type roleConfig struct {
+	SourceAccountName string
+	AccountId         string
+	RoleName          string
+}
+
+// LoadCredentials loads credentials from ~/.aws/credentials and roles from
+// ~/.aws.roles which may be used later.
+func LoadCredentials() (*CredentialsStore, error) {
+	return loadCredentials()
+}
+
+// ForEachTarget will iterate over a set of targets ((account,region) tuples)
+// and will launch a goroutine calling targetFunc for each target.
+// The list of targets to iterate over is given by targets and the list of
+// targets to skip is given by skipList. An empty string for .AccountName is
+// expanded to all available accounts and an empty string for .Region is
+// expanded to all regions for an account.
+// The number of goroutines is returned. If wait is true then ForEachTarget will
+// wait for all the goroutines to complete, else it is the responsibility of the
+// caller to wait for the goroutines to complete.
+func (cs *CredentialsStore) ForEachTarget(targets TargetList,
+	skipList TargetList,
+	targetFunc func(awsSession *session.Session, accountName, regionName string,
+		logger log.Logger),
+	wait bool, logger log.Logger) (int, error) {
+	return cs.forEachTarget(targets, skipList, targetFunc, wait, logger)
+}
+
+// GetSessionForAccount will return the session credentials available for an
+// account. The name of the account should be given by accountName.
+// A *session.Session is returned which may be used to bind to AWS services
+// (i.e. EC2).
+func (cs *CredentialsStore) GetSessionForAccount(accountName string) (
+	*session.Session, error) {
+	return cs.getSessionForAccount(accountName)
+}
+
+// GetEC2Service will get an EC2 service handle for an account and region.
+func (cs *CredentialsStore) GetEC2Service(accountName, regionName string) (
+	*ec2.EC2, error) {
+	return cs.getEC2Service(accountName, regionName)
+}
+
+// ListAccountsWithCredentials will list all accounts for which credentials
+// should be available.
+func (cs *CredentialsStore) ListAccountsWithCredentials() []string {
+	return cs.listAccountsWithCredentials()
+}
+
+// ListRegionsForAccount will return all the regions available to an account.
+func (cs *CredentialsStore) ListRegionsForAccount(accountName string) (
+	[]string, error) {
+	return cs.listRegionsForAccount(accountName)
+}
+
 func ForEachTarget(targets TargetList, skipList TargetList,
-	targetFunc func(*ec2.EC2, string, string, log.Logger),
+	targetFunc func(awsService *ec2.EC2, accountName, regionName string,
+		logger log.Logger),
 	logger log.Logger) (int, error) {
 	return forEachTarget(targets, skipList, targetFunc, logger)
 }

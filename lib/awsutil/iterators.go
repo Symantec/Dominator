@@ -13,13 +13,31 @@ type resultsType struct {
 }
 
 func forEachTarget(targets TargetList, skipList TargetList,
-	targetFunc func(*ec2.EC2, string, string, log.Logger),
+	targetFunc func(awsService *ec2.EC2, accountName, regionName string,
+		logger log.Logger),
 	logger log.Logger) (int, error) {
+	cs, err := LoadCredentials()
+	if err != nil {
+		return 0, err
+	}
+	return cs.ForEachTarget(targets, skipList,
+		func(awsSession *session.Session, accountName, regionName string,
+			logger log.Logger) {
+			targetFunc(CreateService(awsSession, regionName), accountName,
+				regionName, logger)
+		},
+		false, logger)
+}
+
+func (cs *CredentialsStore) forEachTarget(targets TargetList,
+	skipList TargetList,
+	targetFunc func(awsSession *session.Session, accountName, regionName string,
+		logger log.Logger),
+	wait bool, logger log.Logger) (int, error) {
 	if len(targets) < 1 { // Full wildcard.
 		targets = make(TargetList, 1)
 	}
 	accountMap := make(map[string][]string) // Key: accountName, value: regions.
-	var allAccountNames []string
 	skipTargets := make(map[Target]struct{})
 	for _, target := range skipList {
 		if target.AccountName != "" || target.Region != "" {
@@ -29,14 +47,7 @@ func forEachTarget(targets TargetList, skipList TargetList,
 	// Expand any wildcard account names.
 	for _, target := range targets {
 		if target.AccountName == "" {
-			if allAccountNames == nil {
-				var err error
-				allAccountNames, err = ListAccountNames()
-				if err != nil {
-					return 0, err
-				}
-			}
-			for _, accountName := range allAccountNames {
+			for _, accountName := range cs.ListAccountsWithCredentials() {
 				regions := accountMap[accountName]
 				regions = append(regions, target.Region)
 				accountMap[accountName] = regions
@@ -47,16 +58,18 @@ func forEachTarget(targets TargetList, skipList TargetList,
 			accountMap[target.AccountName] = regions
 		}
 	}
-	awsSessions := make(map[string]*session.Session, len(accountMap))
+	// Ensure all credentials are available.
 	for accountName := range accountMap {
-		awsSession, err := CreateSession(accountName)
-		if err != nil {
+		if _, err := cs.GetSessionForAccount(accountName); err != nil {
 			return 0, err
 		}
-		awsSessions[accountName] = awsSession
 	}
 	accountResultsChannel := make(chan resultsType, 1)
 	var numTargets int
+	var waitChannel chan struct{}
+	if wait {
+		waitChannel = make(chan struct{}, 1)
+	}
 	for accountName, regions := range accountMap {
 		// Remove duplicate/redundant regions.
 		regionMap := make(map[string]struct{})
@@ -71,9 +84,9 @@ func forEachTarget(targets TargetList, skipList TargetList,
 		for region := range regionMap {
 			regionList = append(regionList, region)
 		}
-		go forEachRegionInAccount(awsSessions[accountName],
-			accountName, regionList, accountResultsChannel, skipTargets,
-			targetFunc, logger)
+		awsSession, _ := cs.GetSessionForAccount(accountName)
+		go cs.forEachRegionInAccount(awsSession, accountName, regionList,
+			accountResultsChannel, skipTargets, targetFunc, waitChannel, logger)
 	}
 	var firstError error
 	// Collect account results.
@@ -84,20 +97,22 @@ func forEachTarget(targets TargetList, skipList TargetList,
 		}
 		numTargets += result.numTargets
 	}
+	if waitChannel != nil {
+		for count := 0; count < numTargets; count++ {
+			<-waitChannel
+		}
+	}
 	return numTargets, firstError
 }
 
-func forEachRegionInAccount(awsSession *session.Session,
+func (cs *CredentialsStore) forEachRegionInAccount(awsSession *session.Session,
 	accountName string, regions []string,
 	resultsChannel chan<- resultsType, skipTargets map[Target]struct{},
-	targetFunc func(*ec2.EC2, string, string, log.Logger),
-	logger log.Logger) {
-	aRegionName := "us-east-1"
-	var aAwsService *ec2.EC2
+	targetFunc func(*session.Session, string, string, log.Logger),
+	waitChannel chan<- struct{}, logger log.Logger) {
 	if len(regions) < 1 {
 		var err error
-		aAwsService := CreateService(awsSession, aRegionName)
-		regions, err = listRegions(aAwsService)
+		regions, err = cs.listRegionsForAccount(accountName)
 		if err != nil {
 			resultsChannel <- resultsType{0, err}
 			return
@@ -120,13 +135,13 @@ func forEachRegionInAccount(awsSession *session.Session,
 			logger.Println("skipping region")
 			continue
 		}
-		var awsService *ec2.EC2
-		if region == aRegionName && aAwsService != nil {
-			awsService = aAwsService
-		} else {
-			awsService = CreateService(awsSession, region)
-		}
-		go targetFunc(awsService, accountName, region, logger)
+		go func(awsSession *session.Session, accountName, regionName string,
+			logger log.Logger) {
+			targetFunc(awsSession, accountName, regionName, logger)
+			if waitChannel != nil {
+				waitChannel <- struct{}{}
+			}
+		}(awsSession, accountName, region, logger)
 		numRegions++
 	}
 	resultsChannel <- resultsType{numRegions, nil}
