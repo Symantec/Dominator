@@ -22,9 +22,9 @@ func CreateSession(accountProfileName string) (*session.Session, error) {
 type CredentialsStore struct {
 	accountNames    []string
 	sessionMap      map[string]*session.Session // Key: account name.
-	accountRegions  map[string][]string         // Key: account name.
 	accountIdToName map[string]string           // Key: account ID.
 	accountNameToId map[string]string           // Key: account name.
+	accountRegions  map[string][]string         // Key: account name.
 }
 
 // LoadCredentials loads credentials from ~/.aws/credentials and roles from
@@ -78,13 +78,12 @@ func (cs *CredentialsStore) GetEC2Service(accountName,
 // ListAccountsWithCredentials will list all accounts for which credentials
 // are available.
 func (cs *CredentialsStore) ListAccountsWithCredentials() []string {
-	return cs.listAccountsWithCredentials()
+	return cs.accountNames
 }
 
 // ListRegionsForAccount will return all the regions available to an account.
-func (cs *CredentialsStore) ListRegionsForAccount(accountName string) (
-	[]string, error) {
-	return cs.listRegionsForAccount(accountName)
+func (cs *CredentialsStore) ListRegionsForAccount(accountName string) []string {
+	return cs.accountRegions[accountName]
 }
 
 func ForEachTarget(targets TargetList, skipList TargetList,

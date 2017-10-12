@@ -14,7 +14,16 @@ type sessionResult struct {
 	accountName string
 	accountId   string
 	awsSession  *session.Session
+	regions     []string
 	err         error
+}
+
+func loadCredentials() (*CredentialsStore, error) {
+	accountNames, err := listAccountNames()
+	if err != nil {
+		return nil, err
+	}
+	return createCredentials(accountNames)
 }
 
 func createCredentials(accountNames []string) (*CredentialsStore, error) {
@@ -22,9 +31,9 @@ func createCredentials(accountNames []string) (*CredentialsStore, error) {
 	cs := &CredentialsStore{
 		accountNames:    accountNames,
 		sessionMap:      make(map[string]*session.Session),
-		accountRegions:  make(map[string][]string),
 		accountIdToName: make(map[string]string),
 		accountNameToId: make(map[string]string),
+		accountRegions:  make(map[string][]string),
 	}
 	resultsChannel := make(chan sessionResult, len(accountNames))
 	for _, accountName := range accountNames {
@@ -43,6 +52,7 @@ func createCredentials(accountNames []string) (*CredentialsStore, error) {
 			cs.sessionMap[result.accountName] = result.awsSession
 			cs.accountIdToName[result.accountId] = result.accountName
 			cs.accountNameToId[result.accountName] = result.accountId
+			cs.accountRegions[result.accountName] = result.regions
 		}
 	}
 	if firstError != nil {
@@ -77,34 +87,14 @@ func createSession(accountName string) sessionResult {
 			accountId = arnV.AccountID
 		}
 	}
+	regions, err := listRegions(CreateService(awsSession, "us-east-1"))
+	if err != nil {
+		return sessionResult{err: err}
+	}
 	return sessionResult{
 		accountName: accountName,
 		accountId:   accountId,
 		awsSession:  awsSession,
+		regions:     regions,
 	}
-}
-
-func loadCredentials() (*CredentialsStore, error) {
-	accountNames, err := listAccountNames()
-	if err != nil {
-		return nil, err
-	}
-	return createCredentials(accountNames)
-}
-
-func (cs *CredentialsStore) listAccountsWithCredentials() []string {
-	return cs.accountNames
-}
-
-func (cs *CredentialsStore) listRegionsForAccount(accountName string) (
-	[]string, error) {
-	if regions, ok := cs.accountRegions[accountName]; ok {
-		return regions, nil
-	}
-	awsService := cs.GetEC2Service(accountName, "us-east-1")
-	regions, err := listRegions(awsService)
-	if err != nil {
-		return nil, err
-	}
-	return regions, nil
 }

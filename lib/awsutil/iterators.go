@@ -23,7 +23,7 @@ func forEachTarget(targets TargetList, skipList TargetList,
 	return cs.ForEachTarget(targets, skipList,
 		func(awsSession *session.Session, accountName, regionName string,
 			logger log.Logger) {
-			targetFunc(CreateService(awsSession, regionName), accountName,
+			targetFunc(cs.GetEC2Service(accountName, regionName), accountName,
 				regionName, logger)
 		},
 		false, logger)
@@ -105,12 +105,7 @@ func (cs *CredentialsStore) forEachRegionInAccount(awsSession *session.Session,
 	targetFunc func(*session.Session, string, string, log.Logger),
 	waitChannel chan<- struct{}, logger log.Logger) {
 	if len(regions) < 1 {
-		var err error
-		regions, err = cs.listRegionsForAccount(accountName)
-		if err != nil {
-			resultsChannel <- resultsType{0, err}
-			return
-		}
+		regions = cs.ListRegionsForAccount(accountName)
 	}
 	if _, ok := skipTargets[Target{accountName, ""}]; ok {
 		logger.Println(accountName + ": skipping account")
