@@ -25,7 +25,10 @@ func listAccountNames() ([]string, error) {
 func listFile(filename string, identifierKeyName string) ([]string, error) {
 	pathname := path.Join(os.Getenv("HOME"), ".aws", filename)
 	file, err := os.Open(pathname)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	defer file.Close()
