@@ -49,7 +49,7 @@ func listFile(filename string, identifierKeyName string) ([]string, error) {
 			if len(fields) == 1 {
 				lastAccountName = fields[0]
 			} else if len(fields) == 2 && fields[0] == "profile" {
-				lastAccountName = fields[0]
+				lastAccountName = fields[1]
 			}
 			continue
 		}
