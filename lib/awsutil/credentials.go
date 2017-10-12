@@ -45,7 +45,7 @@ func createCredentials(accountNames []string) (*CredentialsStore, error) {
 	for range accountNames {
 		result := <-resultsChannel
 		if result.err != nil {
-			if firstError != nil {
+			if firstError == nil {
 				firstError = result.err
 			}
 		} else {
