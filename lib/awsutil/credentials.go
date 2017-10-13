@@ -2,12 +2,11 @@ package awsutil
 
 import (
 	"sort"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/sts"
 )
 
 type sessionResult struct {
@@ -66,22 +65,13 @@ func createSession(accountName string) sessionResult {
 	if err != nil {
 		return sessionResult{err: err}
 	}
-	iamService := iam.New(awsSession)
+	stsService := sts.New(awsSession)
+	inp := &sts.GetCallerIdentityInput{}
 	var accountId string
-	if out, err := iamService.GetUser(&iam.GetUserInput{}); err != nil {
-		splitError := strings.Fields(err.Error())
-		if len(splitError) > 3 && splitError[0] == "AccessDenied:" &&
-			splitError[1] == "User:" {
-			if arnV, e := arn.Parse(splitError[2]); e != nil {
-				return sessionResult{err: err}
-			} else {
-				accountId = arnV.AccountID
-			}
-		} else {
-			return sessionResult{err: err}
-		}
+	if out, err := stsService.GetCallerIdentity(inp); err != nil {
+		return sessionResult{err: err}
 	} else {
-		if arnV, err := arn.Parse(aws.StringValue(out.User.Arn)); err != nil {
+		if arnV, err := arn.Parse(aws.StringValue(out.Arn)); err != nil {
 			return sessionResult{err: err}
 		} else {
 			accountId = arnV.AccountID
