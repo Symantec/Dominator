@@ -18,7 +18,7 @@ func CreateSession(accountProfileName string) (*session.Session, error) {
 }
 
 // CredentialsStore records AWS credentials (IAM users and roles) for multiple
-// accounts.
+// accounts. The methods are safe to use concurrently.
 type CredentialsStore struct {
 	accountNames    []string
 	sessionMap      map[string]*session.Session // Key: account name.
