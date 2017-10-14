@@ -32,7 +32,7 @@ var (
 		"Product code (default Debian Jessie amd64)")
 	marketplaceLoginName = flag.String("marketplaceLoginName", "admin",
 		"Login name for instance booted from marketplace image")
-	maxIdleTime = flag.Duration("maxIdleTime", time.Minute*50,
+	maxIdleTime = flag.Duration("maxIdleTime", time.Minute*5,
 		"Maximum idle time for image unpacker instances")
 	minFreeBytes = flag.Uint64("minFreeBytes", 1<<28,
 		"minimum number of free bytes in image")
