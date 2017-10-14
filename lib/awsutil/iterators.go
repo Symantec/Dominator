@@ -20,13 +20,21 @@ func forEachTarget(targets TargetList, skipList TargetList,
 	if err != nil {
 		return 0, err
 	}
+	return cs.ForEachEC2Target(targets, skipList, targetFunc, false, logger)
+}
+
+func (cs *CredentialsStore) forEachEC2Target(targets TargetList,
+	skipList TargetList,
+	targetFunc func(awsService *ec2.EC2, accountName, regionName string,
+		logger log.Logger),
+	wait bool, logger log.Logger) (int, error) {
 	return cs.ForEachTarget(targets, skipList,
 		func(awsSession *session.Session, accountName, regionName string,
 			logger log.Logger) {
 			targetFunc(cs.GetEC2Service(accountName, regionName), accountName,
 				regionName, logger)
 		},
-		false, logger)
+		wait, logger)
 }
 
 func (cs *CredentialsStore) forEachTarget(targets TargetList,
