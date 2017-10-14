@@ -43,6 +43,23 @@ func (cs *CredentialsStore) AccountNameToId(accountName string) string {
 	return cs.accountNameToId[accountName]
 }
 
+// ForEachEC2Target will iterate over a set of targets ((account,region) tuples)
+// and will launch a goroutine calling targetFunc for each target.
+// The list of targets to iterate over is given by targets and the list of
+// targets to skip is given by skipList. An empty string for .AccountName is
+// expanded to all available accounts and an empty string for .Region is
+// expanded to all regions for an account.
+// The number of goroutines is returned. If wait is true then ForEachTarget will
+// wait for all the goroutines to complete, else it is the responsibility of the
+// caller to wait for the goroutines to complete.
+func (cs *CredentialsStore) ForEachEC2Target(targets TargetList,
+	skipList TargetList,
+	targetFunc func(awsService *ec2.EC2, accountName, regionName string,
+		logger log.Logger),
+	wait bool, logger log.Logger) (int, error) {
+	return cs.forEachEC2Target(targets, skipList, targetFunc, wait, logger)
+}
+
 // ForEachTarget will iterate over a set of targets ((account,region) tuples)
 // and will launch a goroutine calling targetFunc for each target.
 // The list of targets to iterate over is given by targets and the list of
