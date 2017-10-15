@@ -27,13 +27,32 @@ type tagFilterType struct {
 	Values []string
 }
 
+var credentialsStore *awsutil.CredentialsStore
+
+func loadCredentials() error {
+	if credentialsStore == nil {
+		var err error
+		credentialsStore, err = awsutil.LoadCredentials()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func newAwsGenerator(args []string) (generator, error) {
+	if err := loadCredentials(); err != nil {
+		return nil, err
+	}
 	return &awsGeneratorType{
 			targets: awsutil.TargetList{awsutil.Target{args[1], args[0]}}},
 		nil
 }
 
 func newAwsFilteredGenerator(args []string) (generator, error) {
+	if err := loadCredentials(); err != nil {
+		return nil, err
+	}
 	gen := awsGeneratorType{
 		filterTagsFile: args[1],
 	}
@@ -44,6 +63,9 @@ func newAwsFilteredGenerator(args []string) (generator, error) {
 }
 
 func newAwsLocalGenerator(args []string) (generator, error) {
+	if err := loadCredentials(); err != nil {
+		return nil, err
+	}
 	region, err := awsutil.GetLocalRegion()
 	if err != nil {
 		return nil, err
@@ -56,14 +78,14 @@ func newAwsLocalGenerator(args []string) (generator, error) {
 func (g *awsGeneratorType) Generate(unused_datacentre string,
 	logger log.Logger) (*mdb.Mdb, error) {
 	resultsChannel := make(chan resultType, 1)
-	numTargets, err := awsutil.ForEachTarget(g.targets, nil,
+	numTargets, err := credentialsStore.ForEachEC2Target(g.targets, nil,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			var result resultType
 			result.mdb, result.err = g.generateForTarget(awsService, account,
 				region, logger)
 			resultsChannel <- result
 		},
-		logger)
+		false, logger)
 	// Collect results.
 	var newMdb mdb.Mdb
 	hostnames := make(map[string]struct{})
