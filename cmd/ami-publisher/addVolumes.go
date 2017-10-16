@@ -9,7 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func addVolumesSubcommand(args []string, logger log.Logger) {
+func addVolumesSubcommand(args []string, logger log.DebugLogger) {
 	if err := addVolumes(args[0], logger); err != nil {
 		fmt.Fprintf(os.Stderr, "Error adding volumes: %s\n", err)
 		os.Exit(1)
@@ -17,7 +17,7 @@ func addVolumesSubcommand(args []string, logger log.Logger) {
 	os.Exit(0)
 }
 
-func addVolumes(sizeStr string, logger log.Logger) error {
+func addVolumes(sizeStr string, logger log.DebugLogger) error {
 	sizeInGiB, err := strconv.ParseInt(sizeStr, 10, 64)
 	if err != nil {
 		return err

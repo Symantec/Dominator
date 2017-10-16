@@ -98,7 +98,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  terminate-instances")
 }
 
-type commandFunc func([]string, liblog.Logger)
+type commandFunc func([]string, liblog.DebugLogger)
 
 type subcommand struct {
 	command string

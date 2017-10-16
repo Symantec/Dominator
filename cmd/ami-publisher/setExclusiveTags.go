@@ -10,7 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func setExclusiveTagsSubcommand(args []string, logger log.Logger) {
+func setExclusiveTagsSubcommand(args []string, logger log.DebugLogger) {
 	err := setExclusiveTags(args[0], args[1], args[2:], logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
@@ -21,7 +21,7 @@ func setExclusiveTagsSubcommand(args []string, logger log.Logger) {
 }
 
 func setExclusiveTags(tagKey string, tagValue string, resultsFiles []string,
-	logger log.Logger) error {
+	logger log.DebugLogger) error {
 	results := make([]amipublisher.Resource, 0)
 	for _, resultsFile := range resultsFiles {
 		var fileResults []amipublisher.Resource

@@ -12,7 +12,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func publishSubcommand(args []string, logger log.Logger) {
+func publishSubcommand(args []string, logger log.DebugLogger) {
 	imageServerAddr := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)
 	err := publish(imageServerAddr, args[0], args[1], logger)
@@ -24,7 +24,7 @@ func publishSubcommand(args []string, logger log.Logger) {
 }
 
 func publish(imageServerAddress string, streamName string, imageLeafName string,
-	logger log.Logger) error {
+	logger log.DebugLogger) error {
 	streamName = path.Clean(streamName)
 	imageLeafName = path.Clean(imageLeafName)
 	if *expiresIn > 0 {

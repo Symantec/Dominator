@@ -12,7 +12,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func launchInstancesSubcommand(args []string, logger log.Logger) {
+func launchInstancesSubcommand(args []string, logger log.DebugLogger) {
 	if err := launchInstances(args[0], logger); err != nil {
 		fmt.Fprintf(os.Stderr, "Error launching instances: %s\n", err)
 		os.Exit(1)
@@ -20,7 +20,7 @@ func launchInstancesSubcommand(args []string, logger log.Logger) {
 	os.Exit(0)
 }
 
-func launchInstances(bootImage string, logger log.Logger) error {
+func launchInstances(bootImage string, logger log.DebugLogger) error {
 	bootImage = path.Clean(bootImage)
 	tags["Name"] = *instanceName
 	searchTags["Name"] = bootImage
@@ -41,7 +41,7 @@ func launchInstances(bootImage string, logger log.Logger) error {
 	return nil
 }
 
-func launchInstancesForImagesSubcommand(args []string, logger log.Logger) {
+func launchInstancesForImagesSubcommand(args []string, logger log.DebugLogger) {
 	if err := launchInstancesForImages(args, logger); err != nil {
 		fmt.Fprintf(os.Stderr, "Error launching instances: %s\n", err)
 		os.Exit(1)
@@ -50,7 +50,7 @@ func launchInstancesForImagesSubcommand(args []string, logger log.Logger) {
 }
 
 func launchInstancesForImages(resourcesFiles []string,
-	logger log.Logger) error {
+	logger log.DebugLogger) error {
 	resources := make([]amipublisher.Resource, 0)
 	for _, resourcesFile := range resourcesFiles {
 		fileRes := make([]amipublisher.Resource, 0)

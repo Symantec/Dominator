@@ -9,7 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func copyBootstrapImageSubcommand(args []string, logger log.Logger) {
+func copyBootstrapImageSubcommand(args []string, logger log.DebugLogger) {
 	err := copyBootstrapImage(args[0], logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error copying bootstrap image: %s\n", err)
@@ -18,7 +18,7 @@ func copyBootstrapImageSubcommand(args []string, logger log.Logger) {
 	os.Exit(0)
 }
 
-func copyBootstrapImage(streamName string, logger log.Logger) error {
+func copyBootstrapImage(streamName string, logger log.DebugLogger) error {
 	streamName = path.Clean(streamName)
 	tags["Name"] = streamName
 	return amipublisher.CopyBootstrapImage(streamName, targets, skipTargets,
