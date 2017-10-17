@@ -32,7 +32,9 @@ func Duration(duration time.Duration) string {
 // FormatBytes returns a string with the number of bytes specified converted
 // into a human-friendly format with a binary multiplier (i.e. GiB).
 func FormatBytes(bytes uint64) string {
-	if bytes>>30 > 100 {
+	if bytes>>40 > 100 {
+		return fmt.Sprintf("%d TiB", bytes>>40)
+	} else if bytes>>30 > 100 {
 		return fmt.Sprintf("%d GiB", bytes>>30)
 	} else if bytes>>20 > 100 {
 		return fmt.Sprintf("%d MiB", bytes>>20)
