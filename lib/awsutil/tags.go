@@ -39,6 +39,14 @@ func (tag *Tag) set(value string) error {
 	return nil
 }
 
+func createTagsFromList(list []*ec2.Tag) Tags {
+	tags := make(Tags, len(list))
+	for _, tag := range list {
+		tags[aws.StringValue(tag.Key)] = aws.StringValue(tag.Value)
+	}
+	return tags
+}
+
 func (tags Tags) copy() Tags {
 	newTags := make(Tags, len(tags))
 	for key, value := range tags {
