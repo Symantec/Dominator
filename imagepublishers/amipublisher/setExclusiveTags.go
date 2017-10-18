@@ -48,7 +48,7 @@ func setExclusiveTagsForTarget(awsService *ec2.EC2, amiId string,
 		logger.Println(err)
 		return err
 	}
-	images, err := getImages(awsService,
+	images, err := getImages(awsService, "",
 		awsutil.Tags{"Name": nameTag, tagKey: ""})
 	if err != nil {
 		logger.Println(err)

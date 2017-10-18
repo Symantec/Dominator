@@ -10,6 +10,14 @@ import (
 
 const ExpiresAtFormat = "2006-01-02 15:04:05"
 
+type Instance struct {
+	awsutil.Target
+	AmiId      string
+	InstanceId string
+	LaunchTime string
+	Tags       awsutil.Tags
+}
+
 type InstanceResult struct {
 	awsutil.Target
 	InstanceId string
@@ -70,6 +78,21 @@ type Unpacker struct {
 	TimeSinceLastUsed string `json:",omitempty"`
 }
 
+type UnusedImage struct {
+	awsutil.Target
+	AmiId        string
+	AmiName      string
+	CreationDate string
+	Description  string
+	Size         uint // Size in GiB.
+	Tags         awsutil.Tags
+}
+
+type UnusedImagesResult struct {
+	UnusedImages []UnusedImage
+	OldInstances []Instance
+}
+
 func (v TargetResult) MarshalJSON() ([]byte, error) {
 	return v.marshalJSON()
 }
@@ -104,6 +127,13 @@ func DeleteTagsOnUnpackers(targets awsutil.TargetList,
 	skipList awsutil.TargetList, name string, tagKeys []string,
 	logger log.Logger) error {
 	return deleteTagsOnUnpackers(targets, skipList, name, tagKeys, logger)
+}
+
+func DeleteUnusedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
+	searchTags, excludeSearchTags awsutil.Tags, minImageAge time.Duration,
+	logger log.DebugLogger) (UnusedImagesResult, error) {
+	return deleteUnusedImages(targets, skipList, searchTags, excludeSearchTags,
+		minImageAge, logger)
 }
 
 func ExpireResources(targets awsutil.TargetList, skipList awsutil.TargetList,
@@ -144,6 +174,13 @@ func ListUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
 	unpackerName string, logger log.Logger) (
 	[]TargetUnpackers, error) {
 	return listUnpackers(targets, skipList, unpackerName, logger)
+}
+
+func ListUnusedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
+	searchTags, excludeSearchTags awsutil.Tags, minImageAge time.Duration,
+	logger log.DebugLogger) (UnusedImagesResult, error) {
+	return listUnusedImages(targets, skipList, searchTags, excludeSearchTags,
+		minImageAge, logger)
 }
 
 func PrepareUnpackers(streamName string, targets awsutil.TargetList,
