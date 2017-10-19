@@ -14,8 +14,9 @@ import (
 )
 
 var (
-	amiName   = flag.String("amiName", "", "AMI Name property")
-	expiresIn = flag.Duration("expiresIn", time.Hour,
+	amiName           = flag.String("amiName", "", "AMI Name property")
+	excludeSearchTags awsutil.Tags
+	expiresIn         = flag.Duration("expiresIn", time.Hour,
 		"Date to set for the ExpiresAt tag")
 	ignoreMissingUnpackers = flag.Bool("ignoreMissingUnpackers", false,
 		"If true, do not generate an error for missing unpackers")
@@ -36,6 +37,8 @@ var (
 		"Maximum idle time for image unpacker instances")
 	minFreeBytes = flag.Uint64("minFreeBytes", 1<<28,
 		"minimum number of free bytes in image")
+	minImageAge = flag.Duration("minImageAge", time.Hour*24,
+		"Minimum image age when listing or deleting unused images")
 	replaceInstances = flag.Bool("replaceInstances", false,
 		"If true, replace old instances when launching, else skip on old")
 	s3Bucket = flag.String("s3Bucket", "",
@@ -56,6 +59,8 @@ var (
 )
 
 func init() {
+	flag.Var(&excludeSearchTags, "excludeSearchTags",
+		"Name of exclude tags to use when searching for resources")
 	flag.Var(&searchTags, "searchTags",
 		"Name of tags to use when searching for resources")
 	flag.Var(&securityGroupSearchTags, "securityGroupSearchTags",
@@ -82,12 +87,14 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  delete results-file...")
 	fmt.Fprintln(os.Stderr, "  delete-tags tag-key results-file...")
 	fmt.Fprintln(os.Stderr, "  delete-tag-on-unpackers tag-key")
+	fmt.Fprintln(os.Stderr, "  delete-unused-images")
 	fmt.Fprintln(os.Stderr, "  expire")
 	fmt.Fprintln(os.Stderr, "  import-key-pair name pub-key-file")
 	fmt.Fprintln(os.Stderr, "  launch-instances boot-image")
 	fmt.Fprintln(os.Stderr, "  launch-instances-for-images results-file...")
 	fmt.Fprintln(os.Stderr, "  list-streams")
 	fmt.Fprintln(os.Stderr, "  list-unpackers")
+	fmt.Fprintln(os.Stderr, "  list-unused-images")
 	fmt.Fprintln(os.Stderr, "  prepare-unpackers [stream-name]")
 	fmt.Fprintln(os.Stderr, "  publish stream-name image-leaf-name")
 	fmt.Fprintln(os.Stderr, "  remove-unused-volumes")
@@ -113,12 +120,14 @@ var subcommands = []subcommand{
 	{"delete", 1, -1, deleteSubcommand},
 	{"delete-tags", 2, -1, deleteTagsSubcommand},
 	{"delete-tags-on-unpackers", 1, 1, deleteTagsOnUnpackersSubcommand},
+	{"delete-unused-images", 0, 0, deleteUnusedImagesSubcommand},
 	{"expire", 0, 0, expireSubcommand},
 	{"import-key-pair", 2, 2, importKeyPairSubcommand},
 	{"launch-instances", 1, 1, launchInstancesSubcommand},
 	{"launch-instances-for-images", 0, -1, launchInstancesForImagesSubcommand},
 	{"list-streams", 0, 0, listStreamsSubcommand},
 	{"list-unpackers", 0, 0, listUnpackersSubcommand},
+	{"list-unused-images", 0, 0, listUnusedImagesSubcommand},
 	{"prepare-unpackers", 0, 1, prepareUnpackersSubcommand},
 	{"publish", 2, 2, publishSubcommand},
 	{"remove-unused-volumes", 0, 0, removeUnusedVolumesSubcommand},
