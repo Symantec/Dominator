@@ -9,7 +9,8 @@ func createRenamingWriter(filename string, perm os.FileMode) (
 	writer := &RenamingWriter{filename: filename}
 	tmpFilename := filename + "~"
 	var err error
-	writer.File, err = os.OpenFile(tmpFilename, os.O_CREATE|os.O_WRONLY, perm)
+	writer.File, err = os.OpenFile(tmpFilename,
+		os.O_CREATE|os.O_TRUNC|os.O_WRONLY, perm)
 	if err != nil {
 		return nil, err
 	}
