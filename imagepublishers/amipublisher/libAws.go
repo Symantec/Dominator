@@ -194,7 +194,7 @@ func deleteImage(cs *awsutil.CredentialsStore, accountName, region string,
 		&aws.Config{Region: aws.String(region)})
 	imageId := aws.StringValue(image.ImageId)
 	if err := deregisterAmi(ec2Service, imageId); err != nil {
-		return err
+		return errors.New(imageId + ": " + err.Error())
 	}
 	switch rootDevType := aws.StringValue(image.RootDeviceType); rootDevType {
 	case "ebs":
@@ -203,7 +203,7 @@ func deleteImage(cs *awsutil.CredentialsStore, accountName, region string,
 			snapshotId := aws.StringValue(bdMapping.Ebs.SnapshotId)
 			if err := deleteSnapshot(ec2Service, snapshotId); err != nil {
 				if firstError == nil {
-					firstError = err
+					firstError = errors.New(snapshotId + ": " + err.Error())
 				}
 			}
 		}
@@ -250,19 +250,24 @@ func deleteS3Directory(awsService *s3.S3, bucket, dir string) error {
 }
 
 func deleteSnapshot(awsService *ec2.EC2, snapshotId string) error {
-	for i := 0; i < 5; i++ {
-		_, err := awsService.DeleteSnapshot(&ec2.DeleteSnapshotInput{
+	var err error
+	for i := 0; i < 60; i++ {
+		_, err = awsService.DeleteSnapshot(&ec2.DeleteSnapshotInput{
 			SnapshotId: aws.String(snapshotId),
 		})
 		if err == nil {
 			return nil
 		}
-		if !strings.Contains(err.Error(), "in use by ami") {
+		if !strings.Contains(err.Error(), "in use by ami") &&
+			!strings.Contains(err.Error(), "RequestLimitExceeded") {
 			return err
 		}
 		time.Sleep(time.Second)
 	}
-	return errors.New("timed out waiting for delete: " + snapshotId)
+	if strings.Contains(err.Error(), "in use by ami") {
+		return errors.New("timed out waiting for delete: " + snapshotId)
+	}
+	return err
 }
 
 func deleteTagsFromResources(awsService *ec2.EC2, tagKeys []string,
@@ -312,11 +317,21 @@ func detachVolume(awsService *ec2.EC2, instanceId, volumeId string) error {
 }
 
 func deregisterAmi(awsService *ec2.EC2, amiId string) error {
-	_, err := awsService.DeregisterImage(&ec2.DeregisterImageInput{
-		ImageId: aws.String(amiId),
-	})
+	var err error
+	for i := 0; i < 6; i++ {
+		_, err = awsService.DeregisterImage(&ec2.DeregisterImageInput{
+			ImageId: aws.String(amiId),
+		})
+		if err == nil {
+			break
+		}
+		if !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return err
+		}
+		time.Sleep(time.Second * 11)
+	}
 	if err != nil {
-		return err
+		return errors.New("timed out waiting for delete: " + amiId)
 	}
 	imageIds := make([]*string, 1)
 	imageIds[0] = aws.String(amiId)
