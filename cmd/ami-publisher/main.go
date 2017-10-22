@@ -39,6 +39,8 @@ var (
 		"minimum number of free bytes in image")
 	minImageAge = flag.Duration("minImageAge", time.Hour*24,
 		"Minimum image age when listing or deleting unused images")
+	oldImageInstancesCsvFile = flag.String("oldImageInstancesCsvFile", "",
+		"File to write CSV listing old image instances")
 	replaceInstances = flag.Bool("replaceInstances", false,
 		"If true, replace old instances when launching, else skip on old")
 	s3Bucket = flag.String("s3Bucket", "",
@@ -52,10 +54,12 @@ var (
 	skipTargets awsutil.TargetList
 	sshKeyName  = flag.String("sshKeyName", "",
 		"Name of SSH key for instance")
-	subnetSearchTags awsutil.Tags = awsutil.Tags{"Network": "Private"}
-	tags             awsutil.Tags
-	targets          awsutil.TargetList
-	vpcSearchTags    awsutil.Tags = awsutil.Tags{"Preferred": "true"}
+	subnetSearchTags    awsutil.Tags = awsutil.Tags{"Network": "Private"}
+	tags                awsutil.Tags
+	targets             awsutil.TargetList
+	unusedImagesCsvFile = flag.String("unusedImagesCsvFile", "",
+		"File to write CSV listing unused images")
+	vpcSearchTags awsutil.Tags = awsutil.Tags{"Preferred": "true"}
 )
 
 func init() {
