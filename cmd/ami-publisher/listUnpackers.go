@@ -9,7 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func listUnpackersSubcommand(args []string, logger log.Logger) {
+func listUnpackersSubcommand(args []string, logger log.DebugLogger) {
 	err := listUnpackers(logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error listing unpackers: %s\n", err)
@@ -18,7 +18,7 @@ func listUnpackersSubcommand(args []string, logger log.Logger) {
 	os.Exit(0)
 }
 
-func listUnpackers(logger log.Logger) error {
+func listUnpackers(logger log.DebugLogger) error {
 	results, err := amipublisher.ListUnpackers(targets, skipTargets,
 		*instanceName, logger)
 	if err != nil {

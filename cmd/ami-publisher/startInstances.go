@@ -9,7 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func startInstancesSubcommand(args []string, logger log.Logger) {
+func startInstancesSubcommand(args []string, logger log.DebugLogger) {
 	if err := startInstances(*instanceName, logger); err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting instances: %s\n", err)
 		os.Exit(1)
@@ -17,7 +17,7 @@ func startInstancesSubcommand(args []string, logger log.Logger) {
 	os.Exit(0)
 }
 
-func startInstances(name string, logger log.Logger) error {
+func startInstances(name string, logger log.DebugLogger) error {
 	results, err := amipublisher.StartInstances(targets, skipTargets, name,
 		logger)
 	if err != nil {

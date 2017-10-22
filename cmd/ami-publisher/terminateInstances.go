@@ -8,7 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func terminateInstancesSubcommand(args []string, logger log.Logger) {
+func terminateInstancesSubcommand(args []string, logger log.DebugLogger) {
 	err := amipublisher.TerminateInstances(targets, skipTargets, *instanceName,
 		logger)
 	if err != nil {

@@ -8,7 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func stopIdleUnpackersSubcommand(args []string, logger log.Logger) {
+func stopIdleUnpackersSubcommand(args []string, logger log.DebugLogger) {
 	err := amipublisher.StopIdleUnpackers(targets, skipTargets, *instanceName,
 		*maxIdleTime, logger)
 	if err != nil {

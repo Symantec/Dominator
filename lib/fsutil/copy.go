@@ -17,7 +17,8 @@ const (
 func copyToFile(destFilename string, perm os.FileMode, reader io.Reader,
 	length uint64) error {
 	tmpFilename := destFilename + "~"
-	destFile, err := os.OpenFile(tmpFilename, os.O_CREATE|os.O_WRONLY, perm)
+	destFile, err := os.OpenFile(tmpFilename,
+		os.O_CREATE|os.O_TRUNC|os.O_WRONLY, perm)
 	if err != nil {
 		return err
 	}

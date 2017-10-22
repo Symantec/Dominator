@@ -9,7 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func prepareUnpackersSubcommand(args []string, logger log.Logger) {
+func prepareUnpackersSubcommand(args []string, logger log.DebugLogger) {
 	streamName := ""
 	if len(args) > 0 {
 		streamName = path.Clean(args[0])

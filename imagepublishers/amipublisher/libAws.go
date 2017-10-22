@@ -14,6 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
+const creationTimeFormat = "2006-01-02T15:04:05.000Z"
+
 func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 	logger log.Logger) error {
 	usedBlockDevices := make(map[string]struct{})
@@ -74,6 +76,22 @@ func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 	}
 	logger.Printf("attached: %s\n", volumeId)
 	return nil
+}
+
+// computeImageConsumption returns the size in GiB.
+func computeImageConsumption(image *ec2.Image) int64 {
+	var sizeGiB int64
+	for _, bdMapping := range image.BlockDeviceMappings {
+		// TODO(rgooch): Should use the snapshot size instead.
+		if ebs := bdMapping.Ebs; ebs != nil {
+			sizeGiB += aws.Int64Value(ebs.VolumeSize)
+		}
+	}
+	// TODO(rgooch): Should query the S3 folder instead.
+	if sizeGiB < 1 {
+		sizeGiB = 1
+	}
+	return sizeGiB
 }
 
 func createSnapshot(awsService *ec2.EC2, volumeId string, description string,
@@ -169,6 +187,41 @@ func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
 	return *volume.VolumeId, nil
 }
 
+func deleteImage(cs *awsutil.CredentialsStore, accountName, region string,
+	image *ec2.Image) error {
+	ec2Service := cs.GetEC2Service(accountName, region)
+	s3Service := s3.New(cs.GetSessionForAccount(accountName),
+		&aws.Config{Region: aws.String(region)})
+	imageId := aws.StringValue(image.ImageId)
+	if err := deregisterAmi(ec2Service, imageId); err != nil {
+		return errors.New(imageId + ": " + err.Error())
+	}
+	switch rootDevType := aws.StringValue(image.RootDeviceType); rootDevType {
+	case "ebs":
+		var firstError error
+		for _, bdMapping := range image.BlockDeviceMappings {
+			snapshotId := aws.StringValue(bdMapping.Ebs.SnapshotId)
+			if err := deleteSnapshot(ec2Service, snapshotId); err != nil {
+				if firstError == nil {
+					firstError = errors.New(snapshotId + ": " + err.Error())
+				}
+			}
+		}
+		if firstError != nil {
+			return firstError
+		}
+	case "instance-store":
+		splitPath := strings.Split(aws.StringValue(image.ImageLocation), "/")
+		bucket := splitPath[0]
+		folder := strings.Join(splitPath[1:len(splitPath)-1], "/")
+		return deleteS3Directory(s3Service, bucket, folder)
+	default:
+		return errors.New("unsupported root device type: " + rootDevType +
+			" for: " + imageId)
+	}
+	return nil
+}
+
 func deleteS3Directory(awsService *s3.S3, bucket, dir string) error {
 	out, err := awsService.ListObjects(&s3.ListObjectsInput{
 		Bucket: aws.String(bucket),
@@ -197,19 +250,24 @@ func deleteS3Directory(awsService *s3.S3, bucket, dir string) error {
 }
 
 func deleteSnapshot(awsService *ec2.EC2, snapshotId string) error {
-	for i := 0; i < 5; i++ {
-		_, err := awsService.DeleteSnapshot(&ec2.DeleteSnapshotInput{
+	var err error
+	for i := 0; i < 60; i++ {
+		_, err = awsService.DeleteSnapshot(&ec2.DeleteSnapshotInput{
 			SnapshotId: aws.String(snapshotId),
 		})
 		if err == nil {
 			return nil
 		}
-		if !strings.Contains(err.Error(), "in use by ami") {
+		if !strings.Contains(err.Error(), "in use by ami") &&
+			!strings.Contains(err.Error(), "RequestLimitExceeded") {
 			return err
 		}
 		time.Sleep(time.Second)
 	}
-	return errors.New("timed out waiting for delete: " + snapshotId)
+	if strings.Contains(err.Error(), "in use by ami") {
+		return errors.New("timed out waiting for delete: " + snapshotId)
+	}
+	return err
 }
 
 func deleteTagsFromResources(awsService *ec2.EC2, tagKeys []string,
@@ -259,11 +317,21 @@ func detachVolume(awsService *ec2.EC2, instanceId, volumeId string) error {
 }
 
 func deregisterAmi(awsService *ec2.EC2, amiId string) error {
-	_, err := awsService.DeregisterImage(&ec2.DeregisterImageInput{
-		ImageId: aws.String(amiId),
-	})
+	var err error
+	for i := 0; i < 6; i++ {
+		_, err = awsService.DeregisterImage(&ec2.DeregisterImageInput{
+			ImageId: aws.String(amiId),
+		})
+		if err == nil {
+			break
+		}
+		if !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return err
+		}
+		time.Sleep(time.Second * 11)
+	}
 	if err != nil {
-		return err
+		return errors.New("timed out waiting for delete: " + amiId)
 	}
 	imageIds := make([]*string, 1)
 	imageIds[0] = aws.String(amiId)
@@ -282,19 +350,66 @@ func deregisterAmi(awsService *ec2.EC2, amiId string) error {
 	return errors.New("timed out waiting for deregister: " + amiId)
 }
 
+func describeInstances(awsService *ec2.EC2, input *ec2.DescribeInstancesInput) (
+	[]*ec2.Instance, error) {
+	if input == nil {
+		input = &ec2.DescribeInstancesInput{}
+	}
+	inp := *input
+	inp.NextToken = nil
+	instances := make([]*ec2.Instance, 0)
+	for {
+		out, err := awsService.DescribeInstances(&inp)
+		if err != nil {
+			return nil, err
+		}
+		for _, reservation := range out.Reservations {
+			for _, instance := range reservation.Instances {
+				instances = append(instances, instance)
+			}
+		}
+		if out.NextToken == nil {
+			break
+		}
+		inp.NextToken = out.NextToken
+	}
+	return instances, nil
+}
+
 func findImage(awsService *ec2.EC2, tags awsutil.Tags) (*ec2.Image, error) {
-	images, err := getImages(awsService, tags)
+	images, err := getImages(awsService, "", tags)
 	if err != nil {
 		return nil, err
 	}
 	return findLatestImage(images)
 }
 
+func findMarketplaceImage(awsService *ec2.EC2, productCode string) (
+	*ec2.Image, error) {
+	out, err := awsService.DescribeImages(
+		&ec2.DescribeImagesInput{
+			Filters: []*ec2.Filter{
+				{
+					Name:   aws.String("product-code"),
+					Values: aws.StringSlice([]string{productCode}),
+				},
+				{
+					Name:   aws.String("product-code.type"),
+					Values: aws.StringSlice([]string{"marketplace"}),
+				},
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+	return findLatestImage(out.Images)
+}
+
 func findLatestImage(images []*ec2.Image) (*ec2.Image, error) {
 	var youngestImage *ec2.Image
 	var youngestTime time.Time
 	for _, image := range images {
-		creationTime, err := time.Parse("2006-01-02T15:04:05.000Z",
+		creationTime, err := time.Parse(creationTimeFormat,
 			aws.StringValue(image.CreationDate))
 		if err != nil {
 			return nil, err
@@ -351,29 +466,15 @@ func getFreeVolumeName(usedBlockDevices map[string]struct{}) string {
 	}
 }
 
-func findMarketplaceImage(awsService *ec2.EC2, productCode string) (
-	*ec2.Image, error) {
-	out, err := awsService.DescribeImages(
-		&ec2.DescribeImagesInput{
-			Filters: []*ec2.Filter{
-				{
-					Name:   aws.String("product-code"),
-					Values: aws.StringSlice([]string{productCode}),
-				},
-				{
-					Name:   aws.String("product-code.type"),
-					Values: aws.StringSlice([]string{"marketplace"}),
-				},
-			},
-		})
-	if err != nil {
-		return nil, err
-	}
-	return findLatestImage(out.Images)
-}
-
-func getImages(awsService *ec2.EC2, tags awsutil.Tags) ([]*ec2.Image, error) {
+func getImages(awsService *ec2.EC2, accountId string, tags awsutil.Tags) (
+	[]*ec2.Image, error) {
 	filters := tags.MakeFilters()
+	if accountId != "" {
+		filters = append(filters, &ec2.Filter{
+			Name:   aws.String("owner-id"),
+			Values: aws.StringSlice([]string{accountId}),
+		})
+	}
 	filters = append(filters, &ec2.Filter{
 		Name:   aws.String("is-public"),
 		Values: aws.StringSlice([]string{"false"}),
@@ -397,7 +498,7 @@ func getInstances(awsService *ec2.EC2, nameTag string) (
 		ec2.InstanceStateNameStopping,
 		ec2.InstanceStateNameStopped,
 	}
-	out, err := awsService.DescribeInstances(&ec2.DescribeInstancesInput{
+	instances, err := describeInstances(awsService, &ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
 			{
 				Name:   aws.String("tag:Name"),
@@ -409,16 +510,7 @@ func getInstances(awsService *ec2.EC2, nameTag string) (
 			},
 		},
 	})
-	if err != nil {
-		return nil, err
-	}
-	instances := make([]*ec2.Instance, 0)
-	for _, reservation := range out.Reservations {
-		for _, instance := range reservation.Instances {
-			instances = append(instances, instance)
-		}
-	}
-	return instances, nil
+	return instances, err
 }
 
 func getInstanceIds(instances []*ec2.Instance) []string {

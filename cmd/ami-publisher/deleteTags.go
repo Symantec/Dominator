@@ -9,7 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func deleteTagsSubcommand(args []string, logger log.Logger) {
+func deleteTagsSubcommand(args []string, logger log.DebugLogger) {
 	err := deleteTags(args[0], args[1:], logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error deleting tags for resources: %s\n", err)
@@ -18,7 +18,8 @@ func deleteTagsSubcommand(args []string, logger log.Logger) {
 	os.Exit(0)
 }
 
-func deleteTags(tagKey string, resultsFiles []string, logger log.Logger) error {
+func deleteTags(tagKey string, resultsFiles []string,
+	logger log.DebugLogger) error {
 	results := make([]amipublisher.Resource, 0)
 	for _, resultsFile := range resultsFiles {
 		fileResults := make([]amipublisher.Resource, 0)
@@ -32,7 +33,7 @@ func deleteTags(tagKey string, resultsFiles []string, logger log.Logger) error {
 	return amipublisher.DeleteTags(results, tagKeys, logger)
 }
 
-func deleteTagsOnUnpackersSubcommand(args []string, logger log.Logger) {
+func deleteTagsOnUnpackersSubcommand(args []string, logger log.DebugLogger) {
 	err := deleteTagsOnUnpackers(args[0], logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error deleting tags on unpackers: %s\n", err)
@@ -41,7 +42,7 @@ func deleteTagsOnUnpackersSubcommand(args []string, logger log.Logger) {
 	os.Exit(0)
 }
 
-func deleteTagsOnUnpackers(tagKey string, logger log.Logger) error {
+func deleteTagsOnUnpackers(tagKey string, logger log.DebugLogger) error {
 	tagKeys := []string{tagKey}
 	return amipublisher.DeleteTagsOnUnpackers(targets, skipTargets,
 		*instanceName, tagKeys, logger)

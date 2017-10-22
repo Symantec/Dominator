@@ -141,6 +141,10 @@ func (tag *Tag) Set(value string) error {
 
 type Tags map[string]string // Key: tag key, value: tag value.
 
+func CreateTagsFromList(list []*ec2.Tag) Tags {
+	return createTagsFromList(list)
+}
+
 func (tags Tags) MakeFilters() []*ec2.Filter {
 	return tags.makeFilters()
 }

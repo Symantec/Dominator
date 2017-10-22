@@ -9,7 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func importKeyPairSubcommand(args []string, logger log.Logger) {
+func importKeyPairSubcommand(args []string, logger log.DebugLogger) {
 	err := importKeyPair(args[0], args[1], logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error importing key pair: %s\n", err)
@@ -19,7 +19,7 @@ func importKeyPairSubcommand(args []string, logger log.Logger) {
 }
 
 func importKeyPair(keyName string, pubKeyFilename string,
-	logger log.Logger) error {
+	logger log.DebugLogger) error {
 	publicKey, err := ioutil.ReadFile(pubKeyFilename)
 	if err != nil {
 		return err
