@@ -1,6 +1,7 @@
 package net
 
 import (
+	"net"
 	"time"
 )
 
@@ -8,8 +9,7 @@ func newMeasuringDialer(dialer Dialer) *MeasuringDialer {
 	return &MeasuringDialer{dialer: dialer}
 }
 
-func (d *MeasuringDialer) Dial(network, address string) (
-	*MeasuringConnection, error) {
+func (d *MeasuringDialer) Dial(network, address string) (net.Conn, error) {
 	startTime := time.Now()
 	netConn, err := d.dialer.Dial(network, address)
 	d.cumulativeDialTime += time.Since(startTime)
