@@ -97,7 +97,7 @@ func New(network, address string, http bool, path string) *ClientResource {
 	return newClientResource(network, address, http, path, defaultDialer)
 }
 
-// NewWithDialer works just like New but allows this rosurce to use a custom
+// NewWithDialer works just like New but allows this resource to use a custom
 // dialer.
 func NewWithDialer(
 	network,
