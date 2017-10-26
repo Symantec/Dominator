@@ -78,7 +78,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr,
 		"    url: URL which yields lines. Each line contains:")
 	fmt.Fprintln(os.Stderr,
-		"         host required-image [planned-image]")
+		"         host [required-image [planned-image]]")
 }
 
 type driver struct {
