@@ -9,7 +9,7 @@ elif [ -x /usr/sbin/update-rc.d ]; then
     readonly init='update-rc.d'
     if [ -d /etc/init.d ]; then
 	readonly destdir='/etc/init.d'
-    elif [ -d /etcrc.d/init.d ]; then
+    elif [ -d /etc/rc.d/init.d ]; then
 	readonly destdir='/etc/rc.d/init.d'
     fi
 elif [ -x /sbin/chkconfig ]; then
