@@ -72,7 +72,8 @@ openssl req -new -key "$newkey.key.pem" -days 1096 -extensions v3_ca \
 	    -batch -out "$newkey.csr" -utf8 -subj "/CN=$username"
 openssl x509 -req -sha256 -days 1096 -in "$newkey.csr" \
 	     -extfile "$tmpfile" $methods_args \
-	     -CAkey root.key.pem -CA root.pem -set_serial "$serial" \
+	     -CAkey "$signing_key.key.pem" -CA "$signing_key.pem" \
+	     -set_serial "$serial" \
 	     -out "$newkey.pem"
 rm -f "$tmpfile"
 chmod a+r "$newkey.pem"
