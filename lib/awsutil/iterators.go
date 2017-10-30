@@ -1,6 +1,8 @@
 package awsutil
 
 import (
+	"errors"
+
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -64,6 +66,12 @@ func (cs *CredentialsStore) forEachTarget(targets TargetList,
 			regions := accountMap[target.AccountName]
 			regions = append(regions, target.Region)
 			accountMap[target.AccountName] = regions
+		}
+	}
+	// Verify we have credentials for all accounts.
+	for accountName := range accountMap {
+		if cs.GetSessionForAccount(accountName) == nil {
+			return 0, errors.New("no session for account: " + accountName)
 		}
 	}
 	accountResultsChannel := make(chan resultsType, 1)
