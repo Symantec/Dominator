@@ -27,11 +27,11 @@ func (tag Tag) makeFilter() *ec2.Filter {
 }
 
 func (tag *Tag) string() string {
-	return tag.Key + ":" + tag.Value
+	return tag.Key + "=" + tag.Value
 }
 
 func (tag *Tag) set(value string) error {
-	splitValue := strings.Split(value, ":")
+	splitValue := strings.Split(value, "=")
 	if len(splitValue) != 2 {
 		return errors.New(`malformed tag: "` + value + `"`)
 	}
@@ -75,7 +75,7 @@ func (tags Tags) makeFilters() []*ec2.Filter {
 func (tags *Tags) string() string {
 	pairs := make([]string, 0, len(*tags))
 	for key, value := range *tags {
-		pairs = append(pairs, key+":"+value)
+		pairs = append(pairs, key+"="+value)
 	}
 	return strings.Join(pairs, ",")
 }
@@ -98,7 +98,7 @@ func (tags *Tags) set(value string) error {
 			newTags.Merge(fileTags)
 			continue
 		}
-		splitTag := strings.Split(tag, ":")
+		splitTag := strings.Split(tag, "=")
 		if len(splitTag) != 2 {
 			return errors.New(`malformed tag: "` + tag + `"`)
 		}
