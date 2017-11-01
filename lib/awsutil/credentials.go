@@ -17,12 +17,13 @@ type sessionResult struct {
 	err         error
 }
 
-func tryLoadCredentials() (*CredentialsStore, []string, error) {
+func tryLoadCredentials() (*CredentialsStore, map[string]error, error) {
 	accountNames, err := listAccountNames()
 	if err != nil {
 		return nil, nil, err
 	}
-	return createCredentials(accountNames)
+	cs, unloadableAccounts := createCredentials(accountNames)
+	return cs, unloadableAccounts, nil
 }
 
 func loadCredentials() (*CredentialsStore, error) {
@@ -30,15 +31,15 @@ func loadCredentials() (*CredentialsStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs, _, err := createCredentials(accountNames)
-	if err != nil {
-		return nil, err
+	cs, unloadableAccounts := createCredentials(accountNames)
+	for _, err := range unloadableAccounts {
+		return cs, err
 	}
 	return cs, nil
 }
 
 func createCredentials(accountNames []string) (
-	*CredentialsStore, []string, error) {
+	*CredentialsStore, map[string]error) {
 	sort.Strings(accountNames)
 	cs := &CredentialsStore{
 		accountNames:    accountNames,
@@ -53,15 +54,11 @@ func createCredentials(accountNames []string) (
 			resultsChannel <- createSession(accountName)
 		}(accountName)
 	}
-	var firstError error
-	var badAccounts []string
+	unloadableAccounts := make(map[string]error)
 	for range accountNames {
 		result := <-resultsChannel
 		if result.err != nil {
-			badAccounts = append(badAccounts, result.accountName)
-			if firstError == nil {
-				firstError = result.err
-			}
+			unloadableAccounts[result.accountName] = result.err
 		} else {
 			cs.sessionMap[result.accountName] = result.awsSession
 			cs.accountIdToName[result.accountId] = result.accountName
@@ -70,10 +67,7 @@ func createCredentials(accountNames []string) (
 		}
 	}
 	close(resultsChannel)
-	if firstError != nil {
-		return cs, badAccounts, firstError
-	}
-	return cs, nil, nil
+	return cs, unloadableAccounts
 }
 
 func createSession(accountName string) sessionResult {

@@ -34,13 +34,12 @@ func LoadCredentials() (*CredentialsStore, error) {
 }
 
 // TryLoadCredentials works like LoadCredentials but attempts to partially
-// load the credentials in the presence of unloadable accounts. If err is
-// non nil and partial loading succeeded, store will be non-nil and
-// badAccounts will contain the list of accounts that could not be loaded.
-// If err is non nil and partial loading did not succeed then both store
-// and badAccounts will be nil.
+// load the credentials in the presence of unloadable accounts.
+// If the partial load is successful, unloadableAccounts contains the error
+// encountered for each unloaded account. If partial load is unsuccessful,
+// TryLoadCredentials returns nil, nil, err
 func TryLoadCredentials() (
-	store *CredentialsStore, badAccounts []string, err error) {
+	store *CredentialsStore, unloadedAccounts map[string]error, err error) {
 	return tryLoadCredentials()
 }
 
