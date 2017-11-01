@@ -5,6 +5,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+
+	"github.com/Symantec/Dominator/lib/log"
 )
 
 type HtmlWriter interface {
@@ -13,7 +15,7 @@ type HtmlWriter interface {
 
 var htmlWriters []HtmlWriter
 
-func StartServer(portNum uint) error {
+func StartServer(portNum uint, logger log.DebugLogger) error {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", portNum))
 	if err != nil {
 		return err
