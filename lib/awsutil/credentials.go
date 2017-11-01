@@ -54,6 +54,7 @@ func createCredentials(accountNames []string) (*CredentialsStore, error) {
 			cs.accountRegions[result.accountName] = result.regions
 		}
 	}
+	close(resultsChannel)
 	if firstError != nil {
 		return nil, firstError
 	}
