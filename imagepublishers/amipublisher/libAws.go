@@ -200,6 +200,9 @@ func deleteImage(cs *awsutil.CredentialsStore, accountName, region string,
 	case "ebs":
 		var firstError error
 		for _, bdMapping := range image.BlockDeviceMappings {
+			if bdMapping.Ebs == nil {
+				return nil
+			}
 			snapshotId := aws.StringValue(bdMapping.Ebs.SnapshotId)
 			if err := deleteSnapshot(ec2Service, snapshotId); err != nil {
 				if firstError == nil {
