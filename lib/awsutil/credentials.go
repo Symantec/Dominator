@@ -33,7 +33,7 @@ func loadCredentials() (*CredentialsStore, error) {
 	}
 	cs, unloadableAccounts := createCredentials(accountNames)
 	for _, err := range unloadableAccounts {
-		return cs, err
+		return nil, err
 	}
 	return cs, nil
 }
