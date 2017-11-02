@@ -17,15 +17,29 @@ type sessionResult struct {
 	err         error
 }
 
+func tryLoadCredentials() (*CredentialsStore, map[string]error, error) {
+	accountNames, err := listAccountNames()
+	if err != nil {
+		return nil, nil, err
+	}
+	cs, unloadableAccounts := createCredentials(accountNames)
+	return cs, unloadableAccounts, nil
+}
+
 func loadCredentials() (*CredentialsStore, error) {
 	accountNames, err := listAccountNames()
 	if err != nil {
 		return nil, err
 	}
-	return createCredentials(accountNames)
+	cs, unloadableAccounts := createCredentials(accountNames)
+	for _, err := range unloadableAccounts {
+		return nil, err
+	}
+	return cs, nil
 }
 
-func createCredentials(accountNames []string) (*CredentialsStore, error) {
+func createCredentials(accountNames []string) (
+	*CredentialsStore, map[string]error) {
 	sort.Strings(accountNames)
 	cs := &CredentialsStore{
 		accountNames:    accountNames,
@@ -40,13 +54,11 @@ func createCredentials(accountNames []string) (*CredentialsStore, error) {
 			resultsChannel <- createSession(accountName)
 		}(accountName)
 	}
-	var firstError error
+	unloadableAccounts := make(map[string]error)
 	for range accountNames {
 		result := <-resultsChannel
 		if result.err != nil {
-			if firstError == nil {
-				firstError = result.err
-			}
+			unloadableAccounts[result.accountName] = result.err
 		} else {
 			cs.sessionMap[result.accountName] = result.awsSession
 			cs.accountIdToName[result.accountId] = result.accountName
@@ -55,32 +67,29 @@ func createCredentials(accountNames []string) (*CredentialsStore, error) {
 		}
 	}
 	close(resultsChannel)
-	if firstError != nil {
-		return nil, firstError
-	}
-	return cs, nil
+	return cs, unloadableAccounts
 }
 
 func createSession(accountName string) sessionResult {
 	awsSession, err := CreateSession(accountName)
 	if err != nil {
-		return sessionResult{err: err}
+		return sessionResult{err: err, accountName: accountName}
 	}
 	stsService := sts.New(awsSession)
 	inp := &sts.GetCallerIdentityInput{}
 	var accountId string
 	if out, err := stsService.GetCallerIdentity(inp); err != nil {
-		return sessionResult{err: err}
+		return sessionResult{err: err, accountName: accountName}
 	} else {
 		if arnV, err := arn.Parse(aws.StringValue(out.Arn)); err != nil {
-			return sessionResult{err: err}
+			return sessionResult{err: err, accountName: accountName}
 		} else {
 			accountId = arnV.AccountID
 		}
 	}
 	regions, err := listRegions(CreateService(awsSession, "us-east-1"))
 	if err != nil {
-		return sessionResult{err: err}
+		return sessionResult{err: err, accountName: accountName}
 	}
 	return sessionResult{
 		accountName: accountName,

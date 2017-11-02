@@ -33,6 +33,16 @@ func LoadCredentials() (*CredentialsStore, error) {
 	return loadCredentials()
 }
 
+// TryLoadCredentials works like LoadCredentials but attempts to partially
+// load the credentials in the presence of unloadable accounts.
+// If the partial load is successful, unloadableAccounts contains the error
+// encountered for each unloaded account. If partial load is unsuccessful,
+// TryLoadCredentials returns nil, nil, err
+func TryLoadCredentials() (
+	store *CredentialsStore, unloadedAccounts map[string]error, err error) {
+	return tryLoadCredentials()
+}
+
 // AccountIdToName will return an account name given an account ID.
 func (cs *CredentialsStore) AccountIdToName(accountId string) string {
 	return cs.accountIdToName[accountId]
