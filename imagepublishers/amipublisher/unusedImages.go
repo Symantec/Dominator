@@ -227,14 +227,16 @@ func listTargetUnusedImages(awsService *ec2.EC2, searchTags awsutil.Tags,
 			}
 		}
 	}
-	images, err := getImages(awsService, accountId, excludeSearchTags)
-	if err != nil {
-		return imageUsage{}, err
-	} else {
-		for _, image := range images {
-			amiId := aws.StringValue(image.ImageId)
-			delete(visibleImages, amiId)
-			delete(results.images, amiId)
+	if len(excludeSearchTags) > 0 {
+		images, err := getImages(awsService, accountId, excludeSearchTags)
+		if err != nil {
+			return imageUsage{}, err
+		} else {
+			for _, image := range images {
+				amiId := aws.StringValue(image.ImageId)
+				delete(visibleImages, amiId)
+				delete(results.images, amiId)
+			}
 		}
 	}
 	instances, err := describeInstances(awsService, nil)
