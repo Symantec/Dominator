@@ -1,6 +1,7 @@
 package amipublisher
 
 import (
+	"errors"
 	"path"
 
 	"github.com/Symantec/Dominator/lib/awsutil"
@@ -12,21 +13,44 @@ import (
 )
 
 func deleteResources(resources []Resource, logger log.Logger) error {
+	cs, err := awsutil.LoadCredentials()
+	if err != nil {
+		return err
+	}
 	return forEachResource(resources, false,
 		func(session *session.Session, awsService *ec2.EC2, resource Resource,
 			logger log.Logger) error {
-			return deleteResource(session, awsService, resource, logger)
+			return deleteResource(cs, session, awsService, resource, logger)
 		},
 		logger)
 }
 
-func deleteResource(session *session.Session, awsService *ec2.EC2,
-	resource Resource, logger log.Logger) error {
+func deleteResource(cs *awsutil.CredentialsStore, session *session.Session,
+	awsService *ec2.EC2, resource Resource, logger log.Logger) error {
 	if resource.SharedFrom != "" {
 		return nil
 	}
 	var firstError error
 	if resource.AmiId != "" {
+		if resource.SnapshotId == "" && resource.S3Bucket == "" {
+			out, err := awsService.DescribeImages(
+				&ec2.DescribeImagesInput{
+					ImageIds: aws.StringSlice([]string{resource.AmiId})})
+			if err != nil {
+				return err
+			}
+			if len(out.Images) != 1 {
+				return errors.New("did not get one image")
+			}
+			err = deleteImage(cs, resource.AccountName, resource.Region,
+				out.Images[0])
+			if err != nil {
+				logger.Printf("error deleting: %s: %s\n", resource.AmiId, err)
+			} else {
+				logger.Printf("deleted: %s\n", resource.AmiId)
+				return nil
+			}
+		}
 		if err := deregisterAmi(awsService, resource.AmiId); err != nil {
 			logger.Printf("error deleting: %s: %s\n", resource.AmiId, err)
 			if firstError == nil {
