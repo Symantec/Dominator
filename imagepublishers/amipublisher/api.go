@@ -10,6 +10,16 @@ import (
 
 const ExpiresAtFormat = "2006-01-02 15:04:05"
 
+type Image struct {
+	awsutil.Target
+	AmiId        string
+	AmiName      string
+	CreationDate string
+	Description  string
+	Size         uint // Size in GiB.
+	Tags         awsutil.Tags
+}
+
 type Instance struct {
 	awsutil.Target
 	AmiId      string
@@ -78,18 +88,8 @@ type Unpacker struct {
 	TimeSinceLastUsed string `json:",omitempty"`
 }
 
-type UnusedImage struct {
-	awsutil.Target
-	AmiId        string
-	AmiName      string
-	CreationDate string
-	Description  string
-	Size         uint // Size in GiB.
-	Tags         awsutil.Tags
-}
-
 type UnusedImagesResult struct {
-	UnusedImages []UnusedImage
+	UnusedImages []Image
 	OldInstances []Instance
 }
 
@@ -163,6 +163,13 @@ func LaunchInstancesForImages(images []Resource,
 	return launchInstancesForImages(images, vpcSearchTags,
 		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName,
 		tags, logger)
+}
+
+func ListImages(targets awsutil.TargetList, skipList awsutil.TargetList,
+	searchTags, excludeSearchTags awsutil.Tags, minImageAge time.Duration,
+	logger log.DebugLogger) ([]Image, error) {
+	return listImages(targets, skipList, searchTags, excludeSearchTags,
+		minImageAge, logger)
 }
 
 func ListStreams(targets awsutil.TargetList, skipList awsutil.TargetList,

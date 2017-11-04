@@ -95,7 +95,7 @@ func writeInstancesCsv(filename string,
 }
 
 func writeUnusedImagesCsv(filename string,
-	images []amipublisher.UnusedImage) error {
+	images []amipublisher.Image) error {
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, filePerms)
 	if err != nil {
 		return err
