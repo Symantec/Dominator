@@ -35,7 +35,7 @@ func deleteUnusedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
 		return UnusedImagesResult{}, err
 	}
 	rawResults, err := listUnusedImagesCS(targets, skipList, searchTags,
-		excludeSearchTags, minImageAge, cs, logger)
+		excludeSearchTags, minImageAge, cs, false, logger)
 	if err != nil {
 		return UnusedImagesResult{}, err
 	}
@@ -67,7 +67,7 @@ func generateResults(rawResults []targetImageUsage,
 	results := UnusedImagesResult{}
 	for _, result := range rawResults {
 		for amiId, image := range result.images {
-			results.UnusedImages = append(results.UnusedImages, UnusedImage{
+			results.UnusedImages = append(results.UnusedImages, Image{
 				Target: awsutil.Target{
 					AccountName: result.accountName,
 					Region:      result.region,
@@ -106,7 +106,7 @@ func listUnusedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
 		return UnusedImagesResult{}, err
 	}
 	rawResults, err := listUnusedImagesCS(targets, skipList, searchTags,
-		excludeSearchTags, minImageAge, cs, logger)
+		excludeSearchTags, minImageAge, cs, false, logger)
 	if err != nil {
 		return UnusedImagesResult{}, err
 	}
@@ -115,7 +115,8 @@ func listUnusedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
 
 func listUnusedImagesCS(targets awsutil.TargetList, skipList awsutil.TargetList,
 	searchTags, excludeSearchTags awsutil.Tags, minImageAge time.Duration,
-	cs *awsutil.CredentialsStore, logger log.DebugLogger) (
+	cs *awsutil.CredentialsStore, ignoreInstances bool,
+	logger log.DebugLogger) (
 	[]targetImageUsage, error) {
 	resultsChannel := make(chan targetImageUsage, 1)
 	logger.Debugln(0, "collecting raw data")
@@ -123,7 +124,7 @@ func listUnusedImagesCS(targets awsutil.TargetList, skipList awsutil.TargetList,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			usage, err := listTargetUnusedImages(awsService, searchTags,
 				excludeSearchTags, cs.AccountNameToId(account), minImageAge,
-				logger)
+				ignoreInstances, logger)
 			if err != nil {
 				logger.Println(err)
 			}
@@ -176,33 +177,36 @@ func listUnusedImagesCS(targets awsutil.TargetList, skipList awsutil.TargetList,
 	}
 	logger.Printf("total images found: %d consuming %s\n",
 		totalImages, format.FormatBytes(uint64(totalGiBytes)<<30))
-	// Delete used images from images table.
-	logger.Debugln(0, "ignoring used images")
-	for _, result := range rawResults {
-		usedMap := imagesUsedPerRegion[result.region]
-		for amiId := range result.images {
-			if _, ok := usedMap[amiId]; ok {
-				delete(result.images, amiId)
+	if !ignoreInstances {
+		// Delete used images from images table.
+		logger.Debugln(0, "ignoring used images")
+		for _, result := range rawResults {
+			usedMap := imagesUsedPerRegion[result.region]
+			for amiId := range result.images {
+				if _, ok := usedMap[amiId]; ok {
+					delete(result.images, amiId)
+				}
 			}
 		}
-	}
-	// Compute space consumed by unused AMIs.
-	numUnusedImages := 0
-	var unusedGiBytes int64
-	for _, result := range rawResults {
-		numUnusedImages += len(result.images)
-		for _, image := range result.images {
-			unusedGiBytes += computeImageConsumption(image)
+		// Compute space consumed by unused AMIs.
+		numUnusedImages := 0
+		var unusedGiBytes int64
+		for _, result := range rawResults {
+			numUnusedImages += len(result.images)
+			for _, image := range result.images {
+				unusedGiBytes += computeImageConsumption(image)
+			}
 		}
+		logger.Printf("number of unused images: %d consuming: %s\n",
+			numUnusedImages, format.FormatBytes(uint64(unusedGiBytes)<<30))
 	}
-	logger.Printf("number of unused images: %d consuming: %s\n",
-		numUnusedImages, format.FormatBytes(uint64(unusedGiBytes)<<30))
 	return rawResults, nil
 }
 
 func listTargetUnusedImages(awsService *ec2.EC2, searchTags awsutil.Tags,
 	excludeSearchTags awsutil.Tags, accountId string,
-	minImageAge time.Duration, logger log.Logger) (imageUsage, error) {
+	minImageAge time.Duration, ignoreInstances bool, logger log.Logger) (
+	imageUsage, error) {
 	results := imageUsage{
 		images: make(map[string]*ec2.Image),
 		used:   make(usedImages),
@@ -227,15 +231,20 @@ func listTargetUnusedImages(awsService *ec2.EC2, searchTags awsutil.Tags,
 			}
 		}
 	}
-	images, err := getImages(awsService, accountId, excludeSearchTags)
-	if err != nil {
-		return imageUsage{}, err
-	} else {
-		for _, image := range images {
-			amiId := aws.StringValue(image.ImageId)
-			delete(visibleImages, amiId)
-			delete(results.images, amiId)
+	if len(excludeSearchTags) > 0 {
+		images, err := getImages(awsService, accountId, excludeSearchTags)
+		if err != nil {
+			return imageUsage{}, err
+		} else {
+			for _, image := range images {
+				amiId := aws.StringValue(image.ImageId)
+				delete(visibleImages, amiId)
+				delete(results.images, amiId)
+			}
 		}
+	}
+	if ignoreInstances {
+		return results, nil
 	}
 	instances, err := describeInstances(awsService, nil)
 	if err != nil {

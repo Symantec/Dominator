@@ -371,7 +371,7 @@ func main() {
 		html.RegisterHtmlWriterForPattern("/dumpFileSystem",
 			"Scanned File System",
 			&DumpableFileSystemHistory{&fsh})
-		if err = httpd.StartServer(*portNum); err != nil {
+		if err = httpd.StartServer(*portNum, logger); err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to create http server: %s\n", err)
 			os.Exit(1)
 		}
