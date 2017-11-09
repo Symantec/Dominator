@@ -17,6 +17,17 @@ func CreateSession(accountProfileName string) (*session.Session, error) {
 		SharedConfigState: session.SharedConfigEnable})
 }
 
+// CredentialsOptions contains options for loading credentials
+type CredentialsOptions struct {
+	// The path of the credentials file.
+	// If empty, defaults to ~/.aws/credentials
+	CredentialsPath string
+
+	// The path of the config file.
+	// If empty, defaults to ~/.aws/config
+	ConfigPath string
+}
+
 // CredentialsStore records AWS credentials (IAM users and roles) for multiple
 // accounts. The methods are safe to use concurrently.
 type CredentialsStore struct {
@@ -40,7 +51,14 @@ func LoadCredentials() (*CredentialsStore, error) {
 // TryLoadCredentials returns nil, nil, err
 func TryLoadCredentials() (
 	store *CredentialsStore, unloadedAccounts map[string]error, err error) {
-	return tryLoadCredentials()
+	return tryLoadCredentialsWithOptions(kDefaultCredentialsOptions)
+}
+
+// TryLoadCredentialsWithOptions works just like TryLoadCredentials but
+// allows caller to specify options for loading the credentials.
+func TryLoadCredentialsWithOptions(config CredentialsOptions) (
+	store *CredentialsStore, unloadedAccounts map[string]error, err error) {
+	return tryLoadCredentialsWithOptions(config.setDefaults())
 }
 
 // AccountIdToName will return an account name given an account ID.
@@ -125,7 +143,11 @@ func GetLocalRegion() (string, error) {
 }
 
 func ListAccountNames() ([]string, error) {
-	return listAccountNames()
+	return listAccountNames(kDefaultCredentialsOptions)
+}
+
+func ListAccountNamesWithOptions(options CredentialsOptions) ([]string, error) {
+	return listAccountNames(options.setDefaults())
 }
 
 func ListRegions(awsService *ec2.EC2) ([]string, error) {
