@@ -29,6 +29,7 @@ type CredentialsStore struct {
 
 // LoadCredentials loads credentials from ~/.aws/credentials and roles from
 // ~/.aws/config which may be used later.
+// LoadCredentials honours the AWS_CONFIG_FILE environment variable only.
 func LoadCredentials() (*CredentialsStore, error) {
 	return loadCredentials()
 }
