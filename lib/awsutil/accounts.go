@@ -7,14 +7,27 @@ import (
 	"strings"
 )
 
+func getenv(key string, defaultValue string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		value = defaultValue
+	}
+	return value
+}
+
 func listAccountNames() ([]string, error) {
 	var accountNames []string
-	if names, err := listFile("credentials", "aws_access_key_id"); err != nil {
+	home := os.Getenv("HOME")
+	credentialsPath := path.Join(home, ".aws", "credentials")
+	if names, err := listFile(
+		credentialsPath, "aws_access_key_id"); err != nil {
 		return nil, err
 	} else {
 		accountNames = append(accountNames, names...)
 	}
-	if names, err := listFile("config", "role_arn"); err != nil {
+	configPath := path.Join(home, ".aws", "config")
+	configPath = getenv("AWS_CONFIG_FILE", configPath)
+	if names, err := listFile(configPath, "role_arn"); err != nil {
 		return nil, err
 	} else {
 		accountNames = append(accountNames, names...)
@@ -22,8 +35,7 @@ func listAccountNames() ([]string, error) {
 	return accountNames, nil
 }
 
-func listFile(filename string, identifierKeyName string) ([]string, error) {
-	pathname := path.Join(os.Getenv("HOME"), ".aws", filename)
+func listFile(pathname string, identifierKeyName string) ([]string, error) {
 	file, err := os.Open(pathname)
 	if err != nil {
 		if os.IsNotExist(err) {
