@@ -60,9 +60,7 @@ func loadCredentials() (*CredentialsStore, error) {
 func createCredentials(
 	accountNames []string, options *CredentialsOptions) (
 	*CredentialsStore, map[string]error) {
-	sort.Strings(accountNames)
 	cs := &CredentialsStore{
-		accountNames:    accountNames,
 		sessionMap:      make(map[string]*session.Session),
 		accountIdToName: make(map[string]string),
 		accountNameToId: make(map[string]string),
@@ -80,6 +78,7 @@ func createCredentials(
 		if result.err != nil {
 			unloadableAccounts[result.accountName] = result.err
 		} else {
+			cs.accountNames = append(cs.accountNames, result.accountName)
 			cs.sessionMap[result.accountName] = result.awsSession
 			cs.accountIdToName[result.accountId] = result.accountName
 			cs.accountNameToId[result.accountName] = result.accountId
@@ -87,6 +86,7 @@ func createCredentials(
 		}
 	}
 	close(resultsChannel)
+	sort.Strings(cs.accountNames)
 	return cs, unloadableAccounts
 }
 
