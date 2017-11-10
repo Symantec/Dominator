@@ -12,6 +12,7 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Symantec/Dominator/lib/net"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -136,6 +137,7 @@ type Herd struct {
 	pollSemaphore         chan struct{}
 	pushSemaphore         chan struct{}
 	cpuSharer             *cpusharer.FifoCpuSharer
+	dialer                net.Dialer
 	currentScanStartTime  time.Time
 	previousScanDuration  time.Duration
 }
