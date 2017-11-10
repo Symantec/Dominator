@@ -9,7 +9,6 @@ import (
 	"errors"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"path/filepath"
 	"reflect"
@@ -18,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Symantec/Dominator/lib/net"
 	"github.com/Symantec/Dominator/lib/x509util"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
@@ -263,7 +263,11 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		log.Println("rpc hijacking ", req.RemoteAddr, ": ", err.Error())
 		return
 	}
-	if tcpConn, ok := unsecuredConn.(*net.TCPConn); ok {
+	connToClose := unsecuredConn
+	defer func() {
+		connToClose.Close()
+	}()
+	if tcpConn, ok := unsecuredConn.(net.TCPConn); ok {
 		if err := tcpConn.SetKeepAlive(true); err != nil {
 			log.Println("error setting keepalive: ", err.Error())
 			return
@@ -272,6 +276,11 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 			log.Println("error setting keepalive period: ", err.Error())
 			return
 		}
+	} else {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusNotAcceptable)
+		log.Println("non-TCP connection")
+		return
 	}
 	_, err = io.WriteString(unsecuredConn, "HTTP/1.0 "+connectString+"\n\n")
 	if err != nil {
@@ -283,7 +292,7 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		var tlsConn *tls.Conn
 		if req.TLS == nil {
 			tlsConn = tls.Server(unsecuredConn, serverTlsConfig)
-			defer tlsConn.Close()
+			connToClose = tlsConn
 			if err := tlsConn.Handshake(); err != nil {
 				serverMetricsMutex.Lock()
 				numRejectedServerConnections++
@@ -307,7 +316,6 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 		myConn.ReadWriter = bufio.NewReadWriter(bufio.NewReader(tlsConn),
 			bufio.NewWriter(tlsConn))
 	} else {
-		defer unsecuredConn.Close()
 		myConn.ReadWriter = bufrw
 	}
 	serverMetricsMutex.Lock()

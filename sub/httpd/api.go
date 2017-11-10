@@ -1,12 +1,12 @@
 package httpd
 
 import (
-	"fmt"
 	"io"
-	"net"
 	"net/http"
 
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/net/reverseconnection"
+	"github.com/Symantec/tricorder/go/tricorder"
 )
 
 type HtmlWriter interface {
@@ -16,7 +16,14 @@ type HtmlWriter interface {
 var htmlWriters []HtmlWriter
 
 func StartServer(portNum uint, logger log.DebugLogger) error {
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", portNum))
+	listener, err := reverseconnection.Listen("tcp", portNum, logger)
+	if err != nil {
+		return err
+	}
+	if err := listener.RequestConnections("Dominator"); err != nil {
+		return err
+	}
+	err = listener.RequestConnections(tricorder.CollectorServiceName)
 	if err != nil {
 		return err
 	}

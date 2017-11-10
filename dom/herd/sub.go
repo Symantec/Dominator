@@ -15,7 +15,6 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
-	libnet "github.com/Symantec/Dominator/lib/net"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/resourcepool"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -28,8 +27,6 @@ var (
 		"If true, log unknown sub connection errors")
 	showIP = flag.Bool("showIP", false,
 		"If true, prefer to show IP address from MDB if available")
-	subConnectTimeout = flag.Uint("subConnectTimeout", 15,
-		"Timeout in seconds for sub connections. If zero, OS timeout is used")
 	useIP = flag.Bool("useIP", true,
 		"If true, prefer to use IP address from MDB if available")
 
@@ -120,9 +117,7 @@ func (sub *Sub) connectAndPoll() {
 	}()
 	sub.lastConnectionStartTime = time.Now()
 	srpcClient, err := sub.clientResource.GetHTTPWithDialer(sub.cancelChannel,
-		libnet.NewCpuSharingDialer(&net.Dialer{
-			Timeout: time.Second * time.Duration(*subConnectTimeout)},
-			sub.herd.cpuSharer))
+		sub.herd.dialer)
 	dialReturnedTime := time.Now()
 	if err != nil {
 		sub.isInsecure = false

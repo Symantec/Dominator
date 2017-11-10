@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/connpool"
+	libnet "github.com/Symantec/Dominator/lib/net"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 )
@@ -61,7 +62,7 @@ func dial(network, address string, dialer connpool.Dialer) (net.Conn, error) {
 		}
 		return nil, err
 	}
-	if tcpConn, ok := conn.(*net.TCPConn); ok {
+	if tcpConn, ok := conn.(libnet.TCPConn); ok {
 		if err := tcpConn.SetKeepAlive(true); err != nil {
 			conn.Close()
 			return nil, err

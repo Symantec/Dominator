@@ -17,6 +17,21 @@ type Dialer interface {
 	Dial(network, address string) (net.Conn, error)
 }
 
+type TCPConn interface {
+	net.Conn
+	SetKeepAlive(keepalive bool) error
+	SetKeepAlivePeriod(d time.Duration) error
+}
+
+func BindAndDial(network, localAddr, remoteAddr string, timeout time.Duration) (
+	net.Conn, error) {
+	return bindAndDial(network, localAddr, remoteAddr, timeout)
+}
+
+func ListenWithReuse(network, address string) (net.Listener, error) {
+	return listenWithReuse(network, address)
+}
+
 // NewCpuSharingDialer wraps dialer and returns a new Dialer which uses the
 // cpuSharer to limit concurrent CPU usage.
 // Whenever a blocking operation is about to commence (such a Dial or Read or

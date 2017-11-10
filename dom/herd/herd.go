@@ -3,6 +3,7 @@ package herd
 import (
 	"errors"
 	"flag"
+	"net"
 	"os"
 	"runtime"
 	"time"
@@ -12,6 +13,8 @@ import (
 	"github.com/Symantec/Dominator/lib/cpusharer"
 	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
 	"github.com/Symantec/Dominator/lib/log"
+	libnet "github.com/Symantec/Dominator/lib/net"
+	"github.com/Symantec/Dominator/lib/net/reverseconnection"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/url"
 	subproto "github.com/Symantec/Dominator/proto/sub"
@@ -21,6 +24,8 @@ import (
 var (
 	pollSlotsPerCPU = flag.Uint("pollSlotsPerCPU", 100,
 		"Number of poll slots per CPU")
+	subConnectTimeout = flag.Uint("subConnectTimeout", 15,
+		"Timeout in seconds for sub connections. If zero, OS timeout is used")
 )
 
 func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
@@ -38,6 +43,10 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	herd.pushSemaphore = make(chan struct{}, runtime.NumCPU())
 	herd.cpuSharer = cpusharer.NewFifoCpuSharer()
 	herd.cpuSharer.SetGrabTimeout(time.Minute * 15)
+	herd.dialer = libnet.NewCpuSharingDialer(reverseconnection.NewDialer(
+		&net.Dialer{Timeout: time.Second * time.Duration(*subConnectTimeout)},
+		nil, time.Second*30, 0, logger),
+		herd.cpuSharer)
 	herd.currentScanStartTime = time.Now()
 	herd.setupMetrics(metricsDir)
 	return &herd
