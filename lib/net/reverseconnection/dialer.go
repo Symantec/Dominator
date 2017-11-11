@@ -106,14 +106,6 @@ func (d *Dialer) lookup(address string) net.Conn {
 }
 
 func (d *Dialer) serveHTTP(w http.ResponseWriter, req *http.Request) {
-	d.connectionMapLock.Lock()
-	_, ok := d.connectionMap[req.RemoteAddr]
-	d.connectionMapLock.Unlock()
-	if ok {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusAlreadyReported)
-		return
-	}
 	if req.Method != "CONNECT" {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -138,6 +130,14 @@ func (d *Dialer) serveHTTP(w http.ResponseWriter, req *http.Request) {
 			conn.Close()
 		}
 	}()
+	d.connectionMapLock.Lock()
+	_, ok = d.connectionMap[req.RemoteAddr]
+	d.connectionMapLock.Unlock()
+	if ok {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusAlreadyReported)
+		return
+	}
 	_, err = io.WriteString(conn, "HTTP/1.0 "+connectString+"\n\n")
 	if err != nil {
 		d.logger.Println("error writing connect message: ", err.Error())
