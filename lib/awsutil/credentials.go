@@ -1,18 +1,14 @@
 package awsutil
 
 import (
+	"os"
 	"sort"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"os"
 	"path"
-)
-
-var (
-	kDefaultCredentialsOptions = (&CredentialsOptions{}).setDefaults()
 )
 
 type sessionResult struct {
@@ -23,13 +19,34 @@ type sessionResult struct {
 	err         error
 }
 
-func (c *CredentialsOptions) setDefaults() *CredentialsOptions {
+func getCredentialsPath() string {
+	return getAwsPath(
+		*awsCredentialsFile, "AWS_CREDENTIAL_FILE", "credentials")
+}
+
+func getConfigPath() string {
+	return getAwsPath(
+		*awsConfigFile, "AWS_CONFIG_FILE", "config")
+}
+
+func getAwsPath(cmdflag, environ, fileName string) string {
+	if cmdflag != "" {
+		return cmdflag
+	}
+	value := os.Getenv(environ)
+	if value != "" {
+		return value
+	}
 	home := os.Getenv("HOME")
+	return path.Join(home, ".aws", fileName)
+}
+
+func (c *CredentialsOptions) setDefaults() *CredentialsOptions {
 	if c.CredentialsPath == "" {
-		c.CredentialsPath = path.Join(home, ".aws", "credentials")
+		c.CredentialsPath = getCredentialsPath()
 	}
 	if c.ConfigPath == "" {
-		c.ConfigPath = path.Join(home, ".aws", "config")
+		c.ConfigPath = getConfigPath()
 	}
 	return c
 }
@@ -45,12 +62,13 @@ func tryLoadCredentialsWithOptions(
 }
 
 func loadCredentials() (*CredentialsStore, error) {
-	accountNames, err := listAccountNames(kDefaultCredentialsOptions)
+	var options CredentialsOptions
+	options.setDefaults()
+	accountNames, err := listAccountNames(&options)
 	if err != nil {
 		return nil, err
 	}
-	cs, unloadableAccounts := createCredentials(
-		accountNames, kDefaultCredentialsOptions)
+	cs, unloadableAccounts := createCredentials(accountNames, &options)
 	for _, err := range unloadableAccounts {
 		return nil, err
 	}
