@@ -36,7 +36,7 @@ func newDialer(rawDialer *net.Dialer, serveMux *http.ServeMux,
 		logger:          logger,
 		connectionMap:   make(map[string]net.Conn),
 	}
-	serveMux.Handle(urlPath, dialer)
+	serveMux.HandleFunc(urlPath, dialer.connectHandler)
 	return dialer
 }
 
@@ -105,7 +105,7 @@ func (d *Dialer) lookup(address string) net.Conn {
 	return nil
 }
 
-func (d *Dialer) serveHTTP(w http.ResponseWriter, req *http.Request) {
+func (d *Dialer) connectHandler(w http.ResponseWriter, req *http.Request) {
 	if req.Method != "CONNECT" {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
