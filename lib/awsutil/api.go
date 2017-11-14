@@ -11,9 +11,11 @@ import (
 
 var (
 	awsConfigFile = flag.String(
-		"awsConfigFile", "", "Location of AWS config file")
+		"awsConfigFile", getConfigPath(), "Location of AWS config file")
 	awsCredentialsFile = flag.String(
-		"awsCredentialsFile", "", "Location of AWS credentials file")
+		"awsCredentialsFile",
+		getCredentialsPath(),
+		"Location of AWS credentials file")
 )
 
 func CreateService(awsSession *session.Session, regionName string) *ec2.EC2 {
@@ -25,8 +27,8 @@ func CreateSession(accountProfileName string) (*session.Session, error) {
 		Profile:           accountProfileName,
 		SharedConfigState: session.SharedConfigEnable,
 		SharedConfigFiles: []string{
-			getCredentialsPath(),
-			getConfigPath(),
+			*awsCredentialsFile,
+			*awsConfigFile,
 		},
 	})
 }

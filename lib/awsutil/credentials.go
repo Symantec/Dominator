@@ -20,19 +20,14 @@ type sessionResult struct {
 }
 
 func getCredentialsPath() string {
-	return getAwsPath(
-		*awsCredentialsFile, "AWS_CREDENTIAL_FILE", "credentials")
+	return getAwsPath("AWS_CREDENTIAL_FILE", "credentials")
 }
 
 func getConfigPath() string {
-	return getAwsPath(
-		*awsConfigFile, "AWS_CONFIG_FILE", "config")
+	return getAwsPath("AWS_CONFIG_FILE", "config")
 }
 
-func getAwsPath(cmdflag, environ, fileName string) string {
-	if cmdflag != "" {
-		return cmdflag
-	}
+func getAwsPath(environ, fileName string) string {
 	value := os.Getenv(environ)
 	if value != "" {
 		return value
@@ -43,10 +38,10 @@ func getAwsPath(cmdflag, environ, fileName string) string {
 
 func (c *CredentialsOptions) setDefaults() *CredentialsOptions {
 	if c.CredentialsPath == "" {
-		c.CredentialsPath = getCredentialsPath()
+		c.CredentialsPath = *awsCredentialsFile
 	}
 	if c.ConfigPath == "" {
-		c.ConfigPath = getConfigPath()
+		c.ConfigPath = *awsConfigFile
 	}
 	return c
 }
