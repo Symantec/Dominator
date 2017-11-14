@@ -29,12 +29,12 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string,
 	if err := image.Verify(); err != nil {
 		return err
 	}
-	imdb.Lock()
-	defer imdb.Unlock()
-	if imdb.scheduleExpiration(image, name) {
+	if imageIsExpired(image) {
 		imdb.logger.Printf("Ignoring already expired image: %s\n", name)
 		return nil
 	}
+	imdb.Lock()
+	defer imdb.Unlock()
 	if _, ok := imdb.imageMap[name]; ok {
 		return errors.New("image: " + name + " already exists")
 	} else {
@@ -63,7 +63,15 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string,
 		writer := fsutil.NewChecksumWriter(w)
 		defer writer.WriteChecksum()
 		encoder := gob.NewEncoder(writer)
-		encoder.Encode(image)
+		if err := encoder.Encode(image); err != nil {
+			os.Remove(filename)
+			return err
+		}
+		if err := w.Flush(); err != nil {
+			os.Remove(filename)
+			return err
+		}
+		imdb.scheduleExpiration(image, name)
 		imdb.imageMap[name] = image
 		imdb.addNotifiers.sendPlain(name, "add", imdb.logger)
 		imdb.removeFromUnreferencedObjectsListAndSave(
@@ -197,6 +205,9 @@ func (imdb *ImageDataBase) deleteImage(name string, username *string) error {
 func (imdb *ImageDataBase) deleteImageAndUpdateUnreferencedObjectsList(
 	name string) {
 	img := imdb.imageMap[name]
+	if img == nil { // May be nil if expiring an already deleted image.
+		return
+	}
 	delete(imdb.imageMap, name)
 	imdb.maybeAddToUnreferencedObjectsList(img.FileSystem)
 }
