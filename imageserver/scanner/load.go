@@ -166,16 +166,17 @@ func (imdb *ImageDataBase) loadFile(filename string, logger log.Logger) error {
 			return err
 		}
 	}
+	if imageIsExpired(&image) {
+		imdb.logger.Printf("Deleting already expired image: %s\n", filename)
+		return os.Remove(pathname)
+	}
 	image.FileSystem.RebuildInodePointers()
 	if err := image.Verify(); err != nil {
 		return err
 	}
+	imdb.scheduleExpiration(&image, filename)
 	imdb.Lock()
 	defer imdb.Unlock()
-	if imdb.scheduleExpiration(&image, filename) {
-		imdb.logger.Printf("Deleting already expired image: %s\n", filename)
-		return os.Remove(pathname)
-	}
 	imdb.imageMap[filename] = &image
 	return nil
 }

@@ -8,6 +8,13 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 )
 
+func imageIsExpired(image *image.Image) bool {
+	if !image.ExpiresAt.IsZero() && image.ExpiresAt.Sub(time.Now()) <= 0 {
+		return true
+	}
+	return false
+}
+
 func (imdb *ImageDataBase) scheduleExpiration(image *image.Image,
 	name string) bool {
 	if image.ExpiresAt.IsZero() {
