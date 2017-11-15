@@ -180,7 +180,7 @@ func (pData *publishData) publishToTarget(awsService *ec2.EC2,
 		imageGiB = volumeSize
 	}
 	amiId, err := registerAmi(awsService, snapshotId, s3Manifest, pData.amiName,
-		imageName, pData.tags, imageGiB, logger)
+		imageName, pData.tags, imageGiB, pData.publishOptions, logger)
 	if err != nil {
 		logger.Printf("Error registering AMI: %s\n", err)
 	}

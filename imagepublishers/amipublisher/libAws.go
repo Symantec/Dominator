@@ -677,7 +677,7 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image, tags awsutil.Tags,
 
 func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 	amiName string, imageName string, tags awsutil.Tags, imageGiB uint64,
-	logger log.Logger) (string, error) {
+	publishOptions *PublishOptions, logger log.Logger) (string, error) {
 	rootDevName := "/dev/sda1"
 	blkDevMaps := make([]*ec2.BlockDeviceMapping, 1)
 	var volumeSize *int64
@@ -696,10 +696,13 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 	if amiName == "" {
 		amiName = imageName
 	}
+	if publishOptions == nil {
+		publishOptions = new(PublishOptions)
+	}
 	params := &ec2.RegisterImageInput{
 		Architecture:       aws.String("x86_64"),
 		Description:        aws.String(imageName),
-		EnaSupport:         aws.Bool(true),
+		EnaSupport:         aws.Bool(publishOptions.EnaSupport),
 		Name:               aws.String(strings.Replace(amiName, ":", ".", -1)),
 		RootDeviceName:     aws.String(rootDevName),
 		SriovNetSupport:    aws.String("simple"),

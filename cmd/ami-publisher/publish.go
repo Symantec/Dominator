@@ -34,7 +34,11 @@ func publish(imageServerAddress string, streamName string, imageLeafName string,
 	}
 	results, err := amipublisher.Publish(imageServerAddress, streamName,
 		imageLeafName, *minFreeBytes, *amiName, tags, targets, skipTargets,
-		*instanceName, *s3Bucket, *s3Folder, *sharingAccountName, logger)
+		*instanceName, *s3Bucket, *s3Folder, *sharingAccountName,
+		amipublisher.PublishOptions{
+			EnaSupport: *enaSupport,
+		},
+		logger)
 	if err != nil {
 		return err
 	}

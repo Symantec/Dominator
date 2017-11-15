@@ -14,7 +14,9 @@ import (
 )
 
 var (
-	amiName           = flag.String("amiName", "", "AMI Name property")
+	amiName    = flag.String("amiName", "", "AMI Name property")
+	enaSupport = flag.Bool("enaSupport", false,
+		"If true, set the Enhanced Networking Adaptor capability flag")
 	excludeSearchTags awsutil.Tags
 	expiresIn         = flag.Duration("expiresIn", time.Hour,
 		"Date to set for the ExpiresAt tag")
