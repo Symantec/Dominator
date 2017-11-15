@@ -3,18 +3,17 @@ package awsutil
 import (
 	"bufio"
 	"os"
-	"path"
 	"strings"
 )
 
-func listAccountNames() ([]string, error) {
+func listAccountNames(options *CredentialsOptions) ([]string, error) {
 	var accountNames []string
-	if names, err := listFile("credentials", "aws_access_key_id"); err != nil {
+	if names, err := listFile(options.CredentialsPath, "aws_access_key_id"); err != nil {
 		return nil, err
 	} else {
 		accountNames = append(accountNames, names...)
 	}
-	if names, err := listFile("config", "role_arn"); err != nil {
+	if names, err := listFile(options.ConfigPath, "role_arn"); err != nil {
 		return nil, err
 	} else {
 		accountNames = append(accountNames, names...)
@@ -22,8 +21,7 @@ func listAccountNames() ([]string, error) {
 	return accountNames, nil
 }
 
-func listFile(filename string, identifierKeyName string) ([]string, error) {
-	pathname := path.Join(os.Getenv("HOME"), ".aws", filename)
+func listFile(pathname string, identifierKeyName string) ([]string, error) {
 	file, err := os.Open(pathname)
 	if err != nil {
 		if os.IsNotExist(err) {
