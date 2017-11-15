@@ -1,10 +1,21 @@
 package awsutil
 
 import (
+	"flag"
+
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+)
+
+var (
+	awsConfigFile = flag.String(
+		"awsConfigFile", getConfigPath(), "Location of AWS config file")
+	awsCredentialsFile = flag.String(
+		"awsCredentialsFile",
+		getCredentialsPath(),
+		"Location of AWS credentials file")
 )
 
 func CreateService(awsSession *session.Session, regionName string) *ec2.EC2 {
@@ -14,7 +25,26 @@ func CreateService(awsSession *session.Session, regionName string) *ec2.EC2 {
 func CreateSession(accountProfileName string) (*session.Session, error) {
 	return session.NewSessionWithOptions(session.Options{
 		Profile:           accountProfileName,
-		SharedConfigState: session.SharedConfigEnable})
+		SharedConfigState: session.SharedConfigEnable,
+		SharedConfigFiles: []string{
+			*awsCredentialsFile,
+			*awsConfigFile,
+		},
+	})
+}
+
+// CredentialsOptions contains options for loading credentials
+type CredentialsOptions struct {
+
+	// The path of the credentials file.
+	// If empty, defaults to to the same location that the LoadCredentials
+	// function uses.
+	CredentialsPath string
+
+	// The path of the config file.
+	// If empty, defaults to the same location that the LoadCredentials
+	// function uses.
+	ConfigPath string
 }
 
 // CredentialsStore records AWS credentials (IAM users and roles) for multiple
@@ -27,8 +57,17 @@ type CredentialsStore struct {
 	accountRegions  map[string][]string         // Key: account name.
 }
 
-// LoadCredentials loads credentials from ~/.aws/credentials and roles from
-// ~/.aws/config which may be used later.
+// LoadCredentials loads credentials from the aws credentials file and roles
+// from the aws config file which may be used later.
+//
+// The location of the credentials file is determined using the following
+// rules from highest to lowest precedence 1) -awsCredentialFile command line
+// parameter. 2) AWS_CREDENTIAL_FILE environment variable.
+// 3) ~/.aws/credentials
+//
+// The location of the config file is determines using the following rules
+// from highest to lowest precedence 2) -awsConfigFile command line parameter
+// 2) AWS_CONFIG_FILE environment variable. 3) ~/.aws/config
 func LoadCredentials() (*CredentialsStore, error) {
 	return loadCredentials()
 }
@@ -40,7 +79,15 @@ func LoadCredentials() (*CredentialsStore, error) {
 // TryLoadCredentials returns nil, nil, err
 func TryLoadCredentials() (
 	store *CredentialsStore, unloadedAccounts map[string]error, err error) {
-	return tryLoadCredentials()
+	var options CredentialsOptions
+	return tryLoadCredentialsWithOptions(options.setDefaults())
+}
+
+// TryLoadCredentialsWithOptions works just like TryLoadCredentials but
+// allows caller to specify options for loading the credentials.
+func TryLoadCredentialsWithOptions(options CredentialsOptions) (
+	store *CredentialsStore, unloadedAccounts map[string]error, err error) {
+	return tryLoadCredentialsWithOptions(options.setDefaults())
 }
 
 // AccountIdToName will return an account name given an account ID.
@@ -125,7 +172,12 @@ func GetLocalRegion() (string, error) {
 }
 
 func ListAccountNames() ([]string, error) {
-	return listAccountNames()
+	var options CredentialsOptions
+	return listAccountNames(options.setDefaults())
+}
+
+func ListAccountNamesWithOptions(options CredentialsOptions) ([]string, error) {
+	return listAccountNames(options.setDefaults())
 }
 
 func ListRegions(awsService *ec2.EC2) ([]string, error) {
