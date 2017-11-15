@@ -227,7 +227,7 @@ func (target *targetResult) bootstrap(streamName string,
 	}
 	logger.Println("registering AMI...")
 	amiId, err := registerAmi(awsService, snapshotId, "", "",
-		streamName+"/bootstrap", newImageTags, 0, logger)
+		streamName+"/bootstrap", newImageTags, 0, nil, logger)
 	if err != nil {
 		deleteSnapshot(awsService, snapshotId)
 		return err

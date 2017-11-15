@@ -50,8 +50,13 @@ type publishData struct {
 	s3BucketExpression string
 	s3Folder           string
 	sharingAccountName string
+	publishOptions     *PublishOptions
 	// Computed data follow.
 	fileSystem *filesystem.FileSystem
+}
+
+type PublishOptions struct {
+	EnaSupport bool
 }
 
 type Resource struct {
@@ -199,7 +204,8 @@ func Publish(imageServerAddress string, streamName string, imageLeafName string,
 	minFreeBytes uint64, amiName string, tags map[string]string,
 	targets awsutil.TargetList, skipList awsutil.TargetList,
 	unpackerName string, s3Bucket string, s3Folder string,
-	sharingAccountName string, logger log.Logger) (Results, error) {
+	sharingAccountName string, publishOptions PublishOptions,
+	logger log.Logger) (Results, error) {
 	pData := &publishData{
 		imageServerAddress: imageServerAddress,
 		streamName:         streamName,
@@ -211,6 +217,7 @@ func Publish(imageServerAddress string, streamName string, imageLeafName string,
 		s3BucketExpression: s3Bucket,
 		s3Folder:           s3Folder,
 		sharingAccountName: sharingAccountName,
+		publishOptions:     &publishOptions,
 	}
 	return pData.publish(targets, skipList, logger)
 }
