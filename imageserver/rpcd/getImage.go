@@ -3,6 +3,7 @@ package rpcd
 import (
 	"time"
 
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
@@ -11,7 +12,7 @@ func (t *srpcType) GetImage(conn *srpc.Conn,
 	request imageserver.GetImageRequest,
 	reply *imageserver.GetImageResponse) error {
 	var response imageserver.GetImageResponse
-	response.Image = t.imageDataBase.GetImage(request.ImageName)
+	response.Image = t.getImageNow(request)
 	*reply = response
 	if response.Image != nil || request.Timeout == 0 {
 		return nil
@@ -33,7 +34,7 @@ func (t *srpcType) GetImage(conn *srpc.Conn,
 				if !timer.Stop() {
 					<-timer.C
 				}
-				response.Image = t.imageDataBase.GetImage(request.ImageName)
+				response.Image = t.getImageNow(request)
 				*reply = response
 				return nil
 			}
@@ -41,4 +42,13 @@ func (t *srpcType) GetImage(conn *srpc.Conn,
 			return nil
 		}
 	}
+}
+
+func (t *srpcType) getImageNow(
+	request imageserver.GetImageRequest) *image.Image {
+	img := *t.imageDataBase.GetImage(request.ImageName)
+	if request.IgnoreFilesystem {
+		img.FileSystem = nil
+	}
+	return &img
 }
