@@ -43,8 +43,9 @@ type DeleteUnreferencedObjectsRequest struct {
 type DeleteUnreferencedObjectsResponse struct{}
 
 type GetImageRequest struct {
-	ImageName string
-	Timeout   time.Duration
+	ImageName        string
+	IgnoreFilesystem bool
+	Timeout          time.Duration
 }
 
 type GetImageResponse struct {
