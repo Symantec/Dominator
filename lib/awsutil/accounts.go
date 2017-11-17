@@ -6,17 +6,29 @@ import (
 	"strings"
 )
 
+const (
+	kDefault = "default"
+)
+
 func listAccountNames(options *CredentialsOptions) ([]string, error) {
 	var accountNames []string
 	if names, err := listFile(options.CredentialsPath, "aws_access_key_id"); err != nil {
 		return nil, err
 	} else {
-		accountNames = append(accountNames, names...)
+		for _, name := range names {
+			if name != kDefault {
+				accountNames = append(accountNames, name)
+			}
+		}
 	}
 	if names, err := listFile(options.ConfigPath, "role_arn"); err != nil {
 		return nil, err
 	} else {
-		accountNames = append(accountNames, names...)
+		for _, name := range names {
+			if name != kDefault {
+				accountNames = append(accountNames, name)
+			}
+		}
 	}
 	return accountNames, nil
 }
