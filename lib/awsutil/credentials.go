@@ -58,12 +58,11 @@ func tryLoadCredentialsWithOptions(
 
 func loadCredentials() (*CredentialsStore, error) {
 	var options CredentialsOptions
-	options.setDefaults()
-	accountNames, err := listAccountNames(&options)
+	cs, unloadableAccounts, err := tryLoadCredentialsWithOptions(
+		options.setDefaults())
 	if err != nil {
 		return nil, err
 	}
-	cs, unloadableAccounts := createCredentials(accountNames, &options)
 	for _, err := range unloadableAccounts {
 		return nil, err
 	}
