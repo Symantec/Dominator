@@ -38,6 +38,12 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 		masterMode:      masterMode,
 		logger:          logger,
 	}
+	imdb.unreferencedObjects, err = loadUnreferencedObjects(
+		path.Join(baseDir, unreferencedObjectsFile))
+	if err != nil {
+		return nil, errors.New("error loading unreferenced objects list: " +
+			err.Error())
+	}
 	state := concurrent.NewState(0)
 	startTime := time.Now()
 	var rusageStart, rusageStop syscall.Rusage
@@ -60,12 +66,6 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 			time.Duration(rusageStart.Utime.Usec)*time.Microsecond
 		logger.Printf("Loaded %d image%s in %s (%s user CPUtime)\n",
 			imdb.CountImages(), plural, time.Since(startTime), userTime)
-	}
-	imdb.unreferencedObjects, err = loadUnreferencedObjects(
-		path.Join(baseDir, unreferencedObjectsFile))
-	if err != nil {
-		return nil, errors.New("error loading unreferenced objects list: " +
-			err.Error())
 	}
 	imdb.regenerateUnreferencedObjectsList()
 	if ads, ok := objSrv.(objectserver.AddCallbackSetter); ok {
