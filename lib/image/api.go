@@ -41,6 +41,13 @@ type Package struct {
 	Version string
 }
 
+// ForEachObject will call objectFunc for all objects (including those for
+// annotations) for the image. If objectFunc returns a non-nil error, processing
+// stops and the error is returned.
+func (image *Image) ForEachObject(objectFunc func(hash.Hash) error) error {
+	return image.forEachObject(objectFunc)
+}
+
 // ListObjects will return a list of all objects (including those for
 // annotations for an image).
 func (image *Image) ListObjects() []hash.Hash {
