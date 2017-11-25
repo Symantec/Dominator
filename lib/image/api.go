@@ -6,6 +6,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/triggers"
 )
 
@@ -46,6 +47,11 @@ type Package struct {
 // stops and the error is returned.
 func (image *Image) ForEachObject(objectFunc func(hash.Hash) error) error {
 	return image.forEachObject(objectFunc)
+}
+
+func (image *Image) ListMissingObjects(
+	objectsChecker objectserver.ObjectsChecker) ([]hash.Hash, error) {
+	return image.listMissingObjects(objectsChecker)
 }
 
 // ListObjects will return a list of all objects (including those for
