@@ -14,11 +14,12 @@ import (
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/log/logutil"
 	"github.com/Symantec/Dominator/lib/objectserver"
 )
 
 func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
-	masterMode bool, logger log.Logger) (*ImageDataBase, error) {
+	masterMode bool, logger log.DebugLogger) (*ImageDataBase, error) {
 	fi, err := os.Stat(baseDir)
 	if err != nil {
 		return nil, errors.New(
@@ -66,6 +67,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 			time.Duration(rusageStart.Utime.Usec)*time.Microsecond
 		logger.Printf("Loaded %d image%s in %s (%s user CPUtime)\n",
 			imdb.CountImages(), plural, time.Since(startTime), userTime)
+		logutil.LogMemory(logger, 0, "after loading")
 	}
 	imdb.regenerateUnreferencedObjectsList()
 	if ads, ok := objSrv.(objectserver.AddCallbackSetter); ok {

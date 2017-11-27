@@ -42,11 +42,11 @@ type ImageDataBase struct {
 	// Unprotected by any lock.
 	objectServer objectserver.FullObjectServer
 	masterMode   bool
-	logger       log.Logger
+	logger       log.DebugLogger
 }
 
 func LoadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
-	masterMode bool, logger log.Logger) (*ImageDataBase, error) {
+	masterMode bool, logger log.DebugLogger) (*ImageDataBase, error) {
 	return loadImageDataBase(baseDir, objSrv, masterMode, logger)
 }
 
