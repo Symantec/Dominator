@@ -66,6 +66,10 @@ func (image *Image) Verify() error {
 	return image.verify()
 }
 
+func (image *Image) VerifyObjects(checker objectserver.ObjectsChecker) error {
+	return image.verifyObjects(checker)
+}
+
 // VerifyRequiredPaths will verify if required paths are present in the image.
 // The table of required paths is given by requiredPaths. If the image is a
 // sparse image (has no filter), then this check is skipped. If a problem is
