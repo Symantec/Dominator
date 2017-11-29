@@ -80,22 +80,6 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 	return imdb, nil
 }
 
-func (imdb *ImageDataBase) checkObjectsForImage(image *image.Image) error {
-	// TODO(rgooch): Implement an API that avoids copying hash lists.
-	hashes := image.ListObjects()
-	objectSizes, err := imdb.objectServer.CheckObjects(hashes)
-	if err != nil {
-		return err
-	}
-	for index, size := range objectSizes {
-		if size < 1 {
-			return errors.New(fmt.Sprintf("object: %x is not available",
-				hashes[index]))
-		}
-	}
-	return nil
-}
-
 func (imdb *ImageDataBase) scanDirectory(dirname string,
 	state *concurrent.State, logger log.Logger) error {
 	directoryMetadata, err := imdb.readDirectoryMetadata(dirname)
@@ -188,7 +172,7 @@ func (imdb *ImageDataBase) loadFile(filename string, logger log.Logger) error {
 		imdb.logger.Printf("Deleting already expired image: %s\n", filename)
 		return os.Remove(pathname)
 	}
-	if imdb.checkObjectsForImage(&image); err != nil {
+	if image.VerifyObjects(imdb.objectServer); err != nil {
 		return err
 	}
 	image.FileSystem.RebuildInodePointers()
