@@ -16,13 +16,34 @@ func (image *Image) listObjects() []hash.Hash {
 
 func (image *Image) listMissingObjects(
 	objectsChecker objectserver.ObjectsChecker) ([]hash.Hash, error) {
-	// TODO(rgooch): Implement an API that avoids copying hash lists.
-	hashes := image.ListObjects()
+	hashBuffer := make([]hash.Hash, 1024)
+	var missingObjects []hash.Hash
+	index := 0
+	image.forEachObject(func(hashVal hash.Hash) error {
+		hashBuffer[index] = hashVal
+		index++
+		if index < len(hashBuffer) {
+			return nil
+		}
+		var err error
+		missingObjects, err = listMissingObjects(missingObjects, hashBuffer,
+			objectsChecker)
+		if err != nil {
+			return err
+		}
+		index = 0
+		return nil
+	})
+	return listMissingObjects(missingObjects, hashBuffer[:index],
+		objectsChecker)
+}
+
+func listMissingObjects(missingObjects, hashes []hash.Hash,
+	objectsChecker objectserver.ObjectsChecker) ([]hash.Hash, error) {
 	objectSizes, err := objectsChecker.CheckObjects(hashes)
 	if err != nil {
 		return nil, err
 	}
-	var missingObjects []hash.Hash
 	for index, size := range objectSizes {
 		if size < 1 {
 			missingObjects = append(missingObjects, hashes[index])
