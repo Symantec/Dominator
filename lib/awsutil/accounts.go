@@ -2,6 +2,7 @@ package awsutil
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -79,6 +80,8 @@ func listFile(pathname string, identifierKeyName string) ([]string, error) {
 			accountNames = append(accountNames, lastAccountName)
 			accessKeyIds[value] = struct{}{}
 			lastAccountName = ""
+		} else {
+			return nil, fmt.Errorf("Duplicate key identifier found: '%s'", line)
 		}
 	}
 	return accountNames, scanner.Err()
