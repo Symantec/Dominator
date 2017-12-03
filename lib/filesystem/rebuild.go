@@ -114,3 +114,12 @@ func (inode *DirectoryInode) buildEntryMap() {
 		}
 	}
 }
+
+func (inode *DirectoryInode) replaceStrings(replaceFunc func(string) string) {
+	for _, dirent := range inode.EntryList {
+		dirent.Name = replaceFunc(dirent.Name)
+		if inode, ok := dirent.inode.(*DirectoryInode); ok {
+			inode.replaceStrings(replaceFunc)
+		}
+	}
+}
