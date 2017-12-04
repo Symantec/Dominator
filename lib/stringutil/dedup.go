@@ -10,6 +10,9 @@ func (d *StringDeduplicator) clear() {
 }
 
 func (d *StringDeduplicator) deDuplicate(str string) string {
+	if str == "" {
+		return ""
+	}
 	if d.lock {
 		d.mutex.Lock()
 		defer d.mutex.Unlock()
