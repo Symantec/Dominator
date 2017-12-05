@@ -51,3 +51,11 @@ func (filter *Filter) match(pathname string) bool {
 	}
 	return false
 }
+
+func (filter *Filter) replaceStrings(replaceFunc func(string) string) {
+	if filter != nil {
+		for index, str := range filter.FilterLines {
+			filter.FilterLines[index] = replaceFunc(str)
+		}
+	}
+}
