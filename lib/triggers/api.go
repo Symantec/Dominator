@@ -20,6 +20,10 @@ type Trigger struct {
 	HighImpact   bool
 }
 
+func (trigger *Trigger) ReplaceStrings(replaceFunc func(string) string) {
+	trigger.replaceStrings(replaceFunc)
+}
+
 type Triggers struct {
 	Triggers          []*Trigger
 	compiled          bool
@@ -37,6 +41,10 @@ func Load(filename string) (*Triggers, error) {
 
 func New() *Triggers {
 	return newTriggers()
+}
+
+func (triggers *Triggers) ReplaceStrings(replaceFunc func(string) string) {
+	triggers.replaceStrings(replaceFunc)
 }
 
 func (mt *MergeableTriggers) ExportTriggers() *Triggers {
