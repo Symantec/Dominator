@@ -60,6 +60,10 @@ func (image *Image) ListObjects() []hash.Hash {
 	return image.listObjects()
 }
 
+func (image *Image) ReplaceStrings(replaceFunc func(string) string) {
+	image.replaceStrings(replaceFunc)
+}
+
 // Verify will perform some self-consistency checks on the image. If a problem
 // is found, an error is returned.
 func (image *Image) Verify() error {
