@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"sync"
 	"syscall"
 	"time"
 
@@ -19,11 +18,6 @@ import (
 	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/stringutil"
 )
-
-type deduperType struct {
-	mutex sync.Mutex
-	*stringutil.StringDeduplicator
-}
 
 func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 	masterMode bool, logger log.DebugLogger) (*ImageDataBase, error) {
@@ -42,6 +36,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 		addNotifiers:    make(notifiers),
 		deleteNotifiers: make(notifiers),
 		mkdirNotifiers:  make(makeDirectoryNotifiers),
+		deduper:         stringutil.NewStringDeduplicator(false),
 		objectServer:    objSrv,
 		masterMode:      masterMode,
 		logger:          logger,
@@ -53,18 +48,15 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 			err.Error())
 	}
 	state := concurrent.NewState(0)
-	deduper := &deduperType{
-		StringDeduplicator: stringutil.NewStringDeduplicator(false)}
 	startTime := time.Now()
 	var rusageStart, rusageStop syscall.Rusage
 	syscall.Getrusage(syscall.RUSAGE_SELF, &rusageStart)
-	if err := imdb.scanDirectory(".", state, deduper, logger); err != nil {
+	if err := imdb.scanDirectory(".", state, logger); err != nil {
 		return nil, err
 	}
 	if err := state.Reap(); err != nil {
 		return nil, err
 	}
-	deduper.Clear()
 	if logger != nil {
 		plural := ""
 		if imdb.CountImages() != 1 {
@@ -91,8 +83,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 }
 
 func (imdb *ImageDataBase) scanDirectory(dirname string,
-	state *concurrent.State, deduper *deduperType,
-	logger log.DebugLogger) error {
+	state *concurrent.State, logger log.DebugLogger) error {
 	directoryMetadata, err := imdb.readDirectoryMetadata(dirname)
 	if err != nil {
 		return err
@@ -121,10 +112,10 @@ func (imdb *ImageDataBase) scanDirectory(dirname string,
 			return err
 		}
 		if stat.Mode&syscall.S_IFMT == syscall.S_IFDIR {
-			err = imdb.scanDirectory(filename, state, deduper, logger)
+			err = imdb.scanDirectory(filename, state, logger)
 		} else if stat.Mode&syscall.S_IFMT == syscall.S_IFREG && stat.Size > 0 {
 			err = state.GoRun(func() error {
-				return imdb.loadFile(filename, deduper, logger)
+				return imdb.loadFile(filename, logger)
 			})
 		}
 		if err != nil {
@@ -157,7 +148,7 @@ func (imdb *ImageDataBase) readDirectoryMetadata(dirname string) (
 	return metadata, reader.VerifyChecksum()
 }
 
-func (imdb *ImageDataBase) loadFile(filename string, deduper *deduperType,
+func (imdb *ImageDataBase) loadFile(filename string,
 	logger log.DebugLogger) error {
 	pathname := path.Join(imdb.baseDir, filename)
 	file, err := os.Open(pathname)
@@ -188,9 +179,9 @@ func (imdb *ImageDataBase) loadFile(filename string, deduper *deduperType,
 		return err
 	}
 	image.FileSystem.RebuildInodePointers()
-	deduper.mutex.Lock()
-	image.ReplaceStrings(deduper.DeDuplicate)
-	deduper.mutex.Unlock()
+	imdb.deduperLock.Lock()
+	image.ReplaceStrings(imdb.deduper.DeDuplicate)
+	imdb.deduperLock.Unlock()
 	if err := image.Verify(); err != nil {
 		return err
 	}
