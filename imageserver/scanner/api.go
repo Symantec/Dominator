@@ -9,6 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
+	"github.com/Symantec/Dominator/lib/stringutil"
 )
 
 // TODO: the types should probably be moved into a separate package, leaving
@@ -38,15 +39,17 @@ type ImageDataBase struct {
 	mkdirNotifiers      makeDirectoryNotifiers
 	unreferencedObjects *unreferencedObjectsList
 	// Unprotected by main lock.
+	deduperLock      sync.Mutex
+	deduper          *stringutil.StringDeduplicator
 	pendingImageLock sync.Mutex
 	// Unprotected by any lock.
 	objectServer objectserver.FullObjectServer
 	masterMode   bool
-	logger       log.Logger
+	logger       log.DebugLogger
 }
 
 func LoadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
-	masterMode bool, logger log.Logger) (*ImageDataBase, error) {
+	masterMode bool, logger log.DebugLogger) (*ImageDataBase, error) {
 	return loadImageDataBase(baseDir, objSrv, masterMode, logger)
 }
 

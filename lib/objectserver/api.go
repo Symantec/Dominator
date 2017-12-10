@@ -33,6 +33,10 @@ type ObjectGetter interface {
 	GetObject(hashVal hash.Hash) (uint64, io.ReadCloser, error)
 }
 
+type ObjectsChecker interface {
+	CheckObjects(hashes []hash.Hash) ([]uint64, error)
+}
+
 type ObjectsGetter interface {
 	GetObjects(hashes []hash.Hash) (ObjectsReader, error)
 }
@@ -45,8 +49,8 @@ type ObjectsReader interface {
 type ObjectServer interface {
 	AddObject(reader io.Reader, length uint64, expectedHash *hash.Hash) (
 		hash.Hash, bool, error)
-	CheckObjects(hashes []hash.Hash) ([]uint64, error)
 	ObjectGetter
+	ObjectsChecker
 	ObjectsGetter
 }
 

@@ -88,7 +88,8 @@ func (objSrv *srpcType) GetObjects(conn *srpc.Conn) error {
 			return errors.New(txt)
 		}
 	}
-	objSrv.logger.Printf("GetObjects() sent: %d objects\n", len(request.Hashes))
+	objSrv.logger.Debugf(0, "GetObjects() sent: %d objects\n",
+		len(request.Hashes))
 	return nil
 }
 

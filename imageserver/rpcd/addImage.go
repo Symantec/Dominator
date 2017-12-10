@@ -2,7 +2,6 @@ package rpcd
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	iclient "github.com/Symantec/Dominator/imageserver/client"
@@ -30,17 +29,9 @@ func (t *srpcType) AddImageTrusted(conn *srpc.Conn,
 	if request.Image.FileSystem == nil {
 		return errors.New("nil file-system")
 	}
-	// Verify all objects are available.
-	hashes := request.Image.ListObjects()
-	objectSizes, err := t.imageDataBase.ObjectServer().CheckObjects(hashes)
+	err := request.Image.VerifyObjects(t.imageDataBase.ObjectServer())
 	if err != nil {
 		return err
-	}
-	for index, size := range objectSizes {
-		if size < 1 {
-			return errors.New(fmt.Sprintf("object: %x is not available",
-				hashes[index]))
-		}
 	}
 	t.setImageInjectionState(request.ImageName, true)
 	defer t.setImageInjectionState(request.ImageName, false)

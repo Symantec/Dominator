@@ -6,6 +6,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	"github.com/Symantec/Dominator/lib/triggers"
 )
 
@@ -41,16 +42,36 @@ type Package struct {
 	Version string
 }
 
+// ForEachObject will call objectFunc for all objects (including those for
+// annotations) for the image. If objectFunc returns a non-nil error, processing
+// stops and the error is returned.
+func (image *Image) ForEachObject(objectFunc func(hash.Hash) error) error {
+	return image.forEachObject(objectFunc)
+}
+
+func (image *Image) ListMissingObjects(
+	objectsChecker objectserver.ObjectsChecker) ([]hash.Hash, error) {
+	return image.listMissingObjects(objectsChecker)
+}
+
 // ListObjects will return a list of all objects (including those for
 // annotations for an image).
 func (image *Image) ListObjects() []hash.Hash {
 	return image.listObjects()
 }
 
+func (image *Image) ReplaceStrings(replaceFunc func(string) string) {
+	image.replaceStrings(replaceFunc)
+}
+
 // Verify will perform some self-consistency checks on the image. If a problem
 // is found, an error is returned.
 func (image *Image) Verify() error {
 	return image.verify()
+}
+
+func (image *Image) VerifyObjects(checker objectserver.ObjectsChecker) error {
+	return image.verifyObjects(checker)
 }
 
 // VerifyRequiredPaths will verify if required paths are present in the image.

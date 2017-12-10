@@ -14,11 +14,13 @@ import (
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/log/logutil"
 	"github.com/Symantec/Dominator/lib/objectserver"
+	"github.com/Symantec/Dominator/lib/stringutil"
 )
 
 func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
-	masterMode bool, logger log.Logger) (*ImageDataBase, error) {
+	masterMode bool, logger log.DebugLogger) (*ImageDataBase, error) {
 	fi, err := os.Stat(baseDir)
 	if err != nil {
 		return nil, errors.New(
@@ -34,9 +36,16 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 		addNotifiers:    make(notifiers),
 		deleteNotifiers: make(notifiers),
 		mkdirNotifiers:  make(makeDirectoryNotifiers),
+		deduper:         stringutil.NewStringDeduplicator(false),
 		objectServer:    objSrv,
 		masterMode:      masterMode,
 		logger:          logger,
+	}
+	imdb.unreferencedObjects, err = loadUnreferencedObjects(
+		path.Join(baseDir, unreferencedObjectsFile))
+	if err != nil {
+		return nil, errors.New("error loading unreferenced objects list: " +
+			err.Error())
 	}
 	state := concurrent.NewState(0)
 	startTime := time.Now()
@@ -60,12 +69,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 			time.Duration(rusageStart.Utime.Usec)*time.Microsecond
 		logger.Printf("Loaded %d image%s in %s (%s user CPUtime)\n",
 			imdb.CountImages(), plural, time.Since(startTime), userTime)
-	}
-	imdb.unreferencedObjects, err = loadUnreferencedObjects(
-		path.Join(baseDir, unreferencedObjectsFile))
-	if err != nil {
-		return nil, errors.New("error loading unreferenced objects list: " +
-			err.Error())
+		logutil.LogMemory(logger, 0, "after loading")
 	}
 	imdb.regenerateUnreferencedObjectsList()
 	if ads, ok := objSrv.(objectserver.AddCallbackSetter); ok {
@@ -79,7 +83,7 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 }
 
 func (imdb *ImageDataBase) scanDirectory(dirname string,
-	state *concurrent.State, logger log.Logger) error {
+	state *concurrent.State, logger log.DebugLogger) error {
 	directoryMetadata, err := imdb.readDirectoryMetadata(dirname)
 	if err != nil {
 		return err
@@ -144,7 +148,8 @@ func (imdb *ImageDataBase) readDirectoryMetadata(dirname string) (
 	return metadata, reader.VerifyChecksum()
 }
 
-func (imdb *ImageDataBase) loadFile(filename string, logger log.Logger) error {
+func (imdb *ImageDataBase) loadFile(filename string,
+	logger log.DebugLogger) error {
 	pathname := path.Join(imdb.baseDir, filename)
 	file, err := os.Open(pathname)
 	if err != nil {
@@ -170,7 +175,13 @@ func (imdb *ImageDataBase) loadFile(filename string, logger log.Logger) error {
 		imdb.logger.Printf("Deleting already expired image: %s\n", filename)
 		return os.Remove(pathname)
 	}
+	if image.VerifyObjects(imdb.objectServer); err != nil {
+		return err
+	}
 	image.FileSystem.RebuildInodePointers()
+	imdb.deduperLock.Lock()
+	image.ReplaceStrings(imdb.deduper.DeDuplicate)
+	imdb.deduperLock.Unlock()
 	if err := image.Verify(); err != nil {
 		return err
 	}

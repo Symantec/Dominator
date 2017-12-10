@@ -46,7 +46,11 @@ func (t *srpcType) GetImage(conn *srpc.Conn,
 
 func (t *srpcType) getImageNow(
 	request imageserver.GetImageRequest) *image.Image {
-	img := *t.imageDataBase.GetImage(request.ImageName)
+	originalImage := t.imageDataBase.GetImage(request.ImageName)
+	if originalImage == nil {
+		return nil
+	}
+	img := *originalImage
 	if request.IgnoreFilesystem {
 		img.FileSystem = nil
 	}

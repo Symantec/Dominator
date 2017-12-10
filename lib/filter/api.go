@@ -24,3 +24,7 @@ func (filter *Filter) Compile() error {
 func (filter *Filter) Match(pathname string) bool {
 	return filter.match(pathname)
 }
+
+func (filter *Filter) ReplaceStrings(replaceFunc func(string) string) {
+	filter.replaceStrings(replaceFunc)
+}

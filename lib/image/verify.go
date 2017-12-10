@@ -2,9 +2,11 @@ package image
 
 import (
 	"errors"
+	"fmt"
 	"path"
 
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/objectserver"
 )
 
 func (image *Image) verify() error {
@@ -26,6 +28,21 @@ func verifyDirectory(directoryInode *filesystem.DirectoryInode,
 		}
 	}
 	return nil
+}
+
+func (image *Image) verifyObjects(checker objectserver.ObjectsChecker) error {
+	missingObjects, err := image.ListMissingObjects(checker)
+	if err != nil {
+		return err
+	}
+	switch len(missingObjects) {
+	case 0:
+		return nil
+	case 1:
+		return fmt.Errorf("object: %x is not available", missingObjects[0])
+	default:
+		return fmt.Errorf("%d objects are not available", len(missingObjects))
+	}
 }
 
 func (image *Image) verifyRequiredPaths(requiredPaths map[string]rune) error {
