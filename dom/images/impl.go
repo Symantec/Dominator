@@ -7,6 +7,7 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/stringutil"
 )
 
 func newManager(imageServerAddress string, logger log.Logger) *Manager {
@@ -16,6 +17,7 @@ func newManager(imageServerAddress string, logger log.Logger) *Manager {
 	m := &Manager{
 		imageServerAddress:   imageServerAddress,
 		logger:               logger,
+		deduper:              stringutil.NewStringDeduplicator(false),
 		imageInterestChannel: imageInterestChannel,
 		imageRequestChannel:  imageRequestChannel,
 		imageExpireChannel:   imageExpireChannel,
@@ -162,6 +164,7 @@ func (m *Manager) loadImage(imageClient *srpc.Client, name string) (
 			name, err)
 		return imageClient, nil, err
 	}
+	img.ReplaceStrings(m.deduper.DeDuplicate)
 	img.FileSystem = img.FileSystem.Filter(img.Filter) // Apply filter.
 	// Build cache data now to avoid potential concurrent builds later.
 	img.FileSystem.InodeToFilenamesTable()
