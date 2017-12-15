@@ -99,12 +99,14 @@ func (m *Manager) setInterest(imageClient *srpc.Client,
 	for name := range imageList {
 		imageClient = m.requestImage(imageClient, name)
 	}
+	deletedSome := false
 	// Clean up unreferenced images.
 	for name := range m.imagesByName {
 		if _, ok := imageList[name]; !ok {
 			m.Lock()
 			delete(m.imagesByName, name)
 			m.Unlock()
+			deletedSome = true
 		}
 	}
 	for name := range m.missingImages {
@@ -114,7 +116,9 @@ func (m *Manager) setInterest(imageClient *srpc.Client,
 			m.Unlock()
 		}
 	}
-	m.rebuildDeDuper()
+	if deletedSome {
+		m.rebuildDeDuper()
+	}
 	return imageClient
 }
 
