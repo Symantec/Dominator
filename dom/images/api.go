@@ -5,6 +5,7 @@ import (
 
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/stringutil"
 )
 
 type Manager struct {
@@ -12,6 +13,7 @@ type Manager struct {
 	logger             log.Logger
 	loggedDialFailure  bool
 	sync.RWMutex
+	deduper *stringutil.StringDeduplicator
 	// Protected by lock.
 	imageInterestChannel chan<- map[string]struct{}
 	imageRequestChannel  chan<- string

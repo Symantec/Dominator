@@ -7,6 +7,7 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/stringutil"
 )
 
 func newManager(imageServerAddress string, logger log.Logger) *Manager {
@@ -16,6 +17,7 @@ func newManager(imageServerAddress string, logger log.Logger) *Manager {
 	m := &Manager{
 		imageServerAddress:   imageServerAddress,
 		logger:               logger,
+		deduper:              stringutil.NewStringDeduplicator(false),
 		imageInterestChannel: imageInterestChannel,
 		imageRequestChannel:  imageRequestChannel,
 		imageExpireChannel:   imageExpireChannel,
@@ -75,6 +77,7 @@ func (m *Manager) manager(imageInterestChannel <-chan map[string]struct{},
 			m.Lock()
 			delete(m.imagesByName, name)
 			m.Unlock()
+			m.rebuildDeDuper()
 		case <-timer.C:
 			// Loop over missing (pending) images. First obtain a copy.
 			missingImages := make(map[string]struct{})
@@ -96,12 +99,14 @@ func (m *Manager) setInterest(imageClient *srpc.Client,
 	for name := range imageList {
 		imageClient = m.requestImage(imageClient, name)
 	}
+	deletedSome := false
 	// Clean up unreferenced images.
 	for name := range m.imagesByName {
 		if _, ok := imageList[name]; !ok {
 			m.Lock()
 			delete(m.imagesByName, name)
 			m.Unlock()
+			deletedSome = true
 		}
 	}
 	for name := range m.missingImages {
@@ -110,6 +115,9 @@ func (m *Manager) setInterest(imageClient *srpc.Client,
 			delete(m.missingImages, name)
 			m.Unlock()
 		}
+	}
+	if deletedSome {
+		m.rebuildDeDuper()
 	}
 	return imageClient
 }
@@ -162,6 +170,7 @@ func (m *Manager) loadImage(imageClient *srpc.Client, name string) (
 			name, err)
 		return imageClient, nil, err
 	}
+	img.ReplaceStrings(m.deduper.DeDuplicate)
 	img.FileSystem = img.FileSystem.Filter(img.Filter) // Apply filter.
 	// Build cache data now to avoid potential concurrent builds later.
 	img.FileSystem.InodeToFilenamesTable()
@@ -171,6 +180,13 @@ func (m *Manager) loadImage(imageClient *srpc.Client, name string) (
 	img.FileSystem.BuildEntryMap()
 	m.logger.Printf("Got image: %s\n", name)
 	return imageClient, img, nil
+}
+
+func (m *Manager) rebuildDeDuper() {
+	m.deduper.Clear()
+	for _, image := range m.imagesByName {
+		image.ReplaceStrings(m.deduper.DeDuplicate)
+	}
 }
 
 func (m *Manager) scheduleExpiration(image *image.Image, name string) bool {

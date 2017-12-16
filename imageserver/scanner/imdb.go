@@ -10,6 +10,7 @@ import (
 	"os/user"
 	"path"
 	"syscall"
+	"time"
 
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
@@ -212,6 +213,7 @@ func (imdb *ImageDataBase) deleteImageAndUpdateUnreferencedObjectsList(
 		return
 	}
 	delete(imdb.imageMap, name)
+	imdb.rebuildDeDuper()
 	imdb.maybeAddToUnreferencedObjectsList(img.FileSystem)
 }
 
@@ -349,6 +351,19 @@ func checkUserInGroup(username, ownerGroup string) error {
 		}
 	}
 	return fmt.Errorf("user: %s not a member of: %s", username, ownerGroup)
+}
+
+// This must be called with the main lock held.
+func (imdb *ImageDataBase) rebuildDeDuper() {
+	imdb.deduperLock.Lock()
+	defer imdb.deduperLock.Unlock()
+	startTime := time.Now()
+	imdb.deduper.Clear()
+	for _, image := range imdb.imageMap {
+		image.ReplaceStrings(imdb.deduper.DeDuplicate)
+	}
+	imdb.logger.Debugf(0, "Rebuilding de-duper state took %s\n",
+		time.Since(startTime))
 }
 
 func (imdb *ImageDataBase) registerAddNotifier() <-chan string {
