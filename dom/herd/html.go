@@ -88,14 +88,17 @@ func (herd *Herd) writeHtml(writer io.Writer) {
 }
 
 func (herd *Herd) writeDisableStatus(writer io.Writer) {
-	timeString := herd.updatesDisabledTime.Format(timeFormat)
+	timeString := ""
+	if !herd.updatesDisabledTime.IsZero() {
+		timeString = " at " + herd.updatesDisabledTime.Format(timeFormat)
+	}
 	if herd.updatesDisabledBy == "" {
 		fmt.Fprintf(writer,
-			"<font color=\"red\">Updates disabled because: %s</font> at %s\n",
+			"<font color=\"red\">Updates disabled %s</font>%s\n",
 			herd.updatesDisabledReason, timeString)
 	} else {
 		fmt.Fprintf(writer,
-			"<font color=\"red\">Updates disabled by: %s because: %s</font> at %s",
+			"<font color=\"red\">Updates disabled by: %s %s</font>%s",
 			herd.updatesDisabledBy, herd.updatesDisabledReason, timeString)
 	}
 }

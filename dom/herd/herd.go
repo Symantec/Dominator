@@ -22,6 +22,8 @@ import (
 )
 
 var (
+	disableUpdatesAtStartup = flag.Bool("disableUpdatesAtStartup", false,
+		"If true, updates are disabled at startup")
 	pollSlotsPerCPU = flag.Uint("pollSlotsPerCPU", 100,
 		"Number of poll slots per CPU")
 	subConnectTimeout = flag.Uint("subConnectTimeout", 15,
@@ -35,6 +37,9 @@ func newHerd(imageServerAddress string, objectServer objectserver.ObjectServer,
 	herd.objectServer = objectServer
 	herd.computedFilesManager = filegenclient.New(objectServer, logger)
 	herd.logger = logger
+	if *disableUpdatesAtStartup {
+		herd.updatesDisabledReason = "by default"
+	}
 	herd.configurationForSubs.ScanExclusionList =
 		constants.ScanExcludeList
 	herd.subsByName = make(map[string]*Sub)
@@ -74,7 +79,7 @@ func (herd *Herd) disableUpdates(username, reason string) error {
 		return errors.New("error disabling updates: no reason given")
 	}
 	herd.updatesDisabledBy = username
-	herd.updatesDisabledReason = reason
+	herd.updatesDisabledReason = "because: " + reason
 	herd.updatesDisabledTime = time.Now()
 	return nil
 }
