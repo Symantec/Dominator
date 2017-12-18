@@ -11,7 +11,8 @@ set -o nounset
 
 if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
     echo 'Usage: make-cert signing-key newkey serial username [methods]'
-    echo '  methods: an optional comma-separated list of method names'
+    echo '  methods: an optional filename of a file containing newline-separated'
+    echo '           method names or a comma-separated list of method names'
     echo 'If serial="AUTO" then the serial numbers are auto-incremented and use'
     echo 'the .serial file to maintain state.'
     exit 1
@@ -59,10 +60,17 @@ else
     echo '[methods_extension]'                                  > "$tmpfile"
     echo '1.3.6.1.4.1.9586.100.7.1=ASN1:SEQUENCE:methods_sect' >> "$tmpfile"
     echo '[methods_sect]'                                      >> "$tmpfile"
-    for method in $(tr , '\n' <<< "$methods"); do
-	echo "field$counter=UTF8:\"$method\"" >> "$tmpfile"
-	counter=$(($counter + 1))
-    done
+    if [ -r "$methods" ]; then
+	while read method || [ -n "$method" ]; do
+	    echo "field$counter=UTF8:\"$method\"" >> "$tmpfile"
+	    counter=$(($counter + 1))
+	done < "$methods"
+    else
+	for method in $(tr , '\n' <<< "$methods"); do
+	    echo "field$counter=UTF8:\"$method\"" >> "$tmpfile"
+	    counter=$(($counter + 1))
+	done
+    fi
 fi
 
 # Now generate the signed certificate.
