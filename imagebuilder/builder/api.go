@@ -98,6 +98,10 @@ func (b *Builder) GetLatestBuildLog(streamName string) ([]byte, error) {
 	return b.getLatestBuildLog(streamName)
 }
 
+func (b *Builder) ShowImageStreams(writer io.Writer) {
+	b.showImageStreams(writer)
+}
+
 func (b *Builder) WriteHtml(writer io.Writer) {
 	b.writeHtml(writer)
 }
