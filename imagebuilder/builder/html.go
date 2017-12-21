@@ -9,16 +9,7 @@ import (
 func (b *Builder) writeHtml(writer io.Writer) {
 	fmt.Fprintf(writer,
 		"Number of image streams: <a href=\"showImageStreams\">%d</a><p>\n",
-		len(b.imageStreams))
-	imageStreamNames := make([]string, 0, len(b.imageStreams))
-	for name := range b.imageStreams {
-		imageStreamNames = append(imageStreamNames, name)
-	}
-	sort.Strings(imageStreamNames)
-	imageStreams := make([]*imageStreamType, len(imageStreamNames))
-	for _, name := range imageStreamNames {
-		imageStreams = append(imageStreams, b.imageStreams[name])
-	}
+		b.getNumNormalStreams())
 	currentBuilds := make([]string, 0)
 	goodBuilds := make(map[string]buildResultType)
 	failedBuilds := make(map[string]buildResultType)
@@ -106,10 +97,7 @@ func (b *Builder) writeHtml(writer io.Writer) {
 }
 
 func (b *Builder) showImageStreams(writer io.Writer) {
-	streamNames := make([]string, 0, len(b.imageStreams))
-	for name := range b.imageStreams {
-		streamNames = append(streamNames, name)
-	}
+	streamNames := b.listNormalStreamNames()
 	sort.Strings(streamNames)
 	fmt.Fprintln(writer, `<table border="1">`)
 	fmt.Fprintln(writer, "  <tr>")
@@ -118,7 +106,10 @@ func (b *Builder) showImageStreams(writer io.Writer) {
 	fmt.Fprintln(writer, "    <th>ManifestDirectory</th>")
 	fmt.Fprintln(writer, "  </tr>")
 	for _, streamName := range streamNames {
-		imageStream := b.imageStreams[streamName]
+		imageStream := b.getNormalStream(streamName)
+		if imageStream == nil {
+			continue
+		}
 		fmt.Fprintf(writer, "  <tr>\n")
 		fmt.Fprintf(writer, "    <td>%s</td>\n", streamName)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", imageStream.ManifestUrl)

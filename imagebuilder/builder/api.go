@@ -68,6 +68,8 @@ type Builder struct {
 	stateDir                  string
 	imageServerAddress        string
 	logger                    log.Logger
+	imageStreamsUrl           string
+	streamsLock               sync.RWMutex
 	bootstrapStreams          map[string]*bootstrapStream
 	imageStreams              map[string]*imageStreamType
 	imageStreamsToAutoRebuild []string
