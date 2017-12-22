@@ -96,6 +96,19 @@ func (b *Builder) writeHtml(writer io.Writer) {
 	}
 }
 
+func (b *Builder) showImageStream(writer io.Writer, streamName string) {
+	stream := b.getNormalStream(streamName)
+	if stream == nil {
+		fmt.Fprintf(writer, "<b>Stream: %s does not exist!</b>\n", streamName)
+		return
+	}
+	fmt.Fprintf(writer, "<h3>Information for stream: %s</h3>\n", streamName)
+	fmt.Fprintf(writer, "Manifest URL: <code>%s</code><br>\n",
+		stream.ManifestUrl)
+	fmt.Fprintf(writer, "Manifest Directory: <code>%s</code><br>\n",
+		stream.ManifestDirectory)
+}
+
 func (b *Builder) showImageStreams(writer io.Writer) {
 	streamNames := b.listNormalStreamNames()
 	sort.Strings(streamNames)
@@ -111,7 +124,9 @@ func (b *Builder) showImageStreams(writer io.Writer) {
 			continue
 		}
 		fmt.Fprintf(writer, "  <tr>\n")
-		fmt.Fprintf(writer, "    <td>%s</td>\n", streamName)
+		fmt.Fprintf(writer,
+			"    <td><a href=\"showImageStream?%s\">%s</a></td>\n",
+			streamName, streamName)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", imageStream.ManifestUrl)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", imageStream.ManifestDirectory)
 		fmt.Fprintf(writer, "  </tr>\n")
