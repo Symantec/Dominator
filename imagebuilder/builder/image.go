@@ -29,32 +29,12 @@ func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 	streamName string, expiresIn time.Duration, gitBranch string,
 	maxSourceAge time.Duration, buildLog *bytes.Buffer, logger log.Logger) (
 	string, error) {
-	manifestRoot, err := ioutil.TempDir("",
-		strings.Replace(streamName, "/", "_", -1)+".manifest")
+	manifestRoot, manifestDirectory, err := stream.getManifest(b, streamName,
+		gitBranch, buildLog)
 	if err != nil {
 		return "", err
 	}
 	defer os.RemoveAll(manifestRoot)
-	if gitBranch == "" {
-		gitBranch = "master"
-	}
-	variableFunc := b.getVariableFunc(map[string]string{
-		"IMAGE_STREAM": streamName,
-	})
-	fmt.Fprintf(buildLog, "Cloning repository: %s branch: %s\n",
-		stream.ManifestUrl, gitBranch)
-	startTime := time.Now()
-	cmd := exec.Command("git", "clone",
-		os.Expand(stream.ManifestUrl, variableFunc), "-b", gitBranch,
-		manifestRoot)
-	cmd.Stdout = buildLog
-	cmd.Stderr = buildLog
-	if err := cmd.Run(); err != nil {
-		return "", errors.New("error cloning repository: " + err.Error())
-	}
-	fmt.Fprintf(buildLog, "Cloned repository in %s\n",
-		format.Duration(time.Since(startTime)))
-	manifestDirectory := os.Expand(stream.ManifestDirectory, variableFunc)
 	name, err := buildImageFromManifest(client, streamName,
 		path.Join(manifestRoot, manifestDirectory), expiresIn,
 		func(client *srpc.Client, streamName, rootDir string,
@@ -66,6 +46,37 @@ func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 		return "", err
 	}
 	return name, nil
+}
+
+func (stream *imageStreamType) getManifest(b *Builder, streamName string,
+	gitBranch string, buildLog *bytes.Buffer) (string, string, error) {
+	if gitBranch == "" {
+		gitBranch = "master"
+	}
+	variableFunc := b.getVariableFunc(map[string]string{
+		"IMAGE_STREAM": streamName,
+	})
+	fmt.Fprintf(buildLog, "Cloning repository: %s branch: %s\n",
+		stream.ManifestUrl, gitBranch)
+	manifestRoot, err := ioutil.TempDir("",
+		strings.Replace(streamName, "/", "_", -1)+".manifest")
+	if err != nil {
+		return "", "", err
+	}
+	startTime := time.Now()
+	cmd := exec.Command("git", "clone",
+		os.Expand(stream.ManifestUrl, variableFunc), "-b", gitBranch,
+		manifestRoot)
+	cmd.Stdout = buildLog
+	cmd.Stderr = buildLog
+	if err := cmd.Run(); err != nil {
+		os.RemoveAll(manifestRoot)
+		return "", "", errors.New("error cloning repository: " + err.Error())
+	}
+	fmt.Fprintf(buildLog, "Cloned repository in %s\n",
+		format.Duration(time.Since(startTime)))
+	manifestDirectory := os.Expand(stream.ManifestDirectory, variableFunc)
+	return manifestRoot, manifestDirectory, nil
 }
 
 func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
