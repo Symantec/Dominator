@@ -1,8 +1,13 @@
 package builder
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
+	"path"
 	"sort"
 )
 
@@ -107,6 +112,26 @@ func (b *Builder) showImageStream(writer io.Writer, streamName string) {
 		stream.ManifestUrl)
 	fmt.Fprintf(writer, "Manifest Directory: <code>%s</code><br>\n",
 		stream.ManifestDirectory)
+	manifestRoot, manifestDirectory, err := stream.getManifest(b, streamName,
+		"", new(bytes.Buffer))
+	if err != nil {
+		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
+		return
+	}
+	defer os.RemoveAll(manifestRoot)
+	manifestFile := path.Join(manifestRoot, manifestDirectory, "manifest")
+	manifestBytes, err := ioutil.ReadFile(manifestFile)
+	if err != nil {
+		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
+		return
+	}
+	var manifest manifestType
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
+		return
+	}
+	fmt.Fprintf(writer, "SourceImage: <code>%s</code><br>\n",
+		manifest.SourceImage)
 }
 
 func (b *Builder) showImageStreams(writer io.Writer) {
