@@ -119,8 +119,8 @@ func (b *Builder) showImageStream(writer io.Writer, streamName string) {
 		return
 	}
 	defer os.RemoveAll(manifestRoot)
-	manifestFile := path.Join(manifestRoot, manifestDirectory, "manifest")
-	manifestBytes, err := ioutil.ReadFile(manifestFile)
+	manifestFilename := path.Join(manifestRoot, manifestDirectory, "manifest")
+	manifestBytes, err := ioutil.ReadFile(manifestFilename)
 	if err != nil {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
@@ -130,8 +130,30 @@ func (b *Builder) showImageStream(writer io.Writer, streamName string) {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
 	}
-	fmt.Fprintf(writer, "SourceImage: <code>%s</code><br>\n",
-		manifest.SourceImage)
+	sourceStream := b.getNormalStream(manifest.SourceImage)
+	if sourceStream == nil {
+		fmt.Fprintf(writer, "SourceImage: <code>%s</code><br>\n",
+			manifest.SourceImage)
+	} else {
+		fmt.Fprintf(writer,
+			"SourceImage: <a href=\"showImageStream?%s\"><code>%s</code></a><br>\n",
+			manifest.SourceImage, manifest.SourceImage)
+	}
+	fmt.Fprintln(writer, "Contents of <code>manifest</code> file:<br>")
+	fmt.Fprintln(writer, "<pre>")
+	writer.Write(manifestBytes)
+	fmt.Fprintln(writer, "</pre><p class=\"clear\">")
+	packagesFile, err := os.Open(
+		path.Join(manifestRoot, manifestDirectory, "package-list"))
+	if err != nil {
+		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
+		return
+	}
+	defer packagesFile.Close()
+	fmt.Fprintln(writer, "Contents of <code>package-list</code> file:<br>")
+	fmt.Fprintln(writer, "<pre>")
+	io.Copy(writer, packagesFile)
+	fmt.Fprintln(writer, "</pre><p class=\"clear\">")
 }
 
 func (b *Builder) showImageStreams(writer io.Writer) {
