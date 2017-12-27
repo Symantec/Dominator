@@ -8,7 +8,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
+	"time"
+
+	"github.com/Symantec/Dominator/lib/format"
 )
 
 func (b *Builder) writeHtml(writer io.Writer) {
@@ -112,6 +116,7 @@ func (b *Builder) showImageStream(writer io.Writer, streamName string) {
 		stream.ManifestUrl)
 	fmt.Fprintf(writer, "Manifest Directory: <code>%s</code><br>\n",
 		stream.ManifestDirectory)
+	startTime := time.Now()
 	manifestRoot, manifestDirectory, err := stream.getManifest(b, streamName,
 		"", new(bytes.Buffer))
 	if err != nil {
@@ -119,7 +124,9 @@ func (b *Builder) showImageStream(writer io.Writer, streamName string) {
 		return
 	}
 	defer os.RemoveAll(manifestRoot)
-	manifestFilename := path.Join(manifestRoot, manifestDirectory, "manifest")
+	loadTime := time.Since(startTime)
+	manifestDirectory = path.Join(manifestRoot, manifestDirectory)
+	manifestFilename := path.Join(manifestDirectory, "manifest")
 	manifestBytes, err := ioutil.ReadFile(manifestFilename)
 	if err != nil {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
@@ -143,8 +150,7 @@ func (b *Builder) showImageStream(writer io.Writer, streamName string) {
 	fmt.Fprintln(writer, "<pre>")
 	writer.Write(manifestBytes)
 	fmt.Fprintln(writer, "</pre><p class=\"clear\">")
-	packagesFile, err := os.Open(
-		path.Join(manifestRoot, manifestDirectory, "package-list"))
+	packagesFile, err := os.Open(path.Join(manifestDirectory, "package-list"))
 	if err != nil {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
@@ -154,6 +160,22 @@ func (b *Builder) showImageStream(writer io.Writer, streamName string) {
 	fmt.Fprintln(writer, "<pre>")
 	io.Copy(writer, packagesFile)
 	fmt.Fprintln(writer, "</pre><p class=\"clear\">")
+	if size, err := getTreeSize(manifestRoot); err != nil {
+		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
+		return
+	} else {
+		speed := float64(size) / loadTime.Seconds()
+		fmt.Fprintf(writer, "Repository size: %s, took: %s (%s/s)<br>\n",
+			format.FormatBytes(size), format.Duration(loadTime),
+			format.FormatBytes(uint64(speed)))
+	}
+	if size, err := getTreeSize(manifestDirectory); err != nil {
+		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
+		return
+	} else {
+		fmt.Fprintf(writer, "Manifest tree size: %s<br>\n",
+			format.FormatBytes(size))
+	}
 }
 
 func (b *Builder) showImageStreams(writer io.Writer) {
@@ -179,4 +201,20 @@ func (b *Builder) showImageStreams(writer io.Writer) {
 		fmt.Fprintf(writer, "  </tr>\n")
 	}
 	fmt.Fprintln(writer, "</table><br>")
+}
+
+func getTreeSize(dirname string) (uint64, error) {
+	var size uint64
+	err := filepath.Walk(dirname,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			size += uint64(info.Size())
+			return nil
+		})
+	if err != nil {
+		return 0, err
+	}
+	return size, nil
 }
