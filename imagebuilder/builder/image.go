@@ -63,20 +63,60 @@ func (stream *imageStreamType) getManifest(b *Builder, streamName string,
 	if err != nil {
 		return "", "", err
 	}
+	doCleanup := true
+	defer func() {
+		if doCleanup {
+			os.RemoveAll(manifestRoot)
+		}
+	}()
+	manifestDirectory := os.Expand(stream.ManifestDirectory, variableFunc)
+	manifestUrl := os.Expand(stream.ManifestUrl, variableFunc)
 	startTime := time.Now()
-	cmd := exec.Command("git", "clone",
-		os.Expand(stream.ManifestUrl, variableFunc), "-b", gitBranch,
-		manifestRoot)
-	cmd.Stdout = buildLog
-	cmd.Stderr = buildLog
-	if err := cmd.Run(); err != nil {
-		os.RemoveAll(manifestRoot)
-		return "", "", errors.New("error cloning repository: " + err.Error())
+	err = runCommand(buildLog, "", "git", "init", manifestRoot)
+	if err != nil {
+		return "", "", err
+	}
+	err = runCommand(buildLog, manifestRoot, "git", "remote", "add", "origin",
+		manifestUrl)
+	if err != nil {
+		return "", "", err
+	}
+	err = runCommand(buildLog, manifestRoot, "git", "config",
+		"core.sparsecheckout", "true")
+	if err != nil {
+		return "", "", err
+	}
+	directorySelector := "*\n"
+	if manifestDirectory != "" {
+		directorySelector = manifestDirectory + "/*\n"
+	}
+	err = ioutil.WriteFile(
+		path.Join(manifestRoot, ".git", "info", "sparse-checkout"),
+		[]byte(directorySelector), 0644)
+	if err != nil {
+		return "", "", err
+	}
+	err = runCommand(buildLog, manifestRoot, "git", "pull", "--depth=1",
+		"origin", gitBranch)
+	if err != nil {
+		return "", "", err
+	}
+	err = runCommand(buildLog, manifestRoot, "git", "checkout", gitBranch)
+	if err != nil {
+		return "", "", err
 	}
 	fmt.Fprintf(buildLog, "Cloned repository in %s\n",
 		format.Duration(time.Since(startTime)))
-	manifestDirectory := os.Expand(stream.ManifestDirectory, variableFunc)
+	doCleanup = false
 	return manifestRoot, manifestDirectory, nil
+}
+
+func runCommand(buildLog *bytes.Buffer, cwd string, args ...string) error {
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Dir = cwd
+	cmd.Stdout = buildLog
+	cmd.Stderr = buildLog
+	return cmd.Run()
 }
 
 func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
