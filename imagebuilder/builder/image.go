@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -29,14 +30,14 @@ func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 	streamName string, expiresIn time.Duration, gitBranch string,
 	maxSourceAge time.Duration, buildLog *bytes.Buffer, logger log.Logger) (
 	string, error) {
-	manifestRoot, manifestDirectory, err := stream.getManifest(b, streamName,
+	manifestDirectory, err := stream.getManifest(b, streamName,
 		gitBranch, buildLog)
 	if err != nil {
 		return "", err
 	}
-	defer os.RemoveAll(manifestRoot)
-	name, err := buildImageFromManifest(client, streamName,
-		path.Join(manifestRoot, manifestDirectory), expiresIn,
+	defer os.RemoveAll(manifestDirectory)
+	name, err := buildImageFromManifest(client, streamName, manifestDirectory,
+		expiresIn,
 		func(client *srpc.Client, streamName, rootDir string,
 			logger log.Logger) (string, error) {
 			return unpackImage(client, streamName, b, maxSourceAge, expiresIn,
@@ -49,7 +50,7 @@ func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 }
 
 func (stream *imageStreamType) getManifest(b *Builder, streamName string,
-	gitBranch string, buildLog *bytes.Buffer) (string, string, error) {
+	gitBranch string, buildLog *bytes.Buffer) (string, error) {
 	if gitBranch == "" {
 		gitBranch = "master"
 	}
@@ -61,7 +62,7 @@ func (stream *imageStreamType) getManifest(b *Builder, streamName string,
 	manifestRoot, err := ioutil.TempDir("",
 		strings.Replace(streamName, "/", "_", -1)+".manifest")
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	doCleanup := true
 	defer func() {
@@ -71,20 +72,19 @@ func (stream *imageStreamType) getManifest(b *Builder, streamName string,
 	}()
 	manifestDirectory := os.Expand(stream.ManifestDirectory, variableFunc)
 	manifestUrl := os.Expand(stream.ManifestUrl, variableFunc)
-	startTime := time.Now()
 	err = runCommand(buildLog, "", "git", "init", manifestRoot)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	err = runCommand(buildLog, manifestRoot, "git", "remote", "add", "origin",
 		manifestUrl)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	err = runCommand(buildLog, manifestRoot, "git", "config",
 		"core.sparsecheckout", "true")
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	directorySelector := "*\n"
 	if manifestDirectory != "" {
@@ -94,21 +94,100 @@ func (stream *imageStreamType) getManifest(b *Builder, streamName string,
 		path.Join(manifestRoot, ".git", "info", "sparse-checkout"),
 		[]byte(directorySelector), 0644)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
+	startTime := time.Now()
 	err = runCommand(buildLog, manifestRoot, "git", "pull", "--depth=1",
 		"origin", gitBranch)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-	err = runCommand(buildLog, manifestRoot, "git", "checkout", gitBranch)
+	if gitBranch != "master" {
+		err = runCommand(buildLog, manifestRoot, "git", "checkout", gitBranch)
+		if err != nil {
+			return "", err
+		}
+	}
+	loadTime := time.Since(startTime)
+	repoSize, err := getTreeSize(manifestRoot)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-	fmt.Fprintf(buildLog, "Cloned repository in %s\n",
-		format.Duration(time.Since(startTime)))
+	speed := float64(repoSize) / loadTime.Seconds()
+	fmt.Fprintf(buildLog,
+		"Downloaded partial repository in %s, size: %s (%s/s)\n",
+		format.Duration(loadTime), format.FormatBytes(repoSize),
+		format.FormatBytes(uint64(speed)))
+	gitDirectory := path.Join(manifestRoot, ".git")
+	if err := os.RemoveAll(gitDirectory); err != nil {
+		return "", err
+	}
+	if manifestDirectory != "" {
+		// Move manifestDirectory into manifestRoot, remove anything else.
+		err := os.Rename(path.Join(manifestRoot, manifestDirectory),
+			gitDirectory)
+		if err != nil {
+			return "", err
+		}
+		filenames, err := listDirectory(manifestRoot)
+		if err != nil {
+			return "", err
+		}
+		for _, filename := range filenames {
+			if filename == ".git" {
+				continue
+			}
+			err := os.RemoveAll(path.Join(manifestRoot, filename))
+			if err != nil {
+				return "", err
+			}
+		}
+		filenames, err = listDirectory(gitDirectory)
+		if err != nil {
+			return "", err
+		}
+		for _, filename := range filenames {
+			err := os.Rename(path.Join(gitDirectory, filename),
+				path.Join(manifestRoot, filename))
+			if err != nil {
+				return "", err
+			}
+		}
+		if err := os.Remove(gitDirectory); err != nil {
+			return "", err
+		}
+	}
 	doCleanup = false
-	return manifestRoot, manifestDirectory, nil
+	return manifestRoot, nil
+}
+
+func getTreeSize(dirname string) (uint64, error) {
+	var size uint64
+	err := filepath.Walk(dirname,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			size += uint64(info.Size())
+			return nil
+		})
+	if err != nil {
+		return 0, err
+	}
+	return size, nil
+}
+
+func listDirectory(directoryName string) ([]string, error) {
+	directory, err := os.Open(directoryName)
+	if err != nil {
+		return nil, err
+	}
+	defer directory.Close()
+	filenames, err := directory.Readdirnames(-1)
+	if err != nil {
+		return nil, err
+	}
+	return filenames, nil
 }
 
 func runCommand(buildLog *bytes.Buffer, cwd string, args ...string) error {
