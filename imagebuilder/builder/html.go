@@ -13,6 +13,8 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 )
 
+const codeStyle = `background-color: #eee; border: 1px solid #999; display: block; float: left;`
+
 func (b *Builder) writeHtml(writer io.Writer) {
 	fmt.Fprintf(writer,
 		"Number of image streams: <a href=\"showImageStreams\">%d</a><p>\n",
@@ -114,8 +116,8 @@ func (b *Builder) showImageStream(writer io.Writer, streamName string) {
 		stream.ManifestUrl)
 	fmt.Fprintf(writer, "Manifest Directory: <code>%s</code><br>\n",
 		stream.ManifestDirectory)
-	manifestDirectory, err := stream.getManifest(b, streamName, "",
-		new(bytes.Buffer))
+	buildLog := new(bytes.Buffer)
+	manifestDirectory, err := stream.getManifest(b, streamName, "", buildLog)
 	if err != nil {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
@@ -142,9 +144,9 @@ func (b *Builder) showImageStream(writer io.Writer, streamName string) {
 			manifest.SourceImage, manifest.SourceImage)
 	}
 	fmt.Fprintln(writer, "Contents of <code>manifest</code> file:<br>")
-	fmt.Fprintln(writer, "<pre>")
+	fmt.Fprintf(writer, "<pre style=\"%s\">\n", codeStyle)
 	writer.Write(manifestBytes)
-	fmt.Fprintln(writer, "</pre><p class=\"clear\">")
+	fmt.Fprintln(writer, "</pre><p style=\"clear: both;\">")
 	packagesFile, err := os.Open(path.Join(manifestDirectory, "package-list"))
 	if err != nil {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
@@ -152,9 +154,9 @@ func (b *Builder) showImageStream(writer io.Writer, streamName string) {
 	}
 	defer packagesFile.Close()
 	fmt.Fprintln(writer, "Contents of <code>package-list</code> file:<br>")
-	fmt.Fprintln(writer, "<pre>")
+	fmt.Fprintf(writer, "<pre style=\"%s\">\n", codeStyle)
 	io.Copy(writer, packagesFile)
-	fmt.Fprintln(writer, "</pre><p class=\"clear\">")
+	fmt.Fprintln(writer, "</pre><p style=\"clear: both;\">")
 	if size, err := getTreeSize(manifestDirectory); err != nil {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
@@ -162,6 +164,12 @@ func (b *Builder) showImageStream(writer io.Writer, streamName string) {
 		fmt.Fprintf(writer, "Manifest tree size: %s<br>\n",
 			format.FormatBytes(size))
 	}
+	fmt.Fprintln(writer, "<hr style=\"height:2px\"><font color=\"#bbb\">")
+	fmt.Fprintln(writer, "<b>Logging output:</b>")
+	fmt.Fprintln(writer, "<pre>")
+	io.Copy(writer, buildLog)
+	fmt.Fprintln(writer, "</pre>")
+	fmt.Fprintln(writer, "</font>")
 }
 
 func (b *Builder) showImageStreams(writer io.Writer) {
