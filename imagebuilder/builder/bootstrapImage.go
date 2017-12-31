@@ -3,6 +3,7 @@ package builder
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -36,6 +37,18 @@ var environmentToSet = map[string]string{
 	"HOME":    "/",
 	"LOGNAME": "root",
 	"USER":    "root",
+}
+
+func clean(rootDir string, buildLog io.Writer) error {
+	fmt.Fprintln(buildLog, "\nCleaning packages:")
+	startTime := time.Now()
+	err := runInTarget(nil, buildLog, rootDir, packagerPathname, "clean")
+	if err != nil {
+		return errors.New("error cleaning: " + err.Error())
+	}
+	fmt.Fprintf(buildLog, "Package clean took: %s\n",
+		format.Duration(time.Since(startTime)))
+	return nil
 }
 
 func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
@@ -72,6 +85,9 @@ func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
 		buildDuration := time.Since(startTime)
 		fmt.Fprintf(buildLog, "\nBuild time: %s\n",
 			format.Duration(buildDuration))
+		if err := clean(rootDir, buildLog); err != nil {
+			return "", err
+		}
 		startTime = time.Now()
 		name, err := addImage(client, streamName, rootDir, stream.Filter,
 			nil, &filter.Filter{}, nil, expiresIn, buildLog, logger)

@@ -83,14 +83,9 @@ func processManifest(manifestDir, rootDir string, buildLog io.Writer) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintln(buildLog, "\nCleaning packages:")
-	startTime := time.Now()
-	err = runInTarget(nil, buildLog, rootDir, packagerPathname, "clean")
-	if err != nil {
-		return errors.New("error cleaning: " + err.Error())
+	if err := clean(rootDir, buildLog); err != nil {
+		return err
 	}
-	fmt.Fprintf(buildLog, "Package clean took: %s\n",
-		format.Duration(time.Since(startTime)))
 	return clearResolvConf(buildLog, rootDir)
 }
 
