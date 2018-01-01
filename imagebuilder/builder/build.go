@@ -23,7 +23,7 @@ func (b *Builder) rebuildImages(minInterval time.Duration) {
 			continue
 		}
 		sleepUntil = time.Now().Add(minInterval)
-		for _, streamName := range b.imageStreamsToAutoRebuild {
+		for _, streamName := range b.listStreamsToAutoRebuild() {
 			_, _, err := b.build(client, streamName, minInterval*2, "", 0)
 			if err != nil {
 				b.logger.Printf("Error building image: %s: %s\n",
@@ -53,7 +53,7 @@ func (b *Builder) build(client *srpc.Client, streamName string,
 	expiresIn time.Duration, gitBranch string, maxSourceAge time.Duration) (
 	string, []byte, error) {
 	startTime := time.Now()
-	builder := b.getImageBuilder(streamName)
+	builder := b.getImageBuilderWithReload(streamName)
 	if builder == nil {
 		return "", nil, errors.New("unknown stream: " + streamName)
 	}
@@ -81,14 +81,25 @@ func (b *Builder) build(client *srpc.Client, streamName string,
 }
 
 func (b *Builder) getImageBuilder(streamName string) imageBuilder {
-	if stream, ok := b.bootstrapStreams[streamName]; ok {
+	if stream := b.getBootstrapStream(streamName); stream != nil {
 		return stream
-	} else {
-		if stream, ok := b.imageStreams[streamName]; ok {
-			return stream
-		}
 	}
+	if stream := b.getNormalStream(streamName); stream != nil {
+		return stream
+	}
+	// Ensure a nil interface is returned, not a stream with value == nil.
 	return nil
+}
+
+func (b *Builder) getImageBuilderWithReload(streamName string) imageBuilder {
+	if stream := b.getImageBuilder(streamName); stream != nil {
+		return stream
+	}
+	if err := b.reloadNormalStreamsConfiguration(); err != nil {
+		b.logger.Printf("Error reloading configuration: %s\n", err)
+		return nil
+	}
+	return b.getImageBuilder(streamName)
 }
 
 func (b *Builder) getCurrentBuildLog(streamName string) ([]byte, error) {

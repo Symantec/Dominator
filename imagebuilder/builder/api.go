@@ -18,6 +18,8 @@ type imageBuilder interface {
 }
 
 type bootstrapStream struct {
+	builder          *Builder
+	name             string
 	BootstrapCommand []string
 	*filter.Filter
 	PackagerType string
@@ -37,6 +39,8 @@ type masterConfigurationType struct {
 }
 
 type imageStreamType struct {
+	builder           *Builder
+	name              string
 	ManifestUrl       string
 	ManifestDirectory string
 }
@@ -68,6 +72,8 @@ type Builder struct {
 	stateDir                  string
 	imageServerAddress        string
 	logger                    log.Logger
+	imageStreamsUrl           string
+	streamsLock               sync.RWMutex
 	bootstrapStreams          map[string]*bootstrapStream
 	imageStreams              map[string]*imageStreamType
 	imageStreamsToAutoRebuild []string
@@ -96,6 +102,14 @@ func (b *Builder) GetCurrentBuildLog(streamName string) ([]byte, error) {
 
 func (b *Builder) GetLatestBuildLog(streamName string) ([]byte, error) {
 	return b.getLatestBuildLog(streamName)
+}
+
+func (b *Builder) ShowImageStream(writer io.Writer, streamName string) {
+	b.showImageStream(writer, streamName)
+}
+
+func (b *Builder) ShowImageStreams(writer io.Writer) {
+	b.showImageStreams(writer)
 }
 
 func (b *Builder) WriteHtml(writer io.Writer) {

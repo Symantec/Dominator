@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
+	"github.com/Symantec/Dominator/imageserver/client"
 	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/url/urlutil"
 )
 
@@ -48,6 +51,7 @@ func load(confUrl, variablesFile, stateDir, imageServerAddress string,
 		stateDir:                  stateDir,
 		imageServerAddress:        imageServerAddress,
 		logger:                    logger,
+		imageStreamsUrl:           masterConfiguration.ImageStreamsUrl,
 		bootstrapStreams:          masterConfiguration.BootstrapStreams,
 		imageStreams:              imageStreamsConfiguration.Streams,
 		imageStreamsToAutoRebuild: imageStreamsToAutoRebuild,
@@ -55,6 +59,17 @@ func load(confUrl, variablesFile, stateDir, imageServerAddress string,
 		lastBuildResults:          make(map[string]buildResultType),
 		packagerTypes:             masterConfiguration.PackagerTypes,
 		variables:                 variables,
+	}
+	for name, stream := range b.bootstrapStreams {
+		stream.builder = b
+		stream.name = name
+	}
+	for name, stream := range b.imageStreams {
+		stream.builder = b
+		stream.name = name
+	}
+	if err := b.makeRequiredDirectories(); err != nil {
+		return nil, err
 	}
 	go b.rebuildImages(imageRebuildInterval)
 	return b, nil
@@ -102,4 +117,60 @@ func loadImageStreams(url string) (*imageStreamsConfigurationType, error) {
 			url, err)
 	}
 	return &configuration, nil
+}
+
+func (b *Builder) makeRequiredDirectories() error {
+	imageServer, err := srpc.DialHTTP("tcp", b.imageServerAddress, 0)
+	if err != nil {
+		b.logger.Println(err)
+		return nil
+	}
+	defer imageServer.Close()
+	directoryList, err := client.ListDirectories(imageServer)
+	if err != nil {
+		b.logger.Println(err)
+		return nil
+	}
+	directories := make(map[string]struct{}, len(directoryList))
+	for _, directory := range directoryList {
+		directories[directory.Name] = struct{}{}
+	}
+	streamNames := b.listAllStreamNames()
+	for _, streamName := range streamNames {
+		if _, ok := directories[streamName]; ok {
+			continue
+		}
+		pathComponents := strings.Split(streamName, "/")
+		for index := range pathComponents {
+			partPath := strings.Join(pathComponents[0:index+1], "/")
+			if _, ok := directories[partPath]; ok {
+				continue
+			}
+			if err := client.MakeDirectory(imageServer, partPath); err != nil {
+				return err
+			}
+			b.logger.Printf("Created missing directory: %s\n", partPath)
+			directories[partPath] = struct{}{}
+		}
+	}
+	return nil
+}
+
+func (b *Builder) reloadNormalStreamsConfiguration() error {
+	imageStreamsConfiguration, err := loadImageStreams(b.imageStreamsUrl)
+	if err != nil {
+		return err
+	}
+	b.logger.Println("Reloaded streams streams configuration")
+	b.streamsLock.Lock()
+	b.imageStreams = imageStreamsConfiguration.Streams
+	for name, stream := range b.imageStreams {
+		stream.builder = b
+		stream.name = name
+	}
+	b.streamsLock.Unlock()
+	if err := b.makeRequiredDirectories(); err != nil {
+		return err
+	}
+	return nil
 }

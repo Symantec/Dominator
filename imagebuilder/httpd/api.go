@@ -28,6 +28,8 @@ func StartServer(portNum uint, builderObj *builder.Builder,
 	myState := state{builderObj}
 	http.HandleFunc("/", myState.statusHandler)
 	http.HandleFunc("/showCurrentBuildLog", myState.showCurrentBuildLogHandler)
+	http.HandleFunc("/showImageStream", myState.showImageStreamHandler)
+	http.HandleFunc("/showImageStreams", myState.showImageStreamsHandler)
 	http.HandleFunc("/showLastBuildLog", myState.showLastBuildLogHandler)
 	if daemon {
 		go http.Serve(listener, nil)
