@@ -18,6 +18,8 @@ type imageBuilder interface {
 }
 
 type bootstrapStream struct {
+	builder          *Builder
+	name             string
 	BootstrapCommand []string
 	*filter.Filter
 	PackagerType string
@@ -37,6 +39,8 @@ type masterConfigurationType struct {
 }
 
 type imageStreamType struct {
+	builder           *Builder
+	name              string
 	ManifestUrl       string
 	ManifestDirectory string
 }

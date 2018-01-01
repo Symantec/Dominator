@@ -60,6 +60,14 @@ func load(confUrl, variablesFile, stateDir, imageServerAddress string,
 		packagerTypes:             masterConfiguration.PackagerTypes,
 		variables:                 variables,
 	}
+	for name, stream := range b.bootstrapStreams {
+		stream.builder = b
+		stream.name = name
+	}
+	for name, stream := range b.imageStreams {
+		stream.builder = b
+		stream.name = name
+	}
 	if err := b.makeRequiredDirectories(); err != nil {
 		return nil, err
 	}
@@ -156,6 +164,10 @@ func (b *Builder) reloadNormalStreamsConfiguration() error {
 	b.logger.Println("Reloaded streams streams configuration")
 	b.streamsLock.Lock()
 	b.imageStreams = imageStreamsConfiguration.Streams
+	for name, stream := range b.imageStreams {
+		stream.builder = b
+		stream.name = name
+	}
 	b.streamsLock.Unlock()
 	if err := b.makeRequiredDirectories(); err != nil {
 		return err

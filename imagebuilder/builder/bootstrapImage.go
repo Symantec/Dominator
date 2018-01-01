@@ -111,6 +111,11 @@ func (packager *packagerType) writePackageInstaller(rootDir string) error {
 	defer file.Close()
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
+	packager.writePackageInstallerContents(writer)
+	return writer.Flush()
+}
+
+func (packager *packagerType) writePackageInstallerContents(writer io.Writer) {
 	fmt.Fprintln(writer, "#! /bin/sh")
 	fmt.Fprintln(writer, "# Created by imaginator.")
 	fmt.Fprintln(writer, "mount -n none -t proc /proc")
@@ -134,7 +139,6 @@ func (packager *packagerType) writePackageInstaller(rootDir string) error {
 	writePackagerCommand(writer, "upgrade", packager.UpgradeCommand)
 	fmt.Fprintln(writer, "echo \"Invalid command: $cmd\"")
 	fmt.Fprintln(writer, "exit 2")
-	return writer.Flush()
 }
 
 func writePackagerCommand(writer io.Writer, cmd string, command []string) {

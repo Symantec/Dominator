@@ -9,11 +9,75 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strings"
 
 	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/html"
+	libjson "github.com/Symantec/Dominator/lib/json"
 )
 
 const codeStyle = `background-color: #eee; border: 1px solid #999; display: block; float: left;`
+
+func (stream *bootstrapStream) WriteHtml(writer io.Writer) {
+	fmt.Fprintf(writer, "Bootstrap command: <code>%s</code><br>\n",
+		strings.Join(stream.BootstrapCommand, " "))
+	if len(stream.FilterLines) > 0 {
+		fmt.Fprintln(writer, "Filter lines:<br>")
+		fmt.Fprintf(writer, "<pre style=\"%s\">\n", codeStyle)
+		libjson.WriteWithIndent(writer, "    ", stream.FilterLines)
+		fmt.Fprintln(writer, "</pre><p style=\"clear: both;\">")
+	}
+	packager := stream.builder.packagerTypes[stream.PackagerType]
+	packager.WriteHtml(writer)
+}
+
+func (b *Builder) getHtmlWriter(streamName string) html.HtmlWriter {
+	if stream := b.getBootstrapStream(streamName); stream != nil {
+		return stream
+	}
+	if stream := b.getNormalStream(streamName); stream != nil {
+		return stream
+	}
+	// Ensure a nil interface is returned, not a stream with value == nil.
+	return nil
+}
+
+func (b *Builder) showImageStream(writer io.Writer, streamName string) {
+	stream := b.getHtmlWriter(streamName)
+	if stream == nil {
+		fmt.Fprintf(writer, "<b>Stream: %s does not exist!</b>\n", streamName)
+		return
+	}
+	fmt.Fprintf(writer, "<h3>Information for stream: %s</h3>\n", streamName)
+	stream.WriteHtml(writer)
+}
+
+func (b *Builder) showImageStreams(writer io.Writer) {
+	streamNames := b.listAllStreamNames()
+	sort.Strings(streamNames)
+	fmt.Fprintln(writer, `<table border="1">`)
+	fmt.Fprintln(writer, "  <tr>")
+	fmt.Fprintln(writer, "    <th>Image Stream</th>")
+	fmt.Fprintln(writer, "    <th>ManifestUrl</th>")
+	fmt.Fprintln(writer, "    <th>ManifestDirectory</th>")
+	fmt.Fprintln(writer, "  </tr>")
+	for _, streamName := range streamNames {
+		fmt.Fprintf(writer, "  <tr>\n")
+		fmt.Fprintf(writer,
+			"    <td><a href=\"showImageStream?%s\">%s</a></td>\n",
+			streamName, streamName)
+		if imageStream := b.getNormalStream(streamName); imageStream == nil {
+			fmt.Fprintln(writer, "    <td></td>")
+			fmt.Fprintln(writer, "    <td></td>")
+		} else {
+			fmt.Fprintf(writer, "    <td>%s</td>\n", imageStream.ManifestUrl)
+			fmt.Fprintf(writer, "    <td>%s</td>\n",
+				imageStream.ManifestDirectory)
+		}
+		fmt.Fprintf(writer, "  </tr>\n")
+	}
+	fmt.Fprintln(writer, "</table><br>")
+}
 
 func (b *Builder) writeHtml(writer io.Writer) {
 	fmt.Fprintf(writer,
@@ -105,19 +169,14 @@ func (b *Builder) writeHtml(writer io.Writer) {
 	}
 }
 
-func (b *Builder) showImageStream(writer io.Writer, streamName string) {
-	stream := b.getNormalStream(streamName)
-	if stream == nil {
-		fmt.Fprintf(writer, "<b>Stream: %s does not exist!</b>\n", streamName)
-		return
-	}
-	fmt.Fprintf(writer, "<h3>Information for stream: %s</h3>\n", streamName)
+func (stream *imageStreamType) WriteHtml(writer io.Writer) {
 	fmt.Fprintf(writer, "Manifest URL: <code>%s</code><br>\n",
 		stream.ManifestUrl)
 	fmt.Fprintf(writer, "Manifest Directory: <code>%s</code><br>\n",
 		stream.ManifestDirectory)
 	buildLog := new(bytes.Buffer)
-	manifestDirectory, err := stream.getManifest(b, streamName, "", buildLog)
+	manifestDirectory, err := stream.getManifest(stream.builder, stream.name,
+		"", buildLog)
 	if err != nil {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
@@ -134,7 +193,7 @@ func (b *Builder) showImageStream(writer io.Writer, streamName string) {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
 	}
-	sourceStream := b.getNormalStream(manifest.SourceImage)
+	sourceStream := stream.builder.getHtmlWriter(manifest.SourceImage)
 	if sourceStream == nil {
 		fmt.Fprintf(writer, "SourceImage: <code>%s</code><br>\n",
 			manifest.SourceImage)
@@ -172,27 +231,29 @@ func (b *Builder) showImageStream(writer io.Writer, streamName string) {
 	fmt.Fprintln(writer, "</font>")
 }
 
-func (b *Builder) showImageStreams(writer io.Writer) {
-	streamNames := b.listNormalStreamNames()
-	sort.Strings(streamNames)
-	fmt.Fprintln(writer, `<table border="1">`)
-	fmt.Fprintln(writer, "  <tr>")
-	fmt.Fprintln(writer, "    <th>Image Stream</th>")
-	fmt.Fprintln(writer, "    <th>ManifestUrl</th>")
-	fmt.Fprintln(writer, "    <th>ManifestDirectory</th>")
-	fmt.Fprintln(writer, "  </tr>")
-	for _, streamName := range streamNames {
-		imageStream := b.getNormalStream(streamName)
-		if imageStream == nil {
-			continue
-		}
-		fmt.Fprintf(writer, "  <tr>\n")
-		fmt.Fprintf(writer,
-			"    <td><a href=\"showImageStream?%s\">%s</a></td>\n",
-			streamName, streamName)
-		fmt.Fprintf(writer, "    <td>%s</td>\n", imageStream.ManifestUrl)
-		fmt.Fprintf(writer, "    <td>%s</td>\n", imageStream.ManifestDirectory)
-		fmt.Fprintf(writer, "  </tr>\n")
+func (packager *packagerType) WriteHtml(writer io.Writer) {
+	fmt.Fprintf(writer, "Clean command: <code>%s</code><br>\n",
+		strings.Join(packager.CleanCommand, " "))
+	fmt.Fprintf(writer, "Install command: <code>%s</code><br>\n",
+		strings.Join(packager.InstallCommand, " "))
+	fmt.Fprintf(writer, "List command: <code>%s</code><br>\n",
+		strings.Join(packager.ListCommand.ArgList, " "))
+	if packager.ListCommand.SizeMultiplier > 1 {
+		fmt.Fprintf(writer, "List command size multiplier: %d<br>\n",
+			packager.ListCommand.SizeMultiplier)
 	}
-	fmt.Fprintln(writer, "</table><br>")
+	fmt.Fprintf(writer, "Update command: <code>%s</code><br>\n",
+		strings.Join(packager.UpdateCommand, " "))
+	fmt.Fprintf(writer, "Upgrade command: <code>%s</code><br>\n",
+		strings.Join(packager.UpgradeCommand, " "))
+	if len(packager.Verbatim) > 0 {
+		fmt.Fprintln(writer, "Verbatim lines:<br>")
+		fmt.Fprintf(writer, "<pre style=\"%s\">\n", codeStyle)
+		libjson.WriteWithIndent(writer, "    ", packager.Verbatim)
+		fmt.Fprintln(writer, "</pre><p style=\"clear: both;\">")
+	}
+	fmt.Fprintln(writer, "Package installer script:<br>")
+	fmt.Fprintf(writer, "<pre style=\"%s\">\n", codeStyle)
+	packager.writePackageInstallerContents(writer)
+	fmt.Fprintln(writer, "</pre><p style=\"clear: both;\">")
 }
