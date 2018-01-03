@@ -16,10 +16,11 @@ for another image, leading to a tree of images. The root of the tree is a
 *[imaginator](../cmd/imaginator/README.md)*. These *bootstrap* images are built
 using vendor-supplied scripts such as `debootstrap` and `yumbootstrap`.
 
-If a *SourceImage* is missing (or too old), it is automatically built. In a
-typical configuration, some commonly used images are automatically and
-periodically rebuilt. This supports fast building of application images which
-automatically have the latest security patches from the OS vendor.
+If a *SourceImage* is missing (or too old (default: 1 hour)), it is
+automatically built. In a typical configuration, some commonly used images are
+automatically and periodically rebuilt. This supports fast building of
+application images which automatically have the latest security patches from the
+OS vendor.
 
 Built images are stored in an *[imageserver](../cmd/imageserver/README.md)*
 which de-duplicates common files and efficiently replicates the data to multiple
