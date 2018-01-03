@@ -1,0 +1,16 @@
+{
+  "Streams": {
+    "image-team/base/Ubuntu-14.04": {
+      "ManifestUrl": "https://git.company.com/Prod-team/image-team.git",
+      "ManifestDirectory": "$IMAGE_STREAM"
+    },
+    "image-team/minimal/Ubuntu-14.04": {
+      "ManifestUrl": "https://git.company.com/Prod-team/image-team.git",
+      "ManifestDirectory": "$IMAGE_STREAM"
+    },
+    "dev-team/webapp/widget-app": {
+      "ManifestUrl": "https://$GIT_USERNAME:$GIT_PASSWORD@secure-git.company.com/Products/Widgets/webapp.git",
+      "ManifestDirectory": ""
+    }
+  }
+}
