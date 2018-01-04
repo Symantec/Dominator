@@ -1,10 +1,8 @@
 {
     "BootstrapStreams": {
-        "bootstrap/CentOS-6": {
+	"bootstrap/CentOS-6": {
 	    "BootstrapCommand": [
 		"yumbootstrap",
-		"--repo",
-		"http://mirror.company.com/centos-6",
 		"centos-6",
 		"$dir"
 	    ],
@@ -17,8 +15,6 @@
 	"bootstrap/CentOS-7": {
 	    "BootstrapCommand": [
 		"yumbootstrap",
-		"--repo",
-		"http://mirror.company.com/centos-7",
 		"centos-7",
 		"$dir"
 	    ],
@@ -36,12 +32,12 @@
 		"$dir",
 		"http://mirror.company.com/debian"
 	    ],
-	    "PackagerType": "deb",
 	    "FilterLines": [
 		"/etc/hostname",
 		"/etc/machine-id",
 		"/var/log/.*"
-	    ]
+	    ],
+	    "PackagerType": "deb"
 	},
         "bootstrap/Ubuntu-14.04": {
 	    "BootstrapCommand": [
@@ -59,7 +55,7 @@
 	    "PackagerType": "deb"
 	}
     },
-    "ImageStreamsUrl": "file:///etc/image-builder/image-streams.json",
+    "ImageStreamsUrl": "file:///etc/imaginator/image-streams.json",
     "PackagerTypes": {
 	"deb": {
 	    "CleanCommand": [
@@ -75,9 +71,9 @@
 	    ],
 	    "ListCommand": {
 		"ArgList": [
-		    dpkg-query",
+		    "dpkg-query",
 		    "-f",
-		    "${binary:Package ${Version} ${Installed-Size}",
+		    "${binary:Package} ${Version} ${Installed-Size}\n",
 		    "--show"
 		],
 		"SizeMultiplier": 1024
@@ -104,7 +100,7 @@
 	    "CleanCommand": [
 		"yum",
 		"clean",
-		"packages"
+		"all"
 	    ],
 	    "InstallCommand": [
 		"yum",
@@ -116,8 +112,8 @@
 		"ArgList": [
 		    "rpm",
 		    "-qa",
-		    "--queryformat,
-		    "%{NAME} %{VERSION} %{SIZE}\n"
+		    "--queryformat",
+		    "%{NAME} %{VERSION}_%{RELEASE} %{SIZE}\n"
 		]
 	    },
 	    "UpdateCommand": [

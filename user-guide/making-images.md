@@ -1,5 +1,8 @@
 # Making Images
-A collection of recipes to make images.
+A collection of recipes to make images. These assume you have generated image
+content by some means. See the guide on
+[manifest-driven image building](image-manifest.md) for how to build image
+content easily and quickly.
 
 ## I just want to push a few files to my machines
 You can do this with a *sparse* image. Unlike regular images where files on the
