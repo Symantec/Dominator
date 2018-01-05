@@ -101,14 +101,12 @@ func writeRegularFile(tarWriter *tar.Writer, fileSystem *filesystem.FileSystem,
 			return fmt.Errorf("%s inode size: %u, object size: %d",
 				name, inode.Size, size)
 		}
-		buf := make([]byte, size)
-		_, err = io.ReadFull(reader, buf)
+		nCopied, err := io.Copy(tarWriter, reader)
 		if err != nil {
 			return err
 		}
-		_, err = tarWriter.Write(buf)
-		if err != nil {
-			return err
+		if nCopied != int64(size) {
+			return fmt.Errorf("nCopied: %d != size: %d", nCopied, size)
 		}
 	}
 	return nil
