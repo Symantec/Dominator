@@ -18,6 +18,7 @@ import (
 var (
 	buildLog = flag.String("buildLog", "",
 		"Filename or URL containing build log")
+	compress      = flag.Bool("compress", false, "If true, compress tar output")
 	computedFiles = flag.String("computedFiles", "",
 		"Name of file containing computed files list")
 	copyMtimesFrom = flag.String("copyMtimesFrom", "",
@@ -84,6 +85,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  mkdir             name")
 	fmt.Fprintln(os.Stderr, "  show              name")
 	fmt.Fprintln(os.Stderr, "  showunrefobj")
+	fmt.Fprintln(os.Stderr, "  tar               name [file]")
 	fmt.Fprintln(os.Stderr, "Fields:")
 	fmt.Fprintln(os.Stderr, "  m: mode")
 	fmt.Fprintln(os.Stderr, "  l: number of hardlinks")
@@ -126,6 +128,7 @@ var subcommands = []subcommand{
 	{"mkdir", 1, 1, makeDirectorySubcommand},
 	{"show", 1, 1, showImageSubcommand},
 	{"showunrefobj", 0, 0, showUnreferencedObjectsSubcommand},
+	{"tar", 1, 2, tarImageSubcommand},
 }
 
 var imageSrpcClient *srpc.Client
