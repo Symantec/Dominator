@@ -1,14 +1,13 @@
 package main
 
 import (
-	"archive/tar"
 	"bufio"
 	"compress/gzip"
 	"fmt"
 	"io"
 	"os"
 
-	fstar "github.com/Symantec/Dominator/lib/filesystem/tar"
+	"github.com/Symantec/Dominator/lib/filesystem/tar"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 )
 
@@ -28,6 +27,10 @@ func tarImageSubcommand(args []string) {
 
 func tarImageAndWrite(objectClient *objectclient.ObjectClient, imageName,
 	outputFilename string) error {
+	fs, err := getTypedImage(imageName)
+	if err != nil {
+		return err
+	}
 	deleteOutfile := true
 	output := io.Writer(os.Stdout)
 	if outputFilename != "" {
@@ -47,18 +50,11 @@ func tarImageAndWrite(objectClient *objectclient.ObjectClient, imageName,
 		}()
 	}
 	if *compress {
-		output = gzip.NewWriter(output)
+		zWriter := gzip.NewWriter(output)
+		defer zWriter.Close()
+		output = zWriter
 	}
-	tarWriter := tar.NewWriter(output)
-	defer tarWriter.Close()
-	fs, err := getTypedImage(imageName)
-	if err != nil {
-		return err
-	}
-	if err := fstar.Encode(tarWriter, fs, objectClient); err != nil {
-		return err
-	}
-	if err := tarWriter.Flush(); err != nil {
+	if err := tar.Write(output, fs, objectClient); err != nil {
 		return err
 	}
 	deleteOutfile = false
