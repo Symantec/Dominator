@@ -17,6 +17,7 @@ type Trigger struct {
 	MatchLines   []string
 	matchRegexes []*regexp.Regexp
 	Service      string
+	DoReboot     bool
 	HighImpact   bool
 }
 
