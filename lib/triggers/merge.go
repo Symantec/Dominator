@@ -24,6 +24,7 @@ func (mt *MergeableTriggers) exportTriggers() *Triggers {
 		triggerList = append(triggerList, &Trigger{
 			MatchLines: matchLines,
 			Service:    service,
+			DoReboot:   trigger.doReboot,
 			HighImpact: trigger.highImpact,
 		})
 	}
@@ -48,6 +49,9 @@ func (mt *MergeableTriggers) merge(triggers *Triggers) {
 		}
 		for _, matchLine := range trigger.MatchLines {
 			trig.matchLines[matchLine] = struct{}{}
+		}
+		if trigger.DoReboot {
+			trig.doReboot = true
 		}
 		if trigger.HighImpact {
 			trig.highImpact = true
