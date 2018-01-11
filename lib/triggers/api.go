@@ -10,6 +10,7 @@ type MergeableTriggers struct {
 
 type mergeableTrigger struct {
 	matchLines map[string]struct{}
+	doReboot   bool
 	highImpact bool
 }
 
@@ -17,6 +18,7 @@ type Trigger struct {
 	MatchLines   []string
 	matchRegexes []*regexp.Regexp
 	Service      string
+	DoReboot     bool
 	HighImpact   bool
 }
 
