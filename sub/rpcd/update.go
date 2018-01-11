@@ -122,34 +122,24 @@ func (t *rpcType) clearUpdateInProgress() {
 	t.updateInProgress = false
 }
 
+// Returns true if there were failures.
 func runTriggers(triggers []*triggers.Trigger, action string,
 	logger log.Logger) bool {
+	doReboot := false
 	hadFailures := false
 	needRestart := false
 	logPrefix := ""
 	if *disableTriggers {
 		logPrefix = "Disabled: "
 	}
-	// For "start" action, if there is a reboot trigger, just do that one.
-	if action == "start" {
-		for _, trigger := range triggers {
-			if trigger.Service == "reboot" {
-				logger.Print(logPrefix, "Rebooting")
-				if *disableTriggers {
-					return hadFailures
-				}
-				if !runCommand(logger, "reboot") {
-					hadFailures = true
-				}
-				return hadFailures
-			}
-		}
-	}
 	ppid := fmt.Sprint(os.Getppid())
 	for _, trigger := range triggers {
-		if trigger.Service == "reboot" && action == "stop" {
-			continue
+		if trigger.DoReboot && action == "start" {
+			doReboot = true
+			break
 		}
+	}
+	for _, trigger := range triggers {
 		if trigger.Service == "subd" {
 			// Never kill myself, just restart.
 			if action == "start" {
@@ -165,9 +155,21 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 		if !runCommand(logger,
 			"run-in-mntns", ppid, "service", trigger.Service, action) {
 			hadFailures = true
+			if trigger.DoReboot && action == "start" {
+				doReboot = false
+			}
 		}
 	}
-	if needRestart {
+	if doReboot {
+		logger.Print(logPrefix, "Rebooting")
+		if *disableTriggers {
+			return hadFailures
+		}
+		if !runCommand(logger, "reboot") {
+			hadFailures = true
+		}
+		return hadFailures
+	} else if needRestart {
 		logger.Printf("%sAction: service subd restart\n", logPrefix)
 		if !runCommand(logger,
 			"run-in-mntns", ppid, "service", "subd", "restart") {
@@ -177,6 +179,7 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 	return hadFailures
 }
 
+// Returns true on success, else false.
 func runCommand(logger log.Logger, name string, args ...string) bool {
 	cmd := exec.Command(name, args...)
 	if logs, err := cmd.CombinedOutput(); err != nil {
