@@ -572,15 +572,6 @@ func (sub *Sub) fetchMissingObjects(srpcClient *srpc.Client, image *image.Image,
 // Returns true if no update needs to be performed.
 func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	logger := sub.herd.logger
-	if !sub.pendingSafetyClear {
-		// Perform a cheap safety check: if over half the inodes will be deleted
-		// then mark the update as unsafe.
-		if sub.requiredImage.Filter != nil &&
-			len(sub.fileSystem.InodeTable)>>1 >
-				len(sub.requiredImage.FileSystem.InodeTable) {
-			return false, statusUnsafeUpdate
-		}
-	}
 	var request subproto.UpdateRequest
 	var reply subproto.UpdateResponse
 	if idle, missing := sub.buildUpdateRequest(&request); missing {
@@ -590,6 +581,13 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	}
 	if sub.mdb.DisableUpdates || sub.herd.updatesDisabledReason != "" {
 		return false, statusUpdatesDisabled
+	}
+	if !sub.pendingSafetyClear {
+		// Perform a cheap safety check: if over half the inodes will be deleted
+		// then mark the update as unsafe.
+		if sub.checkForUnsafeChange(request) {
+			return false, statusUnsafeUpdate
+		}
 	}
 	sub.status = statusSendingUpdate
 	sub.lastUpdateTime = time.Now()
@@ -605,6 +603,21 @@ func (sub *Sub) sendUpdate(srpcClient *srpc.Client) (bool, subStatus) {
 	}
 	sub.pendingSafetyClear = false
 	return false, statusUpdating
+}
+
+// Returns true if the change is unsafe (very large number of deletions).
+func (sub *Sub) checkForUnsafeChange(request subproto.UpdateRequest) bool {
+	if sub.requiredImage.Filter == nil {
+		return false // Sparse image: no deletions.
+	}
+	if len(sub.fileSystem.InodeTable)>>1 <
+		len(sub.requiredImage.FileSystem.InodeTable) {
+		return false
+	}
+	if len(request.PathsToDelete) < len(sub.fileSystem.InodeTable)>>1 {
+		return false
+	}
+	return true
 }
 
 func (sub *Sub) cleanup(srpcClient *srpc.Client) {
