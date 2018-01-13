@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path"
 
@@ -32,7 +31,6 @@ func registerSourceDirectory(manager *filegen.Manager, baseDir string,
 				return err
 			}
 		} else if fi.Mode().IsRegular() {
-			fmt.Println(filename, pathname)
 			manager.RegisterFileForPath(filename, pathname)
 		}
 	}
