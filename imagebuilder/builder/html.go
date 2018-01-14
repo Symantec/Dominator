@@ -207,15 +207,16 @@ func (stream *imageStreamType) WriteHtml(writer io.Writer) {
 	writer.Write(manifestBytes)
 	fmt.Fprintln(writer, "</pre><p style=\"clear: both;\">")
 	packagesFile, err := os.Open(path.Join(manifestDirectory, "package-list"))
-	if err != nil {
+	if err == nil {
+		defer packagesFile.Close()
+		fmt.Fprintln(writer, "Contents of <code>package-list</code> file:<br>")
+		fmt.Fprintf(writer, "<pre style=\"%s\">\n", codeStyle)
+		io.Copy(writer, packagesFile)
+		fmt.Fprintln(writer, "</pre><p style=\"clear: both;\">")
+	} else if !os.IsNotExist(err) {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
 	}
-	defer packagesFile.Close()
-	fmt.Fprintln(writer, "Contents of <code>package-list</code> file:<br>")
-	fmt.Fprintf(writer, "<pre style=\"%s\">\n", codeStyle)
-	io.Copy(writer, packagesFile)
-	fmt.Fprintln(writer, "</pre><p style=\"clear: both;\">")
 	if size, err := getTreeSize(manifestDirectory); err != nil {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
