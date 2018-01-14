@@ -6,4 +6,4 @@ cd "${0%/*}"
 
 . ./scripts/install.lib
 
-install_all image-builder
+install_all imaginator
