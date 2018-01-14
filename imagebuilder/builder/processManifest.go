@@ -14,7 +14,6 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/verstr"
 )
@@ -25,20 +24,19 @@ const (
 )
 
 func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
-	unpackImageFunc unpackImageFunction, rootDir string, buildLog *bytes.Buffer,
-	logger log.Logger) (manifestType, error) {
+	unpackImageFunc unpackImageFunction, rootDir string,
+	buildLog *bytes.Buffer) (manifestType, error) {
 	manifestFile := path.Join(manifestDir, "manifest")
-	var manifest manifestType
-	if err := json.ReadFromFile(manifestFile, &manifest); err != nil {
+	var manifestConfig manifestConfigType
+	if err := json.ReadFromFile(manifestFile, &manifestConfig); err != nil {
 		return manifestType{}, err
 	}
-	imageName, err := unpackImageFunc(client, manifest.SourceImage, rootDir,
-		logger)
+	sourceImageInfo, err := unpackImageFunc(client, manifestConfig.SourceImage,
+		rootDir, buildLog)
 	if err != nil {
 		return manifestType{},
 			errors.New("error unpacking image: " + err.Error())
 	}
-	fmt.Fprintf(buildLog, "Source image: %s\n", imageName)
 	startTime := time.Now()
 	if err := processManifest(manifestDir, rootDir, buildLog); err != nil {
 		return manifestType{},
@@ -46,7 +44,7 @@ func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
 	}
 	fmt.Fprintf(buildLog, "Processed manifest in %s\n",
 		format.Duration(time.Since(startTime)))
-	return manifest, nil
+	return manifestType{manifestConfig.Filter, sourceImageInfo}, nil
 }
 
 func processManifest(manifestDir, rootDir string, buildLog io.Writer) error {

@@ -9,12 +9,13 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/triggers"
 )
 
 type imageBuilder interface {
 	build(b *Builder, client *srpc.Client, streamName string,
 		expiresIn time.Duration, gitBranch string, maxSourceAge time.Duration,
-		buildLog *bytes.Buffer, logger log.Logger) (string, error)
+		buildLog *bytes.Buffer) (string, error)
 }
 
 type bootstrapStream struct {
@@ -36,6 +37,16 @@ type masterConfigurationType struct {
 	ImageStreamsToAutoRebuild []string                    `json:",omitempty"`
 	ImageStreamsUrl           string                      `json:",omitempty"`
 	PackagerTypes             map[string]packagerType     `json:",omitempty"`
+}
+
+type manifestConfigType struct {
+	SourceImage string
+	*filter.Filter
+}
+
+type manifestType struct {
+	filter          *filter.Filter
+	sourceImageInfo *sourceImageInfoType
 }
 
 type imageStreamType struct {
@@ -65,8 +76,13 @@ type packagerType struct {
 	Verbatim       []string
 }
 
+type sourceImageInfoType struct {
+	filter   *filter.Filter
+	triggers *triggers.Triggers
+}
+
 type unpackImageFunction func(client *srpc.Client, streamName, rootDir string,
-	logger log.Logger) (string, error)
+	buildLog *bytes.Buffer) (*sourceImageInfoType, error)
 
 type Builder struct {
 	stateDir                  string
@@ -120,12 +136,12 @@ func BuildImageFromManifest(client *srpc.Client, manifestDir, streamName string,
 	expiresIn time.Duration, buildLog *bytes.Buffer, logger log.Logger) (
 	string, error) {
 	return buildImageFromManifest(client, manifestDir, streamName, expiresIn,
-		unpackImageSimple, buildLog, logger)
+		unpackImageSimple, buildLog)
 }
 
 func BuildTreeFromManifest(client *srpc.Client, manifestDir string,
 	buildLog *bytes.Buffer, logger log.Logger) (string, error) {
-	return buildTreeFromManifest(client, manifestDir, buildLog, logger)
+	return buildTreeFromManifest(client, manifestDir, buildLog)
 }
 
 func ProcessManifest(manifestDir, rootDir string, buildLog io.Writer) error {

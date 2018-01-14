@@ -17,7 +17,6 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/log"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/triggers"
@@ -42,7 +41,7 @@ func addImage(client *srpc.Client, streamName, dirname string,
 	scanFilter *filter.Filter, computedFilesList []util.ComputedFile,
 	imageFilter *filter.Filter,
 	trig *triggers.Triggers, expiresIn time.Duration,
-	buildLog *bytes.Buffer, logger log.Logger) (string, error) {
+	buildLog *bytes.Buffer) (string, error) {
 	packages, err := listPackages(dirname)
 	if err != nil {
 		return "", err
@@ -62,6 +61,11 @@ func addImage(client *srpc.Client, streamName, dirname string,
 		"Scanned file-system and uploaded %d objects (%s) in %s (%s/s)\n",
 		len(fs.InodeTable), format.FormatBytes(fs.TotalDataBytes),
 		format.Duration(duration), format.FormatBytes(speed))
+	if _, img, err := getLatestImage(client, streamName, buildLog); err != nil {
+		return "", err
+	} else if img != nil {
+		util.CopyMtimes(img.FileSystem, fs)
+	}
 	objClient := objectclient.AttachObjectClient(client)
 	// Make a copy of the build log because AddObject() drains the buffer.
 	buildLog = bytes.NewBuffer(buildLog.Bytes())
@@ -72,11 +76,6 @@ func addImage(client *srpc.Client, streamName, dirname string,
 	}
 	if err := objClient.Close(); err != nil {
 		return "", err
-	}
-	if _, oImg, err := getLatestImage(client, streamName, logger); err != nil {
-		return "", err
-	} else if oImg != nil {
-		util.CopyMtimes(oImg.FileSystem, fs)
 	}
 	img := &image.Image{
 		BuildLog:   &image.Annotation{Object: &hashVal},

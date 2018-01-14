@@ -188,7 +188,7 @@ func (stream *imageStreamType) WriteHtml(writer io.Writer) {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
 	}
-	var manifest manifestType
+	var manifest manifestConfigType
 	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return

@@ -17,7 +17,6 @@ import (
 
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 )
 
@@ -53,7 +52,7 @@ func clean(rootDir string, buildLog io.Writer) error {
 
 func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
 	streamName string, expiresIn time.Duration, _ string, _ time.Duration,
-	buildLog *bytes.Buffer, logger log.Logger) (string, error) {
+	buildLog *bytes.Buffer) (string, error) {
 	startTime := time.Now()
 	args := make([]string, 0, len(stream.BootstrapCommand))
 	rootDir, err := ioutil.TempDir("",
@@ -90,7 +89,7 @@ func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
 		}
 		startTime = time.Now()
 		name, err := addImage(client, streamName, rootDir, stream.Filter,
-			nil, &filter.Filter{}, nil, expiresIn, buildLog, logger)
+			nil, &filter.Filter{}, nil, expiresIn, buildLog)
 		if err != nil {
 			return "", err
 		}
