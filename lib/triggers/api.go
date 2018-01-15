@@ -18,8 +18,8 @@ type Trigger struct {
 	MatchLines   []string
 	matchRegexes []*regexp.Regexp
 	Service      string
-	DoReboot     bool
-	HighImpact   bool
+	DoReboot     bool `json:",omitempty"`
+	HighImpact   bool `json:",omitempty"`
 }
 
 func (trigger *Trigger) ReplaceStrings(replaceFunc func(string) string) {
