@@ -207,15 +207,12 @@ func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
 		return "", errors.New(
 			"error loading computed files: " + err.Error())
 	}
-	imageFilter, err := filter.Load(path.Join(manifestDir, "filter"))
+	imageFilter, addFilter, err := loadFilter(manifestDir)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return "", err
-		}
-		imageFilter = &filter.Filter{}
+		return "", err
 	}
-	imageTriggers, err := triggers.Load(path.Join(manifestDir, "triggers"))
-	if err != nil && !os.IsNotExist(err) {
+	imageTriggers, addTriggers, err := loadTriggers(manifestDir)
+	if err != nil {
 		return "", err
 	}
 	rootDir, err := ioutil.TempDir("",
@@ -229,6 +226,18 @@ func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
 		unpackImageFunc, rootDir, buildLog)
 	if err != nil {
 		return "", err
+	}
+	if addFilter {
+		mergeableFilter := &filter.MergeableFilter{}
+		mergeableFilter.Merge(manifest.sourceImageInfo.filter)
+		mergeableFilter.Merge(imageFilter)
+		imageFilter = mergeableFilter.ExportFilter()
+	}
+	if addTriggers {
+		mergeableTriggers := &triggers.MergeableTriggers{}
+		mergeableTriggers.Merge(manifest.sourceImageInfo.triggers)
+		mergeableTriggers.Merge(imageTriggers)
+		imageTriggers = mergeableTriggers.ExportTriggers()
 	}
 	startTime := time.Now()
 	name, err := addImage(client, streamName, rootDir, manifest.filter,
@@ -254,6 +263,48 @@ func buildTreeFromManifest(client *srpc.Client, manifestDir string,
 		return "", err
 	}
 	return rootDir, nil
+}
+
+func loadFilter(manifestDir string) (*filter.Filter, bool, error) {
+	imageFilter, err := filter.Load(path.Join(manifestDir, "filter"))
+	if err != nil && !os.IsNotExist(err) {
+		return nil, false, err
+	}
+	addFilter, err := filter.Load(path.Join(manifestDir, "filter.add"))
+	if err != nil && !os.IsNotExist(err) {
+		return nil, false, err
+	}
+	if imageFilter == nil && addFilter == nil {
+		return &filter.Filter{}, false, nil
+	} else if imageFilter != nil && addFilter != nil {
+		return nil, false, errors.New(
+			"filter and filter.add files both present")
+	} else if imageFilter != nil {
+		return imageFilter, false, nil
+	} else {
+		return addFilter, true, nil
+	}
+}
+
+func loadTriggers(manifestDir string) (*triggers.Triggers, bool, error) {
+	imageTriggers, err := triggers.Load(path.Join(manifestDir, "triggers"))
+	if err != nil && !os.IsNotExist(err) {
+		return nil, false, err
+	}
+	addTriggers, err := triggers.Load(path.Join(manifestDir, "triggers.add"))
+	if err != nil && !os.IsNotExist(err) {
+		return nil, false, err
+	}
+	if imageTriggers == nil && addTriggers == nil {
+		return nil, false, nil
+	} else if imageTriggers != nil && addTriggers != nil {
+		return nil, false, errors.New(
+			"triggers and triggers.add files both present")
+	} else if imageTriggers != nil {
+		return imageTriggers, false, nil
+	} else {
+		return addTriggers, true, nil
+	}
 }
 
 func unpackImageSimple(client *srpc.Client, streamName, rootDir string,
