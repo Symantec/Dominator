@@ -3,11 +3,10 @@ package builder
 import (
 	"bytes"
 	"errors"
-	stdlog "log"
+	"fmt"
 	"time"
 
 	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/log/teelogger"
 	"github.com/Symantec/Dominator/lib/srpc"
 )
 
@@ -15,14 +14,14 @@ func (b *Builder) rebuildImages(minInterval time.Duration) {
 	if minInterval < 1 {
 		return
 	}
-	sleepUntil := time.Now().Add(minInterval)
+	var sleepUntil time.Time
 	for ; ; time.Sleep(time.Until(sleepUntil)) {
+		sleepUntil = time.Now().Add(minInterval)
 		client, err := srpc.DialHTTP("tcp", b.imageServerAddress, 0)
 		if err != nil {
 			b.logger.Println(err)
 			continue
 		}
-		sleepUntil = time.Now().Add(minInterval)
 		for _, streamName := range b.listStreamsToAutoRebuild() {
 			_, _, err := b.build(client, streamName, minInterval*2, "", 0)
 			if err != nil {
@@ -59,19 +58,19 @@ func (b *Builder) build(client *srpc.Client, streamName string,
 	}
 	b.logger.Printf("Building new image for stream: %s\n", streamName)
 	buildLog := &bytes.Buffer{}
-	buildLogger := stdlog.New(buildLog, "", 0)
-	buildLogger.Printf("Starting build for %s at %s\n",
-		streamName, startTime.Format(format.TimeFormatSeconds))
 	b.buildResultsLock.Lock()
 	b.currentBuildLogs[streamName] = buildLog
 	b.buildResultsLock.Unlock()
 	name, err := builder.build(b, client, streamName, expiresIn, gitBranch,
-		maxSourceAge, buildLog, buildLogger)
-	if err != nil {
-		buildLogger.Printf("Error building image: %s\n", err)
+		maxSourceAge, buildLog)
+	if err == nil {
+		buildDuration := format.Duration(time.Since(startTime))
+		fmt.Fprintf(buildLog, "Total build duration: %s\n", buildDuration)
+		b.logger.Printf("Built image for stream: %s in %s\n",
+			streamName, buildDuration)
+	} else {
+		fmt.Fprintf(buildLog, "Error building image: %s\n", err)
 	}
-	teelogger.New(b.logger, buildLogger).Printf("Total build duration: %s\n",
-		format.Duration(time.Since(startTime)))
 	b.buildResultsLock.Lock()
 	defer b.buildResultsLock.Unlock()
 	delete(b.currentBuildLogs, streamName)

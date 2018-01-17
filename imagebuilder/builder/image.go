@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	stdlog "log"
 	"os"
 	"os/exec"
 	"path"
@@ -15,20 +16,14 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/log"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/triggers"
 )
 
-type manifestType struct {
-	SourceImage string
-	*filter.Filter
-}
-
 func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 	streamName string, expiresIn time.Duration, gitBranch string,
-	maxSourceAge time.Duration, buildLog *bytes.Buffer, logger log.Logger) (
+	maxSourceAge time.Duration, buildLog *bytes.Buffer) (
 	string, error) {
 	manifestDirectory, err := stream.getManifest(b, streamName,
 		gitBranch, buildLog)
@@ -39,10 +34,10 @@ func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 	name, err := buildImageFromManifest(client, streamName, manifestDirectory,
 		expiresIn,
 		func(client *srpc.Client, streamName, rootDir string,
-			logger log.Logger) (string, error) {
+			buildLog *bytes.Buffer) (*sourceImageInfoType, error) {
 			return unpackImage(client, streamName, b, maxSourceAge, expiresIn,
-				rootDir, logger)
-		}, buildLog, logger)
+				rootDir, buildLog)
+		}, buildLog)
 	if err != nil {
 		return "", err
 	}
@@ -200,7 +195,7 @@ func runCommand(buildLog *bytes.Buffer, cwd string, args ...string) error {
 
 func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
 	expiresIn time.Duration, unpackImageFunc unpackImageFunction,
-	buildLog *bytes.Buffer, logger log.Logger) (string, error) {
+	buildLog *bytes.Buffer) (string, error) {
 	// First load all the various manifest files (fail early on error).
 	computedFilesList, err := util.LoadComputedFiles(
 		path.Join(manifestDir, "computed-files.json"))
@@ -212,15 +207,12 @@ func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
 		return "", errors.New(
 			"error loading computed files: " + err.Error())
 	}
-	imageFilter, err := filter.Load(path.Join(manifestDir, "filter"))
+	imageFilter, addFilter, err := loadFilter(manifestDir)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return "", err
-		}
-		imageFilter = &filter.Filter{}
+		return "", err
 	}
-	imageTriggers, err := triggers.Load(path.Join(manifestDir, "triggers"))
-	if err != nil && !os.IsNotExist(err) {
+	imageTriggers, addTriggers, err := loadTriggers(manifestDir)
+	if err != nil {
 		return "", err
 	}
 	rootDir, err := ioutil.TempDir("",
@@ -231,14 +223,25 @@ func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
 	defer os.RemoveAll(rootDir)
 	fmt.Fprintf(buildLog, "Created image working directory: %s\n", rootDir)
 	manifest, err := unpackImageAndProcessManifest(client, manifestDir,
-		unpackImageFunc, rootDir, buildLog, logger)
+		unpackImageFunc, rootDir, buildLog)
 	if err != nil {
 		return "", err
 	}
+	if addFilter {
+		mergeableFilter := &filter.MergeableFilter{}
+		mergeableFilter.Merge(manifest.sourceImageInfo.filter)
+		mergeableFilter.Merge(imageFilter)
+		imageFilter = mergeableFilter.ExportFilter()
+	}
+	if addTriggers {
+		mergeableTriggers := &triggers.MergeableTriggers{}
+		mergeableTriggers.Merge(manifest.sourceImageInfo.triggers)
+		mergeableTriggers.Merge(imageTriggers)
+		imageTriggers = mergeableTriggers.ExportTriggers()
+	}
 	startTime := time.Now()
-	name, err := addImage(client, streamName, rootDir, manifest.Filter,
-		computedFilesList, imageFilter, imageTriggers, expiresIn, buildLog,
-		logger)
+	name, err := addImage(client, streamName, rootDir, manifest.filter,
+		computedFilesList, imageFilter, imageTriggers, expiresIn, buildLog)
 	if err != nil {
 		return "", err
 	}
@@ -248,13 +251,13 @@ func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
 }
 
 func buildTreeFromManifest(client *srpc.Client, manifestDir string,
-	buildLog *bytes.Buffer, logger log.Logger) (string, error) {
+	buildLog *bytes.Buffer) (string, error) {
 	rootDir, err := ioutil.TempDir("", "tree")
 	if err != nil {
 		return "", err
 	}
 	_, err = unpackImageAndProcessManifest(client, manifestDir,
-		unpackImageSimple, rootDir, buildLog, logger)
+		unpackImageSimple, rootDir, buildLog)
 	if err != nil {
 		os.RemoveAll(rootDir)
 		return "", err
@@ -262,57 +265,102 @@ func buildTreeFromManifest(client *srpc.Client, manifestDir string,
 	return rootDir, nil
 }
 
+func loadFilter(manifestDir string) (*filter.Filter, bool, error) {
+	imageFilter, err := filter.Load(path.Join(manifestDir, "filter"))
+	if err != nil && !os.IsNotExist(err) {
+		return nil, false, err
+	}
+	addFilter, err := filter.Load(path.Join(manifestDir, "filter.add"))
+	if err != nil && !os.IsNotExist(err) {
+		return nil, false, err
+	}
+	if imageFilter == nil && addFilter == nil {
+		return &filter.Filter{}, false, nil
+	} else if imageFilter != nil && addFilter != nil {
+		return nil, false, errors.New(
+			"filter and filter.add files both present")
+	} else if imageFilter != nil {
+		return imageFilter, false, nil
+	} else {
+		return addFilter, true, nil
+	}
+}
+
+func loadTriggers(manifestDir string) (*triggers.Triggers, bool, error) {
+	imageTriggers, err := triggers.Load(path.Join(manifestDir, "triggers"))
+	if err != nil && !os.IsNotExist(err) {
+		return nil, false, err
+	}
+	addTriggers, err := triggers.Load(path.Join(manifestDir, "triggers.add"))
+	if err != nil && !os.IsNotExist(err) {
+		return nil, false, err
+	}
+	if imageTriggers == nil && addTriggers == nil {
+		return nil, false, nil
+	} else if imageTriggers != nil && addTriggers != nil {
+		return nil, false, errors.New(
+			"triggers and triggers.add files both present")
+	} else if imageTriggers != nil {
+		return imageTriggers, false, nil
+	} else {
+		return addTriggers, true, nil
+	}
+}
+
 func unpackImageSimple(client *srpc.Client, streamName, rootDir string,
-	logger log.Logger) (string, error) {
-	return unpackImage(client, streamName, nil, 0, 0, rootDir, logger)
+	buildLog *bytes.Buffer) (*sourceImageInfoType, error) {
+	return unpackImage(client, streamName, nil, 0, 0, rootDir, buildLog)
 }
 
 func unpackImage(client *srpc.Client, streamName string, builder *Builder,
 	maxSourceAge, expiresIn time.Duration, rootDir string,
-	logger log.Logger) (string, error) {
-	imageName, sourceImage, err := getLatestImage(client, streamName, logger)
+	buildLog *bytes.Buffer) (*sourceImageInfoType, error) {
+	imageName, sourceImage, err := getLatestImage(client, streamName, buildLog)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if sourceImage == nil {
 		if builder == nil {
-			return "", errors.New("no images for stream: " + streamName)
+			return nil, errors.New("no images for stream: " + streamName)
 		}
-		logger.Printf("No source image: %s, attempting to build one\n",
+		fmt.Fprintf(buildLog, "No source image: %s, attempting to build one\n",
 			streamName)
 		imageName, _, err = builder.build(client, streamName, expiresIn,
 			"master", maxSourceAge)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		sourceImage, err = getImage(client, imageName, logger)
+		sourceImage, err = getImage(client, imageName, buildLog)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		logger.Printf("Built new source image: %s\n", imageName)
+		fmt.Fprintf(buildLog, "Built new source image: %s\n", imageName)
 		sourceImage.FileSystem.RebuildInodePointers()
 	}
 	if maxSourceAge > 0 && time.Since(sourceImage.CreatedOn) > maxSourceAge &&
 		builder != nil {
-		logger.Printf("Image: %s is too old, attempting to build a new one\n",
+		fmt.Fprintf(buildLog,
+			"Image: %s is too old, attempting to build a new one\n",
 			imageName)
 		imageName, _, err = builder.build(client, streamName, expiresIn,
 			"master", maxSourceAge)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		sourceImage, err = getImage(client, imageName, logger)
+		sourceImage, err = getImage(client, imageName, buildLog)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		logger.Printf("Built new source image: %s\n", imageName)
+		fmt.Fprintf(buildLog, "Built new source image: %s\n", imageName)
 		sourceImage.FileSystem.RebuildInodePointers()
 	}
 	objClient := objectclient.AttachObjectClient(client)
 	defer objClient.Close()
-	err = util.Unpack(sourceImage.FileSystem, objClient, rootDir, logger)
+	err = util.Unpack(sourceImage.FileSystem, objClient, rootDir,
+		stdlog.New(buildLog, "", 0))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return imageName, nil
+	fmt.Fprintf(buildLog, "Source image: %s\n", imageName)
+	return &sourceImageInfoType{sourceImage.Filter, sourceImage.Triggers}, nil
 }
