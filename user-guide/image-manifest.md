@@ -91,7 +91,13 @@ of objects with the following fields:
 An optional file containing a newline-separated list of regular expressions
 matching files which should not be updated on target machines. This is relevant
 only for images which will be lived patched onto machines with the
-*[dominator](../cmd/dominator/README.md)*.
+*[dominator](../cmd/dominator/README.md)*. This must not be present if the
+`filter.add` file is present.
+
+### `filter.add` file
+This is similar to the `filter` file, except that the filter expressions are
+*added* to the filter of the *SourceImage*, thus inheriting and (if not empty)
+extending the filter. This must not be present if the `filter` file is present.
 
 ### `triggers` file
 An optional JSON encoded file listing the *triggers* (services which should be
@@ -104,3 +110,11 @@ of objects with the following fields:
   	     the regular expressions
 - `HighImpact`: if true, restarting the service will have a high impact on the
   		machine (i.e. a reboot)
+
+This must not be present if the `triggers.add` file is present.
+
+### `triggers.add` file
+This is similar to the `triggers` file, except that the triggers are *added*
+(merged) to the triggers of the *SourceImage*, thus inheriting and (if not
+`[]`) extending the triggers. This must not be present if the `triggers` file is
+present.
