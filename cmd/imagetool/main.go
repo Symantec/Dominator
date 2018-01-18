@@ -81,6 +81,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  listdirs")
 	fmt.Fprintln(os.Stderr, "  listunrefobj")
 	fmt.Fprintln(os.Stderr, "  list-latest-image directory")
+	fmt.Fprintln(os.Stderr, "  merge-filters     filter-file...")
 	fmt.Fprintln(os.Stderr, "  merge-triggers    triggers-file...")
 	fmt.Fprintln(os.Stderr, "  mkdir             name")
 	fmt.Fprintln(os.Stderr, "  show              name")
@@ -124,6 +125,7 @@ var subcommands = []subcommand{
 	{"listdirs", 0, 0, listDirectoriesSubcommand},
 	{"listunrefobj", 0, 0, listUnreferencedObjectsSubcommand},
 	{"list-latest-image", 1, 1, listLatestImageSubcommand},
+	{"merge-filters", 1, -1, mergeFiltersSubcommand},
 	{"merge-triggers", 1, -1, mergeTriggersSubcommand},
 	{"mkdir", 1, 1, makeDirectorySubcommand},
 	{"show", 1, 1, showImageSubcommand},
