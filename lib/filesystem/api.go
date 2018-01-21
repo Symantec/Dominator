@@ -75,6 +75,11 @@ func (fs *FileSystem) Filter(filter *filter.Filter) *FileSystem {
 	return fs.filter(filter)
 }
 
+func (fs *FileSystem) ForEachFile(
+	fn func(name string, inodeNumber uint64, inode GenericInode) error) error {
+	return fs.forEachFile(fn)
+}
+
 func (fs *FileSystem) GetObjects() map[hash.Hash]uint64 {
 	return fs.getObjects()
 }
