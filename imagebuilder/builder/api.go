@@ -28,6 +28,7 @@ type bootstrapStream struct {
 
 type buildResultType struct {
 	imageName string
+	duration  time.Duration
 	buildLog  []byte
 	error     error
 }

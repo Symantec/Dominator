@@ -152,6 +152,7 @@ func (b *Builder) writeHtml(writer io.Writer) {
 		fmt.Fprintln(writer, "    <th>Image Stream</th>")
 		fmt.Fprintln(writer, "    <th>Name</th>")
 		fmt.Fprintln(writer, "    <th>Build log</th>")
+		fmt.Fprintln(writer, "    <th>Last duration</th>")
 		fmt.Fprintln(writer, "  </tr>")
 		for _, streamName := range streamNames {
 			result := goodBuilds[streamName]
@@ -163,6 +164,8 @@ func (b *Builder) writeHtml(writer io.Writer) {
 			fmt.Fprintf(writer,
 				"    <td><a href=\"showLastBuildLog?%s\">log</a></td>\n",
 				streamName)
+			fmt.Fprintf(writer, "    <td>%s</td>\n",
+				format.Duration(result.duration))
 			fmt.Fprintf(writer, "  </tr>\n")
 		}
 		fmt.Fprintln(writer, "</table><br>")
