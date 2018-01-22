@@ -29,8 +29,8 @@ func (trigger *Trigger) ReplaceStrings(replaceFunc func(string) string) {
 type Triggers struct {
 	Triggers          []*Trigger
 	compiled          bool
-	matchedTriggers   map[*Trigger]bool
-	unmatchedTriggers map[*Trigger]bool
+	matchedTriggers   map[*Trigger]struct{}
+	unmatchedTriggers map[*Trigger]struct{}
 }
 
 func Decode(jsonData []byte) (*Triggers, error) {
@@ -45,8 +45,21 @@ func New() *Triggers {
 	return newTriggers()
 }
 
+func (triggers *Triggers) Len() int {
+	return len(triggers.Triggers)
+}
+
+func (triggers *Triggers) Less(left, right int) bool {
+	return triggers.Triggers[left].Service < triggers.Triggers[right].Service
+}
+
 func (triggers *Triggers) ReplaceStrings(replaceFunc func(string) string) {
 	triggers.replaceStrings(replaceFunc)
+}
+
+func (triggers *Triggers) Swap(left, right int) {
+	triggers.Triggers[left], triggers.Triggers[right] =
+		triggers.Triggers[right], triggers.Triggers[left]
 }
 
 func (mt *MergeableTriggers) ExportTriggers() *Triggers {
@@ -63,4 +76,8 @@ func (triggers *Triggers) Match(line string) {
 
 func (triggers *Triggers) GetMatchedTriggers() []*Trigger {
 	return triggers.getMatchedTriggers()
+}
+
+func (triggers *Triggers) GetMatchStatistics() (nMatched, nUnmatched uint) {
+	return triggers.getMatchStatistics()
 }
