@@ -2,7 +2,10 @@
 
 echo=
 
-if [ -d /usr/lib/systemd/system ]; then
+if [ -x /bin/systemctl -a -d /lib/systemd/system ]; then
+    readonly init='systemd'
+    readonly destdir='/lib/systemd/system'
+elif [ -x /usr/bin/systemctl -a -d /usr/lib/systemd/system ]; then
     readonly init='systemd'
     readonly destdir='/usr/lib/systemd/system'
 elif [ -x /usr/sbin/update-rc.d ]; then
