@@ -1,7 +1,9 @@
 package mbr
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 )
 
 func decode(file *os.File) (*Mbr, error) {
@@ -29,4 +31,15 @@ func (mbr *Mbr) getPartitionSize(index uint) uint64 {
 		uint64(mbr.raw[partitionOffset+13])<<8 +
 		uint64(mbr.raw[partitionOffset+14])<<16 +
 		uint64(mbr.raw[partitionOffset+15])<<24)
+}
+
+func writeDefault(filename string) error {
+	cmd := exec.Command("parted", "-s", "-a", "optimal", filename,
+		"mklabel", "msdos", "mkpart", "primary", "ext2", "0%", "100%")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("error partitioning: %s: %s: %s",
+			filename, err, output)
+	}
+	return nil
 }

@@ -23,3 +23,7 @@ func (mbr *Mbr) GetPartitionOffset(index uint) uint64 {
 func (mbr *Mbr) GetPartitionSize(index uint) uint64 {
 	return mbr.getPartitionSize(index)
 }
+
+func WriteDefault(filename string) error {
+	return writeDefault(filename)
+}
