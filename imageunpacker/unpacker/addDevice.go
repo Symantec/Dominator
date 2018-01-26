@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path"
+
+	"github.com/Symantec/Dominator/lib/mbr"
 )
 
 var sysfsDirectory = "/sys/block"
@@ -44,16 +46,13 @@ func (u *Unpacker) addDevice(deviceId string) error {
 }
 
 func partitionAndMkFs(deviceName string) error {
-	cmd := exec.Command("parted", "-s", "-a", "optimal", "/dev/"+deviceName,
-		"mklabel", "msdos", "mkpart", "primary", "ext2", "0%", "100%")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("error partitioning: %s: %s", err, output)
+	devicePath := "/dev/" + deviceName
+	if err := mbr.WriteDefault(devicePath, mbr.TABLE_TYPE_MSDOS); err != nil {
+		return err
 	}
-	cmd = exec.Command("mkfs.ext4", "-L", "rootfs", "-i", "8192",
-		"/dev/"+deviceName+"1")
-	output, err = cmd.CombinedOutput()
-	if err != nil {
+	cmd := exec.Command("mkfs.ext4", "-L", "rootfs", "-i", "8192",
+		devicePath+"1")
+	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("error making file-system: %s: %s", err, output)
 	}
 	return nil
