@@ -231,7 +231,7 @@ func TestSplitHashes5(t *testing.T) {
 			[]fileInfo{{101, hash1, 1}, {101, hash1, 0}, {101, hash1, 0}},
 			[]uint64{1, 2, 1, 2, 3}))
 	if len(request.HardlinksToMake) != 2 {
-		t.Error("#HardlinksToMake: %d != 2", len(request.HardlinksToMake))
+		t.Errorf("#HardlinksToMake: %d != 2", len(request.HardlinksToMake))
 	}
 	if request.HardlinksToMake[0].NewLink != "/file3" ||
 		request.HardlinksToMake[0].Target != "/file2" {
