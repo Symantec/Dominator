@@ -10,13 +10,12 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/objectserver"
-	"github.com/Symantec/Dominator/lib/objectserver/client"
 )
 
 func encode(tarWriter *tar.Writer, fileSystem *filesystem.FileSystem,
-	objectClient *client.ObjectClient) error {
+	objectsGetter objectserver.ObjectsGetter) error {
 	hashList := getOrderedObjectsList(fileSystem)
-	objectsReader, err := objectClient.GetObjects(hashList)
+	objectsReader, err := objectsGetter.GetObjects(hashList)
 	if err != nil {
 		return err
 	}
