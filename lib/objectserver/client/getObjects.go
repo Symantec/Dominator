@@ -45,11 +45,7 @@ func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (
 }
 
 func (or *ObjectsReader) close() error {
-	err := or.reader.Close()
-	if e := or.client.Close(); err == nil {
-		err = e
-	}
-	return err
+	return or.reader.Close()
 }
 
 func (or *ObjectsReader) nextObject() (uint64, io.ReadCloser, error) {
