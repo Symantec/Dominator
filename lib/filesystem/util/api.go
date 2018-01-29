@@ -3,6 +3,7 @@ package util
 import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/mbr"
 	"github.com/Symantec/Dominator/lib/objectserver"
 )
 
@@ -43,4 +44,13 @@ func SpliceComputedFiles(fs *filesystem.FileSystem,
 func Unpack(fs *filesystem.FileSystem, objectsGetter objectserver.ObjectsGetter,
 	rootDir string, logger log.Logger) error {
 	return unpack(fs, objectsGetter, rootDir, logger)
+}
+
+func WriteRaw(fs *filesystem.FileSystem,
+	objectsGetter objectserver.ObjectsGetter, rawFilename string,
+	tableType mbr.TableType,
+	minFreeSpace uint64, roundupPower uint64, makeBootable bool,
+	logger log.Logger) error {
+	return writeRaw(fs, objectsGetter, rawFilename, tableType, minFreeSpace,
+		roundupPower, makeBootable, logger)
 }
