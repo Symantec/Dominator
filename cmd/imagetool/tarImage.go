@@ -27,7 +27,7 @@ func tarImageSubcommand(args []string) {
 
 func tarImageAndWrite(objectClient *objectclient.ObjectClient, imageName,
 	outputFilename string) error {
-	fs, err := getTypedImage(imageName)
+	fs, objectsGetter, err := getImageForUnpack(objectClient, imageName)
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func tarImageAndWrite(objectClient *objectclient.ObjectClient, imageName,
 		defer zWriter.Close()
 		output = zWriter
 	}
-	if err := tar.Write(output, fs, objectClient); err != nil {
+	if err := tar.Write(output, fs, objectsGetter); err != nil {
 		return err
 	}
 	deleteOutfile = false
