@@ -10,6 +10,9 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/flagutil"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/log/cmdlogger"
+	"github.com/Symantec/Dominator/lib/mbr"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
@@ -21,6 +24,8 @@ var (
 	compress      = flag.Bool("compress", false, "If true, compress tar output")
 	computedFiles = flag.String("computedFiles", "",
 		"Name of file containing computed files list")
+	computedFilesRoot = flag.String("computedFilesRoot", "",
+		"Name of directory tree containing computed files to replace on unpack")
 	copyMtimesFrom = flag.String("copyMtimesFrom", "",
 		"Name of image to copy mtimes for otherwise unchanged files/devices")
 	debug = flag.Bool("debug", false,
@@ -36,19 +41,29 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
+	makeBootable = flag.Bool("makeBootable", true,
+		"If true, make raw image bootable by installing GRUB")
+	minFreeBytes = flag.Uint64("minFreeBytes", 4<<20,
+		"minimum number of free bytes in raw image")
 	releaseNotes = flag.String("releaseNotes", "",
 		"Filename or URL containing release notes")
 	requiredPaths = flagutil.StringToRuneMap(constants.RequiredPaths)
-	skipFields    = flag.String("skipFields", "",
+	roundupPower  = flag.Uint64("roundupPower", 24,
+		"power of 2 to round up raw image size")
+	skipFields = flag.String("skipFields", "",
 		"Fields to skip when showing or diffing images")
-	timeout = flag.Duration("timeout", 0, "Timeout for get subcommand")
+	tableType mbr.TableType = mbr.TABLE_TYPE_MSDOS
+	timeout                 = flag.Duration("timeout", 0,
+		"Timeout for get subcommand")
 
+	logger            log.DebugLogger
 	minimumExpiration = 15 * time.Minute
 )
 
 func init() {
 	flag.Var(&requiredPaths, "requiredPaths",
 		"Comma separated list of required path:type entries")
+	flag.Var(&tableType, "tableType", "partition table type for make-raw-image")
 }
 
 func printUsage() {
@@ -81,6 +96,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  listdirs")
 	fmt.Fprintln(os.Stderr, "  listunrefobj")
 	fmt.Fprintln(os.Stderr, "  list-latest-image directory")
+	fmt.Fprintln(os.Stderr, "  make-raw-image    name rawfile")
 	fmt.Fprintln(os.Stderr, "  match-triggers    name triggers-file")
 	fmt.Fprintln(os.Stderr, "  merge-filters     filter-file...")
 	fmt.Fprintln(os.Stderr, "  merge-triggers    triggers-file...")
@@ -126,6 +142,7 @@ var subcommands = []subcommand{
 	{"listdirs", 0, 0, listDirectoriesSubcommand},
 	{"listunrefobj", 0, 0, listUnreferencedObjectsSubcommand},
 	{"list-latest-image", 1, 1, listLatestImageSubcommand},
+	{"make-raw-image", 2, 2, makeRawImageSubcommand},
 	{"match-triggers", 2, 2, matchTriggersSubcommand},
 	{"merge-filters", 1, -1, mergeFiltersSubcommand},
 	{"merge-triggers", 1, -1, mergeTriggersSubcommand},
@@ -189,6 +206,7 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
+	logger = cmdlogger.New()
 	if *expiresIn > 0 && *expiresIn < minimumExpiration {
 		fmt.Fprintf(os.Stderr, "Minimum expiration: %s\n", minimumExpiration)
 		os.Exit(2)

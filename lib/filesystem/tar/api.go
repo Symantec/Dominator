@@ -5,15 +5,15 @@ import (
 	"io"
 
 	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/objectserver/client"
+	"github.com/Symantec/Dominator/lib/objectserver"
 )
 
 func Encode(tarWriter *tar.Writer, fileSystem *filesystem.FileSystem,
-	objectClient *client.ObjectClient) error {
-	return encode(tarWriter, fileSystem, objectClient)
+	objectsGetter objectserver.ObjectsGetter) error {
+	return encode(tarWriter, fileSystem, objectsGetter)
 }
 
 func Write(writer io.Writer, fileSystem *filesystem.FileSystem,
-	objectClient *client.ObjectClient) error {
-	return write(writer, fileSystem, objectClient)
+	objectsGetter objectserver.ObjectsGetter) error {
+	return write(writer, fileSystem, objectsGetter)
 }

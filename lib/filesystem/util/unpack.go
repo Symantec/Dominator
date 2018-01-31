@@ -34,7 +34,13 @@ func createFile(filename string) error {
 
 func unpack(fs *filesystem.FileSystem, objectsGetter objectserver.ObjectsGetter,
 	dirname string, logger log.Logger) error {
-	inodesDir := dirname + ".inodes"
+	for _, entry := range fs.EntryList {
+		if entry.Name == ".inodes" {
+			return errors.New("cannot unpack a file-system with /.inodes")
+		}
+	}
+	os.Mkdir(dirname, dirPerms)
+	inodesDir := path.Join(dirname, ".inodes")
 	if err := os.Mkdir(inodesDir, dirPerms); err != nil {
 		return err
 	}

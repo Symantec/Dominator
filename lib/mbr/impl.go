@@ -1,7 +1,9 @@
 package mbr
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 )
 
 func decode(file *os.File) (*Mbr, error) {
@@ -29,4 +31,23 @@ func (mbr *Mbr) getPartitionSize(index uint) uint64 {
 		uint64(mbr.raw[partitionOffset+13])<<8 +
 		uint64(mbr.raw[partitionOffset+14])<<16 +
 		uint64(mbr.raw[partitionOffset+15])<<24)
+}
+
+func writeDefault(filename string, tableType TableType) error {
+	label, err := tableType.lookupString()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("making table type: %d (%s)\n", tableType, label)
+	cmd := exec.Command("parted", "-s", "-a", "optimal", filename,
+		"mklabel", label,
+		"mkpart", "primary", "ext2", "0%", "100%",
+		"set", "1", "boot", "on",
+	)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("error partitioning: %s: %s: %s",
+			filename, err, output)
+	}
+	return nil
 }

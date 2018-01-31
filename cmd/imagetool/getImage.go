@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/log/nulllogger"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 )
 
@@ -21,9 +23,27 @@ func getImageSubcommand(args []string) {
 
 func getImageAndWrite(objectClient *objectclient.ObjectClient, name,
 	dirname string) error {
-	fs, err := getTypedImage(name)
+	fs, objectsGetter, err := getImageForUnpack(objectClient, name)
 	if err != nil {
 		return err
 	}
-	return util.Unpack(fs, objectClient, dirname, nulllogger.New())
+	return util.Unpack(fs, objectsGetter, dirname, nulllogger.New())
+}
+
+func getImageForUnpack(objectClient *objectclient.ObjectClient, name string) (
+	*filesystem.FileSystem, objectserver.ObjectsGetter, error) {
+	fs, err := getTypedImage(name)
+	if err != nil {
+		return nil, nil, err
+	}
+	if *computedFilesRoot == "" {
+		return fs, objectClient, nil
+	}
+	objectsGetter, err := util.ReplaceComputedFiles(fs,
+		&util.ComputedFilesData{RootDirectory: *computedFilesRoot},
+		objectClient)
+	if err != nil {
+		return nil, nil, err
+	}
+	return fs, objectsGetter, nil
 }

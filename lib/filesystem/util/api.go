@@ -3,12 +3,18 @@ package util
 import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/mbr"
 	"github.com/Symantec/Dominator/lib/objectserver"
 )
 
 type ComputedFile struct {
 	Filename string
 	Source   string
+}
+
+type ComputedFilesData struct {
+	FileData      map[string][]byte // Key: filename.
+	RootDirectory string
 }
 
 // CopyMtimes will copy modification times for files from the source to the
@@ -23,6 +29,13 @@ func LoadComputedFiles(filename string) ([]ComputedFile, error) {
 	return loadComputedFiles(filename)
 }
 
+func ReplaceComputedFiles(fs *filesystem.FileSystem,
+	computedFilesData *ComputedFilesData,
+	objectsGetter objectserver.ObjectsGetter) (
+	objectserver.ObjectsGetter, error) {
+	return replaceComputedFiles(fs, computedFilesData, objectsGetter)
+}
+
 func SpliceComputedFiles(fs *filesystem.FileSystem,
 	computedFileList []ComputedFile) error {
 	return spliceComputedFiles(fs, computedFileList)
@@ -31,4 +44,13 @@ func SpliceComputedFiles(fs *filesystem.FileSystem,
 func Unpack(fs *filesystem.FileSystem, objectsGetter objectserver.ObjectsGetter,
 	rootDir string, logger log.Logger) error {
 	return unpack(fs, objectsGetter, rootDir, logger)
+}
+
+func WriteRaw(fs *filesystem.FileSystem,
+	objectsGetter objectserver.ObjectsGetter, rawFilename string,
+	tableType mbr.TableType,
+	minFreeSpace uint64, roundupPower uint64, makeBootable bool,
+	logger log.Logger) error {
+	return writeRaw(fs, objectsGetter, rawFilename, tableType, minFreeSpace,
+		roundupPower, makeBootable, logger)
 }
