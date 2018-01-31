@@ -98,9 +98,12 @@ func makeCombinedObjectsGetter(computedFilesData *ComputedFilesData,
 		newObjectsGetter.hashToData[hashVal] = data
 		newObjectsGetter.hashToSize[hashVal] = uint64(len(data))
 	}
-	err := newObjectsGetter.scanDirectory(computedFilesData.RootDirectory, "/")
-	if err != nil {
-		return nil, err
+	if computedFilesData.RootDirectory != "" {
+		err := newObjectsGetter.scanDirectory(computedFilesData.RootDirectory,
+			"/")
+		if err != nil {
+			return nil, err
+		}
 	}
 	return newObjectsGetter, nil
 }
