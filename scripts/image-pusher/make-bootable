@@ -13,11 +13,6 @@ readonly root_uuid=$(blkid -o export "${boot_device}1" |\
 			sed -nre 's/^UUID=(.*)$/\1/p')
 echo "UUID=$root_uuid /  ext4  defaults  0 1" > /etc/fstab
 
-readonly kernel_version=$(ls -v /lib/modules | tail -n 1)
-
-# Build a new initramfs suited to the machine.
-dracut --force "/boot/initramfs-$kernel_version.img" "$kernel_version"
-
 # Reconfigure GRUB for new root file-system and install on boot device.
 if [ -x /sbin/grub2-mkconfig ]; then
     grub2-mkconfig -o /boot/grub2/grub.cfg
