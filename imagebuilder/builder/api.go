@@ -72,6 +72,7 @@ type packagerType struct {
 	CleanCommand   argList
 	InstallCommand argList
 	ListCommand    listCommandType
+	RemoveCommand  argList
 	UpdateCommand  argList
 	UpgradeCommand argList
 	Verbatim       []string

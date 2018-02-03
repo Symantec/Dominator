@@ -127,6 +127,7 @@ func (packager *packagerType) writePackageInstallerContents(writer io.Writer) {
 	fmt.Fprintln(writer, `[ "$cmd" = "copy-in" ] && exec cat > "$1"`)
 	writePackagerCommand(writer, "install", packager.InstallCommand)
 	writePackagerCommand(writer, "list", packager.ListCommand.ArgList)
+	writePackagerCommand(writer, "remove", packager.RemoveCommand)
 	fmt.Fprintln(writer, `[ "$cmd" = "run" ] && exec "$@"`)
 	multiplier := packager.ListCommand.SizeMultiplier
 	if multiplier < 1 {

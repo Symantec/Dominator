@@ -246,6 +246,8 @@ func (packager *packagerType) WriteHtml(writer io.Writer) {
 		fmt.Fprintf(writer, "List command size multiplier: %d<br>\n",
 			packager.ListCommand.SizeMultiplier)
 	}
+	fmt.Fprintf(writer, "Remove command: <code>%s</code><br>\n",
+		strings.Join(packager.RemoveCommand, " "))
 	fmt.Fprintf(writer, "Update command: <code>%s</code><br>\n",
 		strings.Join(packager.UpdateCommand, " "))
 	fmt.Fprintf(writer, "Upgrade command: <code>%s</code><br>\n",
