@@ -63,7 +63,8 @@ func (b *Builder) build(client *srpc.Client, streamName string,
 	b.buildResultsLock.Unlock()
 	name, err := builder.build(b, client, streamName, expiresIn, gitBranch,
 		maxSourceAge, buildLog)
-	buildDuration := time.Since(startTime)
+	finishTime := time.Now()
+	buildDuration := finishTime.Sub(startTime)
 	if err == nil {
 		fmt.Fprintf(buildLog, "Total build duration: %s\n", buildDuration)
 		b.logger.Printf("Built image for stream: %s in %s\n",
@@ -75,7 +76,7 @@ func (b *Builder) build(client *srpc.Client, streamName string,
 	defer b.buildResultsLock.Unlock()
 	delete(b.currentBuildLogs, streamName)
 	b.lastBuildResults[streamName] = buildResultType{
-		name, buildDuration, buildLog.Bytes(), err}
+		name, startTime, finishTime, buildLog.Bytes(), err}
 	return name, buildLog.Bytes(), err
 }
 

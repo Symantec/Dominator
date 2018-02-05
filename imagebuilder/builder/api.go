@@ -27,10 +27,11 @@ type bootstrapStream struct {
 }
 
 type buildResultType struct {
-	imageName string
-	duration  time.Duration
-	buildLog  []byte
-	error     error
+	imageName  string
+	startTime  time.Time
+	finishTime time.Time
+	buildLog   []byte
+	error      error
 }
 
 type masterConfigurationType struct {
