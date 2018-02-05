@@ -78,6 +78,14 @@
 		],
 		"SizeMultiplier": 1024
 	    },
+	    "RemoveCommand": [
+		"apt-get",
+		"-q",
+		"--purge",
+		"-y",
+		"--allow-remove-essential",
+		"remove"
+	    ],
 	    "UpdateCommand": [
 		"apt-get",
 		"-q",
@@ -116,6 +124,12 @@
 		    "%{NAME} %{VERSION}_%{RELEASE} %{SIZE}\n"
 		]
 	    },
+	    "RemoveCommand": [
+		"yum",
+		"-q",
+		"-y",
+		"remove"
+	    ],
 	    "UpdateCommand": [
 		"yum",
 		"-q",

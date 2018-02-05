@@ -10,6 +10,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/html"
@@ -98,6 +99,7 @@ func (b *Builder) writeHtml(writer io.Writer) {
 		}
 	}
 	b.buildResultsLock.RUnlock()
+	currentTime := time.Now()
 	if len(currentBuilds) > 0 {
 		fmt.Fprintln(writer, "Current image builds:<br>")
 		fmt.Fprintln(writer, `<table border="1">`)
@@ -127,6 +129,7 @@ func (b *Builder) writeHtml(writer io.Writer) {
 		fmt.Fprintln(writer, "    <th>Image Stream</th>")
 		fmt.Fprintln(writer, "    <th>Error</th>")
 		fmt.Fprintln(writer, "    <th>Build log</th>")
+		fmt.Fprintln(writer, "    <th>Last attempt</th>")
 		fmt.Fprintln(writer, "  </tr>")
 		for _, streamName := range streamNames {
 			result := failedBuilds[streamName]
@@ -136,6 +139,8 @@ func (b *Builder) writeHtml(writer io.Writer) {
 			fmt.Fprintf(writer,
 				"    <td><a href=\"showLastBuildLog?%s\">log</a></td>\n",
 				streamName)
+			fmt.Fprintf(writer, "    <td>%s ago</td>\n",
+				format.Duration(currentTime.Sub(result.finishTime)))
 			fmt.Fprintf(writer, "  </tr>\n")
 		}
 		fmt.Fprintln(writer, "</table><br>")
@@ -152,7 +157,8 @@ func (b *Builder) writeHtml(writer io.Writer) {
 		fmt.Fprintln(writer, "    <th>Image Stream</th>")
 		fmt.Fprintln(writer, "    <th>Name</th>")
 		fmt.Fprintln(writer, "    <th>Build log</th>")
-		fmt.Fprintln(writer, "    <th>Last duration</th>")
+		fmt.Fprintln(writer, "    <th>Duration</th>")
+		fmt.Fprintln(writer, "    <th>Age</th>")
 		fmt.Fprintln(writer, "  </tr>")
 		for _, streamName := range streamNames {
 			result := goodBuilds[streamName]
@@ -165,7 +171,9 @@ func (b *Builder) writeHtml(writer io.Writer) {
 				"    <td><a href=\"showLastBuildLog?%s\">log</a></td>\n",
 				streamName)
 			fmt.Fprintf(writer, "    <td>%s</td>\n",
-				format.Duration(result.duration))
+				format.Duration(result.finishTime.Sub(result.startTime)))
+			fmt.Fprintf(writer, "    <td>%s</td>\n",
+				format.Duration(currentTime.Sub(result.finishTime)))
 			fmt.Fprintf(writer, "  </tr>\n")
 		}
 		fmt.Fprintln(writer, "</table><br>")
@@ -246,6 +254,8 @@ func (packager *packagerType) WriteHtml(writer io.Writer) {
 		fmt.Fprintf(writer, "List command size multiplier: %d<br>\n",
 			packager.ListCommand.SizeMultiplier)
 	}
+	fmt.Fprintf(writer, "Remove command: <code>%s</code><br>\n",
+		strings.Join(packager.RemoveCommand, " "))
 	fmt.Fprintf(writer, "Update command: <code>%s</code><br>\n",
 		strings.Join(packager.UpdateCommand, " "))
 	fmt.Fprintf(writer, "Upgrade command: <code>%s</code><br>\n",

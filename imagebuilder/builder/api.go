@@ -27,10 +27,11 @@ type bootstrapStream struct {
 }
 
 type buildResultType struct {
-	imageName string
-	duration  time.Duration
-	buildLog  []byte
-	error     error
+	imageName  string
+	startTime  time.Time
+	finishTime time.Time
+	buildLog   []byte
+	error      error
 }
 
 type masterConfigurationType struct {
@@ -72,6 +73,7 @@ type packagerType struct {
 	CleanCommand   argList
 	InstallCommand argList
 	ListCommand    listCommandType
+	RemoveCommand  argList
 	UpdateCommand  argList
 	UpgradeCommand argList
 	Verbatim       []string
