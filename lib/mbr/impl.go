@@ -41,7 +41,7 @@ func writeDefault(filename string, tableType TableType) error {
 	fmt.Printf("making table type: %d (%s)\n", tableType, label)
 	cmd := exec.Command("parted", "-s", "-a", "optimal", filename,
 		"mklabel", label,
-		"mkpart", "primary", "ext2", "0%", "100%",
+		"mkpart", "primary", "ext2", "1", "100%",
 		"set", "1", "boot", "on",
 	)
 	output, err := cmd.CombinedOutput()
