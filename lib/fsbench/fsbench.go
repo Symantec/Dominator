@@ -3,6 +3,7 @@ package fsbench
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -126,10 +127,13 @@ func GetReadSpeed(name string) (uint64, uint64, error) {
 	for tread < MAX_TO_READ {
 		var nread int
 		nread, err = file.Read(buffer)
+		tread += uint(nread)
 		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			return 0, 0, fmt.Errorf("error reading: %s: %s", devpath, err)
 		}
-		tread += uint(nread)
 	}
 	elapsed := time.Since(time_start)
 	bytesPerSecond := uint64(float64(tread) / elapsed.Seconds())
