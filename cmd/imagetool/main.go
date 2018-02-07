@@ -19,6 +19,8 @@ import (
 )
 
 var (
+	allocateBlocks = flag.Bool("allocateBlocks", false,
+		"If true, allocate blocks when making raw image")
 	buildLog = flag.String("buildLog", "",
 		"Filename or URL containing build log")
 	compress      = flag.Bool("compress", false, "If true, compress tar output")

@@ -57,6 +57,15 @@ func checkIsBlock(filename string) (bool, error) {
 	}
 }
 
+func fallocate(filename string, imageSize uint64) error {
+	fd, err := syscall.Open(filename, syscall.O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+	defer syscall.Close(fd)
+	return syscall.Fallocate(fd, 0, 0, int64(imageSize))
+}
+
 func getBootDirectory(fs *filesystem.FileSystem) (
 	*filesystem.DirectoryInode, error) {
 	if fs.EntriesByName == nil {
@@ -316,7 +325,7 @@ func writeToBlock(fs *filesystem.FileSystem,
 func writeToFile(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, rawFilename string,
 	tableType mbr.TableType, minFreeSpace uint64, roundupPower uint64,
-	makeBootableFlag bool, logger log.Logger) error {
+	makeBootableFlag, allocateBlocks bool, logger log.Logger) error {
 
 	tmpFilename := rawFilename + "~"
 	if file, err := os.Create(tmpFilename); err != nil {
@@ -338,6 +347,11 @@ func writeToFile(fs *filesystem.FileSystem,
 	imageSize := imageUnits << roundupPower
 	if err := os.Truncate(tmpFilename, int64(imageSize)); err != nil {
 		return err
+	}
+	if allocateBlocks {
+		if err := fallocate(tmpFilename, imageSize); err != nil {
+			return err
+		}
 	}
 	if err := mbr.WriteDefault(tmpFilename, tableType); err != nil {
 		return err
@@ -363,7 +377,7 @@ func writeToFile(fs *filesystem.FileSystem,
 func writeRaw(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, rawFilename string,
 	tableType mbr.TableType, minFreeSpace uint64, roundupPower uint64,
-	makeBootableFlag bool, logger log.Logger) error {
+	makeBootableFlag, allocateBlocks bool, logger log.Logger) error {
 	if isBlock, err := checkIsBlock(rawFilename); err != nil {
 		if !os.IsNotExist(err) {
 			return err
@@ -373,7 +387,7 @@ func writeRaw(fs *filesystem.FileSystem,
 			makeBootableFlag, logger)
 	}
 	return writeToFile(fs, objectsGetter, rawFilename, tableType, minFreeSpace,
-		roundupPower, makeBootableFlag, logger)
+		roundupPower, makeBootableFlag, allocateBlocks, logger)
 }
 
 const grubTemplateString string = `# Generated from simple template.
