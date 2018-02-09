@@ -21,6 +21,10 @@ func convertStat(dest *Stat_t, source *syscall.Stat_t) {
 	dest.Ctim = source.Ctim
 }
 
+func fallocate(fd int, mode uint32, off int64, len int64) error {
+	return syscall.Fallocate(fd, mode, off, len)
+}
+
 func mount(source string, target string, fstype string, flags uintptr,
 	data string) error {
 	var linuxFlags uintptr

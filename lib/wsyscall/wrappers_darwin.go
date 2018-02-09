@@ -18,6 +18,10 @@ func convertStat(dest *Stat_t, source *syscall.Stat_t) {
 	dest.Ctim = source.Ctimespec
 }
 
+func fallocate(fd int, mode uint32, off int64, len int64) error {
+	return syscall.ENOTSUP
+}
+
 func mount(source string, target string, fstype string, flags uintptr,
 	data string) error {
 	return syscall.ENOTSUP
