@@ -55,6 +55,12 @@ func ForceLink(oldname, newname string) error {
 	return forceLink(oldname, newname)
 }
 
+// Fallocate will allocate blocks for the file named filename, up to size
+// specified in bytes.
+func Fallocate(filename string, size uint64) error {
+	return fallocate(filename, size)
+}
+
 // ForceRemove removes the named file or directory. It first attempts to remove
 // using os.Remove and that fails, it blindly calls MakeMutable and then
 // retries.
