@@ -17,6 +17,7 @@ import (
 
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mbr"
@@ -55,15 +56,6 @@ func checkIsBlock(filename string) (bool, error) {
 	} else {
 		return fi.Mode()&os.ModeDevice == os.ModeDevice, nil
 	}
-}
-
-func fallocate(filename string, imageSize uint64) error {
-	fd, err := syscall.Open(filename, syscall.O_RDWR, 0)
-	if err != nil {
-		return err
-	}
-	defer syscall.Close(fd)
-	return syscall.Fallocate(fd, 0, 0, int64(imageSize))
 }
 
 func getBootDirectory(fs *filesystem.FileSystem) (
@@ -349,7 +341,7 @@ func writeToFile(fs *filesystem.FileSystem,
 		return err
 	}
 	if allocateBlocks {
-		if err := fallocate(tmpFilename, imageSize); err != nil {
+		if err := fsutil.Fallocate(tmpFilename, imageSize); err != nil {
 			return err
 		}
 	}
