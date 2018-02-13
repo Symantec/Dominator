@@ -15,6 +15,7 @@ import (
 type Filter struct {
 	FilterLines       []string
 	filterExpressions []*regexp.Regexp
+	invertMatches     bool
 }
 
 // A MergeableFilter may be used to combine multiple Filters, eliminating
@@ -42,7 +43,7 @@ func (filter *Filter) Compile() error {
 }
 
 // Match will return true if pathname matches one of the regular expressions.
-// The Compile method will be automatically called if the it has not been called
+// The Compile method will be automatically called if it has not been called
 // yet.
 func (filter *Filter) Match(pathname string) bool {
 	return filter.match(pathname)

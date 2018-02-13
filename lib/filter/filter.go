@@ -31,6 +31,10 @@ func newFilter(filterLines []string) (*Filter, error) {
 func (filter *Filter) compile() error {
 	filter.filterExpressions = make([]*regexp.Regexp, len(filter.FilterLines))
 	for index, reEntry := range filter.FilterLines {
+		if reEntry == "!" {
+			filter.invertMatches = true
+			continue
+		}
 		var err error
 		filter.filterExpressions[index], err = regexp.Compile("^" + reEntry)
 		if err != nil {
@@ -44,12 +48,18 @@ func (filter *Filter) match(pathname string) bool {
 	if len(filter.filterExpressions) != len(filter.FilterLines) {
 		filter.compile()
 	}
+	defaultRetval := false
+	matchRetval := true
+	if filter.invertMatches {
+		defaultRetval = true
+		matchRetval = false
+	}
 	for _, regex := range filter.filterExpressions {
-		if regex.MatchString(pathname) {
-			return true
+		if regex != nil && regex.MatchString(pathname) {
+			return matchRetval
 		}
 	}
-	return false
+	return defaultRetval
 }
 
 func (filter *Filter) replaceStrings(replaceFunc func(string) string) {
