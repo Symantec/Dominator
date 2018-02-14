@@ -4,6 +4,7 @@ import (
 	"flag"
 
 	"github.com/Symantec/Dominator/lib/log"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -194,11 +195,11 @@ func (tag Tag) MakeFilter() *ec2.Filter {
 }
 
 func (tag *Tag) String() string {
-	return tag.string()
+	return (*libtags.Tag)(tag).String()
 }
 
 func (tag *Tag) Set(value string) error {
-	return tag.set(value)
+	return (*libtags.Tag)(tag).Set(value)
 }
 
 type Tags map[string]string // Key: tag key, value: tag value.
@@ -212,19 +213,19 @@ func (tags Tags) MakeFilters() []*ec2.Filter {
 }
 
 func (tags Tags) Copy() Tags {
-	return tags.copy()
+	return Tags(libtags.Tags(tags).Copy())
 }
 
 func (to Tags) Merge(from Tags) {
-	to.merge(from)
+	libtags.Tags(to).Merge(libtags.Tags(from))
 }
 
 func (tags *Tags) String() string {
-	return tags.string()
+	return (*libtags.Tags)(tags).String()
 }
 
 func (tags *Tags) Set(value string) error {
-	return tags.set(value)
+	return (*libtags.Tags)(tags).Set(value)
 }
 
 type Target struct {
