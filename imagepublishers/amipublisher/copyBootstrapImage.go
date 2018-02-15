@@ -13,6 +13,7 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -32,10 +33,10 @@ type targetResult struct {
 
 func copyBootstrapImage(streamName string, targets awsutil.TargetList,
 	skipList awsutil.TargetList, marketplaceImage, marketplaceLoginName string,
-	newImageTags awsutil.Tags, unpackerName string,
-	vpcSearchTags, subnetSearchTags, securityGroupSearchTags awsutil.Tags,
+	newImageTags libtags.Tags, unpackerName string,
+	vpcSearchTags, subnetSearchTags, securityGroupSearchTags libtags.Tags,
 	instanceType string, sshKeyName string, logger log.Logger) error {
-	imageSearchTags := awsutil.Tags{"Name": streamName}
+	imageSearchTags := libtags.Tags{"Name": streamName}
 	type resultType struct {
 		targetResult
 		error error
@@ -112,7 +113,7 @@ func copyBootstrapImage(streamName string, targets awsutil.TargetList,
 }
 
 func probeTarget(awsService *ec2.EC2, streamName string,
-	imageSearchTags awsutil.Tags, unpackerName string, logger log.Logger) (
+	imageSearchTags libtags.Tags, unpackerName string, logger log.Logger) (
 	targetResult, error) {
 	var result targetResult
 	instance, client, err := getWorkingUnpacker(awsService, unpackerName,
@@ -137,8 +138,8 @@ func probeTarget(awsService *ec2.EC2, streamName string,
 
 func (target *targetResult) bootstrap(streamName string,
 	targets []*targetResult, marketplaceImage, marketplaceLoginName string,
-	newImageTags awsutil.Tags, vpcSearchTags, subnetSearchTags,
-	securityGroupSearchTags awsutil.Tags, instanceType string,
+	newImageTags libtags.Tags, vpcSearchTags, subnetSearchTags,
+	securityGroupSearchTags libtags.Tags, instanceType string,
 	sshKeyName string, logger log.Logger) error {
 	if target.image != nil {
 		return nil // Already have an image: nothing to copy in here.

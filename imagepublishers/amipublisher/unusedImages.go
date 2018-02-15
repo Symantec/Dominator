@@ -7,6 +7,7 @@ import (
 	"github.com/Symantec/Dominator/lib/concurrent"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/log"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
@@ -27,7 +28,7 @@ type targetImageUsage struct {
 type usedImages map[string]struct{} // Key: AMI ID.
 
 func deleteUnusedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
-	searchTags, excludeSearchTags awsutil.Tags, minImageAge time.Duration,
+	searchTags, excludeSearchTags libtags.Tags, minImageAge time.Duration,
 	logger log.DebugLogger) (UnusedImagesResult, error) {
 	logger.Debugln(0, "loading credentials")
 	cs, err := awsutil.LoadCredentials()
@@ -98,7 +99,7 @@ func generateResults(rawResults []targetImageUsage,
 }
 
 func listUnusedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
-	searchTags, excludeSearchTags awsutil.Tags, minImageAge time.Duration,
+	searchTags, excludeSearchTags libtags.Tags, minImageAge time.Duration,
 	logger log.DebugLogger) (UnusedImagesResult, error) {
 	logger.Debugln(0, "loading credentials")
 	cs, err := awsutil.LoadCredentials()
@@ -114,7 +115,7 @@ func listUnusedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
 }
 
 func listUnusedImagesCS(targets awsutil.TargetList, skipList awsutil.TargetList,
-	searchTags, excludeSearchTags awsutil.Tags, minImageAge time.Duration,
+	searchTags, excludeSearchTags libtags.Tags, minImageAge time.Duration,
 	cs *awsutil.CredentialsStore, ignoreInstances bool,
 	logger log.DebugLogger) (
 	[]targetImageUsage, error) {
@@ -203,8 +204,8 @@ func listUnusedImagesCS(targets awsutil.TargetList, skipList awsutil.TargetList,
 	return rawResults, nil
 }
 
-func listTargetUnusedImages(awsService *ec2.EC2, searchTags awsutil.Tags,
-	excludeSearchTags awsutil.Tags, accountId string,
+func listTargetUnusedImages(awsService *ec2.EC2, searchTags libtags.Tags,
+	excludeSearchTags libtags.Tags, accountId string,
 	minImageAge time.Duration, ignoreInstances bool, logger log.Logger) (
 	imageUsage, error) {
 	results := imageUsage{

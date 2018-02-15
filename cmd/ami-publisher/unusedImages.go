@@ -9,10 +9,10 @@ import (
 	"syscall"
 
 	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
-	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 )
 
 const (
@@ -152,7 +152,7 @@ func makeTagKeysList(tagKeysSet map[string]struct{}) []string {
 }
 
 func appendRecordAndWrite(writer *csv.Writer, record []string,
-	tagKeysList []string, tags awsutil.Tags) error {
+	tagKeysList []string, tags libtags.Tags) error {
 	for _, key := range tagKeysList {
 		value := tags[key]
 		record = append(record, value)

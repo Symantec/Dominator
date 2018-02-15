@@ -185,47 +185,16 @@ func ListRegions(awsService *ec2.EC2) ([]string, error) {
 	return listRegions(awsService)
 }
 
-type Tag struct {
-	Key   string
-	Value string
+func MakeFilterFromTag(tag libtags.Tag) *ec2.Filter {
+	return makeFilterFromTag(tag)
 }
 
-func (tag Tag) MakeFilter() *ec2.Filter {
-	return tag.makeFilter()
-}
-
-func (tag *Tag) String() string {
-	return (*libtags.Tag)(tag).String()
-}
-
-func (tag *Tag) Set(value string) error {
-	return (*libtags.Tag)(tag).Set(value)
-}
-
-type Tags map[string]string // Key: tag key, value: tag value.
-
-func CreateTagsFromList(list []*ec2.Tag) Tags {
+func CreateTagsFromList(list []*ec2.Tag) libtags.Tags {
 	return createTagsFromList(list)
 }
 
-func (tags Tags) MakeFilters() []*ec2.Filter {
-	return tags.makeFilters()
-}
-
-func (tags Tags) Copy() Tags {
-	return Tags(libtags.Tags(tags).Copy())
-}
-
-func (to Tags) Merge(from Tags) {
-	libtags.Tags(to).Merge(libtags.Tags(from))
-}
-
-func (tags *Tags) String() string {
-	return (*libtags.Tags)(tags).String()
-}
-
-func (tags *Tags) Set(value string) error {
-	return (*libtags.Tags)(tags).Set(value)
+func MakeFiltersFromTags(tags libtags.Tags) []*ec2.Filter {
+	return makeFiltersFromTags(tags)
 }
 
 type Target struct {

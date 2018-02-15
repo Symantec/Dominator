@@ -1,11 +1,12 @@
 package awsutil
 
 import (
+	libtags "github.com/Symantec/Dominator/lib/tags"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-func (tag Tag) makeFilter() *ec2.Filter {
+func makeFilterFromTag(tag libtags.Tag) *ec2.Filter {
 	if tag.Key == "" {
 		return nil
 	}
@@ -22,21 +23,21 @@ func (tag Tag) makeFilter() *ec2.Filter {
 	}
 }
 
-func createTagsFromList(list []*ec2.Tag) Tags {
-	tags := make(Tags, len(list))
+func createTagsFromList(list []*ec2.Tag) libtags.Tags {
+	tags := make(libtags.Tags, len(list))
 	for _, tag := range list {
 		tags[aws.StringValue(tag.Key)] = aws.StringValue(tag.Value)
 	}
 	return tags
 }
 
-func (tags Tags) makeFilters() []*ec2.Filter {
+func makeFiltersFromTags(tags libtags.Tags) []*ec2.Filter {
 	if len(tags) < 1 {
 		return nil
 	}
 	filters := make([]*ec2.Filter, 0, len(tags))
 	for key, value := range tags {
-		filters = append(filters, Tag{key, value}.makeFilter())
+		filters = append(filters, makeFilterFromTag(libtags.Tag{key, value}))
 	}
 	return filters
 }
