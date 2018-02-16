@@ -127,13 +127,14 @@ func (t *srpcType) addImage(name string) error {
 		return nil
 	}
 	t.logger.Printf("Replicator(%s): add image\n", name)
-	client, err := srpc.DialHTTP("tcp", t.replicationMaster, timeout)
+	client, err := t.imageserverResource.GetHTTP(nil, timeout)
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer client.Put()
 	img, err := imgclient.GetImage(client, name)
 	if err != nil {
+		client.Close()
 		return err
 	}
 	if img == nil {
@@ -148,7 +149,8 @@ func (t *srpcType) addImage(name string) error {
 	}
 	img.FileSystem.RebuildInodePointers()
 	err = t.imageDataBase.DoWithPendingImage(img, func() error {
-		if err := t.getMissingObjects(img); err != nil {
+		if err := t.getMissingObjects(img, client); err != nil {
+			client.Close()
 			return err
 		}
 		if err := t.imageDataBase.AddImage(img, name, nil); err != nil {
@@ -170,7 +172,8 @@ func (t *srpcType) checkImageBeingInjected(name string) bool {
 	return ok
 }
 
-func (t *srpcType) getMissingObjects(img *image.Image) error {
+func (t *srpcType) getMissingObjects(img *image.Image,
+	client *srpc.Client) error {
 	hashes := img.ListObjects()
 	objectSizes, err := t.objSrv.CheckObjects(hashes)
 	if err != nil {
@@ -188,7 +191,7 @@ func (t *srpcType) getMissingObjects(img *image.Image) error {
 	t.logger.Printf("Replicator: downloading %d of %d objects\n",
 		len(missingObjects), len(hashes))
 	startTime := time.Now()
-	objClient := objectclient.NewObjectClient(t.replicationMaster)
+	objClient := objectclient.AttachObjectClient(client)
 	defer objClient.Close()
 	objectsReader, err := objClient.GetObjects(missingObjects)
 	if err != nil {
