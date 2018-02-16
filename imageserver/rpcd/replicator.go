@@ -174,22 +174,20 @@ func (t *srpcType) checkImageBeingInjected(name string) bool {
 
 func (t *srpcType) getMissingObjects(img *image.Image,
 	client *srpc.Client) error {
-	hashes := img.ListObjects()
-	objectSizes, err := t.objSrv.CheckObjects(hashes)
+	var numObjects uint64
+	img.ForEachObject(func(hashVal hash.Hash) error {
+		numObjects++
+		return nil
+	})
+	missingObjects, err := img.ListMissingObjects(t.objSrv)
 	if err != nil {
 		return err
-	}
-	missingObjects := make([]hash.Hash, 0)
-	for index, size := range objectSizes {
-		if size < 1 {
-			missingObjects = append(missingObjects, hashes[index])
-		}
 	}
 	if len(missingObjects) < 1 {
 		return nil
 	}
 	t.logger.Printf("Replicator: downloading %d of %d objects\n",
-		len(missingObjects), len(hashes))
+		len(missingObjects), numObjects)
 	startTime := time.Now()
 	objClient := objectclient.AttachObjectClient(client)
 	defer objClient.Close()
