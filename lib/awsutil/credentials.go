@@ -129,6 +129,23 @@ func createSession(
 	}
 	regions, err := listRegions(CreateService(awsSession, "us-east-1"))
 	if err != nil {
+
+		// Try the ec2::DescribeRegions call in other regions before giving
+		// up and reporting the error. We may need to add to this list.
+		otherRegions := []string{"cn-north-1"}
+		for _, otherRegion := range otherRegions {
+			regions, err := listRegions(CreateService(awsSession, otherRegion))
+			if err == nil {
+				return sessionResult{
+					accountName: accountName,
+					accountId:   accountId,
+					awsSession:  awsSession,
+					regions:     regions,
+				}
+			}
+		}
+
+		// If no success with other regions return the original error
 		return sessionResult{err: err, accountName: accountName}
 	}
 	return sessionResult{
