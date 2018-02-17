@@ -13,6 +13,7 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 )
 
@@ -151,11 +152,10 @@ func (imdb *ImageDataBase) maybeAddToUnreferencedObjectsList(
 	objects := fs.GetObjects()
 	// Scan all remaining images and remove their objects from the list.
 	for _, image := range imdb.imageMap {
-		for _, inode := range image.FileSystem.InodeTable {
-			if inode, ok := inode.(*filesystem.RegularInode); ok {
-				delete(objects, inode.Hash)
-			}
-		}
+		image.ForEachObject(func(hashVal hash.Hash) error {
+			delete(objects, hashVal)
+			return nil
+		})
 	}
 	changed := false
 	for object, size := range objects {
@@ -188,22 +188,21 @@ func (imdb *ImageDataBase) maybeAddToUnreferencedObjectsList(
 }
 
 func (imdb *ImageDataBase) removeFromUnreferencedObjectsListAndSave(
-	inodeTable filesystem.InodeTable) {
-	if imdb.removeFromUnreferencedObjectsList(inodeTable) {
+	img *image.Image) {
+	if imdb.removeFromUnreferencedObjectsList(img) {
 		imdb.saveUnreferencedObjectsList(false)
 	}
 }
 
 func (imdb *ImageDataBase) removeFromUnreferencedObjectsList(
-	inodeTable filesystem.InodeTable) bool {
+	img *image.Image) bool {
 	changed := false
-	for _, inode := range inodeTable {
-		if inode, ok := inode.(*filesystem.RegularInode); ok {
-			if imdb.unreferencedObjects.removeObject(inode.Hash) {
-				changed = true
-			}
+	img.ForEachObject(func(hashVal hash.Hash) error {
+		if imdb.unreferencedObjects.removeObject(hashVal) {
+			changed = true
 		}
-	}
+		return nil
+	})
 	return changed
 }
 
@@ -309,11 +308,10 @@ func (imdb *ImageDataBase) regenerateUnreferencedObjectsList() {
 	imdb.Lock()
 	defer imdb.Unlock()
 	for _, image := range imdb.imageMap {
-		for _, inode := range image.FileSystem.InodeTable {
-			if inode, ok := inode.(*filesystem.RegularInode); ok {
-				delete(objectsMap, inode.Hash)
-			}
-		}
+		image.ForEachObject(func(hashVal hash.Hash) error {
+			delete(objectsMap, hashVal)
+			return nil
+		})
 	}
 	changed := false
 	// Now add unused objects to cached list.

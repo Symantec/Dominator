@@ -78,8 +78,7 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string,
 		imdb.scheduleExpiration(image, name)
 		imdb.imageMap[name] = image
 		imdb.addNotifiers.sendPlain(name, "add", imdb.logger)
-		imdb.removeFromUnreferencedObjectsListAndSave(
-			image.FileSystem.InodeTable)
+		imdb.removeFromUnreferencedObjectsListAndSave(image)
 		return nil
 	}
 }
@@ -241,8 +240,7 @@ func (imdb *ImageDataBase) doWithPendingImage(image *image.Image,
 	imdb.pendingImageLock.Lock()
 	defer imdb.pendingImageLock.Unlock()
 	imdb.Lock()
-	changed := imdb.removeFromUnreferencedObjectsList(
-		image.FileSystem.InodeTable)
+	changed := imdb.removeFromUnreferencedObjectsList(image)
 	imdb.Unlock()
 	err := doFunc()
 	imdb.Lock()
