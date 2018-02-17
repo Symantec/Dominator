@@ -49,8 +49,8 @@ func Unpack(fs *filesystem.FileSystem, objectsGetter objectserver.ObjectsGetter,
 func WriteRaw(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, rawFilename string,
 	tableType mbr.TableType,
-	minFreeSpace uint64, roundupPower uint64, makeBootable bool,
+	minFreeSpace uint64, roundupPower uint64, makeBootable, allocateBlocks bool,
 	logger log.Logger) error {
 	return writeRaw(fs, objectsGetter, rawFilename, tableType, minFreeSpace,
-		roundupPower, makeBootable, logger)
+		roundupPower, makeBootable, allocateBlocks, logger)
 }

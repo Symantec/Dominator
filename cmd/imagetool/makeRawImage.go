@@ -25,5 +25,5 @@ func makeRawImage(objectClient *objectclient.ObjectClient, name,
 		return err
 	}
 	return util.WriteRaw(fs, objectsGetter, rawFilename, tableType,
-		*minFreeBytes, *roundupPower, *makeBootable, logger)
+		*minFreeBytes, *roundupPower, *makeBootable, *allocateBlocks, logger)
 }
