@@ -11,13 +11,14 @@ import (
 	liblog "github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/cmdlogger"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 )
 
 var (
 	amiName    = flag.String("amiName", "", "AMI Name property")
 	enaSupport = flag.Bool("enaSupport", false,
 		"If true, set the Enhanced Networking Adaptor capability flag")
-	excludeSearchTags awsutil.Tags
+	excludeSearchTags libtags.Tags
 	expiresIn         = flag.Duration("expiresIn", time.Hour,
 		"Date to set for the ExpiresAt tag")
 	ignoreMissingUnpackers = flag.Bool("ignoreMissingUnpackers", false,
@@ -49,19 +50,19 @@ var (
 		"S3 bucket to upload bundle to (default is EBS-backed AMIs)")
 	s3Folder = flag.String("s3Folder", "",
 		"S3 folder to upload bundle to (default is EBS-backed AMIs)")
-	searchTags              = awsutil.Tags{"Preferred": "true"}
-	securityGroupSearchTags awsutil.Tags
+	searchTags              = libtags.Tags{"Preferred": "true"}
+	securityGroupSearchTags libtags.Tags
 	sharingAccountName      = flag.String("sharingAccountName", "",
 		"Account from which to share AMIs (for S3-backed)")
 	skipTargets awsutil.TargetList
 	sshKeyName  = flag.String("sshKeyName", "",
 		"Name of SSH key for instance")
-	subnetSearchTags    awsutil.Tags = awsutil.Tags{"Network": "Private"}
-	tags                awsutil.Tags
+	subnetSearchTags    libtags.Tags = libtags.Tags{"Network": "Private"}
+	tags                libtags.Tags
 	targets             awsutil.TargetList
 	unusedImagesCsvFile = flag.String("unusedImagesCsvFile", "",
 		"File to write CSV listing unused images")
-	vpcSearchTags awsutil.Tags = awsutil.Tags{"Preferred": "true"}
+	vpcSearchTags libtags.Tags = libtags.Tags{"Preferred": "true"}
 )
 
 func init() {

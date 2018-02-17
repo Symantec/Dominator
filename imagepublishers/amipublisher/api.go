@@ -6,6 +6,7 @@ import (
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 )
 
 const ExpiresAtFormat = "2006-01-02 15:04:05"
@@ -17,7 +18,7 @@ type Image struct {
 	CreationDate string
 	Description  string
 	Size         uint // Size in GiB.
-	Tags         awsutil.Tags
+	Tags         libtags.Tags
 }
 
 type Instance struct {
@@ -25,7 +26,7 @@ type Instance struct {
 	AmiId      string
 	InstanceId string
 	LaunchTime string
-	Tags       awsutil.Tags
+	Tags       libtags.Tags
 }
 
 type InstanceResult struct {
@@ -103,15 +104,15 @@ func (v TargetResult) MarshalJSON() ([]byte, error) {
 }
 
 func AddVolumes(targets awsutil.TargetList, skipList awsutil.TargetList,
-	tags awsutil.Tags, unpackerName string, size uint64,
+	tags libtags.Tags, unpackerName string, size uint64,
 	logger log.Logger) error {
 	return addVolumes(targets, skipList, tags, unpackerName, size, logger)
 }
 
 func CopyBootstrapImage(streamName string, targets awsutil.TargetList,
 	skipList awsutil.TargetList, marketplaceImage, marketplaceLoginName string,
-	newImageTags awsutil.Tags, unpackerName string,
-	vpcSearchTags, subnetSearchTags, securityGroupSearchTags awsutil.Tags,
+	newImageTags libtags.Tags, unpackerName string,
+	vpcSearchTags, subnetSearchTags, securityGroupSearchTags libtags.Tags,
 	instanceType string, sshKeyName string, logger log.Logger) error {
 	return copyBootstrapImage(streamName, targets, skipList, marketplaceImage,
 		marketplaceLoginName, newImageTags, unpackerName, vpcSearchTags,
@@ -135,7 +136,7 @@ func DeleteTagsOnUnpackers(targets awsutil.TargetList,
 }
 
 func DeleteUnusedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
-	searchTags, excludeSearchTags awsutil.Tags, minImageAge time.Duration,
+	searchTags, excludeSearchTags libtags.Tags, minImageAge time.Duration,
 	logger log.DebugLogger) (UnusedImagesResult, error) {
 	return deleteUnusedImages(targets, skipList, searchTags, excludeSearchTags,
 		minImageAge, logger)
@@ -153,7 +154,7 @@ func ImportKeyPair(targets awsutil.TargetList, skipList awsutil.TargetList,
 
 func LaunchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
 	imageSearchTags, vpcSearchTags, subnetSearchTags,
-	securityGroupSearchTags awsutil.Tags, instanceType string,
+	securityGroupSearchTags libtags.Tags, instanceType string,
 	sshKeyName string, tags map[string]string, replaceInstances bool,
 	logger log.Logger) ([]InstanceResult, error) {
 	return launchInstances(targets, skipList, imageSearchTags, vpcSearchTags,
@@ -162,7 +163,7 @@ func LaunchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
 }
 
 func LaunchInstancesForImages(images []Resource,
-	vpcSearchTags, subnetSearchTags, securityGroupSearchTags awsutil.Tags,
+	vpcSearchTags, subnetSearchTags, securityGroupSearchTags libtags.Tags,
 	instanceType string, sshKeyName string, tags map[string]string,
 	logger log.Logger) ([]InstanceResult, error) {
 	return launchInstancesForImages(images, vpcSearchTags,
@@ -171,7 +172,7 @@ func LaunchInstancesForImages(images []Resource,
 }
 
 func ListImages(targets awsutil.TargetList, skipList awsutil.TargetList,
-	searchTags, excludeSearchTags awsutil.Tags, minImageAge time.Duration,
+	searchTags, excludeSearchTags libtags.Tags, minImageAge time.Duration,
 	logger log.DebugLogger) ([]Image, error) {
 	return listImages(targets, skipList, searchTags, excludeSearchTags,
 		minImageAge, logger)
@@ -189,7 +190,7 @@ func ListUnpackers(targets awsutil.TargetList, skipList awsutil.TargetList,
 }
 
 func ListUnusedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
-	searchTags, excludeSearchTags awsutil.Tags, minImageAge time.Duration,
+	searchTags, excludeSearchTags libtags.Tags, minImageAge time.Duration,
 	logger log.DebugLogger) (UnusedImagesResult, error) {
 	return listUnusedImages(targets, skipList, searchTags, excludeSearchTags,
 		minImageAge, logger)

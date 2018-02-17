@@ -5,10 +5,11 @@ import (
 
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 )
 
 func listImages(targets awsutil.TargetList, skipList awsutil.TargetList,
-	searchTags, excludeSearchTags awsutil.Tags, minImageAge time.Duration,
+	searchTags, excludeSearchTags libtags.Tags, minImageAge time.Duration,
 	logger log.DebugLogger) ([]Image, error) {
 	logger.Debugln(0, "loading credentials")
 	cs, err := awsutil.LoadCredentials()

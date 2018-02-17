@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
-	"github.com/Symantec/Dominator/lib/awsutil"
 	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 )
 
 func launchInstancesSubcommand(args []string, logger log.DebugLogger) {
@@ -60,7 +60,7 @@ func launchInstancesForImages(resourcesFiles []string,
 		resources = append(resources, fileRes...)
 	}
 	if tags == nil {
-		tags = make(awsutil.Tags)
+		tags = make(libtags.Tags)
 	}
 	tags["Name"] = *instanceName
 	if *expiresIn > 0 {

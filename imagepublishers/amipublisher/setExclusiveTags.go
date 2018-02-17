@@ -3,8 +3,8 @@ package amipublisher
 import (
 	"fmt"
 
-	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -49,7 +49,7 @@ func setExclusiveTagsForTarget(awsService *ec2.EC2, amiId string,
 		return err
 	}
 	images, err := getImages(awsService, "",
-		awsutil.Tags{"Name": nameTag, tagKey: ""})
+		libtags.Tags{"Name": nameTag, tagKey: ""})
 	if err != nil {
 		logger.Println(err)
 		return err

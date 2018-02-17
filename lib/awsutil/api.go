@@ -4,6 +4,7 @@ import (
 	"flag"
 
 	"github.com/Symantec/Dominator/lib/log"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -184,47 +185,16 @@ func ListRegions(awsService *ec2.EC2) ([]string, error) {
 	return listRegions(awsService)
 }
 
-type Tag struct {
-	Key   string
-	Value string
+func MakeFilterFromTag(tag libtags.Tag) *ec2.Filter {
+	return makeFilterFromTag(tag)
 }
 
-func (tag Tag) MakeFilter() *ec2.Filter {
-	return tag.makeFilter()
-}
-
-func (tag *Tag) String() string {
-	return tag.string()
-}
-
-func (tag *Tag) Set(value string) error {
-	return tag.set(value)
-}
-
-type Tags map[string]string // Key: tag key, value: tag value.
-
-func CreateTagsFromList(list []*ec2.Tag) Tags {
+func CreateTagsFromList(list []*ec2.Tag) libtags.Tags {
 	return createTagsFromList(list)
 }
 
-func (tags Tags) MakeFilters() []*ec2.Filter {
-	return tags.makeFilters()
-}
-
-func (tags Tags) Copy() Tags {
-	return tags.copy()
-}
-
-func (to Tags) Merge(from Tags) {
-	to.merge(from)
-}
-
-func (tags *Tags) String() string {
-	return tags.string()
-}
-
-func (tags *Tags) Set(value string) error {
-	return tags.set(value)
+func MakeFiltersFromTags(tags libtags.Tags) []*ec2.Filter {
+	return makeFiltersFromTags(tags)
 }
 
 type Target struct {

@@ -12,6 +12,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -307,7 +308,7 @@ func (ss *sharingStateType) publish(awsService *ec2.EC2, result TargetResult) {
 }
 
 func (ss *sharingStateType) harvest(awsService *ec2.EC2, region string,
-	imageName string, tags awsutil.Tags, logger log.Logger) (
+	imageName string, tags libtags.Tags, logger log.Logger) (
 	*TargetResult, error) {
 	ownerId, err := getAccountId(awsService)
 	if err != nil {

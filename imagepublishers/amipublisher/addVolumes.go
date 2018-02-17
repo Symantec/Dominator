@@ -4,11 +4,12 @@ import (
 	uclient "github.com/Symantec/Dominator/imageunpacker/client"
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 func addVolumes(targets awsutil.TargetList, skipList awsutil.TargetList,
-	tags awsutil.Tags, unpackerName string, size uint64,
+	tags libtags.Tags, unpackerName string, size uint64,
 	logger log.Logger) error {
 	errorsChannel := make(chan error, 1)
 	numTargets, err := awsutil.ForEachTarget(targets, skipList,
@@ -27,14 +28,14 @@ func addVolumes(targets awsutil.TargetList, skipList awsutil.TargetList,
 	return err
 }
 
-func addVolumeToTargetWrapper(awsService *ec2.EC2, tags awsutil.Tags,
+func addVolumeToTargetWrapper(awsService *ec2.EC2, tags libtags.Tags,
 	unpackerName string, size uint64, errorChannel chan<- error,
 	logger log.Logger) {
 	errorChannel <- addVolumeToTarget(awsService, tags, unpackerName, size,
 		logger)
 }
 
-func addVolumeToTarget(awsService *ec2.EC2, tags awsutil.Tags,
+func addVolumeToTarget(awsService *ec2.EC2, tags libtags.Tags,
 	unpackerName string, size uint64, logger log.Logger) error {
 	unpackerInstance, srpcClient, err := getWorkingUnpacker(awsService,
 		unpackerName, logger)

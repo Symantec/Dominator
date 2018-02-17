@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/log"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -15,7 +16,7 @@ import (
 
 func launchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
 	imageSearchTags, vpcSearchTags, subnetSearchTags,
-	securityGroupSearchTags awsutil.Tags, instanceType string,
+	securityGroupSearchTags libtags.Tags, instanceType string,
 	sshKeyName string, tags map[string]string, replaceInstances bool,
 	logger log.Logger) ([]InstanceResult, error) {
 	if imageSearchTags["Name"] == "" {
@@ -53,8 +54,8 @@ func launchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
 
 func launchInstanceInTarget(awsService *ec2.EC2,
 	imageSearchTags, vpcSearchTags, subnetSearchTags,
-	securityGroupSearchTags awsutil.Tags,
-	instanceType string, sshKeyName string, tags awsutil.Tags,
+	securityGroupSearchTags libtags.Tags,
+	instanceType string, sshKeyName string, tags libtags.Tags,
 	replaceInstances bool, logger log.Logger) (string, string, error) {
 	oldInstances, err := getInstances(awsService, tags["Name"])
 	if err != nil {
@@ -113,7 +114,7 @@ func launchInstanceInTarget(awsService *ec2.EC2,
 }
 
 func launchInstancesForImages(resources []Resource,
-	vpcSearchTags, subnetSearchTags, securityGroupSearchTags awsutil.Tags,
+	vpcSearchTags, subnetSearchTags, securityGroupSearchTags libtags.Tags,
 	instanceType string, sshKeyName string, tags map[string]string,
 	logger log.Logger) ([]InstanceResult, error) {
 	resultsChannel := make(chan InstanceResult, 1)
@@ -149,8 +150,8 @@ func launchInstancesForImages(resources []Resource,
 
 func launchInstanceForImage(awsService *ec2.EC2, resource Resource,
 	vpcSearchTags, subnetSearchTags,
-	securityGroupSearchTags awsutil.Tags,
-	instanceType string, sshKeyName string, tags awsutil.Tags,
+	securityGroupSearchTags libtags.Tags,
+	instanceType string, sshKeyName string, tags libtags.Tags,
 	logger log.Logger) (string, string, error) {
 	instance, err := launchInstance(awsService,
 		&ec2.Image{ImageId: aws.String(resource.AmiId)},

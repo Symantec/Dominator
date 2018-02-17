@@ -9,6 +9,7 @@ import (
 
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/log"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -95,7 +96,7 @@ func computeImageConsumption(image *ec2.Image) int64 {
 }
 
 func createSnapshot(awsService *ec2.EC2, volumeId string, description string,
-	tags awsutil.Tags, logger log.Logger) (
+	tags libtags.Tags, logger log.Logger) (
 	string, error) {
 	snapshot, err := awsService.CreateSnapshot(&ec2.CreateSnapshotInput{
 		VolumeId:    aws.String(volumeId),
@@ -139,7 +140,7 @@ func createTags(awsService *ec2.EC2, resourceId string,
 }
 
 func createTagSpecification(resourceType string,
-	tags awsutil.Tags) *ec2.TagSpecification {
+	tags libtags.Tags) *ec2.TagSpecification {
 	if tags == nil {
 		return nil
 	}
@@ -155,7 +156,7 @@ func createTagSpecification(resourceType string,
 }
 
 func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
-	tags awsutil.Tags, logger log.Logger) (string, error) {
+	tags libtags.Tags, logger log.Logger) (string, error) {
 	tags = tags.Copy()
 	delete(tags, "ExpiresAt")
 	tags["Name"] = "image unpacker"
@@ -379,7 +380,7 @@ func describeInstances(awsService *ec2.EC2, input *ec2.DescribeInstancesInput) (
 	return instances, nil
 }
 
-func findImage(awsService *ec2.EC2, tags awsutil.Tags) (*ec2.Image, error) {
+func findImage(awsService *ec2.EC2, tags libtags.Tags) (*ec2.Image, error) {
 	images, err := getImages(awsService, "", tags)
 	if err != nil {
 		return nil, err
@@ -469,9 +470,9 @@ func getFreeVolumeName(usedBlockDevices map[string]struct{}) string {
 	}
 }
 
-func getImages(awsService *ec2.EC2, accountId string, tags awsutil.Tags) (
+func getImages(awsService *ec2.EC2, accountId string, tags libtags.Tags) (
 	[]*ec2.Image, error) {
-	filters := tags.MakeFilters()
+	filters := awsutil.MakeFiltersFromTags(tags)
 	if accountId != "" {
 		filters = append(filters, &ec2.Filter{
 			Name:   aws.String("owner-id"),
@@ -573,9 +574,9 @@ func getRunningInstance(awsService *ec2.EC2, instances []*ec2.Instance,
 	return stoppedInstance, nil
 }
 
-func getSecurityGroup(awsService *ec2.EC2, vpcId string, tags awsutil.Tags) (
+func getSecurityGroup(awsService *ec2.EC2, vpcId string, tags libtags.Tags) (
 	*ec2.SecurityGroup, error) {
-	filters := tags.MakeFilters()
+	filters := awsutil.MakeFiltersFromTags(tags)
 	filters = append(filters, &ec2.Filter{
 		Name:   aws.String("vpc-id"),
 		Values: aws.StringSlice([]string{vpcId}),
@@ -594,9 +595,9 @@ func getSecurityGroup(awsService *ec2.EC2, vpcId string, tags awsutil.Tags) (
 	return out.SecurityGroups[0], nil
 }
 
-func getSubnet(awsService *ec2.EC2, vpcId string, tags awsutil.Tags) (
+func getSubnet(awsService *ec2.EC2, vpcId string, tags libtags.Tags) (
 	*ec2.Subnet, error) {
-	filters := tags.MakeFilters()
+	filters := awsutil.MakeFiltersFromTags(tags)
 	filters = append(filters, &ec2.Filter{
 		Name:   aws.String("vpc-id"),
 		Values: aws.StringSlice([]string{vpcId}),
@@ -617,9 +618,9 @@ func getSubnet(awsService *ec2.EC2, vpcId string, tags awsutil.Tags) (
 	return nil, errors.New("no subnets with available IPs found")
 }
 
-func getVpc(awsService *ec2.EC2, tags awsutil.Tags) (*ec2.Vpc, error) {
+func getVpc(awsService *ec2.EC2, tags libtags.Tags) (*ec2.Vpc, error) {
 	out, err := awsService.DescribeVpcs(
-		&ec2.DescribeVpcsInput{Filters: tags.MakeFilters()})
+		&ec2.DescribeVpcsInput{Filters: awsutil.MakeFiltersFromTags(tags)})
 	if err != nil {
 		return nil, err
 	}
@@ -632,8 +633,8 @@ func getVpc(awsService *ec2.EC2, tags awsutil.Tags) (*ec2.Vpc, error) {
 	return out.Vpcs[0], nil
 }
 
-func launchInstance(awsService *ec2.EC2, image *ec2.Image, tags awsutil.Tags,
-	vpcSearchTags, subnetSearchTags, securityGroupSearchTags awsutil.Tags,
+func launchInstance(awsService *ec2.EC2, image *ec2.Image, tags libtags.Tags,
+	vpcSearchTags, subnetSearchTags, securityGroupSearchTags libtags.Tags,
 	instanceType string, sshKeyName string) (*ec2.Instance, error) {
 	vpc, err := getVpc(awsService, vpcSearchTags)
 	if err != nil {
@@ -676,7 +677,7 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image, tags awsutil.Tags,
 }
 
 func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
-	amiName string, imageName string, tags awsutil.Tags, imageGiB uint64,
+	amiName string, imageName string, tags libtags.Tags, imageGiB uint64,
 	publishOptions *PublishOptions, logger log.Logger) (string, error) {
 	rootDevName := "/dev/sda1"
 	blkDevMaps := make([]*ec2.BlockDeviceMapping, 1)

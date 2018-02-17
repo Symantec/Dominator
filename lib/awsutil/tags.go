@@ -1,15 +1,12 @@
 package awsutil
 
 import (
-	"errors"
-	"strings"
-
-	libjson "github.com/Symantec/Dominator/lib/json"
+	libtags "github.com/Symantec/Dominator/lib/tags"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-func (tag Tag) makeFilter() *ec2.Filter {
+func makeFilterFromTag(tag libtags.Tag) *ec2.Filter {
 	if tag.Key == "" {
 		return nil
 	}
@@ -26,87 +23,21 @@ func (tag Tag) makeFilter() *ec2.Filter {
 	}
 }
 
-func (tag *Tag) string() string {
-	return tag.Key + "=" + tag.Value
-}
-
-func (tag *Tag) set(value string) error {
-	splitValue := strings.Split(value, "=")
-	if len(splitValue) != 2 {
-		return errors.New(`malformed tag: "` + value + `"`)
-	}
-	*tag = Tag{splitValue[0], splitValue[1]}
-	return nil
-}
-
-func createTagsFromList(list []*ec2.Tag) Tags {
-	tags := make(Tags, len(list))
+func createTagsFromList(list []*ec2.Tag) libtags.Tags {
+	tags := make(libtags.Tags, len(list))
 	for _, tag := range list {
 		tags[aws.StringValue(tag.Key)] = aws.StringValue(tag.Value)
 	}
 	return tags
 }
 
-func (tags Tags) copy() Tags {
-	newTags := make(Tags, len(tags))
-	for key, value := range tags {
-		newTags[key] = value
-	}
-	return newTags
-}
-
-func (to Tags) merge(from Tags) {
-	for key, value := range from {
-		to[key] = value
-	}
-}
-
-func (tags Tags) makeFilters() []*ec2.Filter {
+func makeFiltersFromTags(tags libtags.Tags) []*ec2.Filter {
 	if len(tags) < 1 {
 		return nil
 	}
 	filters := make([]*ec2.Filter, 0, len(tags))
 	for key, value := range tags {
-		filters = append(filters, Tag{key, value}.makeFilter())
+		filters = append(filters, makeFilterFromTag(libtags.Tag{key, value}))
 	}
 	return filters
-}
-
-func (tags *Tags) string() string {
-	pairs := make([]string, 0, len(*tags))
-	for key, value := range *tags {
-		pairs = append(pairs, key+"="+value)
-	}
-	return strings.Join(pairs, ",")
-}
-
-func (tags *Tags) set(value string) error {
-	newTags := make(Tags)
-	if value == "" {
-		*tags = newTags
-		return nil
-	}
-	for _, tag := range strings.Split(value, ",") {
-		if len(tag) < 3 {
-			return errors.New(`malformed tag: "` + tag + `"`)
-		}
-		if tag[0] == '@' {
-			var fileTags Tags
-			if err := libjson.ReadFromFile(tag[1:], &fileTags); err != nil {
-				return errors.New("error loading tags file: " + err.Error())
-			}
-			newTags.Merge(fileTags)
-			continue
-		}
-		splitTag := strings.Split(tag, "=")
-		if len(splitTag) != 2 {
-			return errors.New(`malformed tag: "` + tag + `"`)
-		}
-		if splitTag[0] == "" {
-			return errors.New("empty tag key")
-		}
-		newTags[splitTag[0]] = splitTag[1]
-	}
-	*tags = newTags
-	return nil
 }
