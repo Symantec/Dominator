@@ -43,14 +43,14 @@ type ImageDataBase struct {
 	deduper          *stringutil.StringDeduplicator
 	pendingImageLock sync.Mutex
 	// Unprotected by any lock.
-	objectServer objectserver.FullObjectServer
-	masterMode   bool
-	logger       log.DebugLogger
+	objectServer      objectserver.FullObjectServer
+	replicationMaster string
+	logger            log.DebugLogger
 }
 
 func LoadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
-	masterMode bool, logger log.DebugLogger) (*ImageDataBase, error) {
-	return loadImageDataBase(baseDir, objSrv, masterMode, logger)
+	replicationMaster string, logger log.DebugLogger) (*ImageDataBase, error) {
+	return loadImageDataBase(baseDir, objSrv, replicationMaster, logger)
 }
 
 func (imdb *ImageDataBase) AddImage(image *image.Image, name string,
