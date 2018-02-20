@@ -58,23 +58,19 @@ func main() {
 	if err != nil {
 		logger.Fatalf("Cannot create ObjectServer: %s\n", err)
 	}
-	masterMode := true
+	var imageServerAddress string
 	if *imageServerHostname != "" {
-		masterMode = false
+		imageServerAddress = fmt.Sprintf("%s:%d", *imageServerHostname,
+			*imageServerPortNum)
 	}
-	imdb, err := scanner.LoadImageDataBase(*imageDir, objSrv, masterMode,
-		logger)
+	imdb, err := scanner.LoadImageDataBase(*imageDir, objSrv,
+		imageServerAddress, logger)
 	if err != nil {
 		logger.Fatalf("Cannot load image database: %s\n", err)
 	}
 	tricorder.RegisterMetric("/image-count",
 		func() uint { return imdb.CountImages() },
 		units.None, "number of images")
-	var imageServerAddress string
-	if *imageServerHostname != "" {
-		imageServerAddress = fmt.Sprintf("%s:%d", *imageServerHostname,
-			*imageServerPortNum)
-	}
 	imgSrvRpcHtmlWriter, err := imageserverRpcd.Setup(imdb, imageServerAddress,
 		objSrv, logger)
 	if err != nil {

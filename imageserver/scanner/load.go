@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 	"syscall"
 	"time"
 
@@ -15,12 +16,15 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/logutil"
+	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/Symantec/Dominator/lib/objectserver"
+	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/stringutil"
 )
 
 func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
-	masterMode bool, logger log.DebugLogger) (*ImageDataBase, error) {
+	replicationMaster string, logger log.DebugLogger) (*ImageDataBase, error) {
 	fi, err := os.Stat(baseDir)
 	if err != nil {
 		return nil, errors.New(
@@ -30,16 +34,16 @@ func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 		return nil, errors.New(fmt.Sprintf("%s is not a directory\n", baseDir))
 	}
 	imdb := &ImageDataBase{
-		baseDir:         baseDir,
-		directoryMap:    make(map[string]image.DirectoryMetadata),
-		imageMap:        make(map[string]*image.Image),
-		addNotifiers:    make(notifiers),
-		deleteNotifiers: make(notifiers),
-		mkdirNotifiers:  make(makeDirectoryNotifiers),
-		deduper:         stringutil.NewStringDeduplicator(false),
-		objectServer:    objSrv,
-		masterMode:      masterMode,
-		logger:          logger,
+		baseDir:           baseDir,
+		directoryMap:      make(map[string]image.DirectoryMetadata),
+		imageMap:          make(map[string]*image.Image),
+		addNotifiers:      make(notifiers),
+		deleteNotifiers:   make(notifiers),
+		mkdirNotifiers:    make(makeDirectoryNotifiers),
+		deduper:           stringutil.NewStringDeduplicator(false),
+		objectServer:      objSrv,
+		replicationMaster: replicationMaster,
+		logger:            logger,
 	}
 	imdb.unreferencedObjects, err = loadUnreferencedObjects(
 		path.Join(baseDir, unreferencedObjectsFile))
@@ -175,8 +179,23 @@ func (imdb *ImageDataBase) loadFile(filename string,
 		imdb.logger.Printf("Deleting already expired image: %s\n", filename)
 		return os.Remove(pathname)
 	}
-	if image.VerifyObjects(imdb.objectServer); err != nil {
-		return err
+	if err := image.VerifyObjects(imdb.objectServer); err != nil {
+		if imdb.replicationMaster == "" ||
+			!strings.Contains(err.Error(), "not available") {
+			return fmt.Errorf("error verifying: %s: %s", filename, err)
+		}
+		client, err := srpc.DialHTTP("tcp", imdb.replicationMaster, time.Minute)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+		objClient := objectclient.AttachObjectClient(client)
+		defer objClient.Close()
+		err = image.GetMissingObjects(imdb.objectServer, objClient,
+			prefixlogger.New(filename+": ", logger))
+		if err != nil {
+			return err
+		}
 	}
 	image.FileSystem.RebuildInodePointers()
 	imdb.deduperLock.Lock()

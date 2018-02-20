@@ -19,7 +19,7 @@ func (image *Image) listMissingObjects(
 	hashBuffer := make([]hash.Hash, 1024)
 	var missingObjects []hash.Hash
 	index := 0
-	image.forEachObject(func(hashVal hash.Hash) error {
+	err := image.forEachObject(func(hashVal hash.Hash) error {
 		hashBuffer[index] = hashVal
 		index++
 		if index < len(hashBuffer) {
@@ -34,6 +34,9 @@ func (image *Image) listMissingObjects(
 		index = 0
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 	return listMissingObjects(missingObjects, hashBuffer[:index],
 		objectsChecker)
 }

@@ -22,6 +22,7 @@ var (
 type srpcType struct {
 	imageDataBase             *scanner.ImageDataBase
 	replicationMaster         string
+	imageserverResource       *srpc.ClientResource
 	objSrv                    objectserver.FullObjectServer
 	archiveMode               bool
 	logger                    log.Logger
@@ -49,6 +50,7 @@ func Setup(imdb *scanner.ImageDataBase, replicationMaster string,
 	srpcObj := &srpcType{
 		imageDataBase:       imdb,
 		replicationMaster:   replicationMaster,
+		imageserverResource: srpc.NewClientResource("tcp", replicationMaster),
 		objSrv:              objSrv,
 		logger:              logger,
 		archiveMode:         *archiveMode,

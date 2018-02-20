@@ -3,13 +3,15 @@ package rpcd
 import (
 	"encoding/gob"
 	"errors"
+	"fmt"
 	"io"
 	"time"
 
 	imgclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
@@ -126,29 +128,30 @@ func (t *srpcType) addImage(name string) error {
 	if t.imageDataBase.CheckImage(name) || t.checkImageBeingInjected(name) {
 		return nil
 	}
-	t.logger.Printf("Replicator(%s): add image\n", name)
-	client, err := srpc.DialHTTP("tcp", t.replicationMaster, timeout)
+	logger := prefixlogger.New(fmt.Sprintf("Replicator(%s): ", name), t.logger)
+	logger.Println("add image")
+	client, err := t.imageserverResource.GetHTTP(nil, timeout)
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer client.Put()
 	img, err := imgclient.GetImage(client, name)
 	if err != nil {
+		client.Close()
 		return err
 	}
 	if img == nil {
 		return errors.New(name + ": not found")
 	}
-	t.logger.Printf("Replicator(%s): downloaded image\n", name)
+	logger.Println("downloaded image")
 	if t.archiveMode && !img.ExpiresAt.IsZero() && !*archiveExpiringImages {
-		t.logger.Printf(
-			"Replicator(%s): ignoring expiring image in archiver mode\n",
-			name)
+		logger.Println("ignoring expiring image in archiver mode")
 		return nil
 	}
 	img.FileSystem.RebuildInodePointers()
 	err = t.imageDataBase.DoWithPendingImage(img, func() error {
-		if err := t.getMissingObjects(img); err != nil {
+		if err := t.getMissingObjects(img, client, logger); err != nil {
+			client.Close()
 			return err
 		}
 		if err := t.imageDataBase.AddImage(img, name, nil); err != nil {
@@ -159,7 +162,7 @@ func (t *srpcType) addImage(name string) error {
 	if err != nil {
 		return err
 	}
-	t.logger.Printf("Replicator(%s): added image\n", name)
+	logger.Println("added image")
 	return nil
 }
 
@@ -170,47 +173,9 @@ func (t *srpcType) checkImageBeingInjected(name string) bool {
 	return ok
 }
 
-func (t *srpcType) getMissingObjects(img *image.Image) error {
-	hashes := img.ListObjects()
-	objectSizes, err := t.objSrv.CheckObjects(hashes)
-	if err != nil {
-		return err
-	}
-	missingObjects := make([]hash.Hash, 0)
-	for index, size := range objectSizes {
-		if size < 1 {
-			missingObjects = append(missingObjects, hashes[index])
-		}
-	}
-	if len(missingObjects) < 1 {
-		return nil
-	}
-	t.logger.Printf("Replicator: downloading %d of %d objects\n",
-		len(missingObjects), len(hashes))
-	startTime := time.Now()
-	objClient := objectclient.NewObjectClient(t.replicationMaster)
+func (t *srpcType) getMissingObjects(img *image.Image, client *srpc.Client,
+	logger log.DebugLogger) error {
+	objClient := objectclient.AttachObjectClient(client)
 	defer objClient.Close()
-	objectsReader, err := objClient.GetObjects(missingObjects)
-	if err != nil {
-		return errors.New("error downloading objects: " + err.Error())
-	}
-	defer objectsReader.Close()
-	var totalBytes uint64
-	for _, hash := range missingObjects {
-		length, reader, err := objectsReader.NextObject()
-		if err != nil {
-			return err
-		}
-		_, _, err = t.objSrv.AddObject(reader, length, &hash)
-		reader.Close()
-		if err != nil {
-			return err
-		}
-		totalBytes += length
-	}
-	timeTaken := time.Since(startTime)
-	t.logger.Printf("Replicator: downloaded %d objects, %s in %s (%s/s)\n",
-		len(missingObjects), format.FormatBytes(totalBytes), timeTaken,
-		format.FormatBytes(uint64(float64(totalBytes)/timeTaken.Seconds())))
-	return nil
+	return img.GetMissingObjects(t.objSrv, objClient, logger)
 }
