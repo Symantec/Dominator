@@ -1,6 +1,7 @@
 package wsyscall
 
 import (
+	"errors"
 	"runtime"
 	"syscall"
 )
@@ -85,7 +86,11 @@ func unshareMountNamespace() error {
 	// well thought out.
 	runtime.LockOSThread()
 	if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
-		return err
+		return errors.New("error unsharing mount namespace: " + err.Error())
 	}
-	return syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, "")
+	err := syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, "")
+	if err != nil {
+		return errors.New("error making mounts private: " + err.Error())
+	}
+	return nil
 }
