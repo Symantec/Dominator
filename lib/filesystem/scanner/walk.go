@@ -61,6 +61,9 @@ func scanFileSystem(rootDirectoryName string,
 	fsScanContext *fsrateio.ReaderContext, scanFilter *filter.Filter,
 	checkScanDisableRequest func() bool, hasher Hasher, oldFS *FileSystem) (
 	*FileSystem, error) {
+	if checkScanDisableRequest != nil && checkScanDisableRequest() {
+		return nil, errors.New("DisableScan")
+	}
 	var fileSystem FileSystem
 	fileSystem.rootDirectoryName = rootDirectoryName
 	fileSystem.fsScanContext = fsScanContext
