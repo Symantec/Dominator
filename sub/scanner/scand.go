@@ -3,6 +3,7 @@ package scanner
 import (
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/Symantec/Dominator/lib/log"
 )
@@ -38,7 +39,9 @@ func scannerDaemon(rootDirectoryName string, cacheDirectoryName string,
 	runtime.LockOSThread()
 	loweredPriority := false
 	var oldFS FileSystem
-	for {
+	var sleepUntil time.Time
+	for ; ; time.Sleep(time.Until(sleepUntil)) {
+		sleepUntil = time.Now().Add(time.Second)
 		fs, err := scanFileSystem(rootDirectoryName, cacheDirectoryName,
 			configuration, &oldFS)
 		if err != nil {
