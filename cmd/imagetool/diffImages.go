@@ -12,7 +12,6 @@ import (
 	imgclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/filesystem/scanner"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
@@ -26,21 +25,21 @@ func diffSubcommand(args []string) {
 func diffTypedImages(tool string, lName string, rName string) {
 	lfs, err := getTypedImage(lName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting left image\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error getting left image: %s\n", err)
 		os.Exit(1)
 	}
 	rfs, err := getTypedImage(rName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting right image\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error getting right image: %s\n", err)
 		os.Exit(1)
 	}
 	if rfs, err = applyDeleteFilter(rfs); err != nil {
-		fmt.Fprintf(os.Stderr, "Error filtering right image\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error filtering right image: %s\n", err)
 		os.Exit(1)
 	}
 	err = diffImages(tool, lfs, rfs)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error diffing images\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Error diffing images: %s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
@@ -69,11 +68,11 @@ func getTypedImage(typedName string) (*filesystem.FileSystem, error) {
 }
 
 func scanDirectory(name string) (*filesystem.FileSystem, error) {
-	sfs, err := scanner.ScanFileSystem(name, nil, nil, nil, nil, nil)
+	fs, err := buildImageWithHasher(nil, nil, name, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &sfs.FileSystem, nil
+	return fs, nil
 }
 
 func readFileSystem(name string) (*filesystem.FileSystem, error) {
