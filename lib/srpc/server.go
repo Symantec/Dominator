@@ -32,6 +32,7 @@ const (
 
 type methodWrapper struct {
 	plain                         bool
+	public                        bool
 	fn                            reflect.Value
 	requestType                   reflect.Type
 	responseType                  reflect.Type
@@ -99,7 +100,8 @@ func defaultMethodBlocker(methodName string) bool {
 	return false
 }
 
-func registerName(name string, rcvr interface{}) error {
+func registerName(name string, rcvr interface{},
+	options ReceiverOptions) error {
 	var receiver receiverType
 	receiver.methods = make(map[string]*methodWrapper)
 	typeOfReceiver := reflect.TypeOf(rcvr)
@@ -107,6 +109,10 @@ func registerName(name string, rcvr interface{}) error {
 	receiverMetricsDir, err := serverMetricsDir.RegisterDirectory(name)
 	if err != nil {
 		return err
+	}
+	publicMethods := make(map[string]struct{}, len(options.PublicMethods))
+	for _, methodName := range options.PublicMethods {
+		publicMethods[methodName] = struct{}{}
 	}
 	for index := 0; index < typeOfReceiver.NumMethod(); index++ {
 		method := typeOfReceiver.Method(index)
@@ -119,6 +125,9 @@ func registerName(name string, rcvr interface{}) error {
 			continue
 		}
 		receiver.methods[method.Name] = mVal
+		if _, ok := publicMethods[method.Name]; ok {
+			mVal.public = true
+		}
 		dir, err := receiverMetricsDir.RegisterDirectory(method.Name)
 		if err != nil {
 			return err
@@ -343,6 +352,11 @@ func checkVerifiedChains(verifiedChains [][]*x509.Certificate,
 func getAuth(state tls.ConnectionState) (string, map[string]struct{}, error) {
 	var username string
 	permittedMethods := make(map[string]struct{})
+	trustCertMethods := false
+	if fullAuthCaCertPool == nil ||
+		checkVerifiedChains(state.VerifiedChains, fullAuthCaCertPool) {
+		trustCertMethods = true
+	}
 	for _, certChain := range state.VerifiedChains {
 		for _, cert := range certChain {
 			var err error
@@ -352,12 +366,14 @@ func getAuth(state tls.ConnectionState) (string, map[string]struct{}, error) {
 					return "", nil, err
 				}
 			}
-			pms, err := x509util.GetPermittedMethods(cert)
-			if err != nil {
-				return "", nil, err
-			}
-			for method := range pms {
-				permittedMethods[method] = struct{}{}
+			if trustCertMethods {
+				pms, err := x509util.GetPermittedMethods(cert)
+				if err != nil {
+					return "", nil, err
+				}
+				for method := range pms {
+					permittedMethods[method] = struct{}{}
+				}
 			}
 		}
 	}
@@ -427,9 +443,14 @@ func (conn *Conn) findMethod(serviceMethod string) (*methodWrapper, error) {
 	if !ok {
 		return nil, errors.New(serviceName + ": unknown method: " + methodName)
 	}
-	if !conn.checkPermitted(serviceMethod) {
-		method.numDeniedCalls++
-		return nil, ErrorAccessToMethodDenied
+	if conn.checkMethodAccess(serviceMethod) {
+		conn.haveMethodAccess = true
+	} else {
+		conn.haveMethodAccess = false
+		if !method.public {
+			method.numDeniedCalls++
+			return nil, ErrorAccessToMethodDenied
+		}
 	}
 	if receiver.blockMethod(methodName) {
 		return nil, ErrorMethodBlocked
@@ -438,7 +459,7 @@ func (conn *Conn) findMethod(serviceMethod string) (*methodWrapper, error) {
 }
 
 // Returns true if the method is permitted, else false if denied.
-func (conn *Conn) checkPermitted(serviceMethod string) bool {
+func (conn *Conn) checkMethodAccess(serviceMethod string) bool {
 	if conn.permittedMethods == nil {
 		return true
 	}

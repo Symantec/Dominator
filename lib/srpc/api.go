@@ -14,6 +14,7 @@ package srpc
 import (
 	"bufio"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"net"
 	"sync"
@@ -32,9 +33,12 @@ var (
 	ErrorMethodBlocked        = errors.New("method blocked")
 )
 
-var serverTlsConfig *tls.Config
-var clientTlsConfig *tls.Config
-var tlsRequired bool
+var (
+	clientTlsConfig    *tls.Config
+	fullAuthCaCertPool *x509.CertPool
+	serverTlsConfig    *tls.Config
+	tlsRequired        bool
+)
 
 // CheckTlsRequired returns true if the server requires TLS connections with
 // trusted certificates. It returns false if unencrypted or unauthenticated
@@ -52,6 +56,11 @@ func LoadCertificates(directory string) ([]tls.Certificate, error) {
 	return loadCertificates(directory)
 }
 
+type AuthInformation struct {
+	HaveMethodAccess bool
+	Username         string
+}
+
 // MethodBlocker defines an interface to block method calls (after possible
 // authentication) for a receiver (passed to RegisterName).
 type MethodBlocker interface {
@@ -66,7 +75,12 @@ type MethodBlocker interface {
 // passed only to provide access to connection metadata.
 // The name of the receiver (service) is given by name.
 func RegisterName(name string, rcvr interface{}) error {
-	return registerName(name, rcvr)
+	return registerName(name, rcvr, ReceiverOptions{})
+}
+
+func RegisterNameWithOptions(name string, rcvr interface{},
+	options ReceiverOptions) error {
+	return registerName(name, rcvr, options)
 }
 
 // RegisterServerTlsConfig registers the configuration for TLS server
@@ -81,6 +95,15 @@ func RegisterServerTlsConfig(config *tls.Config, requireTls bool) {
 // connections.
 func RegisterClientTlsConfig(config *tls.Config) {
 	clientTlsConfig = config
+}
+
+// RegisterFullAuthCA registers the CA certificate pool used for full
+// authentication/authorisation checks (including method checks). If not
+// specified, the CA certificate pool registered with RegisterServerTlsConfig is
+// used for full auth checks. This allows for distinguishing between CAs trusted
+// for everything versus CAs trusted only for identity (username and groups).
+func RegisterFullAuthCA(certPool *x509.CertPool) {
+	fullAuthCaCertPool = certPool
 }
 
 type privateClientResource struct {
@@ -257,6 +280,7 @@ type Conn struct {
 	isEncrypted bool
 	*bufio.ReadWriter
 	remoteAddr       string
+	haveMethodAccess bool
 	username         string              // Empty string for unauthenticated.
 	permittedMethods map[string]struct{} // nil: all, empty: none permitted.
 }
@@ -265,6 +289,14 @@ type Conn struct {
 // Client for a subsequent Call.
 func (conn *Conn) Close() error {
 	return conn.close()
+}
+
+// GetAuthInformation will return authentication information for the client who
+// holds the certificate used to authenticate the connection to the server. If
+// the connection was not authenticated nil is returned. If the connection is a
+// client connection, then GetAuthInformation will panic.
+func (conn *Conn) GetAuthInformation() *AuthInformation {
+	return conn.getAuthInformation()
 }
 
 // IsEncrypted will return true if the underlying connection is TLS-encrypted.
@@ -290,4 +322,8 @@ func (conn *Conn) RequestReply(request interface{}, reply interface{}) error {
 // connection, then Username will panic.
 func (conn *Conn) Username() string {
 	return conn.getUsername()
+}
+
+type ReceiverOptions struct {
+	PublicMethods []string
 }
