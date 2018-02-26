@@ -10,6 +10,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"text/template"
 	"time"
@@ -27,11 +28,15 @@ import (
 
 const BLKGETSIZE = 0x00001260
 
+var (
+	mutex               sync.Mutex
+	defaultMkfsFeatures map[string]struct{} // Key: feature name.
+)
+
 type bootInfoType struct {
-	GrubConfigDirectory string
-	InitrdImageFile     string
-	KernelImageFile     string
-	grubTemplate        *template.Template
+	InitrdImageFile string
+	KernelImageFile string
+	grubTemplate    *template.Template
 }
 
 func checkIfPartition(device string) (bool, error) {
@@ -74,14 +79,55 @@ func getBootDirectory(fs *filesystem.FileSystem) (
 	return bootDirectory, nil
 }
 
-func getRootOptions(fs *filesystem.FileSystem,
+func getDefaultMkfsFeatures(device, size string, logger log.Logger) (
+	map[string]struct{}, error) {
+	var err error
+	mutex.Lock()
+	defer mutex.Unlock()
+	if defaultMkfsFeatures == nil {
+		startTime := time.Now()
+		logger.Println("Making calibration file-system")
+		cmd := exec.Command("mkfs.ext4", "-L", "calibration-fs", "-i", "65536",
+			device, size)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			return nil, fmt.Errorf(
+				"error making calibration file-system on: %s: %s: %s",
+				device, err, output)
+		}
+		logger.Printf("Made calibration file-system in %s\n",
+			format.Duration(time.Since(startTime)))
+	}
+	cmd := exec.Command("dumpe2fs", "-h", device)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("error dumping file-system info: %s: %s",
+			err, output)
+	}
+	defaultMkfsFeatures = make(map[string]struct{})
+	for _, line := range strings.Split(string(output), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 3 {
+			continue
+		}
+		if fields[0] != "Filesystem" || fields[1] != "features:" {
+			continue
+		}
+		for _, field := range fields[2:] {
+			defaultMkfsFeatures[field] = struct{}{}
+		}
+		break
+	}
+	return defaultMkfsFeatures, nil
+}
+
+func getUnsupportedOptions(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter) ([]string, error) {
 	bootDirectory, err := getBootDirectory(fs)
 	if err != nil {
 		return nil, err
 	}
 	dirent, ok := bootDirectory.EntriesByName["ext4.unsupported-features"]
-	fsOptions := []string{"has_journal"}
+	var unsupportedOptions []string
 	if ok {
 		if inode, ok := dirent.Inode().(*filesystem.RegularInode); ok {
 			hashes := []hash.Hash{inode.Hash}
@@ -108,13 +154,13 @@ func getRootOptions(fs *filesystem.FileSystem,
 					}
 					return nil, err
 				} else {
-					fsOptions = append(fsOptions,
-						"^"+strings.Map(sanitiseInput, option))
+					unsupportedOptions = append(unsupportedOptions,
+						strings.Map(sanitiseInput, option))
 				}
 			}
 		}
 	}
-	return fsOptions, nil
+	return unsupportedOptions, nil
 }
 
 func getRootPartition(bootDevice string) (string, error) {
@@ -132,7 +178,7 @@ func getRootPartition(bootDevice string) (string, error) {
 	}
 }
 
-func getBlocksize(device string) (uint64, error) {
+func getDeviceSize(device string) (uint64, error) {
 	fd, err := syscall.Open(device, os.O_RDONLY|syscall.O_CLOEXEC, 0666)
 	if err != nil {
 		return 0, err
@@ -157,7 +203,7 @@ func ioctl(fd int, request, argp uintptr) error {
 func makeAndWriteRoot(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, bootDevice, rootDevice string,
 	makeBootableFlag bool, logger log.Logger) error {
-	fsOptions, err := getRootOptions(fs, objectsGetter)
+	unsupportedOptions, err := getUnsupportedOptions(fs, objectsGetter)
 	if err != nil {
 		return err
 	}
@@ -169,7 +215,7 @@ func makeAndWriteRoot(fs *filesystem.FileSystem,
 			return err
 		}
 	}
-	if err := makeRootFs(rootDevice, fsOptions, logger); err != nil {
+	if err := makeRootFs(rootDevice, unsupportedOptions, logger); err != nil {
 		return err
 	}
 	mountPoint, err := ioutil.TempDir("", "write-raw-image")
@@ -192,17 +238,33 @@ func makeAndWriteRoot(fs *filesystem.FileSystem,
 	return bootInfo.makeBootable(bootDevice, mountPoint, logger)
 }
 
-func makeRootFs(deviceName string, options []string, logger log.Logger) error {
-	size, err := getBlocksize(deviceName)
+func makeRootFs(deviceName string, unsupportedOptions []string,
+	logger log.Logger) error {
+	size, err := getDeviceSize(deviceName)
 	if err != nil {
-		return err
-	} else {
-		logger.Printf("Making %s file-system\n", format.FormatBytes(size))
+		return fmt.Errorf("error geting device size: %s: %s", deviceName, err)
 	}
+	sizeString := strconv.FormatUint(size>>10, 10)
+	var options []string
+	if len(unsupportedOptions) > 0 {
+		defaultFeatures, err := getDefaultMkfsFeatures(deviceName, sizeString,
+			logger)
+		if err != nil {
+			return err
+		}
+		for _, option := range unsupportedOptions {
+			if _, ok := defaultFeatures[option]; ok {
+				options = append(options, "^"+option)
+			}
+		}
+	}
+	cmd := exec.Command("mkfs.ext4", "-L", "rootfs", "-i", "8192")
+	if len(options) > 0 {
+		cmd.Args = append(cmd.Args, "-O", strings.Join(options, ","))
+	}
+	cmd.Args = append(cmd.Args, deviceName, sizeString)
+	logger.Printf("Making %s file-system\n", format.FormatBytes(size))
 	startTime := time.Now()
-	cmd := exec.Command("mkfs.ext4", "-L", "rootfs", "-i", "8192",
-		"-O", strings.Join(options, ","),
-		deviceName, strconv.FormatUint(size>>10, 10))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("error making file-system on: %s: %s: %s",
 			deviceName, err, output)
@@ -231,14 +293,6 @@ func getBootInfo(fs *filesystem.FileSystem,
 		return nil, err
 	}
 	bootInfo := &bootInfoType{}
-	if _, ok := bootDirectory.EntriesByName["grub2"]; ok {
-		bootInfo.GrubConfigDirectory = "grub2"
-	} else if _, ok := bootDirectory.EntriesByName["grub"]; ok {
-		bootInfo.GrubConfigDirectory = "grub"
-	} else {
-		bootInfo.GrubConfigDirectory = "grub" // HACK. Maybe.
-		// return nil, errors.New("no GRUB configuration directory")
-	}
 	for _, dirent := range bootDirectory.EntryList {
 		if strings.HasPrefix(dirent.Name, "initrd.img-") ||
 			strings.HasPrefix(dirent.Name, "initramfs-") {
@@ -265,7 +319,16 @@ func getBootInfo(fs *filesystem.FileSystem,
 func (bootInfo *bootInfoType) makeBootable(deviceName string, rootDir string,
 	logger log.Logger) error {
 	startTime := time.Now()
-	cmd := exec.Command("grub-install", "--boot-directory="+rootDir+"/boot",
+	grubConfigFile := path.Join(rootDir, "boot", "grub", "grub.cfg")
+	grubInstaller, err := exec.LookPath("grub-install")
+	if err != nil {
+		grubInstaller, err = exec.LookPath("grub2-install")
+		if err != nil {
+			return fmt.Errorf("cannot find GRUB installer: %s", err)
+		}
+		grubConfigFile = path.Join(rootDir, "boot", "grub2", "grub.cfg")
+	}
+	cmd := exec.Command(grubInstaller, "--boot-directory="+rootDir+"/boot",
 		deviceName)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("error installing GRUB on: %s: %s: %s",
@@ -273,10 +336,9 @@ func (bootInfo *bootInfoType) makeBootable(deviceName string, rootDir string,
 	}
 	logger.Printf("Installed GRUB in %s\n",
 		format.Duration(time.Since(startTime)))
-	grubConfigFile := path.Join(rootDir, "boot", "grub", "grub.cfg")
 	file, err := os.Create(grubConfigFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating GRUB config file: %s", err)
 	}
 	err = bootInfo.grubTemplate.Execute(file, bootInfo)
 	if err != nil {
@@ -286,17 +348,8 @@ func (bootInfo *bootInfoType) makeBootable(deviceName string, rootDir string,
 	if err := file.Close(); err != nil {
 		return err
 	}
-	if bootInfo.GrubConfigDirectory != "grub" {
-		// Be nice and make a copy for grub2.
-		err := os.Link(grubConfigFile,
-			path.Join(rootDir, "boot", bootInfo.GrubConfigDirectory,
-				"grub.cfg"))
-		if err != nil {
-			return err
-		}
-	}
 	return ioutil.WriteFile(path.Join(rootDir, "etc", "fstab"),
-		[]byte("LABEL=rootfs / ext4 defaults 0 1"),
+		[]byte("LABEL=rootfs / ext4 defaults 0 1\n"),
 		0644)
 }
 

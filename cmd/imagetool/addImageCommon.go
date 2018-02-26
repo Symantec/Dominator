@@ -80,7 +80,7 @@ func buildImage(imageSClient *srpc.Client, filter *filter.Filter,
 }
 
 func buildImageWithHasher(imageSClient *srpc.Client, filter *filter.Filter,
-	imageFilename string, h *hasher) (*filesystem.FileSystem, error) {
+	imageFilename string, h scanner.Hasher) (*filesystem.FileSystem, error) {
 	fi, err := os.Lstat(imageFilename)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func buildImageWithHasher(imageSClient *srpc.Client, filter *filter.Filter,
 
 func buildImageFromRaw(imageSClient *srpc.Client, filter *filter.Filter,
 	imageFile *os.File, partitionTable *mbr.Mbr,
-	h *hasher) (*filesystem.FileSystem, error) {
+	h scanner.Hasher) (*filesystem.FileSystem, error) {
 	var index uint
 	var offsetOfLargest, sizeOfLargest uint64
 	numPartitions := partitionTable.GetNumPartitions()
