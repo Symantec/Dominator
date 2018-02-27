@@ -61,6 +61,14 @@ type AuthInformation struct {
 	Username         string
 }
 
+type Decoder interface {
+	Decode(e interface{}) error
+}
+
+type Encoder interface {
+	Encode(e interface{}) error
+}
+
 // MethodBlocker defines an interface to block method calls (after possible
 // authentication) for a receiver (passed to RegisterName).
 type MethodBlocker interface {
@@ -70,6 +78,7 @@ type MethodBlocker interface {
 // RegisterName publishes in the server the set of methods of the receiver
 // value that satisfy one of the following interfaces:
 //   func Method(*Conn) error
+//   func Method(*Conn, Decoder, Encoder) error
 //   func Method(*Conn, request, *response) error
 // The request/response method must not perform I/O on the Conn type. This is
 // passed only to provide access to connection metadata.
