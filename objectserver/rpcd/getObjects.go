@@ -1,7 +1,6 @@
 package rpcd
 
 import (
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
@@ -14,7 +13,8 @@ import (
 
 var exclusive sync.RWMutex
 
-func (objSrv *srpcType) GetObjects(conn *srpc.Conn) error {
+func (objSrv *srpcType) GetObjects(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder) error {
 	defer conn.Flush()
 	var request objectserver.GetObjectsRequest
 	var response objectserver.GetObjectsResponse
@@ -27,8 +27,6 @@ func (objSrv *srpcType) GetObjects(conn *srpc.Conn) error {
 		objSrv.getSemaphore <- true
 		defer releaseSemaphore(objSrv.getSemaphore)
 	}
-	decoder := gob.NewDecoder(conn)
-	encoder := gob.NewEncoder(conn)
 	var err error
 	if err = decoder.Decode(&request); err != nil {
 		response.ResponseString = err.Error()
