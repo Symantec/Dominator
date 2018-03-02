@@ -1,7 +1,6 @@
 package rpcd
 
 import (
-	"encoding/gob"
 	"syscall"
 	"time"
 
@@ -11,11 +10,11 @@ import (
 
 var startTime time.Time = time.Now()
 
-func (t *rpcType) Poll(conn *srpc.Conn) error {
+func (t *rpcType) Poll(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder) error {
 	defer conn.Flush()
 	var request sub.PollRequest
 	var response sub.PollResponse
-	decoder := gob.NewDecoder(conn)
 	if err := decoder.Decode(&request); err != nil {
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
@@ -51,7 +50,6 @@ func (t *rpcType) Poll(conn *srpc.Conn) error {
 		request.HaveGeneration != t.fileSystemHistory.GenerationCount() {
 		response.FileSystemFollows = true
 	}
-	encoder := gob.NewEncoder(conn)
 	if err := encoder.Encode(response); err != nil {
 		return err
 	}
