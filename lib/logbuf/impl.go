@@ -23,14 +23,18 @@ const (
 	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP |
 		syscall.S_IROTH
 
-	timeLayout = "2006-01-02:15:04:05.999"
+	reopenMessage = "Closing and will open new logfile"
+	timeLayout    = "2006-01-02:15:04:05.999"
 )
 
-func newLogBuffer(length uint, dirname string, quota uint64) *LogBuffer {
+func newLogBuffer(length uint, dirname string, maxFileSize uint64,
+	quota uint64) *LogBuffer {
 	logBuffer := &LogBuffer{
-		buffer: ring.New(int(length)),
-		logDir: dirname,
-		quota:  quota}
+		buffer:      ring.New(int(length)),
+		logDir:      dirname,
+		maxFileSize: maxFileSize,
+		quota:       quota,
+	}
 	if err := logBuffer.setupFileLogging(); err != nil {
 		fmt.Fprintln(logBuffer, err)
 	}
@@ -140,12 +144,54 @@ func (lb *LogBuffer) writeToLogFile(p []byte) bool {
 		return false
 	}
 	lb.writer.Write(p)
-	lb.usage += uint64(len(p))
-	if lb.usage <= lb.quota {
-		return true
+	lb.fileSize += uint64(len(p))
+	if lb.fileSize > lb.maxFileSize {
+		lb.closeAndOpenNewFile()
 	}
-	lb.enforceQuota()
+	lb.usage += uint64(len(p))
+	if lb.usage > lb.quota {
+		lb.enforceQuota()
+	}
 	return true
+}
+
+// This should be called with the lock held.
+func (lb *LogBuffer) closeAndOpenNewFile() error {
+	now := time.Now()
+	year, month, day := now.Date()
+	hour, minute, second := now.Clock()
+	nWritten, _ := fmt.Fprintf(lb.writer, "%d/%02d/%02d %02d:%02d:%02d %s\n",
+		year, month, day, hour, minute, second, reopenMessage)
+	lb.usage += uint64(nWritten)
+	lb.writer.Flush()
+	lb.writer = nil
+	lb.file.Close()
+	if err := lb.openNewFile(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// This should be called with the lock held.
+func (lb *LogBuffer) openNewFile() error {
+	lb.fileSize = 0
+	filename := time.Now().Format(timeLayout)
+	file, err := os.OpenFile(path.Join(lb.logDir, filename),
+		os.O_CREATE|os.O_WRONLY, filePerms)
+	if err != nil {
+		return err
+	}
+	if !*alsoLogToStderr {
+		syscall.Dup2(int(file.Fd()), int(os.Stdout.Fd()))
+		syscall.Dup2(int(file.Fd()), int(os.Stderr.Fd()))
+	}
+	lb.file = file
+	lb.writer = bufio.NewWriter(file)
+	symlink := path.Join(lb.logDir, "latest")
+	tmpSymlink := symlink + "~"
+	os.Remove(tmpSymlink)
+	os.Symlink(filename, tmpSymlink)
+	return os.Rename(tmpSymlink, symlink)
 }
 
 // This should be called with the lock held.
@@ -200,23 +246,9 @@ func (lb *LogBuffer) enforceQuota() error {
 		lb.file = nil
 	}
 	if lb.file == nil {
-		filename := time.Now().Format(timeLayout)
-		file, err := os.OpenFile(path.Join(lb.logDir, filename),
-			os.O_CREATE|os.O_WRONLY, filePerms)
-		if err != nil {
+		if err := lb.openNewFile(); err != nil {
 			return err
 		}
-		if !*alsoLogToStderr {
-			syscall.Dup2(int(file.Fd()), int(os.Stdout.Fd()))
-			syscall.Dup2(int(file.Fd()), int(os.Stderr.Fd()))
-		}
-		lb.file = file
-		lb.writer = bufio.NewWriter(file)
-		symlink := path.Join(lb.logDir, "latest")
-		tmpSymlink := symlink + "~"
-		os.Remove(tmpSymlink)
-		os.Symlink(filename, tmpSymlink)
-		os.Rename(tmpSymlink, symlink)
 	}
 	if numBytesDeleted > 0 {
 		now := time.Now()
@@ -226,6 +258,7 @@ func (lb *LogBuffer) enforceQuota() error {
 			"%d/%02d/%02d %02d:%02d:%02d Deleted %s in %d files\n",
 			year, month, day, hour, minute, second,
 			format.FormatBytes(numBytesDeleted), numFilesDeleted)
+		lb.fileSize += uint64(nWritten)
 		lb.usage += uint64(nWritten)
 	}
 	return nil
@@ -266,18 +299,24 @@ func (lb *LogBuffer) getEntries() [][]byte {
 }
 
 func (lb *LogBuffer) dumpSince(writer io.Writer, name string,
-	earliestTime time.Time, prefix, postfix string, recentFirst bool) error {
+	earliestTime time.Time, prefix, postfix string, recentFirst bool) (
+	bool, error) {
 	file, err := os.Open(path.Join(lb.logDir, path.Base(path.Clean(name))))
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 	lines := make([]string, 0)
 	timeFormat := "2006/01/02 15:04:05"
 	minLength := len(timeFormat) + 2
+	foundReopenMessage := false
 	for scanner.Scan() {
 		line := scanner.Text()
+		if strings.Contains(line, reopenMessage) {
+			foundReopenMessage = true
+			continue
+		}
 		if len(line) >= minLength {
 			timeString := line[:minLength-2]
 			timeStamp, err := time.ParseInLocation(timeFormat, timeString,
@@ -295,7 +334,7 @@ func (lb *LogBuffer) dumpSince(writer io.Writer, name string,
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return err
+		return false, err
 	}
 	if recentFirst {
 		reverseStrings(lines)
@@ -305,7 +344,7 @@ func (lb *LogBuffer) dumpSince(writer io.Writer, name string,
 			writer.Write([]byte(postfix))
 		}
 	}
-	return nil
+	return foundReopenMessage, nil
 }
 
 func (lb *LogBuffer) writeMark() {

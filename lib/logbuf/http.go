@@ -258,12 +258,13 @@ func (lb *LogBuffer) showRecent(w io.Writer, duration time.Duration,
 	lb.flush()
 	for _, name := range names {
 		cWriter.count = 0
-		lb.dumpSince(cWriter, name, earliestTime, "", "\n", recentFirst)
-		fmt.Fprintln(writer, "</pre>")
-		if cWriter.count > 0 {
-			cWriter.prefixLine = "<hr>\n<pre>\n"
+		foundReopenMessage, _ := lb.dumpSince(cWriter, name, earliestTime, "",
+			"\n", recentFirst)
+		if cWriter.count > 0 && !foundReopenMessage {
+			cWriter.prefixLine = "</pre>\n<hr>\n<pre>\n"
 		}
 	}
+	fmt.Fprintln(writer, "</pre>")
 	fmt.Fprintln(writer, "</body>")
 }
 
