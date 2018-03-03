@@ -23,6 +23,7 @@ var (
 	idleMarkTimeout = new(time.Duration)
 	logbufLines     = new(uint)
 	logDir          = new(string)
+	logFileMaxSize  = new(uint)
 	logQuota        = new(uint)
 )
 
@@ -39,8 +40,10 @@ type LogBuffer struct {
 	logDir        string
 	file          *os.File
 	writer        *bufio.Writer
-	usage         uint64
+	fileSize      uint64
+	maxFileSize   uint64
 	quota         uint64
+	usage         uint64
 	writeNotifier chan<- struct{}
 	panicLogfile  *string // Name of last invocation logfile if it has a panic.
 }
@@ -55,9 +58,12 @@ func UseFlagSet(set *flag.FlagSet) {
 		"time after last log before a 'MARK' message is written to logfile")
 	set.UintVar(logbufLines, "logbufLines", 1024,
 		"Number of lines to store in the log buffer")
-	set.StringVar(logDir, "logDir", path.Join("/var/log", path.Base(os.Args[0])),
+	set.StringVar(logDir, "logDir", path.Join("/var/log",
+		path.Base(os.Args[0])),
 		"Directory to write log data to. If empty, no logs are written")
-	set.UintVar(logQuota, "logQuota", 10,
+	set.UintVar(logFileMaxSize, "logFileMaxSize", 10,
+		"Maximum size for a log file in MiB. If exceeded, new file is created")
+	set.UintVar(logQuota, "logQuota", 100,
 		"Log quota in MiB. If exceeded, old logs are deleted")
 }
 
@@ -72,11 +78,15 @@ func UseFlagSet(set *flag.FlagSet) {
 //  -logQuota:        Log quota in MiB. If exceeded, old logs are deleted.
 //                    If zero, the quota will be 16 KiB
 func New() *LogBuffer {
-	quota := uint64(*logQuota) << 20
-	if quota < 16384 {
-		quota = 16384
+	maxFileSize := uint64(*logFileMaxSize) << 20
+	if maxFileSize < 16384 {
+		maxFileSize = 16384
 	}
-	return newLogBuffer(*logbufLines, *logDir, quota)
+	quota := uint64(*logQuota) << 20
+	if quota < 65536 {
+		quota = 65536
+	}
+	return newLogBuffer(*logbufLines, *logDir, maxFileSize, quota)
 }
 
 // Get works like New except that successive calls to Get return the same
