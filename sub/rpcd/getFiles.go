@@ -2,7 +2,6 @@ package rpcd
 
 import (
 	"bufio"
-	"encoding/gob"
 	"io"
 	"os"
 	"path"
@@ -11,11 +10,11 @@ import (
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
-func (t *rpcType) GetFiles(conn *srpc.Conn) error {
+func (t *rpcType) GetFiles(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder) error {
 	defer conn.Flush()
 	t.getFilesLock.Lock()
 	defer t.getFilesLock.Unlock()
-	encoder := gob.NewEncoder(conn)
 	numFiles := 0
 	for ; ; numFiles++ {
 		filename, err := conn.ReadString('\n')
@@ -40,7 +39,7 @@ func (t *rpcType) GetFiles(conn *srpc.Conn) error {
 }
 
 func processFilename(conn *srpc.Conn, filename string,
-	encoder *gob.Encoder) error {
+	encoder srpc.Encoder) error {
 	file, err := os.Open(filename)
 	var response sub.GetFileResponse
 	if err != nil {

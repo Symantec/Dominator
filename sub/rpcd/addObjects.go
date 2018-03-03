@@ -22,10 +22,11 @@ type objectServer struct {
 	baseDir string
 }
 
-func (t *addObjectsHandlerType) AddObjects(conn *srpc.Conn) error {
+func (t *addObjectsHandlerType) AddObjects(conn *srpc.Conn,
+	decoder srpc.Decoder, encoder srpc.Encoder) error {
 	defer t.scannerConfiguration.BoostCpuLimit(t.logger)
 	objSrv := &objectServer{t.objectsDir}
-	return lib.AddObjects(conn, objSrv, t.logger)
+	return lib.AddObjects(conn, decoder, encoder, objSrv, t.logger)
 }
 
 func (objSrv *objectServer) AddObject(reader io.Reader, length uint64,

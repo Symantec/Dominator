@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"encoding/gob"
 	"io"
 
 	"github.com/Symantec/Dominator/lib/errors"
@@ -10,11 +9,10 @@ import (
 	"github.com/Symantec/Dominator/proto/objectserver"
 )
 
-func addObjects(conn *srpc.Conn, adder ObjectAdder, logger log.Logger) error {
+func addObjects(conn *srpc.Conn, decoder srpc.Decoder, encoder srpc.Encoder,
+	adder ObjectAdder, logger log.Logger) error {
 	defer conn.Flush()
 	logger.Printf("AddObjects(%s) starting\n", conn.RemoteAddr())
-	decoder := gob.NewDecoder(conn)
-	encoder := gob.NewEncoder(conn)
 	numAdded := 0
 	numObj := 0
 	for ; ; numObj++ {

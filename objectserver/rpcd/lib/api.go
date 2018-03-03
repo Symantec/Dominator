@@ -14,12 +14,14 @@ type ObjectAdder interface {
 		hash.Hash, bool, error)
 }
 
-func AddObjects(conn *srpc.Conn, adder ObjectAdder, logger log.Logger) error {
-	return addObjects(conn, adder, logger)
+func AddObjects(conn *srpc.Conn, decoder srpc.Decoder, encoder srpc.Encoder,
+	adder ObjectAdder, logger log.Logger) error {
+	return addObjects(conn, decoder, encoder, adder, logger)
 }
 
-func AddObjectsWithMaster(conn *srpc.Conn,
-	objSrv objectserver.StashingObjectServer, masterAddress string,
-	logger log.DebugLogger) error {
-	return addObjectsWithMaster(conn, objSrv, masterAddress, logger)
+func AddObjectsWithMaster(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder, objSrv objectserver.StashingObjectServer,
+	masterAddress string, logger log.DebugLogger) error {
+	return addObjectsWithMaster(conn, decoder, encoder, objSrv, masterAddress,
+		logger)
 }

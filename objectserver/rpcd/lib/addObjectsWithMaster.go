@@ -15,19 +15,18 @@ import (
 	proto "github.com/Symantec/Dominator/proto/objectserver"
 )
 
-func addObjectsWithMaster(conn *srpc.Conn,
-	objSrv objectserver.StashingObjectServer, masterAddress string,
-	logger log.DebugLogger) error {
+func addObjectsWithMaster(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder, objSrv objectserver.StashingObjectServer,
+	masterAddress string, logger log.DebugLogger) error {
 	logger.Printf("AddObjectsWithMaster(%s) starting\n", conn.RemoteAddr())
 	defer conn.Flush()
-	decoder := gob.NewDecoder(conn)
 	numAdded := 0
 	numObj := 0
 	outgoingQueueSendChan, outgoingQueueReceiveChan := newOutgoingQueue()
 	errorChan := make(chan error, 1)
 	defer close(outgoingQueueSendChan)
-	go processOutgoingQueue(gob.NewEncoder(conn), outgoingQueueReceiveChan,
-		errorChan, logger)
+	go processOutgoingQueue(encoder, outgoingQueueReceiveChan, errorChan,
+		logger)
 	masterQueueSendChan, masterQueueReceiveChan := newMasterQueue()
 	defer close(masterQueueSendChan)
 	masterDrain := make(chan error, 1)
@@ -144,7 +143,7 @@ func addObjectsWithMaster(conn *srpc.Conn,
 	return nil
 }
 
-func processOutgoingQueue(encoder *gob.Encoder,
+func processOutgoingQueue(encoder srpc.Encoder,
 	queue <-chan <-chan proto.AddObjectResponse, errorChan chan<- error,
 	logger log.DebugLogger) {
 	// Hold back one response until flush entry. This ensures the client will

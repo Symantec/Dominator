@@ -1,7 +1,6 @@
 package rpcd
 
 import (
-	"encoding/gob"
 	"io"
 
 	"github.com/Symantec/Dominator/lib/image"
@@ -9,7 +8,8 @@ import (
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
 
-func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
+func (t *srpcType) GetImageUpdates(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder) error {
 	defer conn.Flush()
 	t.logger.Printf("New image replication client connected from: %s\n",
 		conn.RemoteAddr())
@@ -21,7 +21,6 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 	defer t.imageDataBase.UnregisterAddNotifier(addChannel)
 	defer t.imageDataBase.UnregisterDeleteNotifier(deleteChannel)
 	defer t.imageDataBase.UnregisterMakeDirectoryNotifier(mkdirChannel)
-	encoder := gob.NewEncoder(conn)
 	directories := t.imageDataBase.ListDirectories()
 	image.SortDirectories(directories)
 	for _, directory := range directories {
@@ -112,12 +111,12 @@ func getCloseNotifier(conn *srpc.Conn) <-chan error {
 	return closeChannel
 }
 
-func sendUpdate(encoder *gob.Encoder, name string, operation uint) error {
+func sendUpdate(encoder srpc.Encoder, name string, operation uint) error {
 	imageUpdate := imageserver.ImageUpdate{Name: name, Operation: operation}
 	return encoder.Encode(imageUpdate)
 }
 
-func sendMakeDirectory(encoder *gob.Encoder, directory image.Directory) error {
+func sendMakeDirectory(encoder srpc.Encoder, directory image.Directory) error {
 	imageUpdate := imageserver.ImageUpdate{
 		Directory: &directory,
 		Operation: imageserver.OperationMakeDirectory,

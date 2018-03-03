@@ -28,10 +28,15 @@ const (
 	rpcPath         = "/_goSRPC_/"
 	tlsRpcPath      = "/_go_TLS_SRPC_/"
 	listMethodsPath = rpcPath + "listMethods"
+
+	methodTypeRaw = iota
+	methodTypeCoder
+	methodTypeRequestReply
 )
 
 type methodWrapper struct {
-	plain                         bool
+	methodType                    int
+	public                        bool
 	fn                            reflect.Value
 	requestType                   reflect.Type
 	responseType                  reflect.Type
@@ -61,6 +66,8 @@ var (
 // Precompute some reflect types. Can't use the types directly because Typeof
 // takes an empty interface value. This is annoying.
 var typeOfConn = reflect.TypeOf((**Conn)(nil)).Elem()
+var typeOfDecoder = reflect.TypeOf((*Decoder)(nil)).Elem()
+var typeOfEncoder = reflect.TypeOf((*Encoder)(nil)).Elem()
 var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
 
 func init() {
@@ -99,7 +106,8 @@ func defaultMethodBlocker(methodName string) bool {
 	return false
 }
 
-func registerName(name string, rcvr interface{}) error {
+func registerName(name string, rcvr interface{},
+	options ReceiverOptions) error {
 	var receiver receiverType
 	receiver.methods = make(map[string]*methodWrapper)
 	typeOfReceiver := reflect.TypeOf(rcvr)
@@ -107,6 +115,10 @@ func registerName(name string, rcvr interface{}) error {
 	receiverMetricsDir, err := serverMetricsDir.RegisterDirectory(name)
 	if err != nil {
 		return err
+	}
+	publicMethods := make(map[string]struct{}, len(options.PublicMethods))
+	for _, methodName := range options.PublicMethods {
+		publicMethods[methodName] = struct{}{}
 	}
 	for index := 0; index < typeOfReceiver.NumMethod(); index++ {
 		method := typeOfReceiver.Method(index)
@@ -119,6 +131,9 @@ func registerName(name string, rcvr interface{}) error {
 			continue
 		}
 		receiver.methods[method.Name] = mVal
+		if _, ok := publicMethods[method.Name]; ok {
+			mVal.public = true
+		}
 		dir, err := receiverMetricsDir.RegisterDirectory(method.Name)
 		if err != nil {
 			return err
@@ -148,21 +163,29 @@ func getMethod(methodType reflect.Type, fn reflect.Value) *methodWrapper {
 		if methodType.In(1) != typeOfConn {
 			return nil
 		}
-		return &methodWrapper{plain: true, fn: fn}
+		return &methodWrapper{methodType: methodTypeRaw, fn: fn}
 	}
 	if methodType.NumIn() == 4 {
-		// Method needs four ins: receiver, *Conn, request, *reply.
 		if methodType.In(1) != typeOfConn {
 			return nil
 		}
-		if methodType.In(3).Kind() != reflect.Ptr {
-			return nil
+		// Coder Method needs four ins: receiver, *Conn, Decoder, Encoder.
+		if methodType.In(2) == typeOfDecoder &&
+			methodType.In(3) == typeOfEncoder {
+			return &methodWrapper{
+				methodType: methodTypeCoder,
+				fn:         fn,
+			}
 		}
-		return &methodWrapper{
-			plain:        false,
-			fn:           fn,
-			requestType:  methodType.In(2),
-			responseType: methodType.In(3).Elem()}
+		// RequestReply Method needs four ins: receiver, *Conn, request, *reply.
+		if methodType.In(3).Kind() == reflect.Ptr {
+			return &methodWrapper{
+				methodType:   methodTypeRequestReply,
+				fn:           fn,
+				requestType:  methodType.In(2),
+				responseType: methodType.In(3).Elem(),
+			}
+		}
 	}
 	return nil
 }
@@ -192,7 +215,7 @@ func (m *methodWrapper) registerMetrics(dir *tricorder.DirectorySpec) error {
 	if err != nil {
 		return err
 	}
-	if m.plain {
+	if m.methodType != methodTypeRequestReply {
 		return nil
 	}
 	m.failedRRCallsDistribution = bucketer.NewCumulativeDistribution()
@@ -343,6 +366,11 @@ func checkVerifiedChains(verifiedChains [][]*x509.Certificate,
 func getAuth(state tls.ConnectionState) (string, map[string]struct{}, error) {
 	var username string
 	permittedMethods := make(map[string]struct{})
+	trustCertMethods := false
+	if fullAuthCaCertPool == nil ||
+		checkVerifiedChains(state.VerifiedChains, fullAuthCaCertPool) {
+		trustCertMethods = true
+	}
 	for _, certChain := range state.VerifiedChains {
 		for _, cert := range certChain {
 			var err error
@@ -352,12 +380,14 @@ func getAuth(state tls.ConnectionState) (string, map[string]struct{}, error) {
 					return "", nil, err
 				}
 			}
-			pms, err := x509util.GetPermittedMethods(cert)
-			if err != nil {
-				return "", nil, err
-			}
-			for method := range pms {
-				permittedMethods[method] = struct{}{}
+			if trustCertMethods {
+				pms, err := x509util.GetPermittedMethods(cert)
+				if err != nil {
+					return "", nil, err
+				}
+				for method := range pms {
+					permittedMethods[method] = struct{}{}
+				}
 			}
 		}
 	}
@@ -427,9 +457,14 @@ func (conn *Conn) findMethod(serviceMethod string) (*methodWrapper, error) {
 	if !ok {
 		return nil, errors.New(serviceName + ": unknown method: " + methodName)
 	}
-	if !conn.checkPermitted(serviceMethod) {
-		method.numDeniedCalls++
-		return nil, ErrorAccessToMethodDenied
+	if conn.checkMethodAccess(serviceMethod) {
+		conn.haveMethodAccess = true
+	} else {
+		conn.haveMethodAccess = false
+		if !method.public {
+			method.numDeniedCalls++
+			return nil, ErrorAccessToMethodDenied
+		}
 	}
 	if receiver.blockMethod(methodName) {
 		return nil, ErrorMethodBlocked
@@ -438,7 +473,7 @@ func (conn *Conn) findMethod(serviceMethod string) (*methodWrapper, error) {
 }
 
 // Returns true if the method is permitted, else false if denied.
-func (conn *Conn) checkPermitted(serviceMethod string) bool {
+func (conn *Conn) checkMethodAccess(serviceMethod string) bool {
 	if conn.permittedMethods == nil {
 		return true
 	}
@@ -480,35 +515,51 @@ func (m *methodWrapper) call(conn *Conn) error {
 
 func (m *methodWrapper) _call(conn *Conn) error {
 	connValue := reflect.ValueOf(conn)
-	if m.plain {
+	switch m.methodType {
+	case methodTypeRaw:
 		returnValues := m.fn.Call([]reflect.Value{connValue})
 		errInter := returnValues[0].Interface()
 		if errInter != nil {
 			return errInter.(error)
 		}
 		return nil
+	case methodTypeCoder:
+		decoder := gob.NewDecoder(conn)
+		encoder := gob.NewEncoder(conn)
+		returnValues := m.fn.Call([]reflect.Value{
+			connValue,
+			reflect.ValueOf(decoder),
+			reflect.ValueOf(encoder),
+		})
+		errInter := returnValues[0].Interface()
+		if errInter != nil {
+			return errInter.(error)
+		}
+		return nil
+	case methodTypeRequestReply:
+		request := reflect.New(m.requestType)
+		response := reflect.New(m.responseType)
+		decoder := gob.NewDecoder(conn)
+		if err := decoder.Decode(request.Interface()); err != nil {
+			_, err = conn.WriteString(err.Error() + "\n")
+			return err
+		}
+		startTime := time.Now()
+		returnValues := m.fn.Call([]reflect.Value{connValue, request.Elem(),
+			response})
+		timeTaken := time.Since(startTime)
+		errInter := returnValues[0].Interface()
+		if errInter != nil {
+			m.failedRRCallsDistribution.Add(timeTaken)
+			err := errInter.(error)
+			_, err = conn.WriteString(err.Error() + "\n")
+			return err
+		}
+		m.successfulRRCallsDistribution.Add(timeTaken)
+		if _, err := conn.WriteString("\n"); err != nil {
+			return err
+		}
+		return gob.NewEncoder(conn).Encode(response.Interface())
 	}
-	request := reflect.New(m.requestType)
-	response := reflect.New(m.responseType)
-	decoder := gob.NewDecoder(conn)
-	if err := decoder.Decode(request.Interface()); err != nil {
-		_, err = conn.WriteString(err.Error() + "\n")
-		return err
-	}
-	startTime := time.Now()
-	returnValues := m.fn.Call([]reflect.Value{connValue, request.Elem(),
-		response})
-	timeTaken := time.Since(startTime)
-	errInter := returnValues[0].Interface()
-	if errInter != nil {
-		m.failedRRCallsDistribution.Add(timeTaken)
-		err := errInter.(error)
-		_, err = conn.WriteString(err.Error() + "\n")
-		return err
-	}
-	m.successfulRRCallsDistribution.Add(timeTaken)
-	if _, err := conn.WriteString("\n"); err != nil {
-		return err
-	}
-	return gob.NewEncoder(conn).Encode(response.Interface())
+	return errors.New("unknown method type")
 }
