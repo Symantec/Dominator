@@ -80,6 +80,10 @@ func SetAllUid(uid int) error {
 	return setAllUid(uid)
 }
 
+func SetNetNamespace(fd int) error {
+	return setNetNamespace(fd)
+}
+
 func Stat(path string, statbuf *Stat_t) error {
 	var rawStatbuf syscall.Stat_t
 	if err := syscall.Stat(path, &rawStatbuf); err != nil {
@@ -91,4 +95,8 @@ func Stat(path string, statbuf *Stat_t) error {
 
 func UnshareMountNamespace() error {
 	return unshareMountNamespace()
+}
+
+func UnshareNetNamespace() (int, int, error) {
+	return unshareNetNamespace()
 }

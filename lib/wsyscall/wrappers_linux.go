@@ -2,9 +2,13 @@ package wsyscall
 
 import (
 	"errors"
+	"os"
 	"runtime"
+	"strconv"
 	"syscall"
 )
+
+const sys_SETNS = 308 // 64 bit only.
 
 func convertStat(dest *Stat_t, source *syscall.Stat_t) {
 	dest.Dev = source.Dev
@@ -78,6 +82,17 @@ func setAllUid(uid int) error {
 	return syscall.Setresuid(uid, uid, uid)
 }
 
+func setNetNamespace(namespaceFd int) error {
+	runtime.LockOSThread()
+	_, _, errno := syscall.Syscall(sys_SETNS, uintptr(namespaceFd),
+		uintptr(syscall.CLONE_NEWNET), 0)
+	if errno != 0 {
+		return os.NewSyscallError("setns", errno)
+	}
+	return nil
+
+}
+
 func unshareMountNamespace() error {
 	// Pin goroutine to OS thread. This hack is required because
 	// syscall.Unshare() operates on only one thread in the process, and Go
@@ -93,4 +108,20 @@ func unshareMountNamespace() error {
 		return errors.New("error making mounts private: " + err.Error())
 	}
 	return nil
+}
+
+func unshareNetNamespace() (int, int, error) {
+	runtime.LockOSThread()
+	if err := syscall.Unshare(syscall.CLONE_NEWNET); err != nil {
+		return -1, -1,
+			errors.New("error unsharing net namespace: " + err.Error())
+	}
+	tid := syscall.Gettid()
+	tidString := strconv.FormatInt(int64(tid), 10)
+	fd, err := syscall.Open("/proc/"+tidString+"/ns/net", syscall.O_RDONLY, 0)
+	if err != nil {
+		return -1, -1,
+			errors.New("error getting FD for namespace: " + err.Error())
+	}
+	return fd, tid, nil
 }
