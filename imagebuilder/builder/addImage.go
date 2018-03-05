@@ -104,12 +104,13 @@ func listPackages(rootDir string) ([]image.Package, error) {
 	if err != nil {
 		return nil, err
 	}
-	var sizeMultiplier uint64
+	sizeMultiplier := uint64(1)
 	nScanned, err := fmt.Fscanf(output, "%d", &sizeMultiplier)
 	if err != nil {
-		return nil, err
-	}
-	if nScanned != 1 {
+		if err != io.EOF {
+			return nil, err
+		}
+	} else if nScanned != 1 {
 		return nil, errors.New("malformed size multiplier")
 	}
 	output.Reset()

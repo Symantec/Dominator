@@ -166,7 +166,7 @@ func writeArgument(writer io.Writer, arg string) {
 }
 
 func clearResolvConf(writer io.Writer, rootDir string) error {
-	return runInTarget(nil, writer, rootDir, "truncate", "-s", "0",
+	return runInTarget(nil, writer, rootDir, "cp", "/dev/null",
 		"/etc/resolv.conf")
 }
 
