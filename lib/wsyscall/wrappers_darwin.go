@@ -68,6 +68,14 @@ func setAllUid(uid int) error {
 	return syscall.Setreuid(uid, uid)
 }
 
+func setNetNamespace(namespaceFd int) error {
+	return syscall.ENOTSUP
+}
+
+func unshareNetNamespace() (int, int, error) {
+	return -1, -1, syscall.ENOTSUP
+}
+
 func unshareMountNamespace() error {
 	return syscall.ENOTSUP
 }
