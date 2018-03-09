@@ -26,7 +26,10 @@ import (
 	"github.com/Symantec/Dominator/lib/wsyscall"
 )
 
-const BLKGETSIZE = 0x00001260
+const (
+	BLKGETSIZE  = 0x00001260
+	createFlags = os.O_CREATE | os.O_TRUNC | os.O_RDWR
+)
 
 var (
 	mutex               sync.Mutex
@@ -369,11 +372,11 @@ func writeToBlock(fs *filesystem.FileSystem,
 
 func writeToFile(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, rawFilename string,
-	tableType mbr.TableType, minFreeSpace uint64, roundupPower uint64,
-	makeBootableFlag, allocateBlocks bool, logger log.Logger) error {
-
+	perm os.FileMode, tableType mbr.TableType, minFreeSpace uint64,
+	roundupPower uint64, makeBootableFlag, allocateBlocks bool,
+	logger log.Logger) error {
 	tmpFilename := rawFilename + "~"
-	if file, err := os.Create(tmpFilename); err != nil {
+	if file, err := os.OpenFile(tmpFilename, createFlags, perm); err != nil {
 		return err
 	} else {
 		file.Close()
@@ -421,8 +424,9 @@ func writeToFile(fs *filesystem.FileSystem,
 
 func writeRaw(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, rawFilename string,
-	tableType mbr.TableType, minFreeSpace uint64, roundupPower uint64,
-	makeBootableFlag, allocateBlocks bool, logger log.Logger) error {
+	perm os.FileMode, tableType mbr.TableType, minFreeSpace uint64,
+	roundupPower uint64, makeBootableFlag, allocateBlocks bool,
+	logger log.Logger) error {
 	if isBlock, err := checkIsBlock(rawFilename); err != nil {
 		if !os.IsNotExist(err) {
 			return err
@@ -431,8 +435,8 @@ func writeRaw(fs *filesystem.FileSystem,
 		return writeToBlock(fs, objectsGetter, rawFilename, tableType,
 			makeBootableFlag, logger)
 	}
-	return writeToFile(fs, objectsGetter, rawFilename, tableType, minFreeSpace,
-		roundupPower, makeBootableFlag, allocateBlocks, logger)
+	return writeToFile(fs, objectsGetter, rawFilename, perm, tableType,
+		minFreeSpace, roundupPower, makeBootableFlag, allocateBlocks, logger)
 }
 
 const grubTemplateString string = `# Generated from simple template.
