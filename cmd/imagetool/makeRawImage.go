@@ -3,10 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
+	"syscall"
 
 	"github.com/Symantec/Dominator/lib/filesystem/util"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 )
+
+const filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP |
+	syscall.S_IROTH
 
 func makeRawImageSubcommand(args []string) {
 	_, objectClient := getClients()
@@ -24,6 +28,6 @@ func makeRawImage(objectClient *objectclient.ObjectClient, name,
 	if err != nil {
 		return err
 	}
-	return util.WriteRaw(fs, objectsGetter, rawFilename, tableType,
+	return util.WriteRaw(fs, objectsGetter, rawFilename, filePerms, tableType,
 		*minFreeBytes, *roundupPower, *makeBootable, *allocateBlocks, logger)
 }

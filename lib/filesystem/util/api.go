@@ -1,6 +1,8 @@
 package util
 
 import (
+	"os"
+
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mbr"
@@ -48,9 +50,9 @@ func Unpack(fs *filesystem.FileSystem, objectsGetter objectserver.ObjectsGetter,
 
 func WriteRaw(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, rawFilename string,
-	tableType mbr.TableType,
+	perm os.FileMode, tableType mbr.TableType,
 	minFreeSpace uint64, roundupPower uint64, makeBootable, allocateBlocks bool,
 	logger log.Logger) error {
-	return writeRaw(fs, objectsGetter, rawFilename, tableType, minFreeSpace,
-		roundupPower, makeBootable, allocateBlocks, logger)
+	return writeRaw(fs, objectsGetter, rawFilename, perm, tableType,
+		minFreeSpace, roundupPower, makeBootable, allocateBlocks, logger)
 }
