@@ -32,6 +32,11 @@ func BindAndDial(network, localAddr, remoteAddr string, timeout time.Duration) (
 	return bindAndDial(network, localAddr, remoteAddr, timeout)
 }
 
+// ListBridges will return a list of EtherNet (layer 2) bridges.
+func ListBridges() ([]net.Interface, error) {
+	return listBridges()
+}
+
 // ListenWithResuse is similar to the net.Listen function from the standard
 // library but sets the SO_REUSEADDR and SO_REUSEPORT options on the underlying
 // socket. This is needed if using BindAndDial to specify the same local address
