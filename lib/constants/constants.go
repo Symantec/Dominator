@@ -8,6 +8,8 @@ const (
 	SimpleMdbServerPortNumber    = 6973
 	ImageUnpackerPortNumber      = 6974
 	ImaginatorPortNumber         = 6975
+	HypervisorPortNumber         = 6976
+	ClusterManagerPortNumber     = 6977
 
 	DefaultCpuPercent          = 50
 	DefaultNetworkSpeedPercent = 10
