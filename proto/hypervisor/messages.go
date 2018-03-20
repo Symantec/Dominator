@@ -95,6 +95,32 @@ type ListVMsResponse struct {
 	VMs []VmInfo
 }
 
+type ReplaceVmImageRequest struct {
+	DhcpTimeout      time.Duration
+	ImageDataSize    uint64
+	ImageName        string `json:",omitempty"`
+	ImageTimeout     time.Duration
+	ImageURL         string `json:",omitempty"`
+	IpAddress        net.IP
+	MinimumFreeBytes uint64
+	RoundupPower     uint64
+} // RAW image data (length=ImageDataSize) is streamed afterwards.
+
+type ReplaceVmImageResponse struct { // Multiple responses are sent.
+	DhcpTimedOut    bool
+	Final           bool // If true, this is the final response.
+	ProgressMessage string
+	Error           string
+}
+
+type RestoreVmImageRequest struct {
+	IpAddress net.IP
+}
+
+type RestoreVmImageResponse struct {
+	Error string
+}
+
 type StartVmRequest struct {
 	DhcpTimeout time.Duration
 	IpAddress   net.IP
