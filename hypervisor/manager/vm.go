@@ -15,6 +15,7 @@ import (
 	"time"
 
 	imclient "github.com/Symantec/Dominator/imageserver/client"
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/json"
@@ -36,17 +37,21 @@ var (
 	errorNoAccessToResource = errors.New("no access to resource")
 )
 
-func computeSize(request proto.CreateVmRequest, size uint64) uint64 {
+type sendErrorFunc func(conn *srpc.Conn, encoder srpc.Encoder, err error) error
+type sendUpdateFunc func(conn *srpc.Conn, encoder srpc.Encoder,
+	message string) error
+
+func computeSize(minimumFreeBytes, roundupPower, size uint64) uint64 {
 	minBytes := size + size>>3 // 12% extra for good luck.
-	minBytes += request.MinimumFreeBytes
-	if request.RoundupPower < 24 {
-		request.RoundupPower = 24 // 16 MiB.
+	minBytes += minimumFreeBytes
+	if roundupPower < 24 {
+		roundupPower = 24 // 16 MiB.
 	}
-	imageUnits := minBytes >> request.RoundupPower
-	if imageUnits<<request.RoundupPower < minBytes {
+	imageUnits := minBytes >> roundupPower
+	if imageUnits<<roundupPower < minBytes {
 		imageUnits++
 	}
-	return imageUnits << request.RoundupPower
+	return imageUnits << roundupPower
 }
 
 func copyData(filename string, reader io.Reader, length uint64,
@@ -65,8 +70,22 @@ func copyData(filename string, reader io.Reader, length uint64,
 	return err
 }
 
+func getImage(client *srpc.Client, imageName string,
+	imageTimeout time.Duration) (*filesystem.FileSystem, error) {
+	img, err := imclient.GetImageWithTimeout(client, imageName,
+		imageTimeout)
+	if err != nil {
+		return nil, err
+	}
+	if img == nil {
+		return nil, errors.New("timeout getting image")
+	}
+	img.FileSystem.RebuildInodePointers()
+	return img.FileSystem, nil
+}
+
 func maybeDrainAll(conn *srpc.Conn, request proto.CreateVmRequest) error {
-	if err := maybeDrainImage(conn, request); err != nil {
+	if err := maybeDrainImage(conn, request.ImageDataSize); err != nil {
 		return err
 	}
 	if err := maybeDrainUserData(conn, request); err != nil {
@@ -75,9 +94,9 @@ func maybeDrainAll(conn *srpc.Conn, request proto.CreateVmRequest) error {
 	return nil
 }
 
-func maybeDrainImage(conn *srpc.Conn, request proto.CreateVmRequest) error {
-	if request.ImageDataSize > 0 { // Drain data.
-		_, err := io.CopyN(ioutil.Discard, conn, int64(request.ImageDataSize))
+func maybeDrainImage(imageReader io.Reader, imageDataSize uint64) error {
+	if imageDataSize > 0 { // Drain data.
+		_, err := io.CopyN(ioutil.Discard, imageReader, int64(imageDataSize))
 		return err
 	}
 	return nil
@@ -89,18 +108,6 @@ func maybeDrainUserData(conn *srpc.Conn, request proto.CreateVmRequest) error {
 		return err
 	}
 	return nil
-}
-
-func sendError(conn *srpc.Conn, encoder srpc.Encoder, err error) error {
-	return encoder.Encode(proto.CreateVmResponse{Error: err.Error()})
-}
-
-func sendUpdate(conn *srpc.Conn, encoder srpc.Encoder, message string) error {
-	response := proto.CreateVmResponse{ProgressMessage: message}
-	if err := encoder.Encode(response); err != nil {
-		return err
-	}
-	return conn.Flush()
 }
 
 func setVolumeSize(filename string, size uint64) error {
@@ -197,6 +204,20 @@ func (m *Manager) checkVmHasHealthAgent(ipAddr net.IP) (bool, error) {
 
 func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 	encoder srpc.Encoder) error {
+
+	sendError := func(conn *srpc.Conn, encoder srpc.Encoder, err error) error {
+		return encoder.Encode(proto.CreateVmResponse{Error: err.Error()})
+	}
+
+	sendUpdate := func(conn *srpc.Conn, encoder srpc.Encoder,
+		message string) error {
+		response := proto.CreateVmResponse{ProgressMessage: message}
+		if err := encoder.Encode(response); err != nil {
+			return err
+		}
+		return conn.Flush()
+	}
+
 	var request proto.CreateVmRequest
 	if err := decoder.Decode(&request); err != nil {
 		return err
@@ -243,7 +264,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		return sendError(conn, encoder, err)
 	}
 	if request.ImageName != "" {
-		if err := maybeDrainImage(conn, request); err != nil {
+		if err := maybeDrainImage(conn, request.ImageDataSize); err != nil {
 			return err
 		}
 		if err := sendUpdate(conn, encoder, "getting image"); err != nil {
@@ -256,28 +277,23 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 					m.ImageServerAddress, err))
 		}
 		defer client.Close()
-		img, err := imclient.GetImageWithTimeout(client, request.ImageName,
-			request.ImageTimeout)
+		fs, err := getImage(client, request.ImageName, request.ImageTimeout)
 		if err != nil {
 			return sendError(conn, encoder, err)
 		}
-		if img == nil {
-			return sendError(conn, encoder, errors.New("timeout getting image"))
-		}
-		img.FileSystem.RebuildInodePointers()
 		objectClient := objclient.AttachObjectClient(client)
 		defer objectClient.Close()
-		size := computeSize(request, img.FileSystem.EstimateUsage(0))
+		size := computeSize(request.MinimumFreeBytes, request.RoundupPower,
+			fs.EstimateUsage(0))
 		if err := vm.setupVolumes(size, request); err != nil {
 			return sendError(conn, encoder, err)
 		}
 		if err := sendUpdate(conn, encoder, "unpacking image"); err != nil {
 			return err
 		}
-		err = util.WriteRaw(img.FileSystem, objectClient,
-			vm.VolumeLocations[0].Filename, filePerms, mbr.TABLE_TYPE_MSDOS,
-			request.MinimumFreeBytes, request.RoundupPower, true, true,
-			m.Logger)
+		err = util.WriteRaw(fs, objectClient, vm.VolumeLocations[0].Filename,
+			filePerms, mbr.TABLE_TYPE_MSDOS, request.MinimumFreeBytes,
+			request.RoundupPower, true, true, m.Logger)
 		if err != nil {
 			return sendError(conn, encoder, err)
 		}
@@ -292,7 +308,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 			return err
 		}
 	} else if request.ImageURL != "" {
-		if err := maybeDrainImage(conn, request); err != nil {
+		if err := maybeDrainImage(conn, request.ImageDataSize); err != nil {
 			return err
 		}
 		httpResponse, err := http.Get(request.ImageURL)
@@ -465,6 +481,166 @@ func (m *Manager) listVMs(doSort bool) []string {
 	return ipAddrs
 }
 
+func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder, authInfo *srpc.AuthInformation) error {
+
+	sendError := func(conn *srpc.Conn, encoder srpc.Encoder, err error) error {
+		return encoder.Encode(proto.ReplaceVmImageResponse{Error: err.Error()})
+	}
+
+	sendUpdate := func(conn *srpc.Conn, encoder srpc.Encoder,
+		message string) error {
+		response := proto.ReplaceVmImageResponse{ProgressMessage: message}
+		if err := encoder.Encode(response); err != nil {
+			return err
+		}
+		return conn.Flush()
+	}
+
+	var request proto.ReplaceVmImageRequest
+	if err := decoder.Decode(&request); err != nil {
+		return err
+	}
+	vm, err := m.getVmAndLock(request.IpAddress)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if err := vm.checkAuth(authInfo); err != nil {
+		return err
+	}
+	if vm.State != proto.StateStopped {
+		if err := maybeDrainImage(conn, request.ImageDataSize); err != nil {
+			return err
+		}
+		return sendError(conn, encoder, errors.New("VM is not stopped"))
+	}
+	tmpRootFilename := vm.VolumeLocations[0].Filename + ".new"
+	defer os.Remove(tmpRootFilename)
+	var newSize uint64
+	if request.ImageName != "" {
+		if err := maybeDrainImage(conn, request.ImageDataSize); err != nil {
+			return err
+		}
+		if err := sendUpdate(conn, encoder, "getting image"); err != nil {
+			return err
+		}
+		client, err := srpc.DialHTTP("tcp", m.ImageServerAddress, 0)
+		if err != nil {
+			return sendError(conn, encoder,
+				fmt.Errorf("error connecting to image server: %s: %s",
+					m.ImageServerAddress, err))
+		}
+		defer client.Close()
+		fs, err := getImage(client, request.ImageName, request.ImageTimeout)
+		if err != nil {
+			return sendError(conn, encoder, err)
+		}
+		objectClient := objclient.AttachObjectClient(client)
+		defer objectClient.Close()
+		if err := sendUpdate(conn, encoder, "unpacking image"); err != nil {
+			return err
+		}
+		err = util.WriteRaw(fs, objectClient, tmpRootFilename, filePerms,
+			mbr.TABLE_TYPE_MSDOS, request.MinimumFreeBytes,
+			request.RoundupPower, true, true, m.Logger)
+		if err != nil {
+			return sendError(conn, encoder, err)
+		}
+		if fi, err := os.Stat(tmpRootFilename); err != nil {
+			return sendError(conn, encoder, err)
+		} else {
+			newSize = uint64(fi.Size())
+		}
+	} else if request.ImageDataSize > 0 {
+		err := copyData(tmpRootFilename, conn, request.ImageDataSize, filePerms)
+		if err != nil {
+			return err
+		}
+		newSize = computeSize(request.MinimumFreeBytes, request.RoundupPower,
+			request.ImageDataSize)
+		if err := setVolumeSize(tmpRootFilename, newSize); err != nil {
+			return sendError(conn, encoder, err)
+		}
+	} else if request.ImageURL != "" {
+		if err := maybeDrainImage(conn, request.ImageDataSize); err != nil {
+			return err
+		}
+		httpResponse, err := http.Get(request.ImageURL)
+		if err != nil {
+			return sendError(conn, encoder, err)
+		}
+		defer httpResponse.Body.Close()
+		if httpResponse.StatusCode != http.StatusOK {
+			return sendError(conn, encoder, errors.New(httpResponse.Status))
+		}
+		if httpResponse.ContentLength < 0 {
+			return sendError(conn, encoder,
+				errors.New("ContentLength from: "+request.ImageURL))
+		}
+		err = copyData(tmpRootFilename, httpResponse.Body,
+			uint64(httpResponse.ContentLength), filePerms)
+		if err != nil {
+			return sendError(conn, encoder, err)
+		}
+		newSize = computeSize(request.MinimumFreeBytes, request.RoundupPower,
+			uint64(httpResponse.ContentLength))
+		if err := setVolumeSize(tmpRootFilename, newSize); err != nil {
+			return sendError(conn, encoder, err)
+		}
+	} else {
+		return sendError(conn, encoder, errors.New("no image specified"))
+	}
+	rootFilename := vm.VolumeLocations[0].Filename
+	oldRootFilename := vm.VolumeLocations[0].Filename + ".old"
+	if err := os.Rename(rootFilename, oldRootFilename); err != nil {
+		return sendError(conn, encoder, err)
+	}
+	if err := os.Rename(tmpRootFilename, rootFilename); err != nil {
+		os.Rename(oldRootFilename, rootFilename)
+		return sendError(conn, encoder, err)
+	}
+	if request.ImageName != "" {
+		vm.ImageName = request.ImageName
+	}
+	vm.Volumes[0].Size = newSize
+	vm.setState(vm.State)
+	response := proto.ReplaceVmImageResponse{
+		Final: true,
+	}
+	if err := encoder.Encode(response); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Manager) restoreVmImage(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	vm, err := m.getVmAndLock(ipAddr)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if err := vm.checkAuth(authInfo); err != nil {
+		return err
+	}
+	if vm.State != proto.StateStopped {
+		return errors.New("VM is not stopped")
+	}
+	rootFilename := vm.VolumeLocations[0].Filename
+	oldRootFilename := vm.VolumeLocations[0].Filename + ".old"
+	fi, err := os.Stat(oldRootFilename)
+	if err != nil {
+		return err
+	}
+	if err := os.Rename(oldRootFilename, rootFilename); err != nil {
+		return err
+	}
+	vm.Volumes[0].Size = uint64(fi.Size())
+	vm.setState(vm.State)
+	return nil
+}
+
 func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	dhcpTimeout time.Duration) (bool, error) {
 	vm, err := m.getVmAndLock(ipAddr)
@@ -544,7 +720,8 @@ func (vm *vmInfoType) checkAuth(authInfo *srpc.AuthInformation) error {
 
 func (vm *vmInfoType) copyRootVolume(request proto.CreateVmRequest,
 	reader io.Reader, dataSize uint64) error {
-	size := computeSize(request, dataSize)
+	size := computeSize(request.MinimumFreeBytes, request.RoundupPower,
+		dataSize)
 	if err := vm.setupVolumes(size, request); err != nil {
 		return err
 	}

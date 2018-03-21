@@ -124,6 +124,16 @@ func (m *Manager) MakeSubnetChannel() <-chan proto.Subnet {
 	return m.makeSubnetChannel()
 }
 
+func (m *Manager) ReplaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder, authInfo *srpc.AuthInformation) error {
+	return m.replaceVmImage(conn, decoder, encoder, authInfo)
+}
+
+func (m *Manager) RestoreVmImage(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	return m.restoreVmImage(ipAddr, authInfo)
+}
+
 func (m *Manager) StartVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	dhcpTimeout time.Duration) (
 	bool, error) {
