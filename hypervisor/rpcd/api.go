@@ -31,6 +31,8 @@ func Setup(manager *manager.Manager, logger log.DebugLogger) (
 			"ChangeVmTags",
 			"CreateVm",
 			"DestroyVm",
+			"ReplaceVmImage",
+			"RestoreVmImage",
 			"StartVm",
 			"StopVm",
 		}})
