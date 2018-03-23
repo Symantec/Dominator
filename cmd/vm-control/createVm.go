@@ -148,6 +148,7 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 	}
 	return nil
 }
+
 func getReader(filename string) (io.ReadCloser, int64, error) {
 	if file, err := os.Open(filename); err != nil {
 		return nil, -1, err

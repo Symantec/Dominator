@@ -71,6 +71,8 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  create-vm")
 	fmt.Fprintln(os.Stderr, "  destroy-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  get-vm-info IPaddr")
+	fmt.Fprintln(os.Stderr, "  replace-vm-image IPaddr")
+	fmt.Fprintln(os.Stderr, "  restore-vm-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  start-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  stop-vm IPaddr")
 }
@@ -91,6 +93,8 @@ var subcommands = []subcommand{
 	{"create-vm", 0, 0, createVmSubcommand},
 	{"destroy-vm", 1, 1, destroyVmSubcommand},
 	{"get-vm-info", 1, 1, getVmInfoSubcommand},
+	{"replace-vm-image", 1, 1, replaceVmImageSubcommand},
+	{"restore-vm-image", 1, 1, restoreVmImageSubcommand},
 	{"start-vm", 1, 1, startVmSubcommand},
 	{"stop-vm", 1, 1, stopVmSubcommand},
 }
