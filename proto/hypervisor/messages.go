@@ -31,7 +31,7 @@ type AddAddressesToPoolResponse struct {
 }
 
 type Address struct {
-	IpAddress  net.IP
+	IpAddress  net.IP `json:",omitempty"`
 	MacAddress string
 }
 
