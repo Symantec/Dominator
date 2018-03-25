@@ -2,13 +2,13 @@ package dhcpd
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"net"
 	"os"
 	"time"
 
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/net/util"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 	dhcp "github.com/krolaw/dhcp4"
 )
@@ -29,7 +29,7 @@ func newServer(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
 		ipAddrToMacAddr: make(map[string]string),
 		leases:          make(map[string]proto.Address),
 	}
-	if myIP, err := getMyIP(); err != nil {
+	if myIP, err := util.GetMyIP(); err != nil {
 		return nil, err
 	} else {
 		dhcpServer.myIP = myIP
@@ -54,44 +54,6 @@ func newServer(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
 		}(bridge)
 	}
 	return dhcpServer, nil
-}
-
-func getMyIP() (net.IP, error) {
-	var myIP net.IP
-	mostOnesInMask := 0
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		return nil, err
-	}
-	for _, iface := range interfaces {
-		if iface.Flags&net.FlagUp == 0 {
-			continue
-		}
-		if iface.Flags&net.FlagBroadcast == 0 {
-			continue
-		}
-		interfaceAddrs, err := iface.Addrs()
-		if err != nil {
-			return nil, err
-		}
-		for _, addr := range interfaceAddrs {
-			IP, IPNet, err := net.ParseCIDR(addr.String())
-			if err != nil {
-				return nil, err
-			}
-			if IP = IP.To4(); IP == nil {
-				continue
-			}
-			if onesInMask, _ := IPNet.Mask.Size(); onesInMask > mostOnesInMask {
-				myIP = IP
-				mostOnesInMask = onesInMask
-			}
-		}
-	}
-	if myIP == nil {
-		return nil, errors.New("no IP address found")
-	}
-	return myIP, nil
 }
 
 func findRoutes() ([]routeType, string, error) {
