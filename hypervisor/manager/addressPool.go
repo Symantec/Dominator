@@ -21,22 +21,14 @@ func (m *Manager) addAddressesToPool(addresses []proto.Address,
 		defer m.mutex.Unlock()
 	}
 	for _, address := range addresses {
-		foundSubnet := false
-		for _, subnet := range m.subnets {
-			subnetMask := net.IPMask(subnet.IpMask)
-			subnetAddr := subnet.IpGateway.Mask(subnetMask)
-			if address.IpAddress.Mask(subnetMask).Equal(subnetAddr) {
-				foundSubnet = true
-				break
-			}
-		}
-		if !foundSubnet {
+		ipAddr := address.IpAddress
+		if ipAddr != nil && m.getMatchingSubnet(ipAddr) == "" {
 			return fmt.Errorf("no subnet matching %s", address.IpAddress)
 		}
 	}
 	m.addressPool = append(m.addressPool, addresses...)
 	return json.WriteToFile(path.Join(m.StateDir, "address-pool.json"),
-		filePerms, "    ", m.addressPool)
+		publicFilePerms, "    ", m.addressPool)
 }
 
 func (m *Manager) loadAddressPool() error {
@@ -61,7 +53,7 @@ func (m *Manager) getFreeAddress(subnetId string) (proto.Address, error) {
 	}
 	if subnetId == "" {
 		err := json.WriteToFile(path.Join(m.StateDir, "address-pool.json"),
-			filePerms, "    ", m.addressPool[1:])
+			publicFilePerms, "    ", m.addressPool[1:])
 		if err != nil {
 			return proto.Address{}, err
 		}
@@ -95,11 +87,21 @@ func (m *Manager) getFreeAddress(subnetId string) (proto.Address, error) {
 		addressPool = append(addressPool, address)
 	}
 	err := json.WriteToFile(path.Join(m.StateDir, "address-pool.json"),
-		filePerms, "    ", addressPool)
+		publicFilePerms, "    ", addressPool)
 	if err != nil {
 		return proto.Address{}, err
 	}
 	address := m.addressPool[foundPos]
 	m.addressPool = addressPool
 	return address, nil
+}
+
+func (m *Manager) listAvailableAddresses() []proto.Address {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	addresses := make([]proto.Address, 0, len(m.addressPool))
+	for _, address := range m.addressPool {
+		addresses = append(addresses, address)
+	}
+	return addresses
 }

@@ -26,7 +26,9 @@ func (m *Manager) writeHtml(writer io.Writer) {
 	numSubnets := len(m.subnets)
 	numAddresses := len(m.addressPool)
 	m.mutex.RUnlock()
-	fmt.Fprintf(writer, "Available addresses: %d<br>\n", numAddresses)
+	fmt.Fprintf(writer,
+		"Available addresses: <a href=\"listAvailableAddresses\">%d</a><br>\n",
+		numAddresses)
 	fmt.Fprintf(writer, "Available CPU: %g<br>\n",
 		float64(m.getAvailableMilliCPU())*1e-3)
 	if memInfo, err := meminfo.GetMemInfo(); err != nil {
@@ -36,7 +38,8 @@ func (m *Manager) writeHtml(writer io.Writer) {
 			format.FormatBytes(memInfo.Available),
 			format.FormatBytes(memUnallocated<<20))
 	}
-	fmt.Fprintf(writer, "Number of subnets: %d<br>\n", numSubnets)
+	fmt.Fprintf(writer,
+		"Number of subnets: <a href=\"listSubnets\">%d</a><br>\n", numSubnets)
 	fmt.Fprintf(writer, "Volume directories: %s<br>\n",
 		strings.Join(m.volumeDirectories, " "))
 }

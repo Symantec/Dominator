@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	filePerms       = syscall.S_IRUSR | syscall.S_IWUSR
-	publicFilePerms = filePerms | syscall.S_IRGRP | syscall.S_IROTH
+	privateFilePerms = syscall.S_IRUSR | syscall.S_IWUSR
+	publicFilePerms  = privateFilePerms | syscall.S_IRGRP | syscall.S_IROTH
 )
 
 var (
@@ -292,7 +292,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 			return err
 		}
 		err = util.WriteRaw(fs, objectClient, vm.VolumeLocations[0].Filename,
-			filePerms, mbr.TABLE_TYPE_MSDOS, request.MinimumFreeBytes,
+			privateFilePerms, mbr.TABLE_TYPE_MSDOS, request.MinimumFreeBytes,
 			request.RoundupPower, true, true, m.Logger)
 		if err != nil {
 			return sendError(conn, encoder, err)
@@ -333,7 +333,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 	}
 	if request.UserDataSize > 0 {
 		filename := path.Join(vm.dirname, "user-data.raw")
-		err := copyData(filename, conn, request.UserDataSize, filePerms)
+		err := copyData(filename, conn, request.UserDataSize, privateFilePerms)
 		if err != nil {
 			return sendError(conn, encoder, err)
 		}
@@ -346,7 +346,8 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		for index, volume := range request.SecondaryVolumes {
 			fname := vm.VolumeLocations[index+1].Filename
 			cFlags := os.O_CREATE | os.O_TRUNC | os.O_RDWR
-			if file, err := os.OpenFile(fname, cFlags, filePerms); err != nil {
+			file, err := os.OpenFile(fname, cFlags, privateFilePerms)
+			if err != nil {
 				return sendError(conn, encoder, err)
 			} else {
 				file.Close()
@@ -541,7 +542,7 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 		if err := sendUpdate(conn, encoder, "unpacking image"); err != nil {
 			return err
 		}
-		err = util.WriteRaw(fs, objectClient, tmpRootFilename, filePerms,
+		err = util.WriteRaw(fs, objectClient, tmpRootFilename, privateFilePerms,
 			mbr.TABLE_TYPE_MSDOS, request.MinimumFreeBytes,
 			request.RoundupPower, true, true, m.Logger)
 		if err != nil {
@@ -553,7 +554,8 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 			newSize = uint64(fi.Size())
 		}
 	} else if request.ImageDataSize > 0 {
-		err := copyData(tmpRootFilename, conn, request.ImageDataSize, filePerms)
+		err := copyData(tmpRootFilename, conn, request.ImageDataSize,
+			privateFilePerms)
 		if err != nil {
 			return err
 		}
@@ -579,7 +581,7 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 				errors.New("ContentLength from: "+request.ImageURL))
 		}
 		err = copyData(tmpRootFilename, httpResponse.Body,
-			uint64(httpResponse.ContentLength), filePerms)
+			uint64(httpResponse.ContentLength), privateFilePerms)
 		if err != nil {
 			return sendError(conn, encoder, err)
 		}
@@ -725,7 +727,8 @@ func (vm *vmInfoType) copyRootVolume(request proto.CreateVmRequest,
 	if err := vm.setupVolumes(size, request); err != nil {
 		return err
 	}
-	err := copyData(vm.VolumeLocations[0].Filename, reader, dataSize, filePerms)
+	err := copyData(vm.VolumeLocations[0].Filename, reader, dataSize,
+		privateFilePerms)
 	if err != nil {
 		return err
 	}

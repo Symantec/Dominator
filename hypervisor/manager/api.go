@@ -116,6 +116,14 @@ func (m *Manager) GetVmUserData(ipAddr net.IP) (io.ReadCloser, error) {
 	return m.getVmUserData(ipAddr)
 }
 
+func (m *Manager) ListAvailableAddresses() []proto.Address {
+	return m.listAvailableAddresses()
+}
+
+func (m *Manager) ListSubnets(doSort bool) []proto.Subnet {
+	return m.listSubnets(doSort)
+}
+
 func (m *Manager) ListVMs(doSort bool) []string {
 	return m.listVMs(doSort)
 }
