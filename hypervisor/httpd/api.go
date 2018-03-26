@@ -26,6 +26,9 @@ func StartServer(portNum uint, managerObj *manager.Manager, daemon bool) error {
 	}
 	myState := state{managerObj}
 	http.HandleFunc("/", myState.statusHandler)
+	http.HandleFunc("/listAvailableAddresses",
+		myState.listAvailableAddressesHandler)
+	http.HandleFunc("/listSubnets", myState.listSubnetsHandler)
 	http.HandleFunc("/listVMs", myState.listVMsHandler)
 	http.HandleFunc("/showVmBootLog", myState.showBootLogHandler)
 	http.HandleFunc("/showVM", myState.showVMHandler)
