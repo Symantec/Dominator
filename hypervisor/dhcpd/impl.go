@@ -1,10 +1,7 @@
 package dhcpd
 
 import (
-	"bufio"
-	"fmt"
 	"net"
-	"os"
 	"time"
 
 	"github.com/Symantec/Dominator/lib/log"
@@ -15,12 +12,6 @@ import (
 
 const sysClassNet = "/sys/class/net"
 const leaseTime = time.Hour * 48
-
-type routeType struct {
-	interfaceName string
-	destination   uint32
-	mask          uint32
-}
 
 func newServer(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
 	dhcpServer := &DhcpServer{
@@ -54,40 +45,6 @@ func newServer(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
 		}(bridge)
 	}
 	return dhcpServer, nil
-}
-
-func findRoutes() ([]routeType, string, error) {
-	file, err := os.Open("/proc/net/route")
-	if err != nil {
-		return nil, "", err
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	routes := make([]routeType, 0)
-	var defaultInterfaceName string
-	for scanner.Scan() {
-		var interfaceName string
-		var destAddr, gatewayAddr, flags, mask uint32
-		var ign int
-		nCopied, err := fmt.Sscanf(scanner.Text(),
-			"%s %x %x %x %d %d %d %x %d %d %d",
-			&interfaceName, &destAddr, &gatewayAddr, &flags, &ign, &ign, &ign,
-			&mask, &ign, &ign, &ign)
-		if err != nil || nCopied < 11 {
-			continue
-		}
-		if flags&0x1 != 0x1 {
-			continue
-		}
-		routes = append(routes, routeType{interfaceName, destAddr, mask})
-		if destAddr == 0 && flags&0x2 == 0x2 {
-			defaultInterfaceName = interfaceName
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, "", err
-	}
-	return routes, defaultInterfaceName, nil
 }
 
 func (s *DhcpServer) acknowledgeLease(ipAddr net.IP) {
