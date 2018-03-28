@@ -27,3 +27,7 @@ func GetMyIP() (net.IP, error) {
 func GetResolverConfiguration() (*ResolverConfiguration, error) {
 	return getResolverConfiguration()
 }
+
+func ShrinkIP(netIP net.IP) net.IP {
+	return shrinkIP(netIP)
+}
