@@ -19,6 +19,7 @@ func newServer(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
 		ackChannels:     make(map[string]chan struct{}),
 		ipAddrToMacAddr: make(map[string]string),
 		leases:          make(map[string]proto.Address),
+		requestChannels: make(map[string]chan net.IP),
 	}
 	if myIP, err := util.GetMyIP(); err != nil {
 		return nil, err
@@ -104,6 +105,29 @@ func (s *DhcpServer) makeAcknowledgmentChannel(ipAddr net.IP) <-chan struct{} {
 	return newChan
 }
 
+func (s *DhcpServer) makeRequestChannel(macAddr string) <-chan net.IP {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if oldChan, ok := s.requestChannels[macAddr]; ok {
+		return oldChan
+	}
+	newChan := make(chan net.IP, 16)
+	s.requestChannels[macAddr] = newChan
+	return newChan
+}
+
+func (s *DhcpServer) notifyRequest(address proto.Address) {
+	s.mutex.Lock()
+	requestChan, ok := s.requestChannels[address.MacAddress]
+	s.mutex.Unlock()
+	if ok {
+		select {
+		case requestChan <- address.IpAddress:
+		default:
+		}
+	}
+}
+
 func (s *DhcpServer) removeLease(ipAddr net.IP) {
 	ipStr := ipAddr.String()
 	s.mutex.Lock()
@@ -142,21 +166,24 @@ func (s *DhcpServer) ServeDHCP(req dhcp.Packet, msgType dhcp.MessageType,
 			leaseOptions.SelectOrderOrAll(
 				options[dhcp.OptionParameterRequestList]))
 	case dhcp.Request:
-		server, ok := options[dhcp.OptionServerIdentifier]
-		if ok {
-			serverIP := net.IP(server)
-			if !serverIP.IsUnspecified() && !serverIP.Equal(s.myIP) {
-				s.logger.Debugf(0, "DHCP Request to: %s is not me: %s\n",
-					serverIP, s.myIP)
-				return nil // Message not for this DHCP server.
-			}
-		}
 		reqIP := net.IP(options[dhcp.OptionRequestedIPAddress])
 		if reqIP == nil {
 			s.logger.Debugln(0, "DHCP Request did not request an IP")
 			reqIP = net.IP(req.CIAddr())
 		}
+		reqIP = util.ShrinkIP(reqIP)
 		macAddr := req.CHAddr().String()
+		s.notifyRequest(proto.Address{reqIP, macAddr})
+		server, ok := options[dhcp.OptionServerIdentifier]
+		if ok {
+			serverIP := net.IP(server)
+			if !serverIP.IsUnspecified() && !serverIP.Equal(s.myIP) {
+				s.logger.Debugf(0,
+					"DHCP Request for: %s from: %s to: %s is not me: %s\n",
+					reqIP, macAddr, serverIP, s.myIP)
+				return nil // Message not for this DHCP server.
+			}
+		}
 		s.logger.Debugf(0, "DHCP Request for: %s from: %s\n", reqIP, macAddr)
 		lease, subnet := s.findLease(macAddr)
 		if lease == nil {

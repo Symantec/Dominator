@@ -15,6 +15,7 @@ type DhcpServer struct {
 	ackChannels     map[string]chan struct{} // Key: IPaddr.
 	ipAddrToMacAddr map[string]string        // Key: IPaddr, V: MACaddr.
 	leases          map[string]proto.Address // Key: MACaddr, V: Address.
+	requestChannels map[string]chan net.IP   // Key: MACaddr.
 	subnets         []proto.Subnet
 }
 
@@ -32,6 +33,10 @@ func (s *DhcpServer) AddSubnet(subnet proto.Subnet) {
 
 func (s *DhcpServer) MakeAcknowledgmentChannel(ipAddr net.IP) <-chan struct{} {
 	return s.makeAcknowledgmentChannel(ipAddr)
+}
+
+func (s *DhcpServer) MakeRequestChannel(macAddr string) <-chan net.IP {
+	return s.makeRequestChannel(macAddr)
 }
 
 func (s *DhcpServer) RemoveLease(ipAddr net.IP) {
