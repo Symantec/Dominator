@@ -20,10 +20,26 @@ func (m *Manager) addAddressesToPool(addresses []proto.Address,
 		m.mutex.Lock()
 		defer m.mutex.Unlock()
 	}
+	existingIpAddresses := make(map[string]struct{})
+	existingMacAddresses := make(map[string]struct{})
+	for _, address := range m.addressPool {
+		if address.IpAddress != nil {
+			existingIpAddresses[address.IpAddress.String()] = struct{}{}
+		}
+		existingMacAddresses[address.MacAddress] = struct{}{}
+	}
 	for _, address := range addresses {
 		ipAddr := address.IpAddress
-		if ipAddr != nil && m.getMatchingSubnet(ipAddr) == "" {
-			return fmt.Errorf("no subnet matching %s", address.IpAddress)
+		if ipAddr != nil {
+			if m.getMatchingSubnet(ipAddr) == "" {
+				return fmt.Errorf("no subnet matching %s", address.IpAddress)
+			}
+			if _, ok := existingIpAddresses[ipAddr.String()]; ok {
+				return fmt.Errorf("duplicate IP address: %s", address.IpAddress)
+			}
+		}
+		if _, ok := existingMacAddresses[address.MacAddress]; ok {
+			return fmt.Errorf("duplicate MAC address: %s", address.MacAddress)
 		}
 	}
 	m.addressPool = append(m.addressPool, addresses...)
