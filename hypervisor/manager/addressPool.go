@@ -28,6 +28,10 @@ func (m *Manager) addAddressesToPool(addresses []proto.Address,
 		}
 		existingMacAddresses[address.MacAddress] = struct{}{}
 	}
+	for ipAddress, vm := range m.vms {
+		existingIpAddresses[ipAddress] = struct{}{}
+		existingMacAddresses[vm.Address.MacAddress] = struct{}{}
+	}
 	for _, address := range addresses {
 		ipAddr := address.IpAddress
 		if ipAddr != nil {
