@@ -62,6 +62,9 @@ func (s *DhcpServer) acknowledgeLease(ipAddr net.IP) {
 
 func (s *DhcpServer) addLease(address proto.Address) {
 	address.Shrink()
+	if len(address.IpAddress) < 1 {
+		return
+	}
 	ipAddr := address.IpAddress.String()
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
