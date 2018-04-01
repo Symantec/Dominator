@@ -129,6 +129,9 @@ func (s *DhcpServer) notifyRequest(address proto.Address) {
 }
 
 func (s *DhcpServer) removeLease(ipAddr net.IP) {
+	if len(ipAddr) < 1 {
+		return
+	}
 	ipStr := ipAddr.String()
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
