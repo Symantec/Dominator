@@ -56,8 +56,11 @@ func (s state) showVMHandler(w http.ResponseWriter, req *http.Request) {
                           </style>`)
 		fmt.Fprintln(writer, "<body>")
 		fmt.Fprintln(writer, `<table border="0">`)
-		ipAddress := vm.Address.IpAddress.String()
-		writeString(writer, "IP Address", ipAddress)
+		if len(vm.Address.IpAddress) < 1 {
+			writeString(writer, "IP Address", ipAddr+" (externally allocated)")
+		} else {
+			writeString(writer, "IP Address", ipAddr)
+		}
 		writeString(writer, "MAC Address", vm.Address.MacAddress)
 		if vm.ImageName != "" {
 			image := fmt.Sprintf("<a href=\"http://%s/showImage?%s\">%s</a>",
@@ -77,11 +80,11 @@ func (s state) showVMHandler(w http.ResponseWriter, req *http.Request) {
 		writeStrings(writer, "Owner users", vm.OwnerUsers)
 		writeBool(writer, "Spread volumes", vm.SpreadVolumes)
 		writeString(writer, "Latest boot",
-			fmt.Sprintf("<a href=\"showVmBootLog?%s\">log</a>", ipAddress))
+			fmt.Sprintf("<a href=\"showVmBootLog?%s\">log</a>", ipAddr))
 		if ok, _ := s.manager.CheckVmHasHealthAgent(netIpAddr); ok {
 			writeString(writer, "Health Agent",
 				fmt.Sprintf("<a href=\"http://%s:6910/\">detected</a>",
-					ipAddress))
+					ipAddr))
 		}
 		fmt.Fprintln(writer, "</table>")
 		fmt.Fprintln(writer, "Tags:<br>")
