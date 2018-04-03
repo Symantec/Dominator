@@ -16,6 +16,7 @@ type DhcpServer interface {
 	AddLease(address proto.Address)
 	AddSubnet(subnet proto.Subnet)
 	MakeAcknowledgmentChannel(ipAddr net.IP) <-chan struct{}
+	MakeRequestChannel(macAddr string) <-chan net.IP
 	RemoveLease(ipAddr net.IP)
 }
 
@@ -48,6 +49,7 @@ type vmInfoType struct {
 	manager         *Manager
 	dirname         string
 	hasHealthAgent  bool
+	ipAddress       string
 	monitorSockname string
 	ownerUsers      map[string]struct{}
 	commandChannel  chan<- string

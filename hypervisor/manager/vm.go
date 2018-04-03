@@ -153,6 +153,12 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest) (*vmInfoType, error) {
 	if err := m.checkSufficientMemoryWithLock(req.MemoryInMiB); err != nil {
 		return nil, err
 	}
+	var ipAddress string
+	if len(address.IpAddress) < 1 {
+		ipAddress = "0.0.0.0"
+	} else {
+		ipAddress = address.IpAddress.String()
+	}
 	vm := &vmInfoType{
 		VmInfo: proto.VmInfo{
 			Address:       address,
@@ -165,12 +171,12 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest) (*vmInfoType, error) {
 			State:         proto.StateStarting,
 			Tags:          req.Tags,
 		},
-		manager: m,
-		dirname: path.Join(m.StateDir, "VMs", address.IpAddress.String()),
-		logger: prefixlogger.New(address.IpAddress.String()+": ",
-			m.Logger),
+		manager:   m,
+		dirname:   path.Join(m.StateDir, "VMs", ipAddress),
+		ipAddress: ipAddress,
+		logger:    prefixlogger.New(ipAddress+": ", m.Logger),
 	}
-	m.vms[address.IpAddress.String()] = vm
+	m.vms[ipAddress] = vm
 	freeAddress = false
 	return vm, nil
 }
@@ -239,8 +245,12 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		if vm == nil {
 			return
 		}
+		select {
+		case vm.commandChannel <- "quit":
+		default:
+		}
 		m.mutex.Lock()
-		delete(m.vms, vm.Address.IpAddress.String())
+		delete(m.vms, vm.ipAddress)
 		err := m.addAddressesToPool([]proto.Address{vm.Address}, false)
 		if err != nil {
 			m.Logger.Println(err)
@@ -376,7 +386,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 	response := proto.CreateVmResponse{
 		DhcpTimedOut: dhcpTimedOut,
 		Final:        true,
-		IpAddress:    vm.Address.IpAddress,
+		IpAddress:    net.ParseIP(vm.ipAddress),
 	}
 	if err := encoder.Encode(response); err != nil {
 		return err
@@ -687,6 +697,9 @@ func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation) error {
 	case proto.StateStarting:
 		return errors.New("VM is starting")
 	case proto.StateRunning:
+		if len(vm.Address.IpAddress) < 1 {
+			return errors.New("cannot stop VM with externally managed lease")
+		}
 		vm.setState(proto.StateStopping)
 		vm.commandChannel <- "system_powerdown"
 		time.AfterFunc(time.Second*15, vm.kill)
@@ -708,6 +721,34 @@ func (vm *vmInfoType) autoDestroy() {
 	if err := vm.manager.destroyVm(vm.Address.IpAddress, authInfo); err != nil {
 		vm.logger.Println(err)
 	}
+}
+
+func (vm *vmInfoType) changeIpAddress(ipAddress string) error {
+	dirname := path.Join(vm.manager.StateDir, "VMs", ipAddress)
+	if err := os.Rename(vm.dirname, dirname); err != nil {
+		return err
+	}
+	vm.dirname = dirname
+	for index, volume := range vm.VolumeLocations {
+		parent := path.Dir(volume.DirectoryToCleanup)
+		dirname := path.Join(parent, ipAddress)
+		if err := os.Rename(volume.DirectoryToCleanup, dirname); err != nil {
+			return err
+		}
+		vm.VolumeLocations[index] = volumeType{
+			DirectoryToCleanup: dirname,
+			Filename:           path.Join(dirname, path.Base(volume.Filename)),
+		}
+	}
+	vm.logger.Printf("changing to new address: %s\n", ipAddress)
+	vm.logger = prefixlogger.New(ipAddress+": ", vm.manager.Logger)
+	vm.setState(vm.State)
+	vm.manager.mutex.Lock()
+	defer vm.manager.mutex.Unlock()
+	delete(vm.manager.vms, vm.ipAddress)
+	vm.ipAddress = ipAddress
+	vm.manager.vms[vm.ipAddress] = vm
+	return nil
 }
 
 func (vm *vmInfoType) checkAuth(authInfo *srpc.AuthInformation) error {
@@ -739,7 +780,7 @@ func (vm *vmInfoType) copyRootVolume(request proto.CreateVmRequest,
 func (vm *vmInfoType) delete() {
 	vm.manager.DhcpServer.RemoveLease(vm.Address.IpAddress)
 	vm.manager.mutex.Lock()
-	delete(vm.manager.vms, vm.Address.IpAddress.String())
+	delete(vm.manager.vms, vm.ipAddress)
 	err := vm.manager.addAddressesToPool([]proto.Address{vm.Address}, false)
 	vm.manager.mutex.Unlock()
 	if err != nil {
@@ -789,8 +830,11 @@ func (vm *vmInfoType) probeHealthAgent(cancel <-chan struct{}) {
 		default:
 		}
 		sleepUntil := time.Now().Add(time.Second)
-		conn, err := net.DialTimeout("tcp",
-			vm.Address.IpAddress.String()+":6910", time.Second*5)
+		if vm.ipAddress == "0.0.0.0" {
+			time.Sleep(time.Until(sleepUntil))
+			continue
+		}
+		conn, err := net.DialTimeout("tcp", vm.ipAddress+":6910", time.Second*5)
 		if err == nil {
 			conn.Close()
 			vm.mutex.Lock()
@@ -843,8 +887,7 @@ func (vm *vmInfoType) setupVolumes(rootSize uint64,
 	if err != nil {
 		return err
 	}
-	ipAddress := vm.Address.IpAddress.String()
-	volumeDirectory := path.Join(volumeDirectories[0], ipAddress)
+	volumeDirectory := path.Join(volumeDirectories[0], vm.ipAddress)
 	os.RemoveAll(volumeDirectory)
 	if err := os.MkdirAll(volumeDirectory, dirPerms); err != nil {
 		return err
@@ -853,7 +896,7 @@ func (vm *vmInfoType) setupVolumes(rootSize uint64,
 	vm.VolumeLocations = append(vm.VolumeLocations,
 		volumeType{volumeDirectory, filename})
 	for index := range request.SecondaryVolumes {
-		volumeDirectory := path.Join(volumeDirectories[index+1], ipAddress)
+		volumeDirectory := path.Join(volumeDirectories[index+1], vm.ipAddress)
 		os.RemoveAll(volumeDirectory)
 		if err := os.MkdirAll(volumeDirectory, dirPerms); err != nil {
 			return err
@@ -913,6 +956,21 @@ func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration) (bool, error) {
 	go vm.monitor(monitorSock, commandChannel)
 	commandChannel <- "qmp_capabilities"
 	vm.setState(proto.StateRunning)
+	if len(vm.Address.IpAddress) < 1 {
+		// Must wait to see what IP address is given by external DHCP server.
+		reqCh := vm.manager.DhcpServer.MakeRequestChannel(vm.Address.MacAddress)
+		if dhcpTimeout < time.Minute {
+			dhcpTimeout = time.Minute
+		}
+		timer := time.NewTimer(dhcpTimeout)
+		select {
+		case ipAddr := <-reqCh:
+			timer.Stop()
+			return false, vm.changeIpAddress(ipAddr.String())
+		case <-timer.C:
+			return true, errors.New("timed out on external lease")
+		}
+	}
 	if dhcpTimeout > 0 {
 		ackChan := vm.manager.DhcpServer.MakeAcknowledgmentChannel(
 			vm.Address.IpAddress)
@@ -941,7 +999,7 @@ func (vm *vmInfoType) startVm() error {
 	bootlogFilename := path.Join(vm.dirname, "bootlog")
 	cmd := exec.Command("qemu-system-x86_64", "-machine", "pc,accel=kvm",
 		"-nodefaults",
-		"-name", vm.Address.IpAddress.String(),
+		"-name", vm.ipAddress,
 		"-m", fmt.Sprintf("%dM", vm.MemoryInMiB),
 		"-smp", fmt.Sprintf("cpus=%d", nCpus),
 		"-net", "nic,model=virtio,macaddr="+vm.Address.MacAddress,

@@ -65,6 +65,7 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 		vmInfo.Address.Shrink()
 		vmInfo.manager = manager
 		vmInfo.dirname = vmDirname
+		vmInfo.ipAddress = ipAddr
 		vmInfo.ownerUsers = make(map[string]struct{}, len(vmInfo.OwnerUsers))
 		for _, username := range vmInfo.OwnerUsers {
 			vmInfo.ownerUsers[username] = struct{}{}
