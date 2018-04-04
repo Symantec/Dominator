@@ -72,7 +72,13 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 		}
 		vmInfo.logger = prefixlogger.New(ipAddr+": ", manager.Logger)
 		manager.vms[ipAddr] = &vmInfo
-		vmInfo.startManaging(0)
+		if _, err := vmInfo.startManaging(0); err != nil {
+			manager.Logger.Println(err)
+			if ipAddr == "0.0.0.0" {
+				delete(manager.vms, ipAddr)
+				vmInfo.destroy()
+			}
+		}
 	}
 	if len(manager.volumeDirectories) < 1 {
 		manager.volumeDirectories, err = getVolumeDirectories()

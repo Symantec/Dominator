@@ -795,6 +795,14 @@ func (vm *vmInfoType) delete() {
 	os.RemoveAll(vm.dirname)
 }
 
+func (vm *vmInfoType) destroy() {
+	select {
+	case vm.commandChannel <- "quit":
+	default:
+	}
+	vm.delete()
+}
+
 func (vm *vmInfoType) kill() {
 	vm.mutex.Lock()
 	defer vm.mutex.Unlock()
