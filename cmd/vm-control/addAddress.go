@@ -12,7 +12,11 @@ import (
 )
 
 func addAddressSubcommand(args []string, logger log.DebugLogger) {
-	err := addAddress(args[0], args[1], logger)
+	var ipAddr string
+	if len(args) > 1 {
+		ipAddr = args[1]
+	}
+	err := addAddress(args[0], ipAddr, logger)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error adding address: %s\n", err)
 		os.Exit(1)
@@ -21,9 +25,9 @@ func addAddressSubcommand(args []string, logger log.DebugLogger) {
 }
 
 func addAddress(macAddr, ipAddr string, logger log.DebugLogger) error {
-	address := proto.Address{
-		IpAddress:  net.ParseIP(ipAddr),
-		MacAddress: macAddr,
+	address := proto.Address{MacAddress: macAddr}
+	if ipAddr != "" {
+		address.IpAddress = net.ParseIP(ipAddr)
 	}
 	address.Shrink()
 	request := proto.AddAddressesToPoolRequest{
