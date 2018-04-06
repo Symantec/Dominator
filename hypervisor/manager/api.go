@@ -139,9 +139,19 @@ func (m *Manager) ReplaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 	return m.replaceVmImage(conn, decoder, encoder, authInfo)
 }
 
+func (m *Manager) ReplaceVmUserData(ipAddr net.IP, reader io.Reader,
+	size uint64, authInfo *srpc.AuthInformation) error {
+	return m.replaceVmUserData(ipAddr, reader, size, authInfo)
+}
+
 func (m *Manager) RestoreVmImage(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
 	return m.restoreVmImage(ipAddr, authInfo)
+}
+
+func (m *Manager) RestoreVmUserData(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	return m.restoreVmUserData(ipAddr, authInfo)
 }
 
 func (m *Manager) StartVm(ipAddr net.IP, authInfo *srpc.AuthInformation,

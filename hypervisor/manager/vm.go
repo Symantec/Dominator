@@ -626,6 +626,34 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 	return nil
 }
 
+func (m *Manager) replaceVmUserData(ipAddr net.IP, reader io.Reader,
+	size uint64, authInfo *srpc.AuthInformation) error {
+	vm, err := m.getVmAndLock(ipAddr)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if err := vm.checkAuth(authInfo); err != nil {
+		return err
+	}
+	filename := path.Join(vm.dirname, "user-data.raw")
+	oldFilename := filename + ".old"
+	newFilename := filename + ".new"
+	err = fsutil.CopyToFile(newFilename, privateFilePerms, reader, size)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(newFilename)
+	if err := os.Rename(filename, oldFilename); err != nil {
+		return err
+	}
+	if err := os.Rename(newFilename, filename); err != nil {
+		os.Rename(oldFilename, filename)
+		return err
+	}
+	return nil
+}
+
 func (m *Manager) restoreVmImage(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
 	vm, err := m.getVmAndLock(ipAddr)
@@ -651,6 +679,21 @@ func (m *Manager) restoreVmImage(ipAddr net.IP,
 	vm.Volumes[0].Size = uint64(fi.Size())
 	vm.setState(vm.State)
 	return nil
+}
+
+func (m *Manager) restoreVmUserData(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	vm, err := m.getVmAndLock(ipAddr)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if err := vm.checkAuth(authInfo); err != nil {
+		return err
+	}
+	filename := path.Join(vm.dirname, "user-data.raw")
+	oldFilename := filename + ".old"
+	return os.Rename(oldFilename, filename)
 }
 
 func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
