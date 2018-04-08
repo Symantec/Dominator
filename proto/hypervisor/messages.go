@@ -113,11 +113,28 @@ type ReplaceVmImageResponse struct { // Multiple responses are sent.
 	Error           string
 }
 
+type ReplaceVmUserDataRequest struct {
+	IpAddress net.IP
+	Size      uint64
+} // User data (length=Size) are streamed afterwards.
+
+type ReplaceVmUserDataResponse struct {
+	Error string
+}
+
 type RestoreVmImageRequest struct {
 	IpAddress net.IP
 }
 
 type RestoreVmImageResponse struct {
+	Error string
+}
+
+type RestoreVmUserDataRequest struct {
+	IpAddress net.IP
+}
+
+type RestoreVmUserDataResponse struct {
 	Error string
 }
 
