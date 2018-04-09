@@ -98,6 +98,16 @@ func (m *Manager) DestroyVm(ipAddr net.IP,
 	return m.destroyVm(ipAddr, authInfo)
 }
 
+func (m *Manager) DiscardVmOldImage(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	return m.discardVmOldImage(ipAddr, authInfo)
+}
+
+func (m *Manager) DiscardVmOldUserData(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	return m.discardVmOldUserData(ipAddr, authInfo)
+}
+
 func (m *Manager) GetImageServerAddress() string {
 	return m.ImageServerAddress
 }

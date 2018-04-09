@@ -423,6 +423,32 @@ func (m *Manager) destroyVm(ipAddr net.IP,
 	return nil
 }
 
+func (m *Manager) discardVmOldImage(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	vm, err := m.getVmAndLock(ipAddr)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if err := vm.checkAuth(authInfo); err != nil {
+		return err
+	}
+	return os.Remove(vm.VolumeLocations[0].Filename + ".old")
+}
+
+func (m *Manager) discardVmOldUserData(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	vm, err := m.getVmAndLock(ipAddr)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if err := vm.checkAuth(authInfo); err != nil {
+		return err
+	}
+	return os.Remove(path.Join(vm.dirname, "user-data.old"))
+}
+
 func (m *Manager) getNumVMs() (uint, uint) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
