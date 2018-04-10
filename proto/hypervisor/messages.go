@@ -80,6 +80,22 @@ type DestroyVmResponse struct {
 	Error string
 }
 
+type DiscardVmOldImageRequest struct {
+	IpAddress net.IP
+}
+
+type DiscardVmOldImageResponse struct {
+	Error string
+}
+
+type DiscardVmOldUserDataRequest struct {
+	IpAddress net.IP
+}
+
+type DiscardVmOldUserDataResponse struct {
+	Error string
+}
+
 type GetVmInfoRequest struct {
 	IpAddress net.IP
 }
