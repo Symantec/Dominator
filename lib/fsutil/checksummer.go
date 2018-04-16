@@ -19,6 +19,10 @@ func newChecksumReader(reader io.Reader) *ChecksumReader {
 	return r
 }
 
+func (r *ChecksumReader) getChecksum() []byte {
+	return r.checksummer.Sum(nil)
+}
+
 func (r *ChecksumReader) read(p []byte) (int, error) {
 	nRead, err := r.reader.Read(p)
 	if err != nil {
@@ -45,7 +49,7 @@ func (r *ChecksumReader) verifyChecksum() error {
 			"ChecksumReader.Checksum(): expected: %d got: %d bytes",
 			r.checksummer.Size(), nRead)
 	}
-	if !bytes.Equal(buf, r.checksummer.Sum(nil)) {
+	if !bytes.Equal(buf, r.getChecksum()) {
 		return ErrorChecksumMismatch
 	}
 	return nil
