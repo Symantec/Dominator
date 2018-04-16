@@ -128,6 +128,10 @@ func NewChecksumReader(reader io.Reader) *ChecksumReader {
 	return newChecksumReader(reader)
 }
 
+func (r *ChecksumReader) GetChecksum() []byte {
+	return r.getChecksum()
+}
+
 func (r *ChecksumReader) Read(p []byte) (int, error) {
 	return r.read(p)
 }
