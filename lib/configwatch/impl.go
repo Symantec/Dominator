@@ -1,9 +1,11 @@
 package configwatch
 
 import (
+	"bytes"
 	"io"
 	"time"
 
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/url/urlutil"
 )
@@ -21,11 +23,19 @@ func watch(url string, checkInterval time.Duration,
 
 func watchLoop(rawChannel <-chan io.ReadCloser,
 	configChannel chan<- interface{}, decoder Decoder, logger log.DebugLogger) {
+	var previousChecksum []byte
 	for reader := range rawChannel {
-		if config, err := decoder(reader); err != nil {
+		checksumReader := fsutil.NewChecksumReader(reader)
+		if config, err := decoder(checksumReader); err != nil {
 			logger.Println(err)
 		} else {
-			configChannel <- config
+			newChecksum := checksumReader.GetChecksum()
+			if bytes.Equal(newChecksum, previousChecksum) {
+				logger.Debugln(1, "Ignoring unchanged configuration")
+			} else {
+				configChannel <- config
+				previousChecksum = newChecksum
+			}
 		}
 		reader.Close()
 	}
