@@ -18,7 +18,7 @@ func Open(url string) (io.ReadCloser, error) {
 // when a new inode is found and it is a regular file. If url is a HTTP/HTTPS
 // URL a new io.ReadCloser is yielded every checkInterval.
 // Each yielded io.ReadCloser must be closed after use.
-// Any errors are logged to the logger if it is not nil.
+// Any errors are logged to the logger.
 func WatchUrl(url string, checkInterval time.Duration,
 	logger log.Logger) (<-chan io.ReadCloser, error) {
 	return watchUrl(url, checkInterval, logger)
