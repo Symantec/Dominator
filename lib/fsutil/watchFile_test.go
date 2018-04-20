@@ -67,12 +67,12 @@ func testWatchFile(t *testing.T, dirname string) {
 		time.Sleep(time.Millisecond * 50)
 		file, err := os.Create(pathExistsLater)
 		if err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 		file.Close()
 	}()
 	ch = WatchFile(pathExistsLater, logger)
-	rc, err = watchTimeout(ch, time.Millisecond*10)
+	_, err = watchTimeout(ch, time.Millisecond*10)
 	if err != errorTimeout {
 		t.Fatal("Expected timeout error for non-existant file")
 	}

@@ -44,6 +44,7 @@ func TestWaitFile(t *testing.T) {
 	}()
 	rc, err = WaitFile(pathExistsLater, time.Millisecond*10)
 	if err == nil {
+		rc.Close()
 		t.Errorf("Expected timeout error for non-existant file")
 	}
 	rc, err = WaitFile(pathExistsLater, time.Millisecond*90)
