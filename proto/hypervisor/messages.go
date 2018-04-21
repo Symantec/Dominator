@@ -105,10 +105,12 @@ type GetVmInfoResponse struct {
 	Error  string
 }
 
-type ListVMsRequest struct{}
+type ListVMsRequest struct {
+	Sort bool
+}
 
 type ListVMsResponse struct {
-	VMs []VmInfo
+	IpAddresses []net.IP
 }
 
 type ReplaceVmImageRequest struct {
