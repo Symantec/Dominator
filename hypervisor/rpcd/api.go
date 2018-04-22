@@ -33,6 +33,7 @@ func Setup(manager *manager.Manager, logger log.DebugLogger) (
 			"DestroyVm",
 			"DiscardVmOldImage",
 			"DiscardVmOldUserData",
+			"GetUpdates",
 			"GetVmInfo",
 			"ListVMs",
 			"ReplaceVmImage",
