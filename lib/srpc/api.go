@@ -308,6 +308,13 @@ func (conn *Conn) GetAuthInformation() *AuthInformation {
 	return conn.getAuthInformation()
 }
 
+// GetCloseNotifier will create a goroutine which reads from the connection
+// until it closes or there is a read error. The error (which is nil if the
+// connection closed) is sent to the channel. All data read are discarded.
+func (conn *Conn) GetCloseNotifier() <-chan error {
+	return conn.getCloseNotifier()
+}
+
 // IsEncrypted will return true if the underlying connection is TLS-encrypted.
 func (conn *Conn) IsEncrypted() bool {
 	return conn.isEncrypted
