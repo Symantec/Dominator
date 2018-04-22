@@ -96,6 +96,15 @@ type DiscardVmOldUserDataResponse struct {
 	Error string
 }
 
+// The GetUpdates() RPC is fully streamed.
+// The client sends no information to the server.
+// The server sends a stream of Update messages.
+
+type Update struct {
+	AddressPool []Address          `json:",omitempty"`
+	VMs         map[string]*VmInfo `json:",omitempty"` // Key: IP address.
+}
+
 type GetVmInfoRequest struct {
 	IpAddress net.IP
 }
