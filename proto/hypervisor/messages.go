@@ -102,6 +102,7 @@ type DiscardVmOldUserDataResponse struct {
 
 type Update struct {
 	AddressPool []Address          `json:",omitempty"`
+	Subnets     []Subnet           `json:",omitempty"`
 	VMs         map[string]*VmInfo `json:",omitempty"` // Key: IP address.
 }
 
