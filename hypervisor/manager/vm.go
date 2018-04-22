@@ -192,7 +192,7 @@ func (m *Manager) changeVmTags(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		return err
 	}
 	vm.Tags = tgs
-	vm.setState(vm.State)
+	vm.writeAndSendInfo()
 	return nil
 }
 
@@ -251,6 +251,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		}
 		m.mutex.Lock()
 		delete(m.vms, vm.ipAddress)
+		m.sendVmInfo(vm.ipAddress, nil)
 		err := m.addAddressesToPool([]proto.Address{vm.Address}, false)
 		if err != nil {
 			m.Logger.Println(err)
@@ -642,7 +643,7 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 		vm.ImageName = request.ImageName
 	}
 	vm.Volumes[0].Size = newSize
-	vm.setState(vm.State)
+	vm.writeAndSendInfo()
 	response := proto.ReplaceVmImageResponse{
 		Final: true,
 	}
@@ -703,7 +704,7 @@ func (m *Manager) restoreVmImage(ipAddr net.IP,
 		return err
 	}
 	vm.Volumes[0].Size = uint64(fi.Size())
-	vm.setState(vm.State)
+	vm.writeAndSendInfo()
 	return nil
 }
 
@@ -720,6 +721,14 @@ func (m *Manager) restoreVmUserData(ipAddr net.IP,
 	filename := path.Join(vm.dirname, "user-data.raw")
 	oldFilename := filename + ".old"
 	return os.Rename(oldFilename, filename)
+}
+
+func (m *Manager) sendVmInfo(ipAddress string, vm *proto.VmInfo) {
+	if ipAddress != "0.0.0.0" {
+		m.sendUpdateWithLock(proto.Update{
+			VMs: map[string]*proto.VmInfo{ipAddress: vm},
+		})
+	}
 }
 
 func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
@@ -811,12 +820,15 @@ func (vm *vmInfoType) changeIpAddress(ipAddress string) error {
 	}
 	vm.logger.Printf("changing to new address: %s\n", ipAddress)
 	vm.logger = prefixlogger.New(ipAddress+": ", vm.manager.Logger)
-	vm.setState(vm.State)
+	vm.writeInfo()
 	vm.manager.mutex.Lock()
 	defer vm.manager.mutex.Unlock()
 	delete(vm.manager.vms, vm.ipAddress)
 	vm.ipAddress = ipAddress
 	vm.manager.vms[vm.ipAddress] = vm
+	vm.manager.sendUpdateWithLock(proto.Update{
+		VMs: map[string]*proto.VmInfo{ipAddress: &vm.VmInfo},
+	})
 	return nil
 }
 
@@ -850,6 +862,7 @@ func (vm *vmInfoType) delete() {
 	vm.manager.DhcpServer.RemoveLease(vm.Address.IpAddress)
 	vm.manager.mutex.Lock()
 	delete(vm.manager.vms, vm.ipAddress)
+	vm.manager.sendVmInfo(vm.ipAddress, nil)
 	err := vm.manager.addAddressesToPool([]proto.Address{vm.Address}, false)
 	vm.manager.mutex.Unlock()
 	if err != nil {
@@ -949,12 +962,7 @@ func (vm *vmInfoType) processMonitorResponses(monitorSock net.Conn) {
 
 func (vm *vmInfoType) setState(state proto.State) {
 	vm.State = state
-	filename := path.Join(vm.dirname, "info.json")
-	err := json.WriteToFile(filename, publicFilePerms, "    ", vm)
-	if err != nil {
-		vm.logger.Println(err)
-		return
-	}
+	vm.writeAndSendInfo()
 }
 
 func (vm *vmInfoType) setupVolumes(rootSize uint64,
@@ -1100,4 +1108,17 @@ func (vm *vmInfoType) startVm() error {
 		return fmt.Errorf("error starting QEMU: %s: %s", err, output)
 	}
 	return nil
+}
+
+func (vm *vmInfoType) writeAndSendInfo() {
+	if err := vm.writeInfo(); err != nil {
+		vm.logger.Println(err)
+		return
+	}
+	vm.manager.sendVmInfo(vm.ipAddress, &vm.VmInfo)
+}
+
+func (vm *vmInfoType) writeInfo() error {
+	filename := path.Join(vm.dirname, "info.json")
+	return json.WriteToFile(filename, publicFilePerms, "    ", vm)
 }

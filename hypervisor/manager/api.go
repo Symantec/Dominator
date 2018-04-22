@@ -27,6 +27,7 @@ type Manager struct {
 	volumeDirectories []string
 	mutex             sync.RWMutex // Lock everthing below (those can change).
 	addressPool       []proto.Address
+	notifiers         map[<-chan proto.Update]chan<- proto.Update
 	subnets           map[string]proto.Subnet // Key: Subnet ID.
 	subnetChannels    []chan<- proto.Subnet
 	vms               map[string]*vmInfoType // Key: IP address.
@@ -88,6 +89,10 @@ func (m *Manager) CheckVmHasHealthAgent(ipAddr net.IP) (bool, error) {
 	return m.checkVmHasHealthAgent(ipAddr)
 }
 
+func (m *Manager) CloseUpdateChannel(channel <-chan proto.Update) {
+	m.closeUpdateChannel(channel)
+}
+
 func (m *Manager) CreateVm(conn *srpc.Conn, decoder srpc.Decoder,
 	encoder srpc.Encoder) error {
 	return m.createVm(conn, decoder, encoder)
@@ -142,6 +147,10 @@ func (m *Manager) ListVMs(doSort bool) []string {
 
 func (m *Manager) MakeSubnetChannel() <-chan proto.Subnet {
 	return m.makeSubnetChannel()
+}
+
+func (m *Manager) MakeUpdateChannel() <-chan proto.Update {
+	return m.makeUpdateChannel()
 }
 
 func (m *Manager) ReplaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
