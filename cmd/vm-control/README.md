@@ -36,7 +36,10 @@ Some of the sub-commands available are:
 - **destroy-vm**: destroy a VM (all ephemeral data and metadata are lost)
 - **discard-vm-old-image**: discard the previous root image for a VM
 - **discard-vm-old-user-data**: discard the previous user data for a VM
+- **get-updates**: get and show a continuous stream of updates from a
+  		   *Hypervisor*. This is primarily for debugging
 - **get-vm-info**: get and show the information for a VM
+- **list-vms**: list the IP addresses for all VMs
 - **replace-vm-image**: replace the root image for a VM. The old root image is
                         saved. The VM must not be running
 - **replace-vm-user-data**: replace the user data for a VM. The old user data is
