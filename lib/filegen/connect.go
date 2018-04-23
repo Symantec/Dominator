@@ -108,7 +108,7 @@ func (m *Manager) updateMachineData(machine mdb.Machine) {
 	defer m.rwMutex.Unlock()
 	if oldMachine, ok := m.machineData[machine.Hostname]; !ok {
 		m.machineData[machine.Hostname] = machine
-	} else if oldMachine != machine {
+	} else if !oldMachine.Compare(machine) {
 		m.machineData[machine.Hostname] = machine
 		for _, pathMgr := range m.pathManagers {
 			delete(pathMgr.machineHashes, machine.Hostname)

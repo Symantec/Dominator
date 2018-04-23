@@ -12,6 +12,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/tricorder/go/tricorder"
 )
 
@@ -74,6 +75,10 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr,
 		"    url: URL which yields JSON with map of map of hosts with fqdn entries")
 	fmt.Fprintln(os.Stderr,
+		"  hypervisor")
+	fmt.Fprintln(os.Stderr,
+		"    Query Hypervisor on this machine")
+	fmt.Fprintln(os.Stderr,
 		"  text: url")
 	fmt.Fprintln(os.Stderr,
 		"    url: URL which yields lines. Each line contains:")
@@ -94,6 +99,7 @@ var drivers = []driver{
 	{"aws-local", 0, 0, newAwsLocalGenerator},
 	{"cis", 1, 1, newCisGenerator},
 	{"ds.host.fqdn", 1, 1, newDsHostFqdnGenerator},
+	{"hypervisor", 0, 0, newHypervisorGenerator},
 	{"text", 1, 1, newTextGenerator},
 }
 
@@ -143,6 +149,7 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
+	setupserver.SetupTlsClientOnly()
 	handleSignals(logger)
 	readerChannel := fsutil.WatchFile(*sourcesFile, logger)
 	file, err := os.Open(*sourcesFile)
@@ -150,7 +157,7 @@ func main() {
 		showErrorAndDie(err)
 	}
 	(<-readerChannel).Close()
-	generators, err := setupGenerators(file, drivers)
+	generators, err := setupGenerators(file, drivers, logger)
 	file.Close()
 	if err != nil {
 		showErrorAndDie(err)

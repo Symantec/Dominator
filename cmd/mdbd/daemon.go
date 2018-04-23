@@ -58,7 +58,14 @@ func runDaemon(generators []generator, mdbFileName, hostnameRegex string,
 	}
 	var cycleStopTime time.Time
 	fetchIntervalDuration := time.Duration(fetchInterval) * time.Second
-	for ; ; sleepUntil(cycleStopTime) {
+	eventChannel := make(chan struct{}, 1)
+	for _, gen := range generators {
+		if eGen, ok := gen.(eventGenerator); ok {
+			eGen.RegisterEventChannel(eventChannel)
+		}
+	}
+	intervalTimer := time.NewTimer(fetchIntervalDuration)
+	for ; ; sleepUntil(eventChannel, intervalTimer, cycleStopTime) {
 		cycleStopTime = time.Now().Add(fetchIntervalDuration)
 		newMdb, err := loadFromAll(generators, datacentre, logger)
 		if err != nil {
@@ -85,13 +92,18 @@ func runDaemon(generators []generator, mdbFileName, hostnameRegex string,
 	}
 }
 
-func sleepUntil(wakeTime time.Time) {
+func sleepUntil(eventChannel <-chan struct{}, intervalTimer *time.Timer,
+	wakeTime time.Time) {
 	runtime.GC() // An opportune time to take out the garbage.
 	sleepTime := wakeTime.Sub(time.Now())
 	if sleepTime < time.Second {
 		sleepTime = time.Second
 	}
-	time.Sleep(sleepTime)
+	intervalTimer.Reset(sleepTime)
+	select {
+	case <-eventChannel:
+	case <-intervalTimer.C:
+	}
 }
 
 func loadFromAll(generators []generator, datacentre string,

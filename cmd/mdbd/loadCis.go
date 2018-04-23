@@ -9,7 +9,7 @@ import (
 	"github.com/Symantec/Dominator/lib/mdb"
 )
 
-func newCisGenerator(args []string) (generator, error) {
+func newCisGenerator(args []string, logger log.DebugLogger) (generator, error) {
 	return sourceGenerator{loadCis, args[0]}, nil
 }
 

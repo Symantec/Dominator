@@ -50,7 +50,7 @@ func (t *rpcType) GetMdbUpdates(conn *srpc.Conn) error {
 			return err
 		}
 	}
-	closeChannel := getCloseNotifier(conn)
+	closeChannel := conn.GetCloseNotifier()
 	for {
 		var err error
 		select {
@@ -65,7 +65,7 @@ func (t *rpcType) GetMdbUpdates(conn *srpc.Conn) error {
 			if err = conn.Flush(); err != nil {
 				break
 			}
-		case err = <-closeChannel:
+		case <-closeChannel:
 			break
 		}
 		if err != nil {
@@ -95,7 +95,7 @@ func (t *rpcType) pushUpdateToAll(old, new *mdb.Mdb) {
 	}
 	for _, newMachine := range new.Machines {
 		if oldMachine, ok := oldMachines[newMachine.Hostname]; ok {
-			if newMachine != oldMachine {
+			if !newMachine.Compare(oldMachine) {
 				mdbUpdate.MachinesToUpdate = append(mdbUpdate.MachinesToUpdate,
 					newMachine)
 			}
@@ -152,18 +152,4 @@ func sendUpdate(channel chan<- mdbserver.MdbUpdate,
 		return
 	}
 	channel <- mdbUpdate
-}
-
-func getCloseNotifier(conn *srpc.Conn) <-chan error {
-	closeChannel := make(chan error)
-	go func() {
-		for {
-			buf := make([]byte, 1)
-			if _, err := conn.Read(buf); err != nil {
-				closeChannel <- err
-				return
-			}
-		}
-	}()
-	return closeChannel
 }
