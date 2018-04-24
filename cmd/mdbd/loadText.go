@@ -9,7 +9,8 @@ import (
 	"github.com/Symantec/Dominator/lib/mdb"
 )
 
-func newTextGenerator(args []string) (generator, error) {
+func newTextGenerator(args []string,
+	logger log.DebugLogger) (generator, error) {
 	return sourceGenerator{loadText, args[0]}, nil
 }
 

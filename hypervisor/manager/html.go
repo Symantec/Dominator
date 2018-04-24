@@ -11,14 +11,11 @@ import (
 
 func (m *Manager) writeHtml(writer io.Writer) {
 	numRunning, numStopped := m.getNumVMs()
-	fmt.Fprintf(writer,
-		"Number of VMs <a href=\"listVMs?output=text\">known</a>: <a href=\"listVMs\">%d</a><br>\n",
+	writeCountLinks(writer, "Number of VMs known", "listVMs?state=",
 		numRunning+numStopped)
-	fmt.Fprintf(writer,
-		"Number of VMs <a href=\"listVMs?state=running&output=text\">running</a>: <a href=\"listVMs?state=running\">%d</a><br>\n",
+	writeCountLinks(writer, "Number of VMs running", "listVMs?state=running",
 		numRunning)
-	fmt.Fprintf(writer,
-		"Number of VMs <a href=\"listVMs?state=stopped&output=text\">stopped</a>: <a href=\"listVMs?state=stopped\">%d</a><br>\n",
+	writeCountLinks(writer, "Number of VMs stopped", "listVMs?state=stopped",
 		numStopped)
 	fmt.Fprintln(writer, "<br>")
 	m.mutex.RLock()
@@ -42,4 +39,10 @@ func (m *Manager) writeHtml(writer io.Writer) {
 		"Number of subnets: <a href=\"listSubnets\">%d</a><br>\n", numSubnets)
 	fmt.Fprintf(writer, "Volume directories: %s<br>\n",
 		strings.Join(m.volumeDirectories, " "))
+}
+
+func writeCountLinks(writer io.Writer, text, path string, count uint) {
+	fmt.Fprintf(writer,
+		"%s: <a href=\"%s\">%d</a> (<a href=\"%s&output=text\">text</a>)<br>\n",
+		text, path, count, path)
 }

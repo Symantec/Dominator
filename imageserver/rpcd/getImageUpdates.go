@@ -1,8 +1,6 @@
 package rpcd
 
 import (
-	"io"
-
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/imageserver"
@@ -51,7 +49,7 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 	}
 	t.logger.Println(
 		"Finished sending initial image list to replication client")
-	closeChannel := getCloseNotifier(conn)
+	closeChannel := conn.GetCloseNotifier()
 	for {
 		select {
 		case imageName := <-addChannel:
@@ -72,7 +70,7 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 				return err
 			}
 		case err := <-closeChannel:
-			if err == io.EOF {
+			if err == nil {
 				t.logger.Printf("Image replication client disconnected: %s\n",
 					conn.RemoteAddr())
 				return nil
@@ -95,20 +93,6 @@ func (t *srpcType) incrementNumReplicationClients(increment bool) {
 	} else {
 		t.numReplicationClients--
 	}
-}
-
-func getCloseNotifier(conn *srpc.Conn) <-chan error {
-	closeChannel := make(chan error)
-	go func() {
-		for {
-			buf := make([]byte, 1)
-			if _, err := conn.Read(buf); err != nil {
-				closeChannel <- err
-				return
-			}
-		}
-	}()
-	return closeChannel
 }
 
 func sendUpdate(encoder srpc.Encoder, name string, operation uint) error {

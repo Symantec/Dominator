@@ -10,6 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/Symantec/Dominator/lib/meminfo"
+	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 const (
@@ -25,6 +26,7 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 	manager := &Manager{
 		StartOptions:      startOptions,
 		memTotalInMiB:     memInfo.Total >> 20,
+		notifiers:         make(map[<-chan proto.Update]chan<- proto.Update),
 		numCPU:            runtime.NumCPU(),
 		vms:               make(map[string]*vmInfoType),
 		volumeDirectories: startOptions.VolumeDirectories,

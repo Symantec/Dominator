@@ -1,0 +1,115 @@
+#! /bin/bash --posix
+
+### BEGIN INIT INFO
+# Provides:		hypervisor
+# Required-Start:	$local_fs $network $syslog
+# Required-Stop:	$local_fs $network $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 6
+# Short-Description:	Hypervisor
+### END INIT INFO
+
+# /etc/init.d/hypervisor: start and stop the Hypervisor
+
+. /lib/lsb/init-functions
+
+umask 022
+
+readonly default_log_dir='/var/log/hypervisor'
+readonly default_state_dir='/var/lib/hypervisor'
+
+CONFIGURATION_URL=
+DAEMON='/usr/local/sbin/hypervisor'
+IMAGE_SERVER_HOSTNAME=
+LOG_DIR="$default_log_dir"
+LOG_QUOTA=
+LOGBUF_LINES=
+LOOP_PIDFILE='/var/run/hypervisor.loop.pid'
+PIDFILE='/var/run/hypervisor.pid'
+STATE_DIR="$default_state_dir"
+VOLUME_DIRECTORIES=
+
+PROG_ARGS=
+
+[ -f /etc/default/hypervisor ] && . /etc/default/hypervisor
+
+test -x "$DAEMON" || exit 0
+
+export PATH="${PATH:+$PATH:}/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin"
+
+mkdir -m 0755 -p "$LOG_DIR" "$STATE_DIR"
+
+if [ -n "$CONFIGURATION_URL" ]; then
+    PROG_ARGS="$PROG_ARGS -configurationUrl=$CONFIGURATION_URL"
+fi
+
+if [ -n "$IMAGE_SERVER_HOSTNAME" ]; then
+    PROG_ARGS="$PROG_ARGS -imageServerHostname=$IMAGE_SERVER_HOSTNAME"
+fi
+
+if [ -n "$LOG_DIR" ] && [ "$LOG_DIR" != "$default_log_dir" ]; then
+    PROG_ARGS="$PROG_ARGS -logDir=$LOG_DIR"
+fi
+
+if [ -n "$LOG_QUOTA" ]; then
+    PROG_ARGS="$PROG_ARGS -logQuota=$LOG_QUOTA"
+fi
+
+if [ -n "$LOGBUF_LINES" ]; then
+    PROG_ARGS="$PROG_ARGS -logbufLines=$LOGBUF_LINES"
+fi
+
+if [ -n "$STATE_DIR" ] && [ "$STATE_DIR" != "$default_state_dir" ]; then
+    PROG_ARGS="$PROG_ARGS -stateDir=$STATE_DIR"
+fi
+
+if [ -n "$VOLUME_DIRECTORIES" ]; then
+    PROG_ARGS="$PROG_ARGS -volumeDirectories=$VOLUME_DIRECTORIES"
+fi
+
+do_start ()
+{
+    start-stop-daemon --start --quiet --pidfile "$PIDFILE" \
+		      --exec "$DAEMON" --make-pidfile -- \
+		      $PROG_ARGS
+}
+
+start_loop ()
+{
+    echo "$BASHPID" > "$LOOP_PIDFILE"
+    while true; do
+	sleep_interval=1
+	do_start || sleep_interval=10
+	rm -f "$PIDFILE"
+	sleep "$sleep_interval"
+    done
+}
+
+case "$1" in
+  start)
+	log_daemon_msg "Starting hypervisor daemon" "hypervisor" || true
+	(start_loop < /dev/null &> /dev/null &)
+	;;
+  stop)
+	log_daemon_msg "Stopping hypervisor daemon" "hypervisor" || true
+	[ -s "$LOOP_PIDFILE" ] && kill -KILL $(cat "$LOOP_PIDFILE")
+	[ -s "$PIDFILE" ]      && kill -TERM $(cat "$PIDFILE")
+	rm -f "$LOOP_PIDFILE" "$PIDFILE"
+	;;
+
+  reload|force-reload)
+	$0 stop
+	$0 start
+	;;
+
+  restart)
+	$0 stop
+	$0 start
+	;;
+
+  *)
+	log_action_msg "Usage: /etc/init.d/hypervisor {start|stop|reload|force-reload|restart}" || true
+	exit 1
+esac
+
+exit 0

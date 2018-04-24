@@ -68,14 +68,19 @@ func (m *Manager) addSubnetsInternal(subnets []proto.Subnet) error {
 	for _, subnet := range subnets {
 		m.subnets[subnet.Id] = subnet
 	}
-	subnetsToWrite := make(map[string]proto.Subnet, len(m.subnets)-1)
+	subnetsToWrite := make([]proto.Subnet, 0, len(m.subnets)-1)
 	for _, subnet := range m.subnets {
 		if subnet.Id != "hypervisor" {
-			subnetsToWrite[subnet.Id] = subnet
+			subnetsToWrite = append(subnetsToWrite, subnet)
 		}
 	}
-	return json.WriteToFile(path.Join(m.StateDir, "subnets.json"),
+	err := json.WriteToFile(path.Join(m.StateDir, "subnets.json"),
 		publicFilePerms, "    ", subnetsToWrite)
+	if err != nil {
+		return err
+	}
+	m.sendUpdateWithLock(proto.Update{Subnets: subnets})
+	return nil
 }
 
 // This must be called with the lock held.

@@ -47,8 +47,7 @@ func (m *Manager) addAddressesToPool(addresses []proto.Address,
 		}
 	}
 	m.addressPool = append(m.addressPool, addresses...)
-	return json.WriteToFile(path.Join(m.StateDir, "address-pool.json"),
-		publicFilePerms, "    ", m.addressPool)
+	return m.writeAddressPool(m.addressPool)
 }
 
 func (m *Manager) loadAddressPool() error {
@@ -72,9 +71,7 @@ func (m *Manager) getFreeAddress(subnetId string) (proto.Address, error) {
 		return proto.Address{}, errors.New("no free addresses in pool")
 	}
 	if subnetId == "" {
-		err := json.WriteToFile(path.Join(m.StateDir, "address-pool.json"),
-			publicFilePerms, "    ", m.addressPool[1:])
-		if err != nil {
+		if err := m.writeAddressPool(m.addressPool[1:]); err != nil {
 			return proto.Address{}, err
 		}
 		address := m.addressPool[0]
@@ -106,9 +103,7 @@ func (m *Manager) getFreeAddress(subnetId string) (proto.Address, error) {
 		}
 		addressPool = append(addressPool, address)
 	}
-	err := json.WriteToFile(path.Join(m.StateDir, "address-pool.json"),
-		publicFilePerms, "    ", addressPool)
-	if err != nil {
+	if err := m.writeAddressPool(addressPool); err != nil {
 		return proto.Address{}, err
 	}
 	address := m.addressPool[foundPos]
@@ -124,4 +119,14 @@ func (m *Manager) listAvailableAddresses() []proto.Address {
 		addresses = append(addresses, address)
 	}
 	return addresses
+}
+
+func (m *Manager) writeAddressPool(addresses []proto.Address) error {
+	err := json.WriteToFile(path.Join(m.StateDir, "address-pool.json"),
+		publicFilePerms, "    ", addresses)
+	if err != nil {
+		return err
+	}
+	m.sendUpdateWithLock(proto.Update{AddressPool: addresses})
+	return nil
 }

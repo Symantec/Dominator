@@ -17,6 +17,9 @@ func (dest *Machine) updateFrom(source Machine) {
 	if source.OwnerGroup != "" {
 		dest.OwnerGroup = source.OwnerGroup
 	}
+	if source.Tags != nil {
+		dest.Tags = source.Tags
+	}
 	if source.AwsMetadata != nil {
 		if dest.AwsMetadata == nil {
 			dest.AwsMetadata = source.AwsMetadata
@@ -24,28 +27,4 @@ func (dest *Machine) updateFrom(source Machine) {
 			dest.AwsMetadata = source.AwsMetadata
 		}
 	}
-}
-
-func compareAwsMetadata(left, right *AwsMetadata) bool {
-	if left.AccountId != right.AccountId {
-		return false
-	}
-	if left.AccountName != right.AccountName {
-		return false
-	}
-	if left.InstanceId != right.InstanceId {
-		return false
-	}
-	if left.Region != right.Region {
-		return false
-	}
-	if len(left.Tags) != len(right.Tags) {
-		return false
-	}
-	for key, value := range left.Tags {
-		if right.Tags[key] != value {
-			return false
-		}
-	}
-	return true
 }

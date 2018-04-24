@@ -40,7 +40,7 @@ func loadCredentials() error {
 	return nil
 }
 
-func newAwsGenerator(args []string) (generator, error) {
+func newAwsGenerator(args []string, logger log.DebugLogger) (generator, error) {
 	if err := loadCredentials(); err != nil {
 		return nil, err
 	}
@@ -49,7 +49,8 @@ func newAwsGenerator(args []string) (generator, error) {
 		nil
 }
 
-func newAwsFilteredGenerator(args []string) (generator, error) {
+func newAwsFilteredGenerator(args []string,
+	logger log.DebugLogger) (generator, error) {
 	if err := loadCredentials(); err != nil {
 		return nil, err
 	}
@@ -62,7 +63,8 @@ func newAwsFilteredGenerator(args []string) (generator, error) {
 	return &gen, nil
 }
 
-func newAwsLocalGenerator(args []string) (generator, error) {
+func newAwsLocalGenerator(args []string,
+	logger log.DebugLogger) (generator, error) {
 	if err := loadCredentials(); err != nil {
 		return nil, err
 	}

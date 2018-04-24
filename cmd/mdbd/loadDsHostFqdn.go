@@ -9,7 +9,8 @@ import (
 	"github.com/Symantec/Dominator/lib/mdb"
 )
 
-func newDsHostFqdnGenerator(args []string) (generator, error) {
+func newDsHostFqdnGenerator(args []string,
+	logger log.DebugLogger) (generator, error) {
 	return sourceGenerator{loadDsHostFqdn, args[0]}, nil
 }
 

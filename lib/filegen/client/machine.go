@@ -49,7 +49,7 @@ func (m *Manager) updateMachine(machine *machineType) {
 		panic(hostname + ": not present")
 	} else {
 		sendRequests := false
-		if machine.machine != mapMachine.machine {
+		if !machine.machine.Compare(mapMachine.machine) {
 			mapMachine.machine = machine.machine
 			sendRequests = true
 		}

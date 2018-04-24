@@ -6,6 +6,7 @@ package mdb
 import (
 	"io"
 
+	"github.com/Symantec/Dominator/lib/tags"
 	"github.com/Symantec/Dominator/lib/verstr"
 )
 
@@ -14,7 +15,7 @@ type AwsMetadata struct {
 	AccountName string
 	InstanceId  string
 	Region      string
-	Tags        map[string]string // Key: tag key name, value: tag value.
+	Tags        tags.Tags
 }
 
 // Machine describes a single machine with a unique Hostname and optional
@@ -26,7 +27,12 @@ type Machine struct {
 	PlannedImage   string       `json:",omitempty"`
 	DisableUpdates bool         `json:",omitempty"`
 	OwnerGroup     string       `json:",omitempty"`
+	Tags           tags.Tags    `json:",omitempty"`
 	AwsMetadata    *AwsMetadata `json:",omitempty"`
+}
+
+func (left Machine) Compare(right Machine) bool {
+	return left.compare(right)
 }
 
 // UpdateFrom updates dest with data from source.

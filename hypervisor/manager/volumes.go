@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	procMounts    string = "/proc/mounts"
-	sysClassBlock        = "/sys/class/block"
+	procMounts    = "/proc/mounts"
+	sysClassBlock = "/sys/class/block"
 )
 
 type mountInfo struct {
