@@ -1,0 +1,12 @@
+[Unit]
+Description=Dominator daemon
+After=network.target
+
+[Service]
+ExecStart=/usr/local/sbin/dominator
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
