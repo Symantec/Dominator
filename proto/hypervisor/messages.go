@@ -43,6 +43,15 @@ type AddSubnetsResponse struct {
 	Error string
 }
 
+type ChangeVmOwnerUsersRequest struct {
+	IpAddress  net.IP
+	OwnerUsers []string
+}
+
+type ChangeVmOwnerUsersResponse struct {
+	Error string
+}
+
 type ChangeVmTagsRequest struct {
 	IpAddress net.IP
 	Tags      map[string]string
