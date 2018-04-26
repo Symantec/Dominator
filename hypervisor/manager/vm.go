@@ -181,6 +181,30 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest) (*vmInfoType, error) {
 	return vm, nil
 }
 
+func (m *Manager) changeVmOwnerUsers(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, extraUsers []string) error {
+	vm, err := m.getVmAndLock(ipAddr)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if err := vm.checkAuth(authInfo); err != nil {
+		return err
+	}
+	ownerUsers := make([]string, 1, len(extraUsers)+1)
+	ownerUsers[0] = vm.OwnerUsers[0]
+	for _, user := range extraUsers {
+		ownerUsers = append(ownerUsers, user)
+	}
+	vm.OwnerUsers = ownerUsers
+	vm.ownerUsers = make(map[string]struct{}, len(ownerUsers))
+	for _, user := range ownerUsers {
+		vm.ownerUsers[user] = struct{}{}
+	}
+	vm.writeAndSendInfo()
+	return nil
+}
+
 func (m *Manager) changeVmTags(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	tgs tags.Tags) error {
 	vm, err := m.getVmAndLock(ipAddr)
