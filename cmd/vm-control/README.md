@@ -7,7 +7,7 @@ It is typically run on a desktop, bastion or build machine.
 ## Usage
 *Vm-Control* supports several sub-commands. There are many command-line flags
 which provide parameters for these sub-commands. The most commonly used
-parameters are `-clusterManagerHostname` or `hypervisorHostname` which specify
+parameters are `-clusterManagerHostname` or `-hypervisorHostname` which specify
 either the Cluster Resource Manager or a specific *Hypervisor* to communicate
 with. The basic usage pattern is:
 
@@ -31,6 +31,7 @@ Some of the sub-commands available are:
 - **add-subnet**: manually add a subnet to a specific *Hypervisor*. This command
                   is only required if a *Cluster Resource Manager* is not
                   available
+- **change-vm-owner-users**: change the extra owners for a VM
 - **change-vm-tags**: change the tags for a VM
 - **create-vm**: create a VM
 - **destroy-vm**: destroy a VM (all ephemeral data and metadata are lost)

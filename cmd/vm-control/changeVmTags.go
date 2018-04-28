@@ -13,7 +13,7 @@ import (
 
 func changeVmTagsSubcommand(args []string, logger log.DebugLogger) {
 	if err := changeVmTags(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error destroying VM: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error changing VM tags: %s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
