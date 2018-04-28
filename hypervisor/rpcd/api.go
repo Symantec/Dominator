@@ -28,6 +28,7 @@ func Setup(manager *manager.Manager, logger log.DebugLogger) (
 	srpc.RegisterNameWithOptions("Hypervisor", srpcObj, srpc.ReceiverOptions{
 		PublicMethods: []string{
 			"AcknowledgeVm",
+			"ChangeVmOwnerUsers",
 			"ChangeVmTags",
 			"CreateVm",
 			"DestroyVm",
