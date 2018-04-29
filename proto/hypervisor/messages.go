@@ -110,9 +110,11 @@ type DiscardVmOldUserDataResponse struct {
 // The server sends a stream of Update messages.
 
 type Update struct {
-	AddressPool []Address          `json:",omitempty"`
-	Subnets     []Subnet           `json:",omitempty"`
-	VMs         map[string]*VmInfo `json:",omitempty"` // Key: IP address.
+	HaveAddressPool bool               `json:",omitempty"`
+	AddressPool     []Address          `json:",omitempty"`
+	HaveSubnets     bool               `json:",omitempty"`
+	Subnets         []Subnet           `json:",omitempty"`
+	VMs             map[string]*VmInfo `json:",omitempty"` // Key: IP address.
 }
 
 type GetVmInfoRequest struct {
