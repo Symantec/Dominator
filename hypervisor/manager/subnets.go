@@ -79,7 +79,7 @@ func (m *Manager) addSubnetsInternal(subnets []proto.Subnet) error {
 	if err != nil {
 		return err
 	}
-	m.sendUpdateWithLock(proto.Update{Subnets: subnets})
+	m.sendUpdateWithLock(proto.Update{HaveSubnets: true, Subnets: subnets})
 	return nil
 }
 

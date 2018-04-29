@@ -127,6 +127,9 @@ func (m *Manager) writeAddressPool(addresses []proto.Address) error {
 	if err != nil {
 		return err
 	}
-	m.sendUpdateWithLock(proto.Update{AddressPool: addresses})
+	m.sendUpdateWithLock(proto.Update{
+		HaveAddressPool: true,
+		AddressPool:     addresses},
+	)
 	return nil
 }
