@@ -36,7 +36,7 @@ func (m *Manager) addAddressesToPool(addresses []proto.Address,
 		ipAddr := address.IpAddress
 		if ipAddr != nil {
 			if m.getMatchingSubnet(ipAddr) == "" {
-				return fmt.Errorf("no subnet matching %s", address.IpAddress)
+				return fmt.Errorf("no subnet matching: %s", address.IpAddress)
 			}
 			if _, ok := existingIpAddresses[ipAddr.String()]; ok {
 				return fmt.Errorf("duplicate IP address: %s", address.IpAddress)
@@ -64,24 +64,30 @@ func (m *Manager) loadAddressPool() error {
 	return nil
 }
 
-func (m *Manager) getFreeAddress(subnetId string) (proto.Address, error) {
+func (m *Manager) getFreeAddress(subnetId string) (
+	proto.Address, string, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	if len(m.addressPool) < 1 {
-		return proto.Address{}, errors.New("no free addresses in pool")
+		return proto.Address{}, "", errors.New("no free addresses in pool")
 	}
 	if subnetId == "" {
-		if err := m.writeAddressPool(m.addressPool[1:]); err != nil {
-			return proto.Address{}, err
-		}
 		address := m.addressPool[0]
+		subnetId = m.getMatchingSubnet(address.IpAddress)
+		if subnetId == "" {
+			return proto.Address{}, "",
+				fmt.Errorf("no subnet matching: %s", address.IpAddress)
+		}
+		if err := m.writeAddressPool(m.addressPool[1:]); err != nil {
+			return proto.Address{}, "", err
+		}
 		copy(m.addressPool, m.addressPool[1:])
 		m.addressPool = m.addressPool[:len(m.addressPool)-1]
-		return address, nil
+		return address, subnetId, nil
 	}
 	subnet, ok := m.subnets[subnetId]
 	if !ok {
-		return proto.Address{}, fmt.Errorf("no such subnet: %s", subnetId)
+		return proto.Address{}, "", fmt.Errorf("no such subnet: %s", subnetId)
 	}
 	subnetMask := net.IPMask(subnet.IpMask)
 	subnetAddr := subnet.IpGateway.Mask(subnetMask)
@@ -93,7 +99,7 @@ func (m *Manager) getFreeAddress(subnetId string) (proto.Address, error) {
 		}
 	}
 	if foundPos < 0 {
-		return proto.Address{},
+		return proto.Address{}, "",
 			fmt.Errorf("no free address in subnet: %s", subnetId)
 	}
 	addressPool := make([]proto.Address, 0, len(m.addressPool)-1)
@@ -104,11 +110,11 @@ func (m *Manager) getFreeAddress(subnetId string) (proto.Address, error) {
 		addressPool = append(addressPool, address)
 	}
 	if err := m.writeAddressPool(addressPool); err != nil {
-		return proto.Address{}, err
+		return proto.Address{}, "", err
 	}
 	address := m.addressPool[foundPos]
 	m.addressPool = addressPool
-	return address, nil
+	return address, subnetId, nil
 }
 
 func (m *Manager) listAvailableAddresses() []proto.Address {

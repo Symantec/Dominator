@@ -132,7 +132,7 @@ func (m *Manager) acknowledgeVm(ipAddr net.IP,
 }
 
 func (m *Manager) allocateVm(req proto.CreateVmRequest) (*vmInfoType, error) {
-	address, err := m.getFreeAddress(req.SubnetId)
+	address, subnetId, err := m.getFreeAddress(req.SubnetId)
 	if err != nil {
 		return nil, err
 	}
@@ -170,6 +170,7 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest) (*vmInfoType, error) {
 			SpreadVolumes: req.SpreadVolumes,
 			State:         proto.StateStarting,
 			Tags:          req.Tags,
+			SubnetId:      subnetId,
 		},
 		manager:   m,
 		dirname:   path.Join(m.StateDir, "VMs", ipAddress),
