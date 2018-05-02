@@ -29,6 +29,7 @@ func StartServer(bridges []net.Interface, managerObj *manager.Manager,
 		logger:  logger,
 	}
 	s.infoHandlers = map[string]metadataWriter{
+		"/latest/dynamic/epoch-time":                 s.showTime,
 		"/latest/dynamic/instance-identity/document": s.showVM,
 	}
 	s.rawHandlers = map[string]rawHandlerFunc{

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/Symantec/Dominator/lib/json"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
@@ -39,6 +40,13 @@ func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err := infoHandler(writer, vmInfo); err != nil {
 		fmt.Fprintln(writer, err)
 	}
+}
+
+func (s *server) showTime(writer io.Writer, vmInfo proto.VmInfo) error {
+	now := time.Now()
+	nano := now.UnixNano() - now.Unix()*1000000000
+	_, err := fmt.Fprintf(writer, "%d.%09d\n", now.Unix(), nano)
+	return err
 }
 
 func (s *server) showVM(writer io.Writer, vmInfo proto.VmInfo) error {
