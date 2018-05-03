@@ -20,6 +20,7 @@ type server struct {
 	logger            log.DebugLogger
 	infoHandlers      map[string]metadataWriter
 	rawHandlers       map[string]rawHandlerFunc
+	paths             map[string]struct{}
 }
 
 func StartServer(hypervisorPortNum uint, bridges []net.Interface,
@@ -37,5 +38,6 @@ func StartServer(hypervisorPortNum uint, bridges []net.Interface,
 	s.rawHandlers = map[string]rawHandlerFunc{
 		"/latest/user-data": s.showUserData,
 	}
+	s.computePaths()
 	return s.startServer()
 }
