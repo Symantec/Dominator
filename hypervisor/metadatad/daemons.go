@@ -103,14 +103,21 @@ func (s *server) createNamespace(startChannel <-chan struct{},
 		statusChannel <- statusType{err: err}
 		return
 	}
-	listener, err := net.Listen("tcp", "169.254.169.254:80")
+	hypervisorListener, err := net.Listen("tcp",
+		fmt.Sprintf("169.254.169.254:%d", s.hypervisorPortNum))
+	if err != nil {
+		statusChannel <- statusType{err: err}
+		return
+	}
+	metadataListener, err := net.Listen("tcp", "169.254.169.254:80")
 	if err != nil {
 		statusChannel <- statusType{err: err}
 		return
 	}
 	statusChannel <- statusType{namespaceFd: namespaceFd, threadId: threadId}
 	logger.Printf("starting metadata server in thread: %d\n", threadId)
-	http.Serve(listener, s)
+	go http.Serve(hypervisorListener, nil)
+	http.Serve(metadataListener, s)
 }
 
 func createInterface(bridge net.Interface, threadId int,
