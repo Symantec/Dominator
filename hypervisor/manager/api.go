@@ -12,6 +12,11 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
+type addressPoolType struct {
+	Free       []proto.Address
+	Registered []proto.Address
+}
+
 type DhcpServer interface {
 	AddLease(address proto.Address)
 	AddSubnet(subnet proto.Subnet)
@@ -26,7 +31,7 @@ type Manager struct {
 	memTotalInMiB     uint64
 	volumeDirectories []string
 	mutex             sync.RWMutex // Lock everthing below (those can change).
-	addressPool       []proto.Address
+	addressPool       addressPoolType
 	notifiers         map[<-chan proto.Update]chan<- proto.Update
 	subnets           map[string]proto.Subnet // Key: Subnet ID.
 	subnetChannels    []chan<- proto.Subnet

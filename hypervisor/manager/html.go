@@ -21,7 +21,7 @@ func (m *Manager) writeHtml(writer io.Writer) {
 	m.mutex.RLock()
 	memUnallocated := m.getUnallocatedMemoryInMiBWithLock()
 	numSubnets := len(m.subnets)
-	numAddresses := len(m.addressPool)
+	numAddresses := len(m.addressPool.Free)
 	m.mutex.RUnlock()
 	fmt.Fprintf(writer,
 		"Available addresses: <a href=\"listAvailableAddresses\">%d</a><br>\n",

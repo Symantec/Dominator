@@ -26,11 +26,13 @@ func (m *Manager) makeUpdateChannel() <-chan proto.Update {
 		vms[addr] = &vm.VmInfo
 	}
 	channel <- proto.Update{
-		HaveAddressPool: true,
-		AddressPool:     m.addressPool,
-		HaveSubnets:     true,
-		Subnets:         subnets,
-		VMs:             vms,
+		HaveAddressPool:  true,
+		AddressPool:      m.addressPool.Registered,
+		HaveNumFree:      true,
+		NumFreeAddresses: uint(len(m.addressPool.Free)),
+		HaveSubnets:      true,
+		Subnets:          subnets,
+		VMs:              vms,
 	}
 	return channel
 }

@@ -139,7 +139,7 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest) (*vmInfoType, error) {
 	freeAddress := true
 	defer func() {
 		if freeAddress {
-			err := m.addAddressesToPool([]proto.Address{address}, true)
+			err := m.releaseAddressInPool(address, true)
 			if err != nil {
 				m.Logger.Println(err)
 			}
@@ -277,7 +277,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		m.mutex.Lock()
 		delete(m.vms, vm.ipAddress)
 		m.sendVmInfo(vm.ipAddress, nil)
-		err := m.addAddressesToPool([]proto.Address{vm.Address}, false)
+		err := m.releaseAddressInPool(vm.Address, false)
 		if err != nil {
 			m.Logger.Println(err)
 		}
@@ -750,6 +750,9 @@ func (m *Manager) restoreVmUserData(ipAddr net.IP,
 
 func (m *Manager) sendVmInfo(ipAddress string, vm *proto.VmInfo) {
 	if ipAddress != "0.0.0.0" {
+		if vm == nil { // GOB cannot encode a nil value in a map.
+			vm = new(proto.VmInfo)
+		}
 		m.sendUpdateWithLock(proto.Update{
 			VMs: map[string]*proto.VmInfo{ipAddress: vm},
 		})
@@ -888,7 +891,7 @@ func (vm *vmInfoType) delete() {
 	vm.manager.mutex.Lock()
 	delete(vm.manager.vms, vm.ipAddress)
 	vm.manager.sendVmInfo(vm.ipAddress, nil)
-	err := vm.manager.addAddressesToPool([]proto.Address{vm.Address}, false)
+	err := vm.manager.releaseAddressInPool(vm.Address, false)
 	vm.manager.mutex.Unlock()
 	if err != nil {
 		vm.manager.Logger.Println(err)
