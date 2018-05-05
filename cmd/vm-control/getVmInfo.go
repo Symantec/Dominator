@@ -21,8 +21,12 @@ func getVmInfoSubcommand(args []string, logger log.DebugLogger) {
 }
 
 func getVmInfo(ipAddr string, logger log.DebugLogger) error {
-	hypervisor := fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum)
-	return getVmInfoOnHypervisor(hypervisor, net.ParseIP(ipAddr), logger)
+	vmIP := net.ParseIP(ipAddr)
+	if hypervisor, err := findHypervisor(vmIP); err != nil {
+		return err
+	} else {
+		return getVmInfoOnHypervisor(hypervisor, vmIP, logger)
+	}
 }
 
 func getVmInfoOnHypervisor(hypervisor string, ipAddr net.IP,

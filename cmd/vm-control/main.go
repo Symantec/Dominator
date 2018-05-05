@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	clusterManagerHostname = flag.String("clusterManagerHostname", "localhost",
+	clusterManagerHostname = flag.String("clusterManagerHostname", "",
 		"Hostname of Cluster Resource Manager")
 	clusterManagerPortNum = flag.Uint("clusterManagerPortNum",
 		constants.ClusterManagerPortNumber,

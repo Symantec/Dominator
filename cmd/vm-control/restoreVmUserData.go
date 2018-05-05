@@ -20,9 +20,12 @@ func restoreVmUserDataSubcommand(args []string, logger log.DebugLogger) {
 }
 
 func restoreVmUserData(ipAddr string, logger log.DebugLogger) error {
-	hypervisor := fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum)
-	return restoreVmUserDataOnHypervisor(hypervisor, net.ParseIP(ipAddr),
-		logger)
+	vmIP := net.ParseIP(ipAddr)
+	if hypervisor, err := findHypervisor(vmIP); err != nil {
+		return err
+	} else {
+		return restoreVmUserDataOnHypervisor(hypervisor, vmIP, logger)
+	}
 }
 
 func restoreVmUserDataOnHypervisor(hypervisor string, ipAddr net.IP,

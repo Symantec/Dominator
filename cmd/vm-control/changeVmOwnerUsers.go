@@ -20,9 +20,12 @@ func changeVmOwnerUsersSubcommand(args []string, logger log.DebugLogger) {
 }
 
 func changeVmOwnerUsers(ipAddr string, logger log.DebugLogger) error {
-	hypervisor := fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum)
-	return changeVmOwnerUsersOnHypervisor(hypervisor, net.ParseIP(ipAddr),
-		logger)
+	vmIP := net.ParseIP(ipAddr)
+	if hypervisor, err := findHypervisor(vmIP); err != nil {
+		return err
+	} else {
+		return changeVmOwnerUsersOnHypervisor(hypervisor, vmIP, logger)
+	}
 }
 
 func changeVmOwnerUsersOnHypervisor(hypervisor string, ipAddr net.IP,
