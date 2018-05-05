@@ -206,6 +206,14 @@ type Subnet struct {
 	DomainNameServers []net.IP
 }
 
+type TraceVmMetadataRequest struct {
+	IpAddress net.IP
+}
+
+type TraceVmMetadataResponse struct {
+	Error string
+} // A stream of strings (trace paths) follow.
+
 type VmInfo struct {
 	Address       Address
 	ImageName     string `json:",omitempty"`
