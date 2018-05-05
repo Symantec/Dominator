@@ -172,10 +172,11 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest) (*vmInfoType, error) {
 			Tags:          req.Tags,
 			SubnetId:      subnetId,
 		},
-		manager:   m,
-		dirname:   path.Join(m.StateDir, "VMs", ipAddress),
-		ipAddress: ipAddress,
-		logger:    prefixlogger.New(ipAddress+": ", m.Logger),
+		manager:          m,
+		dirname:          path.Join(m.StateDir, "VMs", ipAddress),
+		ipAddress:        ipAddress,
+		logger:           prefixlogger.New(ipAddress+": ", m.Logger),
+		metadataChannels: make(map[chan<- string]struct{}),
 	}
 	m.vms[ipAddress] = vm
 	freeAddress = false
@@ -544,6 +545,38 @@ func (m *Manager) listVMs(doSort bool) []string {
 	return ipAddrs
 }
 
+func (m *Manager) notifyVmMetadataRequest(ipAddr net.IP, path string) {
+	addr := ipAddr.String()
+	m.mutex.RLock()
+	vm, ok := m.vms[addr]
+	m.mutex.RUnlock()
+	if !ok {
+		return
+	}
+	vm.mutex.Lock()
+	defer vm.mutex.Unlock()
+	for ch := range vm.metadataChannels {
+		select {
+		case ch <- path:
+		default:
+		}
+	}
+}
+
+func (m *Manager) registerVmMetadataNotifier(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, pathChannel chan<- string) error {
+	vm, err := m.getVmAndLock(ipAddr)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if err := vm.checkAuth(authInfo); err != nil {
+		return err
+	}
+	vm.metadataChannels[pathChannel] = struct{}{}
+	return nil
+}
+
 func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 	encoder srpc.Encoder, authInfo *srpc.AuthInformation) error {
 
@@ -818,6 +851,17 @@ func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation) error {
 	default:
 		return errors.New("unknown state: " + vm.State.String())
 	}
+	return nil
+}
+
+func (m *Manager) unregisterVmMetadataNotifier(ipAddr net.IP,
+	pathChannel chan<- string) error {
+	vm, err := m.getVmAndLock(ipAddr)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	delete(vm.metadataChannels, pathChannel)
 	return nil
 }
 
