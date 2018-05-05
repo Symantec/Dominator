@@ -36,7 +36,8 @@ func StartServer(hypervisorPortNum uint, bridges []net.Interface,
 		"/latest/dynamic/instance-identity/document": s.showVM,
 	}
 	s.rawHandlers = map[string]rawHandlerFunc{
-		"/latest/user-data": s.showUserData,
+		"/datasource/SmallStack": s.showSmallStack,
+		"/latest/user-data":      s.showUserData,
 	}
 	s.computePaths()
 	return s.startServer()

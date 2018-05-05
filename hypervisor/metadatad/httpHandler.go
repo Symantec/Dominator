@@ -86,6 +86,10 @@ func (s *server) showVM(writer io.Writer, vmInfo proto.VmInfo) error {
 	return json.WriteWithIndent(writer, "    ", vmInfo)
 }
 
+func (s *server) showSmallStack(w http.ResponseWriter, ipAddr net.IP) {
+	w.Write([]byte("true\n"))
+}
+
 func (s *server) showUserData(w http.ResponseWriter, ipAddr net.IP) {
 	if file, err := s.manager.GetVmUserData(ipAddr); err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
