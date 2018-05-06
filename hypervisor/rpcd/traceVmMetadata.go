@@ -39,7 +39,11 @@ func (t *srpcType) TraceVmMetadata(conn *srpc.Conn, decoder srpc.Decoder,
 	flushTimer := time.NewTimer(flushDelay)
 	for {
 		select {
-		case path := <-pathChannel:
+		case path, ok := <-pathChannel:
+			if !ok {
+				_, err := conn.Write([]byte("VM destroyed\n\n"))
+				return err
+			}
 			if _, err := conn.Write([]byte(path + "\n")); err != nil {
 				return err
 			}
