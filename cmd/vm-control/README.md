@@ -50,6 +50,7 @@ Some of the sub-commands available are:
 - **restore-vm-user-data**: restore the previously saved user data for a VM
 - **start-vm**: start a stopped VM
 - **stop-vm**: stop a running VM. All data and metadata are preserved
+- **trace-vm-metadata**: trace the requests a VM makes to the metadata service
 
 ## Security
 The *Hypervisor* restricts RPC access using TLS client authentication.

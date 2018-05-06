@@ -83,7 +83,7 @@ func createVm(logger log.DebugLogger) error {
 
 func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 	request := proto.CreateVmRequest{
-		DhcpTimeout: *responseTimeout,
+		DhcpTimeout: *dhcpTimeout,
 		VmInfo: proto.VmInfo{
 			MemoryInMiB: *memory,
 			MilliCPUs:   *milliCPUs,
@@ -146,7 +146,10 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 	if reply.DhcpTimedOut {
 		return errors.New("DHCP ACK timed out")
 	}
-	return nil
+	if *dhcpTimeout > 0 {
+		logger.Debugln(0, "Received DHCP ACK")
+	}
+	return maybeTraceMetadata(client, reply.IpAddress, logger)
 }
 
 func getReader(filename string) (io.ReadCloser, int64, error) {

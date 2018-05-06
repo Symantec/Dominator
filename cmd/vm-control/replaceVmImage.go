@@ -75,7 +75,7 @@ func replaceVmImage(ipAddr string, logger log.DebugLogger) error {
 func replaceVmImageOnHypervisor(hypervisor string, ipAddr net.IP,
 	logger log.DebugLogger) error {
 	request := proto.ReplaceVmImageRequest{
-		DhcpTimeout:      *responseTimeout,
+		DhcpTimeout:      *dhcpTimeout,
 		IpAddress:        ipAddr,
 		MinimumFreeBytes: *minFreeBytes,
 		RoundupPower:     *roundupPower,
@@ -111,5 +111,5 @@ func replaceVmImageOnHypervisor(hypervisor string, ipAddr net.IP,
 	if reply.DhcpTimedOut {
 		return errors.New("DHCP ACK timed out")
 	}
-	return nil
+	return maybeTraceMetadata(client, ipAddr, logger)
 }
