@@ -931,6 +931,9 @@ func (vm *vmInfoType) copyRootVolume(request proto.CreateVmRequest,
 }
 
 func (vm *vmInfoType) delete() {
+	for ch := range vm.metadataChannels {
+		close(ch)
+	}
 	vm.manager.DhcpServer.RemoveLease(vm.Address.IpAddress)
 	vm.manager.mutex.Lock()
 	delete(vm.manager.vms, vm.ipAddress)
