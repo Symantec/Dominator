@@ -64,14 +64,18 @@ func callReplaceVmImage(client *srpc.Client,
 }
 
 func replaceVmImage(ipAddr string, logger log.DebugLogger) error {
-	hypervisor := fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum)
-	return replaceVmImageOnHypervisor(hypervisor, net.ParseIP(ipAddr), logger)
+	vmIP := net.ParseIP(ipAddr)
+	if hypervisor, err := findHypervisor(vmIP); err != nil {
+		return err
+	} else {
+		return replaceVmImageOnHypervisor(hypervisor, vmIP, logger)
+	}
 }
 
 func replaceVmImageOnHypervisor(hypervisor string, ipAddr net.IP,
 	logger log.DebugLogger) error {
 	request := proto.ReplaceVmImageRequest{
-		DhcpTimeout:      *responseTimeout,
+		DhcpTimeout:      *dhcpTimeout,
 		IpAddress:        ipAddr,
 		MinimumFreeBytes: *minFreeBytes,
 		RoundupPower:     *roundupPower,
@@ -107,5 +111,5 @@ func replaceVmImageOnHypervisor(hypervisor string, ipAddr net.IP,
 	if reply.DhcpTimedOut {
 		return errors.New("DHCP ACK timed out")
 	}
-	return nil
+	return maybeTraceMetadata(client, ipAddr, logger)
 }

@@ -15,11 +15,13 @@ import (
 )
 
 var (
-	clusterManagerHostname = flag.String("clusterManagerHostname", "localhost",
+	clusterManagerHostname = flag.String("clusterManagerHostname", "",
 		"Hostname of Cluster Resource Manager")
 	clusterManagerPortNum = flag.Uint("clusterManagerPortNum",
 		constants.ClusterManagerPortNumber,
 		"Port number of Cluster Resource Manager")
+	dhcpTimeout = flag.Duration("dhcpTimeout", time.Minute,
+		"Time to wait before timing out on DHCP request from VM")
 	hypervisorHostname = flag.String("hypervisorHostname", "",
 		"Hostname of hypervisor")
 	hypervisorPortNum = flag.Uint("hypervisorPortNum",
@@ -40,10 +42,10 @@ var (
 	secondaryVolumeSizes flagutil.StringList
 	subnetId             = flag.String("subnetId", "",
 		"Subnet ID to launch VM in")
-	responseTimeout = flag.Duration("responseTimeout", time.Minute,
-		"Time to wait before timing out on network response from VM")
 	roundupPower = flag.Uint64("roundupPower", 24,
 		"power of 2 to round up root volume size")
+	traceMetadata = flag.Bool("traceMetadata", false,
+		"If true, trace metadata calls until interrupted")
 	userDataFile = flag.String("userDataFile", "",
 		"Name file containing user-data accessible from the metadata server")
 	vmTags tags.Tags
@@ -82,6 +84,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  restore-vm-user-data IPaddr")
 	fmt.Fprintln(os.Stderr, "  start-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  stop-vm IPaddr")
+	fmt.Fprintln(os.Stderr, "  trace-vm-metadata IPaddr")
 }
 
 type commandFunc func([]string, log.DebugLogger)
@@ -111,6 +114,7 @@ var subcommands = []subcommand{
 	{"restore-vm-user-data", 1, 1, restoreVmUserDataSubcommand},
 	{"start-vm", 1, 1, startVmSubcommand},
 	{"stop-vm", 1, 1, stopVmSubcommand},
+	{"trace-vm-metadata", 1, 1, traceVmMetadataSubcommand},
 }
 
 func main() {

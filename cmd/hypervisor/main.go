@@ -101,7 +101,8 @@ func main() {
 	httpd.AddHtmlWriter(managerObj)
 	httpd.AddHtmlWriter(rpcHtmlWriter)
 	httpd.AddHtmlWriter(logger)
-	if err := metadatad.StartServer(bridges, managerObj, logger); err != nil {
+	err = metadatad.StartServer(*portNum, bridges, managerObj, logger)
+	if err != nil {
 		logger.Fatalf("Cannot start metadata server: %s\n", err)
 	}
 	if err = httpd.StartServer(*portNum, managerObj, false); err != nil {

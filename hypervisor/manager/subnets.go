@@ -42,6 +42,9 @@ func getHypervisorSubnet() (proto.Subnet, error) {
 }
 
 func (m *Manager) addSubnets(subnets []proto.Subnet) error {
+	for index := range subnets {
+		subnets[index].Shrink()
+	}
 	if err := m.addSubnetsInternal(subnets); err != nil {
 		return err
 	}
@@ -55,9 +58,6 @@ func (m *Manager) addSubnets(subnets []proto.Subnet) error {
 }
 
 func (m *Manager) addSubnetsInternal(subnets []proto.Subnet) error {
-	for _, subnet := range subnets {
-		subnet.Shrink()
-	}
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	for _, subnet := range subnets {
@@ -79,7 +79,7 @@ func (m *Manager) addSubnetsInternal(subnets []proto.Subnet) error {
 	if err != nil {
 		return err
 	}
-	m.sendUpdateWithLock(proto.Update{Subnets: subnets})
+	m.sendUpdateWithLock(proto.Update{HaveSubnets: true, Subnets: subnets})
 	return nil
 }
 

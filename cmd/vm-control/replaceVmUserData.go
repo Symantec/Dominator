@@ -23,9 +23,12 @@ func replaceVmUserDataSubcommand(args []string, logger log.DebugLogger) {
 }
 
 func replaceVmUserData(ipAddr string, logger log.DebugLogger) error {
-	hypervisor := fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum)
-	return replaceVmUserDataOnHypervisor(hypervisor, net.ParseIP(ipAddr),
-		logger)
+	vmIP := net.ParseIP(ipAddr)
+	if hypervisor, err := findHypervisor(vmIP); err != nil {
+		return err
+	} else {
+		return replaceVmUserDataOnHypervisor(hypervisor, vmIP, logger)
+	}
 }
 
 func replaceVmUserDataOnHypervisor(hypervisor string, ipAddr net.IP,

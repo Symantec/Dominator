@@ -1,0 +1,6 @@
+---
+type: url
+probe-freq: 10
+specs:
+    url-path: /healthz
+    url-port: 6976

@@ -132,14 +132,14 @@ func (m *Manager) acknowledgeVm(ipAddr net.IP,
 }
 
 func (m *Manager) allocateVm(req proto.CreateVmRequest) (*vmInfoType, error) {
-	address, err := m.getFreeAddress(req.SubnetId)
+	address, subnetId, err := m.getFreeAddress(req.SubnetId)
 	if err != nil {
 		return nil, err
 	}
 	freeAddress := true
 	defer func() {
 		if freeAddress {
-			err := m.addAddressesToPool([]proto.Address{address}, true)
+			err := m.releaseAddressInPool(address, true)
 			if err != nil {
 				m.Logger.Println(err)
 			}
@@ -170,11 +170,13 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest) (*vmInfoType, error) {
 			SpreadVolumes: req.SpreadVolumes,
 			State:         proto.StateStarting,
 			Tags:          req.Tags,
+			SubnetId:      subnetId,
 		},
-		manager:   m,
-		dirname:   path.Join(m.StateDir, "VMs", ipAddress),
-		ipAddress: ipAddress,
-		logger:    prefixlogger.New(ipAddress+": ", m.Logger),
+		manager:          m,
+		dirname:          path.Join(m.StateDir, "VMs", ipAddress),
+		ipAddress:        ipAddress,
+		logger:           prefixlogger.New(ipAddress+": ", m.Logger),
+		metadataChannels: make(map[chan<- string]struct{}),
 	}
 	m.vms[ipAddress] = vm
 	freeAddress = false
@@ -276,7 +278,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		m.mutex.Lock()
 		delete(m.vms, vm.ipAddress)
 		m.sendVmInfo(vm.ipAddress, nil)
-		err := m.addAddressesToPool([]proto.Address{vm.Address}, false)
+		err := m.releaseAddressInPool(vm.Address, false)
 		if err != nil {
 			m.Logger.Println(err)
 		}
@@ -543,6 +545,38 @@ func (m *Manager) listVMs(doSort bool) []string {
 	return ipAddrs
 }
 
+func (m *Manager) notifyVmMetadataRequest(ipAddr net.IP, path string) {
+	addr := ipAddr.String()
+	m.mutex.RLock()
+	vm, ok := m.vms[addr]
+	m.mutex.RUnlock()
+	if !ok {
+		return
+	}
+	vm.mutex.Lock()
+	defer vm.mutex.Unlock()
+	for ch := range vm.metadataChannels {
+		select {
+		case ch <- path:
+		default:
+		}
+	}
+}
+
+func (m *Manager) registerVmMetadataNotifier(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, pathChannel chan<- string) error {
+	vm, err := m.getVmAndLock(ipAddr)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if err := vm.checkAuth(authInfo); err != nil {
+		return err
+	}
+	vm.metadataChannels[pathChannel] = struct{}{}
+	return nil
+}
+
 func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 	encoder srpc.Encoder, authInfo *srpc.AuthInformation) error {
 
@@ -749,6 +783,9 @@ func (m *Manager) restoreVmUserData(ipAddr net.IP,
 
 func (m *Manager) sendVmInfo(ipAddress string, vm *proto.VmInfo) {
 	if ipAddress != "0.0.0.0" {
+		if vm == nil { // GOB cannot encode a nil value in a map.
+			vm = new(proto.VmInfo)
+		}
 		m.sendUpdateWithLock(proto.Update{
 			VMs: map[string]*proto.VmInfo{ipAddress: vm},
 		})
@@ -814,6 +851,17 @@ func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation) error {
 	default:
 		return errors.New("unknown state: " + vm.State.String())
 	}
+	return nil
+}
+
+func (m *Manager) unregisterVmMetadataNotifier(ipAddr net.IP,
+	pathChannel chan<- string) error {
+	vm, err := m.getVmAndLock(ipAddr)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	delete(vm.metadataChannels, pathChannel)
 	return nil
 }
 
@@ -883,11 +931,14 @@ func (vm *vmInfoType) copyRootVolume(request proto.CreateVmRequest,
 }
 
 func (vm *vmInfoType) delete() {
+	for ch := range vm.metadataChannels {
+		close(ch)
+	}
 	vm.manager.DhcpServer.RemoveLease(vm.Address.IpAddress)
 	vm.manager.mutex.Lock()
 	delete(vm.manager.vms, vm.ipAddress)
 	vm.manager.sendVmInfo(vm.ipAddress, nil)
-	err := vm.manager.addAddressesToPool([]proto.Address{vm.Address}, false)
+	err := vm.manager.releaseAddressInPool(vm.Address, false)
 	vm.manager.mutex.Unlock()
 	if err != nil {
 		vm.manager.Logger.Println(err)

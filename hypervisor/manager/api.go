@@ -12,6 +12,11 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
+type addressPoolType struct {
+	Free       []proto.Address
+	Registered []proto.Address
+}
+
 type DhcpServer interface {
 	AddLease(address proto.Address)
 	AddSubnet(subnet proto.Subnet)
@@ -26,7 +31,7 @@ type Manager struct {
 	memTotalInMiB     uint64
 	volumeDirectories []string
 	mutex             sync.RWMutex // Lock everthing below (those can change).
-	addressPool       []proto.Address
+	addressPool       addressPoolType
 	notifiers         map[<-chan proto.Update]chan<- proto.Update
 	subnets           map[string]proto.Subnet // Key: Subnet ID.
 	subnetChannels    []chan<- proto.Subnet
@@ -46,16 +51,17 @@ type StartOptions struct {
 type vmInfoType struct {
 	mutex sync.Mutex
 	proto.VmInfo
-	VolumeLocations []volumeType
-	manager         *Manager
-	dirname         string
-	hasHealthAgent  bool
-	ipAddress       string
-	monitorSockname string
-	ownerUsers      map[string]struct{}
-	commandChannel  chan<- string
-	logger          log.DebugLogger
-	destroyTimer    *time.Timer
+	VolumeLocations  []volumeType
+	manager          *Manager
+	dirname          string
+	hasHealthAgent   bool
+	ipAddress        string
+	monitorSockname  string
+	ownerUsers       map[string]struct{}
+	commandChannel   chan<- string
+	logger           log.DebugLogger
+	destroyTimer     *time.Timer
+	metadataChannels map[chan<- string]struct{}
 }
 
 type volumeType struct {
@@ -158,6 +164,15 @@ func (m *Manager) MakeUpdateChannel() <-chan proto.Update {
 	return m.makeUpdateChannel()
 }
 
+func (m *Manager) NotifyVmMetadataRequest(ipAddr net.IP, path string) {
+	m.notifyVmMetadataRequest(ipAddr, path)
+}
+
+func (m *Manager) RegisterVmMetadataNotifier(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, pathChannel chan<- string) error {
+	return m.registerVmMetadataNotifier(ipAddr, authInfo, pathChannel)
+}
+
 func (m *Manager) ReplaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 	encoder srpc.Encoder, authInfo *srpc.AuthInformation) error {
 	return m.replaceVmImage(conn, decoder, encoder, authInfo)
@@ -186,6 +201,11 @@ func (m *Manager) StartVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 
 func (m *Manager) StopVm(ipAddr net.IP, authInfo *srpc.AuthInformation) error {
 	return m.stopVm(ipAddr, authInfo)
+}
+
+func (m *Manager) UnregisterVmMetadataNotifier(ipAddr net.IP,
+	pathChannel chan<- string) error {
+	return m.unregisterVmMetadataNotifier(ipAddr, pathChannel)
 }
 
 func (m *Manager) WriteHtml(writer io.Writer) {

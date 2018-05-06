@@ -20,8 +20,12 @@ func changeVmTagsSubcommand(args []string, logger log.DebugLogger) {
 }
 
 func changeVmTags(ipAddr string, logger log.DebugLogger) error {
-	hypervisor := fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum)
-	return changeVmTagsOnHypervisor(hypervisor, net.ParseIP(ipAddr), logger)
+	vmIP := net.ParseIP(ipAddr)
+	if hypervisor, err := findHypervisor(vmIP); err != nil {
+		return err
+	} else {
+		return changeVmTagsOnHypervisor(hypervisor, vmIP, logger)
+	}
 }
 
 func changeVmTagsOnHypervisor(hypervisor string, ipAddr net.IP,

@@ -110,9 +110,13 @@ type DiscardVmOldUserDataResponse struct {
 // The server sends a stream of Update messages.
 
 type Update struct {
-	AddressPool []Address          `json:",omitempty"`
-	Subnets     []Subnet           `json:",omitempty"`
-	VMs         map[string]*VmInfo `json:",omitempty"` // Key: IP address.
+	HaveAddressPool  bool               `json:",omitempty"`
+	AddressPool      []Address          `json:",omitempty"` // Used & free.
+	HaveNumFree      bool               `json:",omitempty"`
+	NumFreeAddresses uint               `json:",omitempty"`
+	HaveSubnets      bool               `json:",omitempty"`
+	Subnets          []Subnet           `json:",omitempty"`
+	VMs              map[string]*VmInfo `json:",omitempty"` // Key: IP address.
 }
 
 type GetVmInfoRequest struct {
@@ -201,6 +205,14 @@ type Subnet struct {
 	IpMask            net.IP // net.IPMask can't be JSON {en,de}coded.
 	DomainNameServers []net.IP
 }
+
+type TraceVmMetadataRequest struct {
+	IpAddress net.IP
+}
+
+type TraceVmMetadataResponse struct {
+	Error string
+} // A stream of strings (trace paths) follow.
 
 type VmInfo struct {
 	Address       Address

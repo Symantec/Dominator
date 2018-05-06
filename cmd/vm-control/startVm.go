@@ -20,14 +20,18 @@ func startVmSubcommand(args []string, logger log.DebugLogger) {
 }
 
 func startVm(ipAddr string, logger log.DebugLogger) error {
-	hypervisor := fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum)
-	return startVmOnHypervisor(hypervisor, net.ParseIP(ipAddr), logger)
+	vmIP := net.ParseIP(ipAddr)
+	if hypervisor, err := findHypervisor(vmIP); err != nil {
+		return err
+	} else {
+		return startVmOnHypervisor(hypervisor, vmIP, logger)
+	}
 }
 
 func startVmOnHypervisor(hypervisor string, ipAddr net.IP,
 	logger log.DebugLogger) error {
 	request := proto.StartVmRequest{
-		DhcpTimeout: *responseTimeout,
+		DhcpTimeout: *dhcpTimeout,
 		IpAddress:   ipAddr,
 	}
 	client, err := srpc.DialHTTP("tcp", hypervisor, 0)
@@ -46,5 +50,5 @@ func startVmOnHypervisor(hypervisor string, ipAddr net.IP,
 	if reply.DhcpTimedOut {
 		return errors.New("DHCP ACK timed out")
 	}
-	return nil
+	return maybeTraceMetadata(client, ipAddr, logger)
 }

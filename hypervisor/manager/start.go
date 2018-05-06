@@ -73,6 +73,7 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 			vmInfo.ownerUsers[username] = struct{}{}
 		}
 		vmInfo.logger = prefixlogger.New(ipAddr+": ", manager.Logger)
+		vmInfo.metadataChannels = make(map[chan<- string]struct{})
 		manager.vms[ipAddr] = &vmInfo
 		if _, err := vmInfo.startManaging(0); err != nil {
 			manager.Logger.Println(err)

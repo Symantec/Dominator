@@ -43,6 +43,7 @@ func Setup(manager *manager.Manager, logger log.DebugLogger) (
 			"RestoreVmUserData",
 			"StartVm",
 			"StopVm",
+			"TraceVmMetadata",
 		}})
 	return (*htmlWriter)(srpcObj), nil
 }
