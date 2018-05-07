@@ -136,6 +136,14 @@ type ListVMsResponse struct {
 	IpAddresses []net.IP
 }
 
+type RemoveExcessAddressesFromPoolRequest struct {
+	MaximumFreeAddresses uint
+}
+
+type RemoveExcessAddressesFromPoolResponse struct {
+	Error string
+}
+
 type ReplaceVmImageRequest struct {
 	DhcpTimeout      time.Duration
 	ImageDataSize    uint64
