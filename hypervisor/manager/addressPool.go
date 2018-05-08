@@ -147,6 +147,33 @@ func (m *Manager) releaseAddressInPool(address proto.Address, lock bool) error {
 	return m.writeAddressPool(m.addressPool, false)
 }
 
+func (m *Manager) removeExcessAddressesFromPool(maxFree uint) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	if uint(len(m.addressPool.Free)) <= maxFree {
+		return nil
+	}
+	newFree := make([]proto.Address, maxFree)
+	copy(newFree, m.addressPool.Free)
+	macAddressesToRemove := make(map[string]struct{})
+	for _, address := range m.addressPool.Free[maxFree:] {
+		macAddressesToRemove[address.MacAddress] = struct{}{}
+	}
+	newRegistered := make([]proto.Address, 0,
+		len(m.addressPool.Registered)-len(macAddressesToRemove))
+	for _, address := range m.addressPool.Registered {
+		if _, ok := macAddressesToRemove[address.MacAddress]; !ok {
+			newRegistered = append(newRegistered, address)
+		}
+	}
+	newPool := addressPoolType{newFree, newRegistered}
+	if err := m.writeAddressPool(newPool, true); err != nil {
+		return err
+	}
+	m.addressPool = newPool
+	return nil
+}
+
 func (m *Manager) writeAddressPool(addressPool addressPoolType,
 	sendAll bool) error {
 	err := json.WriteToFile(path.Join(m.StateDir, "address-pool.json"),
