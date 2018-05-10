@@ -46,6 +46,7 @@ func (m *Manager) addAddressesToPool(addresses []proto.Address,
 			return fmt.Errorf("duplicate MAC address: %s", address.MacAddress)
 		}
 	}
+	m.Logger.Debugf(0, "adding %d addresses to pool\n", len(addresses))
 	m.addressPool.Free = append(m.addressPool.Free, addresses...)
 	m.addressPool.Registered = append(m.addressPool.Registered, addresses...)
 	return m.writeAddressPool(m.addressPool, true)
@@ -145,6 +146,36 @@ func (m *Manager) releaseAddressInPool(address proto.Address, lock bool) error {
 	}
 	m.addressPool.Free = append(m.addressPool.Free, address)
 	return m.writeAddressPool(m.addressPool, false)
+}
+
+func (m *Manager) removeExcessAddressesFromPool(maxFree uint) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	if uint(len(m.addressPool.Free)) <= maxFree {
+		return nil
+	}
+	newFree := make([]proto.Address, maxFree)
+	copy(newFree, m.addressPool.Free)
+	macAddressesToRemove := make(map[string]struct{})
+	for _, address := range m.addressPool.Free[maxFree:] {
+		macAddressesToRemove[address.MacAddress] = struct{}{}
+	}
+	newRegistered := make([]proto.Address, 0,
+		len(m.addressPool.Registered)-len(macAddressesToRemove))
+	for _, address := range m.addressPool.Registered {
+		if _, ok := macAddressesToRemove[address.MacAddress]; !ok {
+			newRegistered = append(newRegistered, address)
+		}
+	}
+	newPool := addressPoolType{newFree, newRegistered}
+	m.Logger.Debugf(0,
+		"removing %d addresses from pool, leaving %d with %d free\n",
+		len(macAddressesToRemove), len(newRegistered), len(newFree))
+	if err := m.writeAddressPool(newPool, true); err != nil {
+		return err
+	}
+	m.addressPool = newPool
+	return nil
 }
 
 func (m *Manager) writeAddressPool(addressPool addressPoolType,

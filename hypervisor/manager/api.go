@@ -168,6 +168,10 @@ func (m *Manager) NotifyVmMetadataRequest(ipAddr net.IP, path string) {
 	m.notifyVmMetadataRequest(ipAddr, path)
 }
 
+func (m *Manager) RemoveExcessAddressesFromPool(maxFree uint) error {
+	return m.removeExcessAddressesFromPool(maxFree)
+}
+
 func (m *Manager) RegisterVmMetadataNotifier(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, pathChannel chan<- string) error {
 	return m.registerVmMetadataNotifier(ipAddr, authInfo, pathChannel)
