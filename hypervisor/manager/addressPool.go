@@ -46,6 +46,7 @@ func (m *Manager) addAddressesToPool(addresses []proto.Address,
 			return fmt.Errorf("duplicate MAC address: %s", address.MacAddress)
 		}
 	}
+	m.Logger.Debugf(0, "adding %d addresses to pool\n", len(addresses))
 	m.addressPool.Free = append(m.addressPool.Free, addresses...)
 	m.addressPool.Registered = append(m.addressPool.Registered, addresses...)
 	return m.writeAddressPool(m.addressPool, true)
@@ -167,6 +168,9 @@ func (m *Manager) removeExcessAddressesFromPool(maxFree uint) error {
 		}
 	}
 	newPool := addressPoolType{newFree, newRegistered}
+	m.Logger.Debugf(0,
+		"removing %d addresses from pool, leaving %d with %d free\n",
+		len(macAddressesToRemove), len(newRegistered), len(newFree))
 	if err := m.writeAddressPool(newPool, true); err != nil {
 		return err
 	}
