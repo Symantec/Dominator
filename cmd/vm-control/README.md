@@ -41,6 +41,8 @@ Some of the sub-commands available are:
   		   *Hypervisor*. This is primarily for debugging
 - **get-vm-info**: get and show the information for a VM
 - **list-vms**: list the IP addresses for all VMs
+- **remove-excess-addresses**: remove free addresses for a specific *Hypervisor*
+                               above the specified limit
 - **replace-vm-image**: replace the root image for a VM. The old root image is
                         saved. The VM must not be running
 - **replace-vm-user-data**: replace the user data for a VM. The old user data is
