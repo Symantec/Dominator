@@ -136,6 +136,17 @@ type ListVMsResponse struct {
 	IpAddresses []net.IP
 }
 
+type ProbeVmPortRequest struct {
+	IpAddress  net.IP
+	PortNumber uint
+	Timeout    time.Duration
+}
+
+type ProbeVmPortResponse struct {
+	PortIsOpen bool
+	Error      string
+}
+
 type RemoveExcessAddressesFromPoolRequest struct {
 	MaximumFreeAddresses uint
 }
