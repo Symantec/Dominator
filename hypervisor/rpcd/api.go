@@ -37,6 +37,7 @@ func Setup(manager *manager.Manager, logger log.DebugLogger) (
 			"GetUpdates",
 			"GetVmInfo",
 			"ListVMs",
+			"ProbeVmPort",
 			"ReplaceVmImage",
 			"ReplaceVmUserData",
 			"RestoreVmImage",

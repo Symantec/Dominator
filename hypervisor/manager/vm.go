@@ -987,7 +987,7 @@ func (vm *vmInfoType) monitor(monitorSock net.Conn,
 }
 
 func (vm *vmInfoType) probeHealthAgent(cancel <-chan struct{}) {
-	stopTime := time.Now().Add(time.Minute)
+	stopTime := time.Now().Add(time.Minute * 5)
 	for time.Until(stopTime) > 0 {
 		select {
 		case <-cancel:

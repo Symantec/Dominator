@@ -149,7 +149,7 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 	if *dhcpTimeout > 0 {
 		logger.Debugln(0, "Received DHCP ACK")
 	}
-	return maybeTraceMetadata(client, reply.IpAddress, logger)
+	return maybeWatchVm(client, hypervisor, reply.IpAddress, logger)
 }
 
 func getReader(filename string) (io.ReadCloser, int64, error) {

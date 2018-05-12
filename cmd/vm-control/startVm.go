@@ -50,5 +50,5 @@ func startVmOnHypervisor(hypervisor string, ipAddr net.IP,
 	if reply.DhcpTimedOut {
 		return errors.New("DHCP ACK timed out")
 	}
-	return maybeTraceMetadata(client, ipAddr, logger)
+	return maybeWatchVm(client, hypervisor, ipAddr, logger)
 }
