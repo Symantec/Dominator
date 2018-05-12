@@ -39,14 +39,6 @@ func traceVmMetadataOnHypervisor(hypervisor string, ipAddr net.IP,
 	return doTraceMetadata(client, ipAddr, logger)
 }
 
-func maybeTraceMetadata(client *srpc.Client, ipAddr net.IP,
-	logger log.Logger) error {
-	if !*traceMetadata {
-		return nil
-	}
-	return doTraceMetadata(client, ipAddr, logger)
-}
-
 func doTraceMetadata(client *srpc.Client, ipAddr net.IP,
 	logger log.Logger) error {
 	request := proto.TraceVmMetadataRequest{ipAddr}
@@ -81,4 +73,18 @@ func doTraceMetadata(client *srpc.Client, ipAddr net.IP,
 		}
 	}
 	return nil
+}
+
+func maybeWatchVm(client *srpc.Client, hypervisor string, ipAddr net.IP,
+	logger log.DebugLogger) error {
+	if !*traceMetadata && *probePortNum < 1 {
+		return nil
+	} else if *traceMetadata && *probePortNum < 1 {
+		return doTraceMetadata(client, ipAddr, logger)
+	} else if !*traceMetadata && *probePortNum > 0 {
+		return probeVmPortOnHypervisorClient(client, ipAddr, logger)
+	} else { // Do both.
+		go doTraceMetadata(client, ipAddr, logger)
+		return probeVmPortOnHypervisor(hypervisor, ipAddr, logger)
+	}
 }

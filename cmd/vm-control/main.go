@@ -37,8 +37,11 @@ var (
 	milliCPUs    = flag.Uint("milliCPUs", 250, "milli CPUs")
 	minFreeBytes = flag.Uint64("minFreeBytes", 64<<20,
 		"minimum number of free bytes in root volume")
-	ownerGroups          flagutil.StringList
-	ownerUsers           flagutil.StringList
+	ownerGroups  flagutil.StringList
+	ownerUsers   flagutil.StringList
+	probePortNum = flag.Uint("probePortNum", 0, "Port number on VM to probe")
+	probeTimeout = flag.Duration("probeTimeout", time.Minute*5,
+		"Time to wait before timing out on probing VM port")
 	secondaryVolumeSizes flagutil.StringList
 	subnetId             = flag.String("subnetId", "",
 		"Subnet ID to launch VM in")
@@ -78,6 +81,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  get-updates")
 	fmt.Fprintln(os.Stderr, "  get-vm-info IPaddr")
 	fmt.Fprintln(os.Stderr, "  list-vms")
+	fmt.Fprintln(os.Stderr, "  probe-vm-port IPaddr")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
 	fmt.Fprintln(os.Stderr, "  replace-vm-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  replace-vm-user-data IPaddr")
@@ -110,6 +114,7 @@ var subcommands = []subcommand{
 	{"get-vm-info", 1, 1, getVmInfoSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
 	{"list-vms", 0, 0, listVMsSubcommand},
+	{"probe-vm-port", 1, 1, probeVmPortSubcommand},
 	{"replace-vm-image", 1, 1, replaceVmImageSubcommand},
 	{"replace-vm-user-data", 1, 1, replaceVmUserDataSubcommand},
 	{"restore-vm-image", 1, 1, restoreVmImageSubcommand},
