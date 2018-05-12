@@ -16,6 +16,10 @@ func AddImageTrusted(client *srpc.Client, name string, img *image.Image) error {
 	return addImageTrusted(client, name, img)
 }
 
+func CheckDirectory(client *srpc.Client, name string) (bool, error) {
+	return checkDirectory(client, name)
+}
+
 func CheckImage(client *srpc.Client, name string) (bool, error) {
 	return checkImage(client, name)
 }
@@ -31,6 +35,11 @@ func DeleteImage(client *srpc.Client, name string) error {
 func DeleteUnreferencedObjects(client *srpc.Client, percentage uint8,
 	bytes uint64) error {
 	return deleteUnreferencedObjects(client, percentage, bytes)
+}
+
+func FindLatestImage(client *srpc.Client, dirname string,
+	ignoreExpiring bool) (string, error) {
+	return findLatestImage(client, dirname, ignoreExpiring)
 }
 
 func GetImage(client *srpc.Client, name string) (*image.Image, error) {
