@@ -21,6 +21,14 @@ type ChangeOwnerRequest struct {
 
 type ChangeOwnerResponse struct{}
 
+type CheckDirectoryRequest struct {
+	DirectoryName string
+}
+
+type CheckDirectoryResponse struct {
+	DirectoryExists bool
+}
+
 type CheckImageRequest struct {
 	ImageName string
 }
@@ -41,6 +49,16 @@ type DeleteUnreferencedObjectsRequest struct {
 }
 
 type DeleteUnreferencedObjectsResponse struct{}
+
+type FindLatestImageRequest struct {
+	DirectoryName        string
+	IgnoreExpiringImages bool
+}
+
+type FindLatestImageResponse struct {
+	ImageName string
+	Error     string
+}
 
 type GetImageRequest struct {
 	ImageName        string

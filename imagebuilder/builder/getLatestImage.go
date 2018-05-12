@@ -3,32 +3,19 @@ package builder
 import (
 	"bytes"
 	"fmt"
-	"path"
 	"time"
 
 	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/verstr"
 )
 
 func getLatestImage(client *srpc.Client, imageStream string,
 	buildLog *bytes.Buffer) (string, *image.Image, error) {
-	imageNames, err := imageclient.ListImages(client)
+	imageName, err := imageclient.FindLatestImage(client, imageStream, false)
 	if err != nil {
 		return "", nil, err
-	}
-	verstr.Sort(imageNames)
-	imageName := ""
-	for _, name := range imageNames {
-		dirname := path.Dir(name)
-		if dirname == imageStream {
-			imageName = name
-		}
-	}
-	if imageName == "" {
-		return "", nil, nil
 	}
 	if img, err := getImage(client, imageName, buildLog); err != nil {
 		return "", nil, err

@@ -58,6 +58,10 @@ func (imdb *ImageDataBase) AddImage(image *image.Image, name string,
 	return imdb.addImage(image, name, username)
 }
 
+func (imdb *ImageDataBase) CheckDirectory(name string) bool {
+	return imdb.checkDirectory(name)
+}
+
 func (imdb *ImageDataBase) CheckImage(name string) bool {
 	return imdb.checkImage(name)
 }
@@ -91,6 +95,11 @@ func (imdb *ImageDataBase) DeleteUnreferencedObjects(percentage uint8,
 func (imdb *ImageDataBase) DoWithPendingImage(image *image.Image,
 	doFunc func() error) error {
 	return imdb.doWithPendingImage(image, doFunc)
+}
+
+func (imdb *ImageDataBase) FindLatestImage(dirame string,
+	ignoreExpiring bool) (string, error) {
+	return imdb.findLatestImage(dirame, ignoreExpiring)
 }
 
 func (imdb *ImageDataBase) GetImage(name string) *image.Image {

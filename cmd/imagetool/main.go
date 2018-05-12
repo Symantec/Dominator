@@ -38,6 +38,8 @@ var (
 		"How long before the image expires (auto deletes). Default: never")
 	filterFile = flag.String("filterFile", "",
 		"Filter file to apply when adding images")
+	ignoreExpiring = flag.Bool("ignoreExpiring", false,
+		"If true, ignore expiring images when finding images")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
 		"Hostname of image server")
 	imageServerPortNum = flag.Uint("imageServerPortNum",
@@ -80,6 +82,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  addrep name baseimage layerimage...")
 	fmt.Fprintln(os.Stderr, "  bulk-addrep layerimage...")
 	fmt.Fprintln(os.Stderr, "  check  name")
+	fmt.Fprintln(os.Stderr, "  check-directory dirname")
 	fmt.Fprintln(os.Stderr, "  chown  dirname ownerGroup")
 	fmt.Fprintln(os.Stderr, "  copy   name oldimagename")
 	fmt.Fprintln(os.Stderr, "  delete name")
@@ -93,6 +96,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "           l: name of file containing an Image")
 	fmt.Fprintln(os.Stderr, "           s: name of sub to poll")
 	fmt.Fprintln(os.Stderr, "  estimate-usage    name")
+	fmt.Fprintln(os.Stderr, "  find-latest-image directory")
 	fmt.Fprintln(os.Stderr, "  get               name directory")
 	fmt.Fprintln(os.Stderr, "  list")
 	fmt.Fprintln(os.Stderr, "  listdirs")
@@ -133,12 +137,14 @@ var subcommands = []subcommand{
 	{"addrep", 3, -1, addReplaceImageSubcommand},
 	{"bulk-addrep", 1, -1, bulkAddReplaceImagesSubcommand},
 	{"check", 1, 1, checkImageSubcommand},
+	{"check-directory", 1, 1, checkDirectorySubcommand},
 	{"chown", 2, 2, chownDirectorySubcommand},
 	{"copy", 2, 2, copyImageSubcommand},
 	{"delete", 1, 1, deleteImageSubcommand},
 	{"delunrefobj", 2, 2, deleteUnreferencedObjectsSubcommand},
 	{"diff", 3, 3, diffSubcommand},
 	{"estimate-usage", 1, 1, estimateImageUsageSubcommand},
+	{"find-latest-image", 1, 1, findLatestImageSubcommand},
 	{"get", 2, 2, getImageSubcommand},
 	{"list", 0, 0, listImagesSubcommand},
 	{"listdirs", 0, 0, listDirectoriesSubcommand},

@@ -102,6 +102,13 @@ func (imdb *ImageDataBase) checkDirectoryPermissions(dirname string,
 	return checkUserInGroup(*username, directoryMetadata.OwnerGroup)
 }
 
+func (imdb *ImageDataBase) checkDirectory(name string) bool {
+	imdb.RLock()
+	defer imdb.RUnlock()
+	_, ok := imdb.directoryMap[name]
+	return ok
+}
+
 func (imdb *ImageDataBase) checkImage(name string) bool {
 	imdb.RLock()
 	defer imdb.RUnlock()
@@ -256,6 +263,30 @@ func (imdb *ImageDataBase) doWithPendingImage(image *image.Image,
 	// image was not added: "delete" it by maybe adding to unreferenced list.
 	imdb.maybeAddToUnreferencedObjectsList(image.FileSystem)
 	return err
+}
+
+func (imdb *ImageDataBase) findLatestImage(dirname string,
+	ignoreExpiring bool) (string, error) {
+	imdb.RLock()
+	defer imdb.RUnlock()
+	if _, ok := imdb.directoryMap[dirname]; !ok {
+		return "", errors.New("unknown directory: " + dirname)
+	}
+	var previousCreateTime time.Time
+	var imageName string
+	for name, img := range imdb.imageMap {
+		if ignoreExpiring && !img.ExpiresAt.IsZero() {
+			continue
+		}
+		if path.Dir(name) != dirname {
+			continue
+		}
+		if img.CreatedOn.After(previousCreateTime) {
+			imageName = name
+			previousCreateTime = img.CreatedOn
+		}
+	}
+	return imageName, nil
 }
 
 func (imdb *ImageDataBase) getImage(name string) *image.Image {

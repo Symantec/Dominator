@@ -70,18 +70,34 @@ func copyData(filename string, reader io.Reader, length uint64,
 	return err
 }
 
-func getImage(client *srpc.Client, imageName string,
-	imageTimeout time.Duration) (*filesystem.FileSystem, error) {
-	img, err := imclient.GetImageWithTimeout(client, imageName,
-		imageTimeout)
+func getImage(client *srpc.Client, searchName string,
+	imageTimeout time.Duration) (*filesystem.FileSystem, string, error) {
+	if isDir, err := imclient.CheckDirectory(client, searchName); err != nil {
+		return nil, "", err
+	} else if isDir {
+		imageName, err := imclient.FindLatestImage(client, searchName, false)
+		if err != nil {
+			return nil, "", err
+		}
+		if imageName == "" {
+			return nil, "", errors.New("no images in directory: " + searchName)
+		}
+		img, err := imclient.GetImage(client, imageName)
+		if err != nil {
+			return nil, "", err
+		}
+		img.FileSystem.RebuildInodePointers()
+		return img.FileSystem, imageName, nil
+	}
+	img, err := imclient.GetImageWithTimeout(client, searchName, imageTimeout)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if img == nil {
-		return nil, errors.New("timeout getting image")
+		return nil, "", errors.New("timeout getting image")
 	}
 	img.FileSystem.RebuildInodePointers()
-	return img.FileSystem, nil
+	return img.FileSystem, searchName, nil
 }
 
 func maybeDrainAll(conn *srpc.Conn, request proto.CreateVmRequest) error {
@@ -314,10 +330,12 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 					m.ImageServerAddress, err))
 		}
 		defer client.Close()
-		fs, err := getImage(client, request.ImageName, request.ImageTimeout)
+		fs, imageName, err := getImage(client, request.ImageName,
+			request.ImageTimeout)
 		if err != nil {
 			return sendError(conn, encoder, err)
 		}
+		vm.ImageName = imageName
 		objectClient := objclient.AttachObjectClient(client)
 		defer objectClient.Close()
 		size := computeSize(request.MinimumFreeBytes, request.RoundupPower,
@@ -628,10 +646,12 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 					m.ImageServerAddress, err))
 		}
 		defer client.Close()
-		fs, err := getImage(client, request.ImageName, request.ImageTimeout)
+		fs, imageName, err := getImage(client, request.ImageName,
+			request.ImageTimeout)
 		if err != nil {
 			return sendError(conn, encoder, err)
 		}
+		request.ImageName = imageName
 		objectClient := objclient.AttachObjectClient(client)
 		defer objectClient.Close()
 		if err := sendUpdate(conn, encoder, "unpacking image"); err != nil {
