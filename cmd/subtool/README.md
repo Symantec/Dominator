@@ -25,15 +25,29 @@ subtool -h
 
 Some of the sub-commands available are:
 
+- **boost-cpu-limit**: raise the CPU limit until the next scan cycle (this does
+                       not change the priority (nice) level)
+- **cleanup**: empty the object cache
+- **delete**: delete specified pathnames
 - **fetch**: tell *subd* to fetch the specified object from the objectserver
 - **get-config**: get the current configuration from *subd*
 - **get-file**: get a file from *subd*
+- **list-missing-objects**: list objects in the specified image that are missing
+                            on the sub
 - **poll**: get the checksumed file-system representation
+- **push-file**: push a single file
 - **push-image**: push an image directly to the *[subd](../subd/README.md)*,
                   bypassing the *[dominator](../dominator/README.md)*
+- **push-missing-objects**: push objects in the specified image that are missing
+                            to the sub
+- **restart-service**: restart the specified service
 - **set-config**: set the current configuration of *[subd](../subd/README.md)*
                   (such as rate limits for scanning the file-system and
                   **fetching** objects)
+- **show-update-request**: compute and show the update request for the
+                           specified image
+- **wait-for-image**: wait for the sub to be updated to the specified image
+                      (another entity is responsible for triggering the update)
 
 Note that sub-commands which change the configuration of
 *[subd](../subd/README.md)* may be reverted by the
