@@ -90,6 +90,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  push-file source dest")
 	fmt.Fprintln(os.Stderr, "  push-image image")
 	fmt.Fprintln(os.Stderr, "  push-missing-objects image")
+	fmt.Fprintln(os.Stderr, "  restart-service name")
 	fmt.Fprintln(os.Stderr, "  set-config")
 	fmt.Fprintln(os.Stderr, "  show-update-request image")
 	fmt.Fprintln(os.Stderr, "  wait-for-image image")
@@ -148,6 +149,7 @@ var subcommands = []subcommand{
 	{"push-image", 1, getSubClientRetry, pushImageSubcommand},
 	{"push-missing-objects", 1, getSubClientRetry,
 		pushMissingObjectsSubcommand},
+	{"restart-service", 1, getSubClient, restartServiceSubcommand},
 	{"set-config", 0, getSubClient, setConfigSubcommand},
 	{"show-update-request", 1, getSubClientRetry, showUpdateRequestSubcommand},
 	{"wait-for-image", 1, getSubClientRetry, waitForImageSubcommand},

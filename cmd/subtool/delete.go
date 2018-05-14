@@ -5,6 +5,7 @@ import (
 
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/proto/sub"
+	"github.com/Symantec/Dominator/sub/client"
 )
 
 func deleteSubcommand(getSubClient getSubClientFunc, args []string) {
@@ -15,8 +16,8 @@ func deleteSubcommand(getSubClient getSubClientFunc, args []string) {
 }
 
 func deletePaths(srpcClient *srpc.Client, pathnames []string) error {
-	return srpcClient.RequestReply("Subd.Update", sub.UpdateRequest{
+	return client.CallUpdate(srpcClient, sub.UpdateRequest{
 		PathsToDelete: pathnames,
 		Wait:          true},
-		&sub.FetchResponse{})
+		&sub.UpdateResponse{})
 }
