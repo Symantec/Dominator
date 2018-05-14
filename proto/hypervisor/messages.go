@@ -116,6 +116,7 @@ type Update struct {
 	NumFreeAddresses uint               `json:",omitempty"`
 	HaveSubnets      bool               `json:",omitempty"`
 	Subnets          []Subnet           `json:",omitempty"`
+	HaveVMs          bool               `json:",omitempty"`
 	VMs              map[string]*VmInfo `json:",omitempty"` // Key: IP address.
 }
 
