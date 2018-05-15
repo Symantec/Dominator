@@ -807,7 +807,8 @@ func (m *Manager) sendVmInfo(ipAddress string, vm *proto.VmInfo) {
 			vm = new(proto.VmInfo)
 		}
 		m.sendUpdateWithLock(proto.Update{
-			VMs: map[string]*proto.VmInfo{ipAddress: vm},
+			HaveVMs: true,
+			VMs:     map[string]*proto.VmInfo{ipAddress: vm},
 		})
 	}
 }
@@ -919,7 +920,8 @@ func (vm *vmInfoType) changeIpAddress(ipAddress string) error {
 	vm.ipAddress = ipAddress
 	vm.manager.vms[vm.ipAddress] = vm
 	vm.manager.sendUpdateWithLock(proto.Update{
-		VMs: map[string]*proto.VmInfo{ipAddress: &vm.VmInfo},
+		HaveVMs: true,
+		VMs:     map[string]*proto.VmInfo{ipAddress: &vm.VmInfo},
 	})
 	return nil
 }

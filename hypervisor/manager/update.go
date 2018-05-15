@@ -32,6 +32,7 @@ func (m *Manager) makeUpdateChannel() <-chan proto.Update {
 		NumFreeAddresses: uint(len(m.addressPool.Free)),
 		HaveSubnets:      true,
 		Subnets:          subnets,
+		HaveVMs:          true,
 		VMs:              vms,
 	}
 	return channel
