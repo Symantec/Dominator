@@ -84,7 +84,6 @@ func getBootDirectory(fs *filesystem.FileSystem) (
 
 func getDefaultMkfsFeatures(device, size string, logger log.Logger) (
 	map[string]struct{}, error) {
-	var err error
 	mutex.Lock()
 	defer mutex.Unlock()
 	if defaultMkfsFeatures == nil {
@@ -99,26 +98,32 @@ func getDefaultMkfsFeatures(device, size string, logger log.Logger) (
 		}
 		logger.Printf("Made calibration file-system in %s\n",
 			format.Duration(time.Since(startTime)))
-	}
-	cmd := exec.Command("dumpe2fs", "-h", device)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("error dumping file-system info: %s: %s",
-			err, output)
-	}
-	defaultMkfsFeatures = make(map[string]struct{})
-	for _, line := range strings.Split(string(output), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 3 {
-			continue
+		cmd = exec.Command("dumpe2fs", "-h", device)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return nil, fmt.Errorf("error dumping file-system info: %s: %s",
+				err, output)
 		}
-		if fields[0] != "Filesystem" || fields[1] != "features:" {
-			continue
+		defaultMkfsFeatures = make(map[string]struct{})
+		for _, line := range strings.Split(string(output), "\n") {
+			fields := strings.Fields(line)
+			if len(fields) < 3 {
+				continue
+			}
+			if fields[0] != "Filesystem" || fields[1] != "features:" {
+				continue
+			}
+			for _, field := range fields[2:] {
+				defaultMkfsFeatures[field] = struct{}{}
+			}
+			break
 		}
-		for _, field := range fields[2:] {
-			defaultMkfsFeatures[field] = struct{}{}
+		// Scrub out the calibration file-system.
+		buffer := make([]byte, 65536)
+		if file, err := os.OpenFile(device, os.O_WRONLY, 0); err == nil {
+			file.Write(buffer)
+			file.Close()
 		}
-		break
 	}
 	return defaultMkfsFeatures, nil
 }
