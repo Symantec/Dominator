@@ -13,12 +13,31 @@ import (
 const sysClassNet = "/sys/class/net"
 const leaseTime = time.Hour * 48
 
+func makeOptions(subnet *proto.Subnet, lease *leaseType) dhcp.Options {
+	dnsServers := make([]byte, 0)
+	for _, dnsServer := range subnet.DomainNameServers {
+		dnsServers = append(dnsServers, dnsServer...)
+	}
+	leaseOptions := dhcp.Options{
+		dhcp.OptionSubnetMask:       subnet.IpMask,
+		dhcp.OptionRouter:           subnet.IpGateway,
+		dhcp.OptionDomainNameServer: dnsServers,
+	}
+	if subnet.DomainName != "" {
+		leaseOptions[dhcp.OptionDomainName] = []byte(subnet.DomainName)
+	}
+	if lease.Hostname != "" {
+		leaseOptions[dhcp.OptionHostName] = []byte(lease.Hostname)
+	}
+	return leaseOptions
+}
+
 func newServer(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
 	dhcpServer := &DhcpServer{
 		logger:          logger,
 		ackChannels:     make(map[string]chan struct{}),
 		ipAddrToMacAddr: make(map[string]string),
-		leases:          make(map[string]proto.Address),
+		leases:          make(map[string]leaseType),
 		requestChannels: make(map[string]chan net.IP),
 	}
 	if myIP, err := util.GetMyIP(); err != nil {
@@ -60,7 +79,7 @@ func (s *DhcpServer) acknowledgeLease(ipAddr net.IP) {
 	}
 }
 
-func (s *DhcpServer) addLease(address proto.Address) {
+func (s *DhcpServer) addLease(address proto.Address, hostname string) {
 	address.Shrink()
 	if len(address.IpAddress) < 1 {
 		return
@@ -69,7 +88,7 @@ func (s *DhcpServer) addLease(address proto.Address) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.ipAddrToMacAddr[ipAddr] = address.MacAddress
-	s.leases[address.MacAddress] = address
+	s.leases[address.MacAddress] = leaseType{address, hostname}
 }
 
 func (s *DhcpServer) addSubnet(subnet proto.Subnet) {
@@ -78,20 +97,20 @@ func (s *DhcpServer) addSubnet(subnet proto.Subnet) {
 	s.subnets = append(s.subnets, subnet)
 }
 
-func (s *DhcpServer) findLease(macAddr string) (*proto.Address, *proto.Subnet) {
+func (s *DhcpServer) findLease(macAddr string) (*leaseType, *proto.Subnet) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	if address, ok := s.leases[macAddr]; !ok {
+	if lease, ok := s.leases[macAddr]; !ok {
 		return nil, nil
 	} else {
 		for _, subnet := range s.subnets {
 			subnetMask := net.IPMask(subnet.IpMask)
 			subnetAddr := subnet.IpGateway.Mask(subnetMask)
-			if address.IpAddress.Mask(subnetMask).Equal(subnetAddr) {
-				return &address, &subnet
+			if lease.IpAddress.Mask(subnetMask).Equal(subnetAddr) {
+				return &lease, &subnet
 			}
 		}
-		return &address, nil
+		return &lease, nil
 	}
 }
 
@@ -158,15 +177,7 @@ func (s *DhcpServer) ServeDHCP(req dhcp.Packet, msgType dhcp.MessageType,
 		}
 		s.logger.Debugf(0, "DHCP Offer: %s for: %s, server: %s\n",
 			lease.IpAddress, macAddr, s.myIP)
-		dnsServers := make([]byte, 0)
-		for _, dnsServer := range subnet.DomainNameServers {
-			dnsServers = append(dnsServers, dnsServer...)
-		}
-		leaseOptions := dhcp.Options{
-			dhcp.OptionSubnetMask:       subnet.IpMask,
-			dhcp.OptionRouter:           subnet.IpGateway,
-			dhcp.OptionDomainNameServer: dnsServers,
-		}
+		leaseOptions := makeOptions(subnet, lease)
 		return dhcp.ReplyPacket(req, dhcp.Offer, s.myIP, lease.IpAddress,
 			leaseTime,
 			leaseOptions.SelectOrderOrAll(
@@ -201,15 +212,7 @@ func (s *DhcpServer) ServeDHCP(req dhcp.Packet, msgType dhcp.MessageType,
 			return nil
 		}
 		if reqIP.Equal(lease.IpAddress) {
-			dnsServers := make([]byte, 0)
-			for _, dnsServer := range subnet.DomainNameServers {
-				dnsServers = append(dnsServers, dnsServer...)
-			}
-			leaseOptions := dhcp.Options{
-				dhcp.OptionSubnetMask:       subnet.IpMask,
-				dhcp.OptionRouter:           subnet.IpGateway,
-				dhcp.OptionDomainNameServer: dnsServers,
-			}
+			leaseOptions := makeOptions(subnet, lease)
 			s.logger.Debugf(0, "DHCP ACK for: %s to: %s\n", reqIP, macAddr)
 			s.acknowledgeLease(lease.IpAddress)
 			return dhcp.ReplyPacket(req, dhcp.ACK, s.myIP, reqIP, leaseTime,

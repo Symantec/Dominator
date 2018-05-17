@@ -178,6 +178,7 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest) (*vmInfoType, error) {
 	vm := &vmInfoType{
 		VmInfo: proto.VmInfo{
 			Address:       address,
+			Hostname:      req.Hostname,
 			ImageName:     req.ImageName,
 			ImageURL:      req.ImageURL,
 			MemoryInMiB:   req.MemoryInMiB,
@@ -1116,7 +1117,7 @@ func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration) (bool, error) {
 		vm.logger.Println("unknown state: " + vm.State.String())
 		return false, nil
 	}
-	vm.manager.DhcpServer.AddLease(vm.Address)
+	vm.manager.DhcpServer.AddLease(vm.Address, vm.Hostname)
 	monitorSock, err := net.Dial("unix", vm.monitorSockname)
 	if err != nil {
 		vm.logger.Debugf(0, "error connecting to: %s: %s\n",
