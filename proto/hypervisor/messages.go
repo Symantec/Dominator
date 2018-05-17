@@ -223,6 +223,7 @@ type Subnet struct {
 	Id                string
 	IpGateway         net.IP
 	IpMask            net.IP // net.IPMask can't be JSON {en,de}coded.
+	DomainName        string `json:",omitempty"`
 	DomainNameServers []net.IP
 }
 
@@ -236,6 +237,7 @@ type TraceVmMetadataResponse struct {
 
 type VmInfo struct {
 	Address       Address
+	Hostname      string `json:",omitempty"`
 	ImageName     string `json:",omitempty"`
 	ImageURL      string `json:",omitempty"`
 	MemoryInMiB   uint64
