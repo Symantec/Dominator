@@ -51,7 +51,8 @@ var (
 		"If true, trace metadata calls until interrupted")
 	userDataFile = flag.String("userDataFile", "",
 		"Name file containing user-data accessible from the metadata server")
-	vmTags tags.Tags
+	vmHostname = flag.String("vmHostname", "", "Hostname for VM")
+	vmTags     tags.Tags
 
 	logger log.DebugLogger
 )
