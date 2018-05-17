@@ -85,6 +85,7 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 	request := proto.CreateVmRequest{
 		DhcpTimeout: *dhcpTimeout,
 		VmInfo: proto.VmInfo{
+			Hostname:    *vmHostname,
 			MemoryInMiB: *memory,
 			MilliCPUs:   *milliCPUs,
 			OwnerGroups: ownerGroups,

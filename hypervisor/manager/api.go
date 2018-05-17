@@ -18,7 +18,7 @@ type addressPoolType struct {
 }
 
 type DhcpServer interface {
-	AddLease(address proto.Address)
+	AddLease(address proto.Address, hostname string)
 	AddSubnet(subnet proto.Subnet)
 	MakeAcknowledgmentChannel(ipAddr net.IP) <-chan struct{}
 	MakeRequestChannel(macAddr string) <-chan net.IP

@@ -61,6 +61,9 @@ func (s state) showVMHandler(w http.ResponseWriter, req *http.Request) {
 		} else {
 			writeString(writer, "IP Address", ipAddr)
 		}
+		if vm.Hostname != "" {
+			writeString(writer, "Hostname", vm.Hostname)
+		}
 		writeString(writer, "MAC Address", vm.Address.MacAddress)
 		if vm.ImageName != "" {
 			image := fmt.Sprintf("<a href=\"http://%s/showImage?%s\">%s</a>",

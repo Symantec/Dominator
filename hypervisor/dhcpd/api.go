@@ -14,17 +14,22 @@ type DhcpServer struct {
 	mutex           sync.RWMutex
 	ackChannels     map[string]chan struct{} // Key: IPaddr.
 	ipAddrToMacAddr map[string]string        // Key: IPaddr, V: MACaddr.
-	leases          map[string]proto.Address // Key: MACaddr, V: Address.
+	leases          map[string]leaseType     // Key: MACaddr.
 	requestChannels map[string]chan net.IP   // Key: MACaddr.
 	subnets         []proto.Subnet
+}
+
+type leaseType struct {
+	proto.Address
+	Hostname string
 }
 
 func New(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
 	return newServer(bridges, logger)
 }
 
-func (s *DhcpServer) AddLease(address proto.Address) {
-	s.addLease(address)
+func (s *DhcpServer) AddLease(address proto.Address, hostname string) {
+	s.addLease(address, hostname)
 }
 
 func (s *DhcpServer) AddSubnet(subnet proto.Subnet) {
