@@ -15,13 +15,13 @@ import (
 )
 
 var (
-	clusterManagerHostname = flag.String("clusterManagerHostname", "",
-		"Hostname of Cluster Resource Manager")
-	clusterManagerPortNum = flag.Uint("clusterManagerPortNum",
-		constants.ClusterManagerPortNumber,
-		"Port number of Cluster Resource Manager")
 	dhcpTimeout = flag.Duration("dhcpTimeout", time.Minute,
 		"Time to wait before timing out on DHCP request from VM")
+	fleetManagerHostname = flag.String("fleetManagerHostname", "",
+		"Hostname of Fleet Manager")
+	fleetManagerPortNum = flag.Uint("fleetManagerPortNum",
+		constants.FleetManagerPortNumber,
+		"Port number of Fleet Resource Manager")
 	hypervisorHostname = flag.String("hypervisorHostname", "",
 		"Hostname of hypervisor")
 	hypervisorPortNum = flag.Uint("hypervisorPortNum",
@@ -133,7 +133,7 @@ func main() {
 		os.Exit(2)
 	}
 	logger = cmdlogger.New()
-	if *clusterManagerHostname == "" && *hypervisorHostname == "" {
+	if *fleetManagerHostname == "" && *hypervisorHostname == "" {
 		fmt.Fprintln(os.Stderr, "no-one to talk to")
 		os.Exit(2)
 	}
