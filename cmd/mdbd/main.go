@@ -140,6 +140,10 @@ func showErrorAndDie(err error) {
 }
 
 func main() {
+	if os.Geteuid() == 0 {
+		fmt.Fprintln(os.Stderr, "Do not run the MDB daemon as root")
+		os.Exit(1)
+	}
 	flag.Usage = printUsage
 	flag.Parse()
 	tricorder.RegisterFlags()

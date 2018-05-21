@@ -1,15 +1,11 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	_ "net/http/pprof"
 	"os"
-	"os/user"
 	"path"
-	"runtime"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -22,7 +18,6 @@ import (
 	"github.com/Symantec/Dominator/lib/mdb/mdbd"
 	objectserver "github.com/Symantec/Dominator/lib/objectserver/filesystem"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
-	"github.com/Symantec/Dominator/lib/wsyscall"
 	"github.com/Symantec/tricorder/go/tricorder"
 )
 
@@ -50,8 +45,6 @@ var (
 		"Port number to allocate and listen on for HTTP/RPC")
 	stateDir = flag.String("stateDir", "/var/lib/Dominator",
 		"Name of dominator state directory.")
-	username = flag.String("username", "",
-		"If running as root, username to switch to.")
 )
 
 func showMdb(mdb *mdb.Mdb) {
@@ -66,39 +59,6 @@ func getFdLimit() uint64 {
 		panic(err)
 	}
 	return rlim.Max
-}
-
-func setUser(username string) error {
-	// Lock to OS thread so that UID change sticks to this goroutine and the
-	// re-exec at the end. wsyscall.SetAllUid() only affects one thread on
-	// Linux.
-	runtime.LockOSThread()
-	if username == "" {
-		return errors.New("-username argument missing")
-	}
-	newUser, err := user.Lookup(username)
-	if err != nil {
-		return err
-	}
-	uid, err := strconv.Atoi(newUser.Uid)
-	if err != nil {
-		return err
-	}
-	gid, err := strconv.Atoi(newUser.Gid)
-	if err != nil {
-		return err
-	}
-	if uid == 0 {
-		return errors.New("Do not run the Dominator as root")
-		os.Exit(1)
-	}
-	if err := wsyscall.SetAllGid(gid); err != nil {
-		return err
-	}
-	if err := wsyscall.SetAllUid(uid); err != nil {
-		return err
-	}
-	return syscall.Exec(os.Args[0], os.Args, os.Environ())
 }
 
 func pathJoin(first, second string) string {
@@ -122,6 +82,10 @@ func newObjectServer(objectsDir string, logger log.DebugLogger) (
 }
 
 func main() {
+	if os.Geteuid() == 0 {
+		fmt.Fprintln(os.Stderr, "Do not run the Dominator as root")
+		os.Exit(1)
+	}
 	flag.Parse()
 	tricorder.RegisterFlags()
 	logger := serverlogger.New("")
@@ -136,12 +100,6 @@ func main() {
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot set FD limit\t%s\n", err)
 		os.Exit(1)
-	}
-	if os.Geteuid() == 0 {
-		if err := setUser(*username); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
 	}
 	fi, err := os.Lstat(*stateDir)
 	if err != nil {

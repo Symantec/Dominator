@@ -33,13 +33,13 @@ func printUsage() {
 }
 
 func main() {
-	flag.Usage = printUsage
-	flag.Parse()
-	tricorder.RegisterFlags()
 	if os.Geteuid() == 0 {
 		fmt.Fprintln(os.Stderr, "Do not run the filegen server as root")
 		os.Exit(1)
 	}
+	flag.Usage = printUsage
+	flag.Parse()
+	tricorder.RegisterFlags()
 	logger := serverlogger.New("")
 	if err := setupserver.SetupTls(); err != nil {
 		if *permitInsecureMode {
