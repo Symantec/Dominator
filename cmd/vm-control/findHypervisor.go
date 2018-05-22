@@ -5,13 +5,34 @@ import (
 	"net"
 
 	"github.com/Symantec/Dominator/lib/errors"
+	"github.com/Symantec/Dominator/lib/srpc"
+	proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
 
 func findHypervisor(vmIpAddr net.IP) (string, error) {
-	if *hypervisorHostname != "" {
+	if *fleetManagerHostname != "" {
+		cm := fmt.Sprintf("%s:%d", *fleetManagerHostname,
+			*fleetManagerPortNum)
+		client, err := srpc.DialHTTP("tcp", cm, 0)
+		if err != nil {
+			return "", err
+		}
+		defer client.Close()
+		request := proto.GetHypervisorForVMRequest{vmIpAddr}
+		var reply proto.GetHypervisorForVMResponse
+		err = client.RequestReply("FleetManager.GetHypervisorForVM", request,
+			&reply)
+		if err != nil {
+			return "", err
+		}
+		if err := errors.New(reply.Error); err != nil {
+			return "", err
+		}
+		return reply.HypervisorAddress, nil
+	} else if *hypervisorHostname != "" {
 		return fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum),
 			nil
 	} else {
-		return "", errors.New("no Hypervisor specified")
+		return fmt.Sprintf("localhost:%d", *hypervisorPortNum), nil
 	}
 }
