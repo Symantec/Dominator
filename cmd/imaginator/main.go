@@ -47,6 +47,10 @@ func main() {
 		os.Exit(1)
 	}
 	logger := serverlogger.New("")
+	if umask := syscall.Umask(022); umask != 022 {
+		// Since we can't cleanly fix umask for all threads, fail instead.
+		logger.Fatalf("Umask must be 022, not 0%o\n", umask)
+	}
 	if err := setupserver.SetupTls(); err != nil {
 		logger.Fatalln(err)
 	}
