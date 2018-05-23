@@ -15,7 +15,16 @@ type Directory struct {
 	Subnets          []*Subnet             `json:",omitempty"`
 	nameToDirectory  map[string]*Directory // Key: directory name.
 	parent           *Directory
+	path             string
 	subnetIdToSubnet map[string]*Subnet // Key: subnet ID.
+}
+
+func (directory *Directory) GetPath() string {
+	return directory.path
+}
+
+func (directory *Directory) Walk(fn func(*Directory) error) error {
+	return directory.walk(fn)
 }
 
 type HardwareAddr net.HardwareAddr
@@ -58,6 +67,10 @@ func (t *Topology) FindDirectory(dirname string) (*Directory, error) {
 	return t.findDirectory(dirname)
 }
 
+func (t *Topology) GetLocationOfMachine(name string) (string, error) {
+	return t.getLocationOfMachine(name)
+}
+
 func (t *Topology) GetNumMachines() uint {
 	return uint(len(t.machineParents))
 }
@@ -71,5 +84,5 @@ func (t *Topology) ListMachines(dirname string) ([]*Machine, error) {
 }
 
 func (t *Topology) Walk(fn func(*Directory) error) error {
-	return walk(t.Root, fn)
+	return t.Root.Walk(fn)
 }

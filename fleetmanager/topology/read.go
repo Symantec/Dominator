@@ -20,7 +20,7 @@ func cloneSet(set map[string]struct{}) map[string]struct{} {
 
 func load(topologyDir string) (*Topology, error) {
 	topology := &Topology{machineParents: make(map[string]*Directory)}
-	directory, err := topology.readDirectory(topologyDir,
+	directory, err := topology.readDirectory(topologyDir, "",
 		make(map[string]struct{}))
 	if err != nil {
 		return nil, err
@@ -80,25 +80,27 @@ func loadSubnets(filename string) ([]*Subnet, error) {
 	return subnets, nil
 }
 
-func (t *Topology) readDirectory(dirname string,
+func (t *Topology) readDirectory(topDir, dirname string,
 	subnetIds map[string]struct{}) (*Directory, error) {
 	directory := &Directory{
 		nameToDirectory:  make(map[string]*Directory),
+		path:             dirname,
 		subnetIdToSubnet: make(map[string]*Subnet),
 	}
-	if err := t.loadMachines(directory, dirname); err != nil {
+	dirpath := filepath.Join(topDir, dirname)
+	if err := t.loadMachines(directory, dirpath); err != nil {
 		return nil, err
 	}
-	if err := directory.loadSubnets(dirname, subnetIds); err != nil {
+	if err := directory.loadSubnets(dirpath, subnetIds); err != nil {
 		return nil, err
 	}
-	dirnames, err := readDirnames(dirname)
+	dirnames, err := readDirnames(dirpath)
 	if err != nil {
 		return nil, err
 	}
 	for _, name := range dirnames {
 		path := filepath.Join(dirname, name)
-		fi, err := os.Lstat(path)
+		fi, err := os.Lstat(filepath.Join(topDir, path))
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +108,7 @@ func (t *Topology) readDirectory(dirname string,
 			continue
 		}
 		subnetIds := cloneSet(subnetIds)
-		if subdir, err := t.readDirectory(path, subnetIds); err != nil {
+		if subdir, err := t.readDirectory(topDir, path, subnetIds); err != nil {
 			return nil, err
 		} else {
 			subdir.Name = name
