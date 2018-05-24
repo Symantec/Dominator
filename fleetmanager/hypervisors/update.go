@@ -69,6 +69,7 @@ func (m *Manager) updateTopologyLocked(t *topology.Topology,
 			hypervisor := &hypervisorType{
 				logger:  prefixlogger.New(machine.Hostname+": ", m.logger),
 				machine: machine,
+				vms:     make(map[string]*vmInfoType),
 			}
 			m.hypervisors[machine.Hostname] = hypervisor
 			go m.manageHypervisorLoop(hypervisor, machine.Hostname)
@@ -279,21 +280,22 @@ func (m *Manager) processInitialVMs(h *hypervisorType,
 	vms map[string]*proto.VmInfo) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	vmsToDelete := make(map[string]struct{}, len(m.vms))
-	for ipAddr, vm := range m.vms {
-		if h == vm.hypervisor {
-			vmsToDelete[ipAddr] = struct{}{}
-		}
+	vmsToDelete := make(map[string]struct{}, len(h.vms))
+	for ipAddr := range h.vms {
+		vmsToDelete[ipAddr] = struct{}{}
 	}
 	for ipAddr, protoVm := range vms {
 		delete(vmsToDelete, ipAddr)
-		if vm, ok := m.vms[ipAddr]; ok {
+		if vm, ok := h.vms[ipAddr]; ok {
 			vm.VmInfo = *protoVm
 		} else {
-			m.vms[ipAddr] = &vmInfoType{ipAddr, *protoVm, h}
+			vm := &vmInfoType{ipAddr, *protoVm, h}
+			h.vms[ipAddr] = vm
+			m.vms[ipAddr] = vm
 		}
 	}
 	for ipAddr := range vmsToDelete {
+		delete(h.vms, ipAddr)
 		delete(m.vms, ipAddr)
 	}
 }
@@ -357,12 +359,15 @@ func (m *Manager) processVmUpdates(h *hypervisorType,
 	defer m.mutex.Unlock()
 	for ipAddr, protoVm := range updateVMs {
 		if len(protoVm.Volumes) < 1 {
+			delete(h.vms, ipAddr)
 			delete(m.vms, ipAddr)
 		} else {
-			if vm, ok := m.vms[ipAddr]; ok {
+			if vm, ok := h.vms[ipAddr]; ok {
 				vm.VmInfo = *protoVm
 			} else {
-				m.vms[ipAddr] = &vmInfoType{ipAddr, *protoVm, h}
+				vm := &vmInfoType{ipAddr, *protoVm, h}
+				h.vms[ipAddr] = vm
+				m.vms[ipAddr] = vm
 			}
 		}
 	}

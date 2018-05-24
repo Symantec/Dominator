@@ -7,6 +7,22 @@ import (
 	"github.com/Symantec/Dominator/fleetmanager/topology"
 )
 
+func (m *Manager) getLockedHypervisor(name string,
+	writeLock bool) (*hypervisorType, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	if hypervisor, ok := m.hypervisors[name]; !ok {
+		return nil, errors.New("Hypervisor not found")
+	} else {
+		if writeLock {
+			hypervisor.mutex.Lock()
+		} else {
+			hypervisor.mutex.RLock()
+		}
+		return hypervisor, nil
+	}
+}
+
 func (m *Manager) getHypervisorForVm(ipAddr net.IP) (string, error) {
 	addr := ipAddr.String()
 	m.mutex.RLock()

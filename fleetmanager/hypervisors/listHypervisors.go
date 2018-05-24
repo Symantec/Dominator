@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/url"
 )
 
-func (m *Manager) listHypervisors(topologyDir string) (
+func (m *Manager) listHypervisors(topologyDir string, connectedOnly bool) (
 	[]*hypervisorType, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -19,31 +20,35 @@ func (m *Manager) listHypervisors(topologyDir string) (
 	}
 	hypervisors := make([]*hypervisorType, 0, len(machines))
 	for _, machine := range machines {
-		hypervisors = append(hypervisors, m.hypervisors[machine.Hostname])
+		hypervisor := m.hypervisors[machine.Hostname]
+		if !connectedOnly || hypervisor.probeStatus == probeStatusGood {
+			hypervisors = append(hypervisors, hypervisor)
+		}
 	}
 	return hypervisors, nil
 }
 
 func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 	req *http.Request) {
-	parsedQuery := url.ParseQuery(req.URL)
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
+	topology, err := m.getTopology()
+	if err != nil {
+		fmt.Fprintln(writer, err)
+		return
+	}
+	parsedQuery := url.ParseQuery(req.URL)
 	matchConnectedOnly := false
 	if parsedQuery.Table["state"] == "connected" {
 		matchConnectedOnly = true
 	}
-	hypervisors, err := m.listHypervisors("")
+	hypervisors, err := m.listHypervisors("", matchConnectedOnly)
 	if err != nil {
 		fmt.Fprintln(writer, err)
 		return
 	}
 	if parsedQuery.OutputType() == url.OutputTypeText {
 		for _, hypervisor := range hypervisors {
-			if matchConnectedOnly &&
-				hypervisor.probeStatus != probeStatusGood {
-				continue
-			}
 			fmt.Fprintln(writer, hypervisor.machine.Hostname)
 		}
 		return
@@ -65,6 +70,7 @@ func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 	fmt.Fprintln(writer, "    <th>Status</th>")
 	fmt.Fprintln(writer, "    <th>IP Addr</th>")
 	fmt.Fprintln(writer, "    <th>MAC Addr</th>")
+	fmt.Fprintln(writer, "    <th>Location</th>")
 	fmt.Fprintln(writer, "  </tr>")
 	for _, hypervisor := range hypervisors {
 		if matchConnectedOnly &&
@@ -73,13 +79,29 @@ func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 		}
 		machine := hypervisor.machine
 		fmt.Fprintf(writer, "  <tr>\n")
-		fmt.Fprintf(writer, "    <td><a href=\"http://%s:6976/\">%s</a></td>\n",
-			machine.Hostname, machine.Hostname)
+		fmt.Fprintf(writer, "    <td><a href=\"http://%s:%d/\">%s</a></td>\n",
+			machine.Hostname, constants.HypervisorPortNumber, machine.Hostname)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", hypervisor.probeStatus)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", machine.HostIpAddress)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", machine.HostMacAddress)
+		location, _ := topology.GetLocationOfMachine(machine.Hostname)
+		fmt.Fprintf(writer, "    <td>%s</td>\n", location)
 		fmt.Fprintf(writer, "  </tr>\n")
 	}
 	fmt.Fprintln(writer, "</table>")
 	fmt.Fprintln(writer, "</body>")
+}
+
+func (m *Manager) listHypervisorsInLocation(dirname string) ([]string, error) {
+	hypervisors, err := m.listHypervisors(dirname, true)
+	if err != nil {
+		return nil, err
+	}
+	addresses := make([]string, 0, len(hypervisors))
+	for _, hypervisor := range hypervisors {
+		addresses = append(addresses,
+			fmt.Sprintf("%s:%d",
+				hypervisor.machine.Hostname, constants.HypervisorPortNumber))
+	}
+	return addresses, nil
 }

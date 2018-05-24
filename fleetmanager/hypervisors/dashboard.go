@@ -27,6 +27,7 @@ func (m *Manager) writeHtml(writer io.Writer) {
 		"listHypervisors?state=connected", numConnected)
 	writeCountLinksHTJ(writer, "Number of VMs known",
 		"listVMs?", numVMs)
+	fmt.Fprintln(writer, `Hypervisor <a href="listLocations">locations</a><br>`)
 }
 
 func writeCountLinksHT(writer io.Writer, text, path string, count uint) {

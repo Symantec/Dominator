@@ -25,6 +25,7 @@ type hypervisorType struct {
 	deleteScheduled bool
 	machine         *topology.Machine
 	probeStatus     probeStatus
+	vms             map[string]*vmInfoType // Key: VM IP address.
 }
 
 type IpStorer interface {
@@ -73,12 +74,25 @@ func New(ipStorer IpStorer, logger log.DebugLogger) (*Manager, error) {
 	}
 	manager.initInvertTable()
 	http.HandleFunc("/listHypervisors", manager.listHypervisorsHandler)
+	http.HandleFunc("/listLocations", manager.listLocationsHandler)
 	http.HandleFunc("/listVMs", manager.listVMsHandler)
 	return manager, nil
 }
 
 func (m *Manager) GetHypervisorForVm(ipAddr net.IP) (string, error) {
 	return m.getHypervisorForVm(ipAddr)
+}
+
+func (m *Manager) ListHypervisorsInLocation(dirname string) ([]string, error) {
+	return m.listHypervisorsInLocation(dirname)
+}
+
+func (m *Manager) ListLocations(dirname string) ([]string, error) {
+	return m.listLocations(dirname)
+}
+
+func (m *Manager) ListVMsInLocation(dirname string) ([]net.IP, error) {
+	return m.listVMsInLocation(dirname)
 }
 
 func (m *Manager) WriteHtml(writer io.Writer) {

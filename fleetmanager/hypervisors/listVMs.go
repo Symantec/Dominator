@@ -3,13 +3,14 @@ package hypervisors
 import (
 	"bufio"
 	"fmt"
+	"net"
 	"net/http"
-	"sort"
 
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/url"
+	"github.com/Symantec/Dominator/lib/verstr"
 )
 
 func (m *Manager) getVMs(doSort bool) []vmInfoType {
@@ -21,7 +22,7 @@ func (m *Manager) getVMs(doSort bool) []vmInfoType {
 		for ipAddr := range m.vms {
 			ipAddrs = append(ipAddrs, ipAddr)
 		}
-		sort.Strings(ipAddrs)
+		verstr.Sort(ipAddrs)
 		for _, ipAddr := range ipAddrs {
 			vms = append(vms, *m.vms[ipAddr])
 		}
@@ -35,9 +36,14 @@ func (m *Manager) getVMs(doSort bool) []vmInfoType {
 
 func (m *Manager) listVMsHandler(w http.ResponseWriter,
 	req *http.Request) {
-	parsedQuery := url.ParseQuery(req.URL)
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
+	topology, err := m.getTopology()
+	if err != nil {
+		fmt.Fprintln(writer, err)
+		return
+	}
+	parsedQuery := url.ParseQuery(req.URL)
 	vms := m.getVMs(true)
 	if parsedQuery.OutputType() == url.OutputTypeJson {
 		json.WriteWithIndent(writer, "   ", vms)
@@ -61,6 +67,7 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 		fmt.Fprintln(writer, "    <th>Storage</th>")
 		fmt.Fprintln(writer, "    <th>Primary Owner</th>")
 		fmt.Fprintln(writer, "    <th>Hypervisor</th>")
+		fmt.Fprintln(writer, "    <th>Location</th>")
 		fmt.Fprintln(writer, "  </tr>")
 	}
 	for _, vm := range vms {
@@ -91,6 +98,9 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 				"    <td><a href=\"http://%s:%d/\">%s</a></td>\n",
 				vm.hypervisor.machine.Hostname, constants.HypervisorPortNumber,
 				vm.hypervisor.machine.Hostname)
+			location, _ := topology.GetLocationOfMachine(
+				vm.hypervisor.machine.Hostname)
+			fmt.Fprintf(writer, "    <td>%s</td>\n", location)
 			fmt.Fprintf(writer, "  </tr>\n")
 		}
 	}
@@ -99,4 +109,20 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 		fmt.Fprintln(writer, "</table>")
 		fmt.Fprintln(writer, "</body>")
 	}
+}
+
+func (m *Manager) listVMsInLocation(dirname string) ([]net.IP, error) {
+	hypervisors, err := m.listHypervisors(dirname, true)
+	if err != nil {
+		return nil, err
+	}
+	addresses := make([]net.IP, 0)
+	for _, hypervisor := range hypervisors {
+		hypervisor.mutex.RLock()
+		for _, vm := range hypervisor.vms {
+			addresses = append(addresses, vm.Address.IpAddress)
+		}
+		hypervisor.mutex.RUnlock()
+	}
+	return addresses, nil
 }
