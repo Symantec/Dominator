@@ -29,6 +29,9 @@ func Setup(hypervisorsManager *hypervisors.Manager, logger log.DebugLogger) (
 		srpc.ReceiverOptions{
 			PublicMethods: []string{
 				"GetHypervisorForVM",
+				"ListHypervisorLocations",
+				"ListHypervisorsInLocation",
+				"ListVMsInLocation",
 			}})
 	return (*htmlWriter)(srpcObj), nil
 }
