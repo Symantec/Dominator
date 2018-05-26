@@ -9,7 +9,7 @@ const (
 	ImageUnpackerPortNumber      = 6974
 	ImaginatorPortNumber         = 6975
 	HypervisorPortNumber         = 6976
-	ClusterManagerPortNumber     = 6977
+	FleetManagerPortNumber       = 6977
 
 	DefaultCpuPercent          = 50
 	DefaultNetworkSpeedPercent = 10

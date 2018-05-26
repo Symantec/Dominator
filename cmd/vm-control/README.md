@@ -7,9 +7,9 @@ It is typically run on a desktop, bastion or build machine.
 ## Usage
 *Vm-Control* supports several sub-commands. There are many command-line flags
 which provide parameters for these sub-commands. The most commonly used
-parameters are `-clusterManagerHostname` or `-hypervisorHostname` which specify
-either the Cluster Resource Manager or a specific *Hypervisor* to communicate
-with. The basic usage pattern is:
+parameters are `-fleetManagerHostname` or `-hypervisorHostname` which specify
+either the Fleet Manager or a specific *Hypervisor* to communicate with. The
+basic usage pattern is:
 
 ```
 vm-control [flags...] command [args...]
@@ -26,11 +26,10 @@ Some of the sub-commands available are:
 - **add-address**: manually add a MAC address and IP address pair to a specific
                    *Hypervisor*. If the IP address is not specified an external
                    DHCP server is required to provides leases to VMs. This
-                   command is only required if a *Cluster Resource Manager* is
-                   not available
+                   command is only required if a *Fleet Manager* is not
+                   available
 - **add-subnet**: manually add a subnet to a specific *Hypervisor*. This command
-                  is only required if a *Cluster Resource Manager* is not
-                  available
+                  is only required if a *Fleet Manager* is not available
 - **change-vm-owner-users**: change the extra owners for a VM
 - **change-vm-tags**: change the tags for a VM
 - **create-vm**: create a VM
@@ -40,6 +39,8 @@ Some of the sub-commands available are:
 - **get-updates**: get and show a continuous stream of updates from a
   		   *Hypervisor*. This is primarily for debugging
 - **get-vm-info**: get and show the information for a VM
+- **list-hypervisors**: list healthy Hypervisors in the specified location
+- **list-locations**: list locations within the specified top location
 - **list-vms**: list the IP addresses for all VMs
 - **probe-vm-port**: probe (from its *Hypervisor*) a TCP port for a VM
 - **remove-excess-addresses**: remove free addresses for a specific *Hypervisor*
