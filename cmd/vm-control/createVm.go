@@ -12,7 +12,8 @@ import (
 	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
+	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 func createVmSubcommand(args []string, logger log.DebugLogger) {
@@ -24,13 +25,13 @@ func createVmSubcommand(args []string, logger log.DebugLogger) {
 }
 
 func acknowledgeVm(client *srpc.Client, ipAddress net.IP) error {
-	request := proto.AcknowledgeVmRequest{ipAddress}
-	var reply proto.AcknowledgeVmResponse
+	request := hyper_proto.AcknowledgeVmRequest{ipAddress}
+	var reply hyper_proto.AcknowledgeVmResponse
 	return client.RequestReply("Hypervisor.AcknowledgeVm", request, &reply)
 }
 
-func callCreateVm(client *srpc.Client, request proto.CreateVmRequest,
-	reply *proto.CreateVmResponse, imageReader, userDataReader io.Reader,
+func callCreateVm(client *srpc.Client, request hyper_proto.CreateVmRequest,
+	reply *hyper_proto.CreateVmResponse, imageReader, userDataReader io.Reader,
 	logger log.DebugLogger) error {
 	conn, err := client.Call("Hypervisor.CreateVm")
 	if err != nil {
@@ -59,7 +60,7 @@ func callCreateVm(client *srpc.Client, request proto.CreateVmRequest,
 		return err
 	}
 	for {
-		var response proto.CreateVmResponse
+		var response hyper_proto.CreateVmResponse
 		if err := decoder.Decode(&response); err != nil {
 			return err
 		}
@@ -77,14 +78,17 @@ func callCreateVm(client *srpc.Client, request proto.CreateVmRequest,
 }
 
 func createVm(logger log.DebugLogger) error {
-	hypervisor := fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum)
-	return createVmOnHypervisor(hypervisor, logger)
+	if hypervisor, err := getHypervisorAddress(); err != nil {
+		return err
+	} else {
+		return createVmOnHypervisor(hypervisor, logger)
+	}
 }
 
 func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
-	request := proto.CreateVmRequest{
+	request := hyper_proto.CreateVmRequest{
 		DhcpTimeout: *dhcpTimeout,
-		VmInfo: proto.VmInfo{
+		VmInfo: hyper_proto.VmInfo{
 			Hostname:    *vmHostname,
 			MemoryInMiB: *memory,
 			MilliCPUs:   *milliCPUs,
@@ -134,7 +138,7 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 		return err
 	}
 	defer client.Close()
-	var reply proto.CreateVmResponse
+	var reply hyper_proto.CreateVmResponse
 	err = callCreateVm(client, request, &reply, imageReader, userDataReader,
 		logger)
 	if err != nil {
@@ -153,6 +157,37 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 	return maybeWatchVm(client, hypervisor, reply.IpAddress, logger)
 }
 
+func getHypervisorAddress() (string, error) {
+	if *hypervisorHostname != "" {
+		return fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum),
+			nil
+	}
+	client, err := srpc.DialHTTP("tcp",
+		fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum),
+		0)
+	if err != nil {
+		return "", err
+	}
+	defer client.Close()
+	if *adjacentVM != "" {
+		return findHypervisorClient(client, net.ParseIP(*adjacentVM))
+	}
+	request := fm_proto.ListHypervisorsInLocationRequest{*location}
+	var reply fm_proto.ListHypervisorsInLocationResponse
+	err = client.RequestReply("FleetManager.ListHypervisorsInLocation",
+		request, &reply)
+	if err != nil {
+		return "", err
+	}
+	if reply.Error != "" {
+		return "", errors.New(reply.Error)
+	}
+	if len(reply.HypervisorAddresses) < 1 {
+		return "", errors.New("no active Hypervisors in location")
+	}
+	return reply.HypervisorAddresses[0], nil
+}
+
 func getReader(filename string) (io.ReadCloser, int64, error) {
 	if file, err := os.Open(filename); err != nil {
 		return nil, -1, err
@@ -166,14 +201,14 @@ func getReader(filename string) (io.ReadCloser, int64, error) {
 	}
 }
 
-func parseSizes(strSizes flagutil.StringList) ([]proto.Volume, error) {
-	var volumes []proto.Volume
+func parseSizes(strSizes flagutil.StringList) ([]hyper_proto.Volume, error) {
+	var volumes []hyper_proto.Volume
 	for _, strSize := range strSizes {
 		var size uint64
 		if _, err := fmt.Sscanf(strSize, "%dM", &size); err == nil {
-			volumes = append(volumes, proto.Volume{size << 20})
+			volumes = append(volumes, hyper_proto.Volume{size << 20})
 		} else if _, err := fmt.Sscanf(strSize, "%dG", &size); err == nil {
-			volumes = append(volumes, proto.Volume{size << 30})
+			volumes = append(volumes, hyper_proto.Volume{size << 30})
 		} else {
 			return nil, err
 		}

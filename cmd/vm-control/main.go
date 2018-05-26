@@ -15,6 +15,8 @@ import (
 )
 
 var (
+	adjacentVM = flag.String("adjacentVM", "",
+		"IP address of VM adjacent (same Hypervisor) to VM being created")
 	dhcpTimeout = flag.Duration("dhcpTimeout", time.Minute,
 		"Time to wait before timing out on DHCP request from VM")
 	fleetManagerHostname = flag.String("fleetManagerHostname", "",
@@ -33,6 +35,8 @@ var (
 		"Time to wait before timing out on image fetch")
 	imageURL = flag.String("imageURL", "",
 		"Name of URL of image to boot with")
+	location = flag.String("location", "",
+		"Location to search for hypervisors")
 	memory       = flag.Uint64("memory", 128, "memory in MiB")
 	milliCPUs    = flag.Uint("milliCPUs", 250, "milli CPUs")
 	minFreeBytes = flag.Uint64("minFreeBytes", 64<<20,
@@ -81,6 +85,8 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  discard-vm-old-user-data IPaddr")
 	fmt.Fprintln(os.Stderr, "  get-updates")
 	fmt.Fprintln(os.Stderr, "  get-vm-info IPaddr")
+	fmt.Fprintln(os.Stderr, "  list-hypervisors")
+	fmt.Fprintln(os.Stderr, "  list-locations [TopLocation]")
 	fmt.Fprintln(os.Stderr, "  list-vms")
 	fmt.Fprintln(os.Stderr, "  probe-vm-port IPaddr")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
@@ -114,6 +120,8 @@ var subcommands = []subcommand{
 	{"get-updates", 0, 0, getUpdatesSubcommand},
 	{"get-vm-info", 1, 1, getVmInfoSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
+	{"list-hypervisors", 0, 0, listHypervisorsSubcommand},
+	{"list-locations", 0, 1, listLocationsSubcommand},
 	{"list-vms", 0, 0, listVMsSubcommand},
 	{"probe-vm-port", 1, 1, probeVmPortSubcommand},
 	{"replace-vm-image", 1, 1, replaceVmImageSubcommand},
