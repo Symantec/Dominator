@@ -135,14 +135,11 @@ func setVolumeSize(filename string, size uint64) error {
 
 func (m *Manager) acknowledgeVm(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmAndLock(ipAddr)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
 	if err != nil {
 		return err
 	}
 	defer vm.mutex.Unlock()
-	if err := vm.checkAuth(authInfo); err != nil {
-		return err
-	}
 	vm.destroyTimer.Stop()
 	return nil
 }
@@ -202,14 +199,11 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest) (*vmInfoType, error) {
 
 func (m *Manager) changeVmOwnerUsers(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, extraUsers []string) error {
-	vm, err := m.getVmAndLock(ipAddr)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
 	if err != nil {
 		return err
 	}
 	defer vm.mutex.Unlock()
-	if err := vm.checkAuth(authInfo); err != nil {
-		return err
-	}
 	ownerUsers := make([]string, 1, len(extraUsers)+1)
 	ownerUsers[0] = vm.OwnerUsers[0]
 	for _, user := range extraUsers {
@@ -226,14 +220,11 @@ func (m *Manager) changeVmOwnerUsers(ipAddr net.IP,
 
 func (m *Manager) changeVmTags(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	tgs tags.Tags) error {
-	vm, err := m.getVmAndLock(ipAddr)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
 	if err != nil {
 		return err
 	}
 	defer vm.mutex.Unlock()
-	if err := vm.checkAuth(authInfo); err != nil {
-		return err
-	}
 	vm.Tags = tgs
 	vm.writeAndSendInfo()
 	return nil
@@ -443,14 +434,11 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 
 func (m *Manager) destroyVm(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmAndLock(ipAddr)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
 	if err != nil {
 		return err
 	}
 	defer vm.mutex.Unlock()
-	if err := vm.checkAuth(authInfo); err != nil {
-		return err
-	}
 	switch vm.State {
 	case proto.StateStarting:
 		return errors.New("VM is starting")
@@ -471,28 +459,32 @@ func (m *Manager) destroyVm(ipAddr net.IP,
 
 func (m *Manager) discardVmOldImage(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmAndLock(ipAddr)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
 	if err != nil {
 		return err
 	}
 	defer vm.mutex.Unlock()
-	if err := vm.checkAuth(authInfo); err != nil {
-		return err
-	}
 	return os.Remove(vm.VolumeLocations[0].Filename + ".old")
 }
 
 func (m *Manager) discardVmOldUserData(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmAndLock(ipAddr)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
 	if err != nil {
 		return err
 	}
 	defer vm.mutex.Unlock()
-	if err := vm.checkAuth(authInfo); err != nil {
+	return os.Remove(path.Join(vm.dirname, "user-data.old"))
+}
+
+func (m *Manager) discardVmSnapshot(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	if err != nil {
 		return err
 	}
-	return os.Remove(path.Join(vm.dirname, "user-data.old"))
+	defer vm.mutex.Unlock()
+	return vm.discardSnapshot()
 }
 
 func (m *Manager) getNumVMs() (uint, uint) {
@@ -520,6 +512,19 @@ func (m *Manager) getVmAndLock(ipAddr net.IP) (*vmInfoType, error) {
 		m.mutex.RUnlock()
 		return vm, nil
 	}
+}
+
+func (m *Manager) getVmLockAndAuth(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) (*vmInfoType, error) {
+	vm, err := m.getVmAndLock(ipAddr)
+	if err != nil {
+		return nil, err
+	}
+	if err := vm.checkAuth(authInfo); err != nil {
+		vm.mutex.Unlock()
+		return nil, err
+	}
+	return vm, nil
 }
 
 func (m *Manager) getVmBootLog(ipAddr net.IP) (io.ReadCloser, error) {
@@ -584,14 +589,11 @@ func (m *Manager) notifyVmMetadataRequest(ipAddr net.IP, path string) {
 
 func (m *Manager) registerVmMetadataNotifier(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, pathChannel chan<- string) error {
-	vm, err := m.getVmAndLock(ipAddr)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
 	if err != nil {
 		return err
 	}
 	defer vm.mutex.Unlock()
-	if err := vm.checkAuth(authInfo); err != nil {
-		return err
-	}
 	vm.metadataChannels[pathChannel] = struct{}{}
 	return nil
 }
@@ -616,14 +618,11 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 	if err := decoder.Decode(&request); err != nil {
 		return err
 	}
-	vm, err := m.getVmAndLock(request.IpAddress)
+	vm, err := m.getVmLockAndAuth(request.IpAddress, authInfo)
 	if err != nil {
 		return err
 	}
 	defer vm.mutex.Unlock()
-	if err := vm.checkAuth(authInfo); err != nil {
-		return err
-	}
 	if vm.State != proto.StateStopped {
 		if err := maybeDrainImage(conn, request.ImageDataSize); err != nil {
 			return err
@@ -734,14 +733,11 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 
 func (m *Manager) replaceVmUserData(ipAddr net.IP, reader io.Reader,
 	size uint64, authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmAndLock(ipAddr)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
 	if err != nil {
 		return err
 	}
 	defer vm.mutex.Unlock()
-	if err := vm.checkAuth(authInfo); err != nil {
-		return err
-	}
 	filename := path.Join(vm.dirname, "user-data.raw")
 	oldFilename := filename + ".old"
 	newFilename := filename + ".new"
@@ -760,16 +756,36 @@ func (m *Manager) replaceVmUserData(ipAddr net.IP, reader io.Reader,
 	return nil
 }
 
-func (m *Manager) restoreVmImage(ipAddr net.IP,
-	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmAndLock(ipAddr)
+func (m *Manager) restoreVmFromSnapshot(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, forceIfNotStopped bool) error {
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
 	if err != nil {
 		return err
 	}
 	defer vm.mutex.Unlock()
-	if err := vm.checkAuth(authInfo); err != nil {
+	if vm.State != proto.StateStopped {
+		if !forceIfNotStopped {
+			return errors.New("VM is not stopped")
+		}
+	}
+	for _, volume := range vm.VolumeLocations {
+		snapshotFilename := volume.Filename + ".snapshot"
+		if err := os.Rename(snapshotFilename, volume.Filename); err != nil {
+			if !os.IsNotExist(err) {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (m *Manager) restoreVmImage(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	if err != nil {
 		return err
 	}
+	defer vm.mutex.Unlock()
 	if vm.State != proto.StateStopped {
 		return errors.New("VM is not stopped")
 	}
@@ -789,14 +805,11 @@ func (m *Manager) restoreVmImage(ipAddr net.IP,
 
 func (m *Manager) restoreVmUserData(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmAndLock(ipAddr)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
 	if err != nil {
 		return err
 	}
 	defer vm.mutex.Unlock()
-	if err := vm.checkAuth(authInfo); err != nil {
-		return err
-	}
 	filename := path.Join(vm.dirname, "user-data.raw")
 	oldFilename := filename + ".old"
 	return os.Rename(oldFilename, filename)
@@ -814,16 +827,49 @@ func (m *Manager) sendVmInfo(ipAddress string, vm *proto.VmInfo) {
 	}
 }
 
+func (m *Manager) snapshotVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	forceIfNotStopped, snapshotRootOnly bool) error {
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	// TODO(rgooch): First check for sufficient free space.
+	if vm.State != proto.StateStopped {
+		if !forceIfNotStopped {
+			return errors.New("VM is not stopped")
+		}
+	}
+	if err := vm.discardSnapshot(); err != nil {
+		return err
+	}
+	doCleanup := true
+	defer func() {
+		if doCleanup {
+			vm.discardSnapshot()
+		}
+	}()
+	for index, volume := range vm.VolumeLocations {
+		snapshotFilename := volume.Filename + ".snapshot"
+		if index == 0 || !snapshotRootOnly {
+			err := fsutil.CopyFile(snapshotFilename, volume.Filename,
+				privateFilePerms)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	doCleanup = false
+	return nil
+}
+
 func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	dhcpTimeout time.Duration) (bool, error) {
-	vm, err := m.getVmAndLock(ipAddr)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
 	if err != nil {
 		return false, err
 	}
 	defer vm.mutex.Unlock()
-	if err := vm.checkAuth(authInfo); err != nil {
-		return false, err
-	}
 	if err := checkAvailableMemory(vm.MemoryInMiB); err != nil {
 		return false, err
 	}
@@ -846,14 +892,11 @@ func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 }
 
 func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmAndLock(ipAddr)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
 	if err != nil {
 		return err
 	}
 	defer vm.mutex.Unlock()
-	if err := vm.checkAuth(authInfo); err != nil {
-		return err
-	}
 	switch vm.State {
 	case proto.StateStarting:
 		return errors.New("VM is starting")
@@ -981,6 +1024,17 @@ func (vm *vmInfoType) destroy() {
 	default:
 	}
 	vm.delete()
+}
+
+func (vm *vmInfoType) discardSnapshot() error {
+	for _, volume := range vm.VolumeLocations {
+		if err := os.Remove(volume.Filename + ".snapshot"); err != nil {
+			if !os.IsNotExist(err) {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (vm *vmInfoType) kill() {
