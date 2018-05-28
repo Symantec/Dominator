@@ -105,6 +105,14 @@ type DiscardVmOldUserDataResponse struct {
 	Error string
 }
 
+type DiscardVmSnapshotRequest struct {
+	IpAddress net.IP
+}
+
+type DiscardVmSnapshotResponse struct {
+	Error string
+}
+
 // The GetUpdates() RPC is fully streamed.
 // The client sends no information to the server.
 // The server sends a stream of Update messages.
@@ -183,6 +191,15 @@ type ReplaceVmUserDataResponse struct {
 	Error string
 }
 
+type RestoreVmFromSnapshotRequest struct {
+	IpAddress         net.IP
+	ForceIfNotStopped bool
+}
+
+type RestoreVmFromSnapshotResponse struct {
+	Error string
+}
+
 type RestoreVmImageRequest struct {
 	IpAddress net.IP
 }
@@ -196,6 +213,16 @@ type RestoreVmUserDataRequest struct {
 }
 
 type RestoreVmUserDataResponse struct {
+	Error string
+}
+
+type SnapshotVmRequest struct {
+	IpAddress         net.IP
+	ForceIfNotStopped bool
+	RootOnly          bool
+}
+
+type SnapshotVmResponse struct {
 	Error string
 }
 
