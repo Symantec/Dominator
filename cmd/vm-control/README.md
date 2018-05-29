@@ -36,6 +36,7 @@ Some of the sub-commands available are:
 - **destroy-vm**: destroy a VM (all ephemeral data and metadata are lost)
 - **discard-vm-old-image**: discard the previous root image for a VM
 - **discard-vm-old-user-data**: discard the previous user data for a VM
+- **discard-vm-snapshot**: discard the previous snapshot for a VM
 - **get-updates**: get and show a continuous stream of updates from a
   		   *Hypervisor*. This is primarily for debugging
 - **get-vm-info**: get and show the information for a VM
@@ -49,9 +50,12 @@ Some of the sub-commands available are:
                         saved. The VM must not be running
 - **replace-vm-user-data**: replace the user data for a VM. The old user data is
                         saved
+- **restore-vm-from-snapshot**: restore VM volumes from the previous snapshot,
+                                discarding current volumes
 - **restore-vm-image**: restore the previously saved root image for a VM. The VM
                         must not be running
 - **restore-vm-user-data**: restore the previously saved user data for a VM
+- **snapshot-vm**: create a snapshot of the VM volumes, discarding previous one
 - **start-vm**: start a stopped VM
 - **stop-vm**: stop a running VM. All data and metadata are preserved
 - **trace-vm-metadata**: trace the requests a VM makes to the metadata service

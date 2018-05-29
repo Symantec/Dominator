@@ -24,6 +24,8 @@ var (
 	fleetManagerPortNum = flag.Uint("fleetManagerPortNum",
 		constants.FleetManagerPortNumber,
 		"Port number of Fleet Resource Manager")
+	forceIfNotStopped = flag.Bool("forceIfNotStopped", false,
+		"If true, snapshot or restore VM even if not stopped")
 	hypervisorHostname = flag.String("hypervisorHostname", "",
 		"Hostname of hypervisor")
 	hypervisorPortNum = flag.Uint("hypervisorPortNum",
@@ -51,6 +53,8 @@ var (
 		"Subnet ID to launch VM in")
 	roundupPower = flag.Uint64("roundupPower", 24,
 		"power of 2 to round up root volume size")
+	snapshotRootOnly = flag.Bool("snapshotRootOnly", false,
+		"If true, snapshot only the root volume")
 	traceMetadata = flag.Bool("traceMetadata", false,
 		"If true, trace metadata calls until interrupted")
 	userDataFile = flag.String("userDataFile", "",
@@ -83,6 +87,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  destroy-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  discard-vm-old-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  discard-vm-old-user-data IPaddr")
+	fmt.Fprintln(os.Stderr, "  discard-vm-snapshot IPaddr")
 	fmt.Fprintln(os.Stderr, "  get-updates")
 	fmt.Fprintln(os.Stderr, "  get-vm-info IPaddr")
 	fmt.Fprintln(os.Stderr, "  list-hypervisors")
@@ -92,8 +97,10 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
 	fmt.Fprintln(os.Stderr, "  replace-vm-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  replace-vm-user-data IPaddr")
+	fmt.Fprintln(os.Stderr, "  restore-vm-from-snapshot IPaddr")
 	fmt.Fprintln(os.Stderr, "  restore-vm-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  restore-vm-user-data IPaddr")
+	fmt.Fprintln(os.Stderr, "  snapshot-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  start-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  stop-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  trace-vm-metadata IPaddr")
@@ -117,6 +124,7 @@ var subcommands = []subcommand{
 	{"destroy-vm", 1, 1, destroyVmSubcommand},
 	{"discard-vm-old-image", 1, 1, discardVmOldImageSubcommand},
 	{"discard-vm-old-user-data", 1, 1, discardVmOldUserDataSubcommand},
+	{"discard-vm-snapshot", 1, 1, discardVmSnapshotSubcommand},
 	{"get-updates", 0, 0, getUpdatesSubcommand},
 	{"get-vm-info", 1, 1, getVmInfoSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
@@ -126,8 +134,10 @@ var subcommands = []subcommand{
 	{"probe-vm-port", 1, 1, probeVmPortSubcommand},
 	{"replace-vm-image", 1, 1, replaceVmImageSubcommand},
 	{"replace-vm-user-data", 1, 1, replaceVmUserDataSubcommand},
+	{"restore-vm-from-snapshot", 1, 1, restoreVmFromSnapshotSubcommand},
 	{"restore-vm-image", 1, 1, restoreVmImageSubcommand},
 	{"restore-vm-user-data", 1, 1, restoreVmUserDataSubcommand},
+	{"snapshot-vm", 1, 1, snapshotVmSubcommand},
 	{"start-vm", 1, 1, startVmSubcommand},
 	{"stop-vm", 1, 1, stopVmSubcommand},
 	{"trace-vm-metadata", 1, 1, traceVmMetadataSubcommand},

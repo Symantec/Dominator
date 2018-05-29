@@ -206,9 +206,9 @@ func parseSizes(strSizes flagutil.StringList) ([]hyper_proto.Volume, error) {
 	for _, strSize := range strSizes {
 		var size uint64
 		if _, err := fmt.Sscanf(strSize, "%dM", &size); err == nil {
-			volumes = append(volumes, hyper_proto.Volume{size << 20})
+			volumes = append(volumes, hyper_proto.Volume{Size: size << 20})
 		} else if _, err := fmt.Sscanf(strSize, "%dG", &size); err == nil {
-			volumes = append(volumes, hyper_proto.Volume{size << 30})
+			volumes = append(volumes, hyper_proto.Volume{Size: size << 30})
 		} else {
 			return nil, err
 		}
