@@ -292,7 +292,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		}
 		os.RemoveAll(vm.dirname)
 		for _, volume := range vm.VolumeLocations {
-			os.RemoveAll(path.Dir(volume.Filename))
+			os.RemoveAll(volume.DirectoryToCleanup)
 		}
 		m.mutex.Unlock()
 	}()
@@ -347,7 +347,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		if fi, err := os.Stat(vm.VolumeLocations[0].Filename); err != nil {
 			return sendError(conn, encoder, err)
 		} else {
-			vm.Volumes = []proto.Volume{{uint64(fi.Size())}}
+			vm.Volumes = []proto.Volume{{Size: uint64(fi.Size())}}
 		}
 	} else if request.ImageDataSize > 0 {
 		err := vm.copyRootVolume(request, conn, request.ImageDataSize)
@@ -402,6 +402,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 			if err := setVolumeSize(fname, volume.Size); err != nil {
 				return sendError(conn, encoder, err)
 			}
+			vm.Volumes = append(vm.Volumes, volume)
 		}
 	}
 	if len(memoryError) < 1 {
@@ -992,7 +993,7 @@ func (vm *vmInfoType) copyRootVolume(request proto.CreateVmRequest,
 	if err != nil {
 		return err
 	}
-	vm.Volumes = []proto.Volume{{size}}
+	vm.Volumes = []proto.Volume{{Size: size}}
 	return setVolumeSize(vm.VolumeLocations[0].Filename, size)
 }
 
@@ -1253,7 +1254,7 @@ func (vm *vmInfoType) startVm() error {
 	}
 	for _, volume := range vm.VolumeLocations {
 		cmd.Args = append(cmd.Args,
-			"-drive", "file="+volume.Filename+",format=raw")
+			"-drive", "file="+volume.Filename+",format=raw"+",if=virtio")
 	}
 	os.Remove(bootlogFilename)
 	if output, err := cmd.CombinedOutput(); err != nil {
