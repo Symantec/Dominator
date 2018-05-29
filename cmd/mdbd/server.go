@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"errors"
 	"io"
 	"sync"
@@ -29,8 +28,8 @@ func startRpcd(logger log.Logger) *rpcType {
 	return rpcObj
 }
 
-func (t *rpcType) GetMdbUpdates(conn *srpc.Conn) error {
-	encoder := gob.NewEncoder(conn)
+func (t *rpcType) GetMdbUpdates(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder) error {
 	updateChannel := make(chan mdbserver.MdbUpdate, 10)
 	t.rwMutex.Lock()
 	t.updateChannels[conn] = updateChannel

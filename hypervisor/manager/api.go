@@ -124,6 +124,11 @@ func (m *Manager) DiscardVmOldUserData(ipAddr net.IP,
 	return m.discardVmOldUserData(ipAddr, authInfo)
 }
 
+func (m *Manager) DiscardVmSnapshot(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	return m.discardVmSnapshot(ipAddr, authInfo)
+}
+
 func (m *Manager) GetImageServerAddress() string {
 	return m.ImageServerAddress
 }
@@ -187,6 +192,11 @@ func (m *Manager) ReplaceVmUserData(ipAddr net.IP, reader io.Reader,
 	return m.replaceVmUserData(ipAddr, reader, size, authInfo)
 }
 
+func (m *Manager) RestoreVmFromSnapshot(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, forceIfNotStopped bool) error {
+	return m.restoreVmFromSnapshot(ipAddr, authInfo, forceIfNotStopped)
+}
+
 func (m *Manager) RestoreVmImage(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
 	return m.restoreVmImage(ipAddr, authInfo)
@@ -195,6 +205,11 @@ func (m *Manager) RestoreVmImage(ipAddr net.IP,
 func (m *Manager) RestoreVmUserData(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
 	return m.restoreVmUserData(ipAddr, authInfo)
+}
+
+func (m *Manager) SnapshotVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	forceIfNotStopped, snapshotRootOnly bool) error {
+	return m.snapshotVm(ipAddr, authInfo, forceIfNotStopped, snapshotRootOnly)
 }
 
 func (m *Manager) StartVm(ipAddr net.IP, authInfo *srpc.AuthInformation,

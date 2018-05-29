@@ -1,7 +1,6 @@
 package filegen
 
 import (
-	"encoding/gob"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -12,11 +11,13 @@ import (
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
 )
 
-func (t *rpcType) Connect(conn *srpc.Conn) error {
-	return t.manager.connect(conn) // Long-lived.
+func (t *rpcType) Connect(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder) error {
+	return t.manager.connect(conn, decoder, encoder) // Long-lived.
 }
 
-func (m *Manager) connect(conn *srpc.Conn) error {
+func (m *Manager) connect(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder) error {
 	defer conn.Flush()
 	clientChannel := make(chan *proto.ServerMessage, 4096)
 	m.rwMutex.Lock()
@@ -30,9 +31,7 @@ func (m *Manager) connect(conn *srpc.Conn) error {
 	closeNotifyChannel := make(chan struct{})
 	// The client must keep the same encoder/decoder pair over the lifetime
 	// of the connection.
-	go m.handleClientRequests(gob.NewDecoder(conn), clientChannel,
-		closeNotifyChannel)
-	encoder := gob.NewEncoder(conn)
+	go m.handleClientRequests(decoder, clientChannel, closeNotifyChannel)
 	for {
 		select {
 		case serverMessage := <-clientChannel:
@@ -52,7 +51,7 @@ func (m *Manager) connect(conn *srpc.Conn) error {
 	}
 }
 
-func (m *Manager) handleClientRequests(decoder *gob.Decoder,
+func (m *Manager) handleClientRequests(decoder srpc.Decoder,
 	messageChan chan<- *proto.ServerMessage,
 	closeNotifyChannel chan<- struct{}) {
 	for {
@@ -65,7 +64,7 @@ func (m *Manager) handleClientRequests(decoder *gob.Decoder,
 	}
 }
 
-func (m *Manager) handleRequest(decoder *gob.Decoder,
+func (m *Manager) handleRequest(decoder srpc.Decoder,
 	messageChan chan<- *proto.ServerMessage) error {
 	var request proto.ClientRequest
 	if err := decoder.Decode(&request); err != nil {
