@@ -63,9 +63,8 @@ func callReplaceVmImage(client *srpc.Client,
 	}
 }
 
-func replaceVmImage(ipAddr string, logger log.DebugLogger) error {
-	vmIP := net.ParseIP(ipAddr)
-	if hypervisor, err := findHypervisor(vmIP); err != nil {
+func replaceVmImage(vmHostname string, logger log.DebugLogger) error {
+	if vmIP, hypervisor, err := lookupVmAndHypervisor(vmHostname); err != nil {
 		return err
 	} else {
 		return replaceVmImageOnHypervisor(hypervisor, vmIP, logger)

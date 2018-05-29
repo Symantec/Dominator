@@ -19,9 +19,8 @@ func discardVmSnapshotSubcommand(args []string, logger log.DebugLogger) {
 	os.Exit(0)
 }
 
-func discardVmSnapshot(ipAddr string, logger log.DebugLogger) error {
-	vmIP := net.ParseIP(ipAddr)
-	if hypervisor, err := findHypervisor(vmIP); err != nil {
+func discardVmSnapshot(vmHostname string, logger log.DebugLogger) error {
+	if vmIP, hypervisor, err := lookupVmAndHypervisor(vmHostname); err != nil {
 		return err
 	} else {
 		return discardVmSnapshotOnHypervisor(hypervisor, vmIP, logger)

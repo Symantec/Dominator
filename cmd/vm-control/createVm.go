@@ -170,7 +170,11 @@ func getHypervisorAddress() (string, error) {
 	}
 	defer client.Close()
 	if *adjacentVM != "" {
-		return findHypervisorClient(client, net.ParseIP(*adjacentVM))
+		if adjacentVmIpAddr, err := lookupIP(*adjacentVM); err != nil {
+			return "", err
+		} else {
+			return findHypervisorClient(client, adjacentVmIpAddr)
+		}
 	}
 	request := fm_proto.ListHypervisorsInLocationRequest{*location}
 	var reply fm_proto.ListHypervisorsInLocationResponse
