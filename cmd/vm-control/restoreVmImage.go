@@ -19,9 +19,8 @@ func restoreVmImageSubcommand(args []string, logger log.DebugLogger) {
 	os.Exit(0)
 }
 
-func restoreVmImage(ipAddr string, logger log.DebugLogger) error {
-	vmIP := net.ParseIP(ipAddr)
-	if hypervisor, err := findHypervisor(vmIP); err != nil {
+func restoreVmImage(vmHostname string, logger log.DebugLogger) error {
+	if vmIP, hypervisor, err := lookupVmAndHypervisor(vmHostname); err != nil {
 		return err
 	} else {
 		return restoreVmImageOnHypervisor(hypervisor, vmIP, logger)

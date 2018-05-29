@@ -22,9 +22,8 @@ func replaceVmUserDataSubcommand(args []string, logger log.DebugLogger) {
 	os.Exit(0)
 }
 
-func replaceVmUserData(ipAddr string, logger log.DebugLogger) error {
-	vmIP := net.ParseIP(ipAddr)
-	if hypervisor, err := findHypervisor(vmIP); err != nil {
+func replaceVmUserData(vmHostname string, logger log.DebugLogger) error {
+	if vmIP, hypervisor, err := lookupVmAndHypervisor(vmHostname); err != nil {
 		return err
 	} else {
 		return replaceVmUserDataOnHypervisor(hypervisor, vmIP, logger)

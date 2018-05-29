@@ -41,3 +41,23 @@ func findHypervisorClient(client *srpc.Client,
 	}
 	return reply.HypervisorAddress, nil
 }
+
+func lookupIP(vmHostname string) (net.IP, error) {
+	if ips, err := net.LookupIP(vmHostname); err != nil {
+		return nil, err
+	} else if len(ips) != 1 {
+		return nil, fmt.Errorf("num IPs: %d != 1", len(ips))
+	} else {
+		return ips[0], nil
+	}
+}
+
+func lookupVmAndHypervisor(vmHostname string) (net.IP, string, error) {
+	if vmIpAddr, err := lookupIP(vmHostname); err != nil {
+		return nil, "", err
+	} else if hypervisor, err := findHypervisor(vmIpAddr); err != nil {
+		return nil, "", err
+	} else {
+		return vmIpAddr, hypervisor, nil
+	}
+}
