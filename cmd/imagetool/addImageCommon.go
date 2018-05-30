@@ -226,5 +226,5 @@ func getAnnotation(objectClient *objectclient.ObjectClient, name string) (
 	}
 	reader := bufio.NewReader(file)
 	hash, _, err := objectClient.AddObject(reader, uint64(fi.Size()), nil)
-	return &image.Annotation{Object: &hash}, nil
+	return &image.Annotation{Object: &hash}, err
 }
