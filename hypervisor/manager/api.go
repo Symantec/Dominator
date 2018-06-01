@@ -27,8 +27,9 @@ type DhcpServer interface {
 
 type Manager struct {
 	StartOptions
-	numCPU            int
+	importCookie      []byte
 	memTotalInMiB     uint64
+	numCPU            int
 	volumeDirectories []string
 	mutex             sync.RWMutex // Lock everthing below (those can change).
 	addressPool       addressPoolType
@@ -104,6 +105,11 @@ func (m *Manager) CloseUpdateChannel(channel <-chan proto.Update) {
 	m.closeUpdateChannel(channel)
 }
 
+func (m *Manager) CommitImportedVm(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	return m.commitImportedVm(ipAddr, authInfo)
+}
+
 func (m *Manager) CreateVm(conn *srpc.Conn, decoder srpc.Decoder,
 	encoder srpc.Encoder) error {
 	return m.createVm(conn, decoder, encoder)
@@ -149,6 +155,11 @@ func (m *Manager) GetVmUserData(ipAddr net.IP) (io.ReadCloser, error) {
 	return m.getVmUserData(ipAddr)
 }
 
+func (m *Manager) ImportLocalVm(authInfo *srpc.AuthInformation,
+	request proto.ImportLocalVmRequest) error {
+	return m.importLocalVm(authInfo, request)
+}
+
 func (m *Manager) ListAvailableAddresses() []proto.Address {
 	return m.listAvailableAddresses()
 }
@@ -159,6 +170,10 @@ func (m *Manager) ListSubnets(doSort bool) []proto.Subnet {
 
 func (m *Manager) ListVMs(doSort bool) []string {
 	return m.listVMs(doSort)
+}
+
+func (m *Manager) ListVolumeDirectories() []string {
+	return m.volumeDirectories
 }
 
 func (m *Manager) MakeSubnetChannel() <-chan proto.Subnet {

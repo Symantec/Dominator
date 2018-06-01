@@ -2,6 +2,7 @@ package manager
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -11,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"syscall"
 	"time"
 
 	imclient "github.com/Symantec/Dominator/imageserver/client"
@@ -26,11 +26,6 @@ import (
 	"github.com/Symantec/Dominator/lib/tags"
 	"github.com/Symantec/Dominator/lib/verstr"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
-)
-
-const (
-	privateFilePerms = syscall.S_IRUSR | syscall.S_IWUSR
-	publicFilePerms  = privateFilePerms | syscall.S_IRGRP | syscall.S_IROTH
 )
 
 var (
@@ -240,6 +235,25 @@ func (m *Manager) checkVmHasHealthAgent(ipAddr net.IP) (bool, error) {
 		return false, nil
 	}
 	return vm.hasHealthAgent, nil
+}
+
+func (m *Manager) commitImportedVm(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if !vm.Uncommitted {
+		return fmt.Errorf("%s is already committed")
+	}
+	m.addressPool.Registered = append(m.addressPool.Registered, vm.Address)
+	if err := m.writeAddressPool(m.addressPool, true); err != nil {
+		return err
+	}
+	vm.Uncommitted = false
+	vm.writeAndSendInfo()
+	return nil
 }
 
 func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
@@ -555,6 +569,110 @@ func (m *Manager) getVmUserData(ipAddr net.IP) (io.ReadCloser, error) {
 	filename := path.Join(vm.dirname, "user-data.raw")
 	vm.mutex.Unlock()
 	return os.Open(filename)
+}
+
+func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
+	request proto.ImportLocalVmRequest) error {
+	if !bytes.Equal(m.importCookie, request.VerificationCookie) {
+		return fmt.Errorf("bad verification cookie: you are not root")
+	}
+	request.VmInfo.OwnerUsers = []string{authInfo.Username}
+	request.VmInfo.Uncommitted = true
+	volumeDirectories := make(map[string]struct{}, len(m.volumeDirectories))
+	for _, dirname := range m.volumeDirectories {
+		volumeDirectories[dirname] = struct{}{}
+	}
+	volumes := make([]proto.Volume, 0, len(request.VolumeFilenames))
+	for index, filename := range request.VolumeFilenames {
+		dirname := path.Dir(path.Dir(path.Dir(filename)))
+		if _, ok := volumeDirectories[dirname]; !ok {
+			return fmt.Errorf("%s not in a volume directory", filename)
+		}
+		if fi, err := os.Lstat(filename); err != nil {
+			return err
+		} else if fi.Mode()&os.ModeType != 0 {
+			return fmt.Errorf("%s is not a regular file", filename)
+		} else {
+			var volumeFormat proto.VolumeFormat
+			if index < len(request.VmInfo.Volumes) {
+				volumeFormat = request.VmInfo.Volumes[index].Format
+			}
+			volumes = append(volumes, proto.Volume{
+				Size:   uint64(fi.Size()),
+				Format: volumeFormat,
+			})
+		}
+	}
+	request.Volumes = volumes
+	if err := <-tryAllocateMemory(request.MemoryInMiB); err != nil {
+		return err
+	}
+	ipAddress := request.Address.IpAddress.String()
+	vm := &vmInfoType{
+		VmInfo:           request.VmInfo,
+		manager:          m,
+		dirname:          path.Join(m.StateDir, "VMs", ipAddress),
+		ipAddress:        ipAddress,
+		ownerUsers:       map[string]struct{}{authInfo.Username: struct{}{}},
+		logger:           prefixlogger.New(ipAddress+": ", m.Logger),
+		metadataChannels: make(map[chan<- string]struct{}),
+	}
+	vm.VmInfo.State = proto.StateStarting
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	if _, ok := m.vms[ipAddress]; ok {
+		return fmt.Errorf("%s already exists", ipAddress)
+	}
+	for _, poolAddress := range m.addressPool.Registered {
+		if poolAddress.IpAddress.Equal(request.Address.IpAddress) ||
+			poolAddress.MacAddress == request.Address.MacAddress {
+			return fmt.Errorf("%s is in address pool", ipAddress)
+		}
+	}
+	subnetId := m.getMatchingSubnet(request.Address.IpAddress)
+	if subnetId == "" {
+		return fmt.Errorf("no matching subnet for: %s\n", ipAddress)
+	}
+	vm.VmInfo.SubnetId = subnetId
+	defer func() {
+		if vm == nil {
+			return
+		}
+		delete(m.vms, vm.ipAddress)
+		m.sendVmInfo(vm.ipAddress, nil)
+		os.RemoveAll(vm.dirname)
+		for _, volume := range vm.VolumeLocations {
+			os.RemoveAll(volume.DirectoryToCleanup)
+		}
+	}()
+	if err := os.MkdirAll(vm.dirname, dirPerms); err != nil {
+		return err
+	}
+	for index, sourceFilename := range request.VolumeFilenames {
+		dirname := path.Join(path.Dir(path.Dir(path.Dir(sourceFilename))),
+			ipAddress)
+		if err := os.MkdirAll(dirname, dirPerms); err != nil {
+			return err
+		}
+		var destFilename string
+		if index == 0 {
+			destFilename = path.Join(dirname, "root")
+		} else {
+			destFilename = path.Join(dirname,
+				fmt.Sprintf("secondary-volume.%d", index-1))
+		}
+		if err := os.Link(sourceFilename, destFilename); err != nil {
+			return err
+		}
+		vm.VolumeLocations = append(vm.VolumeLocations, volumeType{
+			dirname, destFilename})
+	}
+	m.vms[ipAddress] = vm
+	if _, err := vm.startManaging(0); err != nil {
+		return err
+	}
+	vm = nil // Cancel cleanup.
+	return nil
 }
 
 func (m *Manager) listVMs(doSort bool) []string {
@@ -1005,7 +1123,10 @@ func (vm *vmInfoType) delete() {
 	vm.manager.mutex.Lock()
 	delete(vm.manager.vms, vm.ipAddress)
 	vm.manager.sendVmInfo(vm.ipAddress, nil)
-	err := vm.manager.releaseAddressInPool(vm.Address, false)
+	var err error
+	if !vm.Uncommitted {
+		err = vm.manager.releaseAddressInPool(vm.Address, false)
+	}
 	vm.manager.mutex.Unlock()
 	if err != nil {
 		vm.manager.Logger.Println(err)
@@ -1252,9 +1373,14 @@ func (vm *vmInfoType) startVm() error {
 	} else {
 		cmd.Args = append(cmd.Args, "-nographic")
 	}
-	for _, volume := range vm.VolumeLocations {
+	for index, volume := range vm.VolumeLocations {
+		var volumeFormat proto.VolumeFormat
+		if index < len(vm.Volumes) {
+			volumeFormat = vm.Volumes[index].Format
+		}
 		cmd.Args = append(cmd.Args,
-			"-drive", "file="+volume.Filename+",format=raw"+",if=virtio")
+			"-drive", "file="+volume.Filename+",format="+volumeFormat.String()+
+				",if=virtio")
 	}
 	os.Remove(bootlogFilename)
 	if output, err := cmd.CombinedOutput(); err != nil {
