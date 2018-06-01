@@ -12,6 +12,9 @@ const (
 	StateStopping      = 3
 	StateStopped       = 4
 	StateDestroying    = 5
+
+	VolumeFormatRaw   = 0
+	VolumeFormatQCOW2 = 1
 )
 
 type AcknowledgeVmRequest struct {
@@ -58,6 +61,14 @@ type ChangeVmTagsRequest struct {
 }
 
 type ChangeVmTagsResponse struct {
+	Error string
+}
+
+type CommitImportedVmRequest struct {
+	IpAddress net.IP
+}
+
+type CommitImportedVmResponse struct {
 	Error string
 }
 
@@ -137,12 +148,29 @@ type GetVmInfoResponse struct {
 	Error  string
 }
 
+type ImportLocalVmRequest struct {
+	VerificationCookie []byte
+	VmInfo
+	VolumeFilenames []string
+}
+
+type ImportLocalVmResponse struct {
+	Error string
+}
+
 type ListVMsRequest struct {
 	Sort bool
 }
 
 type ListVMsResponse struct {
 	IpAddresses []net.IP
+}
+
+type ListVolumeDirectoriesRequest struct{}
+
+type ListVolumeDirectoriesResponse struct {
+	Directories []string
+	Error       string
 }
 
 type ProbeVmPortRequest struct {
@@ -270,14 +298,18 @@ type VmInfo struct {
 	MemoryInMiB   uint64
 	MilliCPUs     uint
 	OwnerGroups   []string `json:",omitempty"`
-	OwnerUsers    []string
-	SpreadVolumes bool
+	OwnerUsers    []string `json:",omitempty"`
+	SpreadVolumes bool     `json:",omitempty"`
 	State         State
 	Tags          map[string]string `json:",omitempty"`
-	SubnetId      string
-	Volumes       []Volume
+	SubnetId      string            `json:",omitempty"`
+	Uncommitted   bool              `json:",omitempty"`
+	Volumes       []Volume          `json:",omitempty"`
 }
 
 type Volume struct {
-	Size uint64
+	Size   uint64
+	Format VolumeFormat
 }
+
+type VolumeFormat uint

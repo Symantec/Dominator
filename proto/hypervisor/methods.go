@@ -6,6 +6,7 @@ import (
 )
 
 const stateUnknown = "UNKNOWN State"
+const volumeFormatUnknown = "UNKNOWN VolumeFormat"
 
 var (
 	stateToText = map[State]string{
@@ -17,12 +18,22 @@ var (
 		StateDestroying:    "destroying",
 	}
 	textToState map[string]State
+
+	volumeFormatToText = map[VolumeFormat]string{
+		VolumeFormatRaw:   "raw",
+		VolumeFormatQCOW2: "qcow2",
+	}
+	textToVolumeFormat map[string]VolumeFormat
 )
 
 func init() {
 	textToState = make(map[string]State, len(stateToText))
 	for state, text := range stateToText {
 		textToState[text] = state
+	}
+	textToVolumeFormat = make(map[string]VolumeFormat, len(volumeFormatToText))
+	for format, text := range volumeFormatToText {
+		textToVolumeFormat[text] = format
 	}
 }
 
@@ -76,5 +87,31 @@ func (subnet *Subnet) Shrink() {
 	subnet.IpMask = shrinkIP(subnet.IpMask)
 	for index, ipAddr := range subnet.DomainNameServers {
 		subnet.DomainNameServers[index] = shrinkIP(ipAddr)
+	}
+}
+
+func (volumeFormat VolumeFormat) MarshalText() ([]byte, error) {
+	if text := volumeFormat.String(); text == volumeFormatUnknown {
+		return nil, errors.New(text)
+	} else {
+		return []byte(text), nil
+	}
+}
+
+func (volumeFormat VolumeFormat) String() string {
+	if text, ok := volumeFormatToText[volumeFormat]; ok {
+		return text
+	} else {
+		return volumeFormatUnknown
+	}
+}
+
+func (volumeFormat *VolumeFormat) UnmarshalText(text []byte) error {
+	txt := string(text)
+	if val, ok := textToVolumeFormat[txt]; ok {
+		*volumeFormat = val
+		return nil
+	} else {
+		return errors.New("unknown VolumeFormat: " + txt)
 	}
 }
