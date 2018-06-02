@@ -40,6 +40,11 @@ Some of the sub-commands available are:
 - **get-updates**: get and show a continuous stream of updates from a
   		   *Hypervisor*. This is primarily for debugging
 - **get-vm-info**: get and show the information for a VM
+- **import-local-vm**: import a local raw VM. This is primarily for debugging
+- **import-virsh-vm**: import a local virsh VM. The specified domain name must
+                       be a FQDN, which is used to obtain the IP address of the
+                       imported VM. The virsh VM must first be shut down. The
+                       imported VM is started
 - **list-hypervisors**: list healthy Hypervisors in the specified location
 - **list-locations**: list locations within the specified top location
 - **list-vms**: list the IP addresses for all VMs

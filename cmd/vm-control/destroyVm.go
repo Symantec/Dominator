@@ -29,14 +29,18 @@ func destroyVm(vmHostname string, logger log.DebugLogger) error {
 
 func destroyVmOnHypervisor(hypervisor string, ipAddr net.IP,
 	logger log.DebugLogger) error {
-	request := proto.DestroyVmRequest{ipAddr}
 	client, err := srpc.DialHTTP("tcp", hypervisor, 0)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
+	return destroyVmOnHypervisorClient(client, ipAddr)
+}
+
+func destroyVmOnHypervisorClient(client *srpc.Client, ipAddr net.IP) error {
+	request := proto.DestroyVmRequest{ipAddr}
 	var reply proto.DestroyVmResponse
-	err = client.RequestReply("Hypervisor.DestroyVm", request, &reply)
+	err := client.RequestReply("Hypervisor.DestroyVm", request, &reply)
 	if err != nil {
 		return err
 	}
