@@ -58,6 +58,8 @@ func (s state) showVMHandler(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintln(writer, `<table border="0">`)
 		if len(vm.Address.IpAddress) < 1 {
 			writeString(writer, "IP Address", ipAddr+" (externally allocated)")
+		} else if vm.Uncommitted {
+			writeString(writer, "IP Address", ipAddr+" (uncommitted)")
 		} else {
 			writeString(writer, "IP Address", ipAddr)
 		}
