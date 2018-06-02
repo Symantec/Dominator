@@ -75,7 +75,13 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 		case url.OutputTypeText:
 			fmt.Fprintln(writer, vm.ipAddr)
 		case url.OutputTypeHtml:
-			fmt.Fprintf(writer, "  <tr>\n")
+			if vm.Uncommitted {
+				fmt.Fprintln(writer, "  <tr style=\"background-color:yellow\">")
+			} else if topology.CheckIfIpIsReserved(vm.ipAddr) {
+				fmt.Fprintln(writer, "  <tr style=\"background-color:orange\">")
+			} else {
+				fmt.Fprintln(writer, "  <tr>")
+			}
 			fmt.Fprintf(writer,
 				"    <td><a href=\"http://%s:%d/showVM?%s\">%s</a></td>\n",
 				vm.hypervisor.machine.Hostname, constants.HypervisorPortNumber,
