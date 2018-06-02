@@ -23,7 +23,6 @@ var (
 	clientMetricsMutex        sync.Mutex
 	numInUseClientConnections uint64
 	numOpenClientConnections  uint64
-	errorNotFound             = errors.New("HTTP method not found")
 )
 
 func init() {
@@ -109,7 +108,7 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 				return nil, err
 			}
 			return newClient(tlsConn, true), nil
-		} else if err == errorNotFound &&
+		} else if err == ErrorNoSrpcEndpoint &&
 			tlsConfig != nil &&
 			tlsConfig.InsecureSkipVerify {
 			// Fall back to insecure connection.
@@ -149,7 +148,7 @@ func doHTTPConnect(conn net.Conn, path string) error {
 		return err
 	}
 	if resp.StatusCode == http.StatusNotFound {
-		return errorNotFound
+		return ErrorNoSrpcEndpoint
 	}
 	if resp.StatusCode == http.StatusUnauthorized {
 		return ErrorBadCertificate

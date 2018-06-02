@@ -55,7 +55,11 @@ func (s state) listVMsHandler(w http.ResponseWriter, req *http.Request) {
 		case url.OutputTypeText:
 			fmt.Fprintln(writer, ipAddr)
 		case url.OutputTypeHtml:
-			fmt.Fprintf(writer, "  <tr>\n")
+			if vm.Uncommitted {
+				fmt.Fprintln(writer, "  <tr style=\"background-color:yellow\">")
+			} else {
+				fmt.Fprintln(writer, "  <tr>")
+			}
 			fmt.Fprintf(writer, "    <td><a href=\"showVM?%s\">%s</a></td>\n",
 				ipAddr, ipAddr)
 			fmt.Fprintf(writer, "    <td>%s</td>\n", vm.Address.MacAddress)

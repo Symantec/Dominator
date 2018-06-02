@@ -1,12 +1,15 @@
 package manager
 
 import (
+	"bytes"
+	"crypto/rand"
 	"errors"
 	"os"
 	"path"
 	"runtime"
 	"syscall"
 
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/Symantec/Dominator/lib/meminfo"
@@ -16,6 +19,8 @@ import (
 const (
 	dirPerms = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP |
 		syscall.S_IROTH | syscall.S_IXOTH
+	privateFilePerms = syscall.S_IRUSR | syscall.S_IWUSR
+	publicFilePerms  = privateFilePerms | syscall.S_IRGRP | syscall.S_IROTH
 )
 
 func newManager(startOptions StartOptions) (*Manager, error) {
@@ -23,8 +28,18 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
+	importCookie := make([]byte, 32)
+	if _, err := rand.Read(importCookie); err != nil {
+		return nil, err
+	}
+	err = fsutil.CopyToFile(path.Join(startOptions.StateDir, "import-cookie"),
+		privateFilePerms, bytes.NewReader(importCookie), 0)
+	if err != nil {
+		return nil, err
+	}
 	manager := &Manager{
 		StartOptions:      startOptions,
+		importCookie:      importCookie,
 		memTotalInMiB:     memInfo.Total >> 20,
 		notifiers:         make(map[<-chan proto.Update]chan<- proto.Update),
 		numCPU:            runtime.NumCPU(),

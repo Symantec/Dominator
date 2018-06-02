@@ -90,6 +90,8 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  discard-vm-snapshot IPaddr")
 	fmt.Fprintln(os.Stderr, "  get-updates")
 	fmt.Fprintln(os.Stderr, "  get-vm-info IPaddr")
+	fmt.Fprintln(os.Stderr, "  import-local-vm info-file root-volume")
+	fmt.Fprintln(os.Stderr, "  import-virsh-vm domain")
 	fmt.Fprintln(os.Stderr, "  list-hypervisors")
 	fmt.Fprintln(os.Stderr, "  list-locations [TopLocation]")
 	fmt.Fprintln(os.Stderr, "  list-vms")
@@ -127,11 +129,13 @@ var subcommands = []subcommand{
 	{"discard-vm-snapshot", 1, 1, discardVmSnapshotSubcommand},
 	{"get-updates", 0, 0, getUpdatesSubcommand},
 	{"get-vm-info", 1, 1, getVmInfoSubcommand},
-	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
+	{"import-local-vm", 2, 2, importLocalVmSubcommand},
+	{"import-virsh-vm", 1, 1, importVirshVmSubcommand},
 	{"list-hypervisors", 0, 0, listHypervisorsSubcommand},
 	{"list-locations", 0, 1, listLocationsSubcommand},
 	{"list-vms", 0, 0, listVMsSubcommand},
 	{"probe-vm-port", 1, 1, probeVmPortSubcommand},
+	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
 	{"replace-vm-image", 1, 1, replaceVmImageSubcommand},
 	{"replace-vm-user-data", 1, 1, replaceVmUserDataSubcommand},
 	{"restore-vm-from-snapshot", 1, 1, restoreVmFromSnapshotSubcommand},
@@ -151,10 +155,6 @@ func main() {
 		os.Exit(2)
 	}
 	logger = cmdlogger.New()
-	if *fleetManagerHostname == "" && *hypervisorHostname == "" {
-		fmt.Fprintln(os.Stderr, "no-one to talk to")
-		os.Exit(2)
-	}
 	if err := setupclient.SetupTls(true); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

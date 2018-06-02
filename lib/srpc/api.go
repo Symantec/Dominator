@@ -29,6 +29,7 @@ var (
 	ErrorNoRouteToHost        = errors.New("no route to host")
 	ErrorMissingCertificate   = errors.New("missing certificate")
 	ErrorBadCertificate       = errors.New("bad certificate")
+	ErrorNoSrpcEndpoint       = errors.New("no SRPC endpoint")
 	ErrorAccessToMethodDenied = errors.New("access to method denied")
 	ErrorMethodBlocked        = errors.New("method blocked")
 )

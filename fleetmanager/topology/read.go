@@ -19,7 +19,10 @@ func cloneSet(set map[string]struct{}) map[string]struct{} {
 }
 
 func load(topologyDir string) (*Topology, error) {
-	topology := &Topology{machineParents: make(map[string]*Directory)}
+	topology := &Topology{
+		machineParents:  make(map[string]*Directory),
+		reservedIpAddrs: make(map[string]struct{}),
+	}
 	directory, err := topology.readDirectory(topologyDir, "",
 		make(map[string]struct{}))
 	if err != nil {
@@ -80,6 +83,19 @@ func loadSubnets(filename string) ([]*Subnet, error) {
 	return subnets, nil
 }
 
+func (t *Topology) loadSubnets(directory *Directory, dirpath string,
+	subnetIds map[string]struct{}) error {
+	if err := directory.loadSubnets(dirpath, subnetIds); err != nil {
+		return err
+	}
+	for _, subnet := range directory.Subnets {
+		for ipAddr := range subnet.reservedIpAddrs {
+			t.reservedIpAddrs[ipAddr] = struct{}{}
+		}
+	}
+	return nil
+}
+
 func (t *Topology) readDirectory(topDir, dirname string,
 	subnetIds map[string]struct{}) (*Directory, error) {
 	directory := &Directory{
@@ -91,7 +107,7 @@ func (t *Topology) readDirectory(topDir, dirname string,
 	if err := t.loadMachines(directory, dirpath); err != nil {
 		return nil, err
 	}
-	if err := directory.loadSubnets(dirpath, subnetIds); err != nil {
+	if err := t.loadSubnets(directory, dirpath, subnetIds); err != nil {
 		return nil, err
 	}
 	dirnames, err := readDirnames(dirpath)

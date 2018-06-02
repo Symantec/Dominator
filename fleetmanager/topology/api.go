@@ -50,8 +50,9 @@ func (subnet *Subnet) Shrink() {
 }
 
 type Topology struct {
-	Root           *Directory
-	machineParents map[string]*Directory // Key: machine name.
+	Root            *Directory
+	machineParents  map[string]*Directory // Key: machine name.
+	reservedIpAddrs map[string]struct{}   // Key: IP address.
 }
 
 func Load(topologyDir string) (*Topology, error) {
@@ -61,6 +62,11 @@ func Load(topologyDir string) (*Topology, error) {
 func Watch(topologyDir string, checkInterval time.Duration,
 	logger log.DebugLogger) (<-chan *Topology, error) {
 	return watch(topologyDir, checkInterval, logger)
+}
+
+func (t *Topology) CheckIfIpIsReserved(ipAddr string) bool {
+	_, ok := t.reservedIpAddrs[ipAddr]
+	return ok
 }
 
 func (t *Topology) FindDirectory(dirname string) (*Directory, error) {
