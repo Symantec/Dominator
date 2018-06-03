@@ -13,8 +13,10 @@ import (
 )
 
 const (
-	probeStatusNotYetProbed = iota
+	probeStatusNotYetProbed probeStatus = iota
 	probeStatusGood
+	probeStatusNoSrpc
+	probeStatusNoService
 	probeStatusBad
 )
 

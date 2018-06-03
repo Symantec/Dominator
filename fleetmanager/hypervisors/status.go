@@ -6,6 +6,10 @@ func (s probeStatus) String() string {
 		return "not yet probed"
 	case probeStatusGood:
 		return "good"
+	case probeStatusNoSrpc:
+		return "no SRPC"
+	case probeStatusNoService:
+		return "no service"
 	case probeStatusBad:
 		return "bad"
 	default:

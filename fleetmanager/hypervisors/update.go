@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/Symantec/Dominator/fleetmanager/topology"
@@ -122,16 +123,18 @@ func (h *hypervisorType) isDeleteScheduled() bool {
 
 func (m *Manager) manageHypervisorLoop(h *hypervisorType, hostname string) {
 	for !h.isDeleteScheduled() {
-		m.manageHypervisor(h, hostname)
-		time.Sleep(time.Second)
+		sleepTime := m.manageHypervisor(h, hostname)
+		time.Sleep(sleepTime)
 	}
 }
 
-func (m *Manager) manageHypervisor(h *hypervisorType, hostname string) {
+func (m *Manager) manageHypervisor(h *hypervisorType,
+	hostname string) time.Duration {
+	failureProbeStatus := probeStatusBad
 	defer func() {
 		h.mutex.Lock()
 		defer h.mutex.Unlock()
-		h.probeStatus = probeStatusBad
+		h.probeStatus = failureProbeStatus
 		if h.conn != nil {
 			h.conn.Close()
 			h.conn = nil
@@ -142,20 +145,29 @@ func (m *Manager) manageHypervisor(h *hypervisorType, hostname string) {
 		time.Minute)
 	if err != nil {
 		h.logger.Debugln(1, err)
-		return
+		if err == srpc.ErrorNoSrpcEndpoint {
+			failureProbeStatus = probeStatusNoSrpc
+		}
+		return time.Second
 	}
 	defer client.Close()
 	conn, err := client.Call("Hypervisor.GetUpdates")
 	if err != nil {
-		h.logger.Println(err)
-		return
+		if strings.HasPrefix(err.Error(), "unknown service") {
+			h.logger.Debugln(1, err)
+			failureProbeStatus = probeStatusNoService
+			return time.Minute
+		} else {
+			h.logger.Println(err)
+		}
+		return time.Second
 	}
 	h.mutex.Lock()
 	h.probeStatus = probeStatusGood
 	if h.deleteScheduled {
 		h.mutex.Unlock()
 		conn.Close()
-		return
+		return 0
 	}
 	h.conn = conn
 	h.mutex.Unlock()
@@ -168,7 +180,7 @@ func (m *Manager) manageHypervisor(h *hypervisorType, hostname string) {
 			if err != io.EOF {
 				h.logger.Println(err)
 			}
-			return
+			return time.Second
 		}
 		m.processHypervisorUpdate(h, update, firstUpdate)
 		firstUpdate = false
