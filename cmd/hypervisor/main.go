@@ -94,18 +94,22 @@ func main() {
 	if err != nil {
 		logger.Fatalf("Cannot start hypervisor: %s\n", err)
 	}
-	rpcHtmlWriter, err := rpcd.Setup(managerObj, logger)
-	if err != nil {
-		logger.Fatalf("Cannot start rpcd: %s\n", err)
-	}
 	httpd.AddHtmlWriter(managerObj)
-	httpd.AddHtmlWriter(rpcHtmlWriter)
+	if len(bridges) < 1 {
+		logger.Println("No bridges found: entering log-only mode")
+	} else {
+		rpcHtmlWriter, err := rpcd.Setup(managerObj, logger)
+		if err != nil {
+			logger.Fatalf("Cannot start rpcd: %s\n", err)
+		}
+		httpd.AddHtmlWriter(rpcHtmlWriter)
+	}
 	httpd.AddHtmlWriter(logger)
 	err = metadatad.StartServer(*portNum, bridges, managerObj, logger)
 	if err != nil {
 		logger.Fatalf("Cannot start metadata server: %s\n", err)
 	}
-	if err = httpd.StartServer(*portNum, managerObj, false); err != nil {
+	if err := httpd.StartServer(*portNum, managerObj, false); err != nil {
 		logger.Fatalf("Unable to create http server: %s\n", err)
 	}
 }
