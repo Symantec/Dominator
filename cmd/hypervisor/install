@@ -1,0 +1,9 @@
+#! /bin/bash --posix
+
+set -o nounset
+
+cd "${0%/*}"
+
+. ./scripts/install.lib
+
+install_all hypervisor
