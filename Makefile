@@ -9,6 +9,9 @@ dominator.tarball:
 filegen-server.tarball:
 	@./scripts/make-tarball filegen-server -C $(ETCDIR) ssl
 
+hypervisor.tarball:
+	@./scripts/make-tarball hypervisor -C $(ETCDIR) ssl
+
 image-unpacker.tarball:
 	@./scripts/make-tarball image-unpacker \
 		scripts/image-pusher/make-bootable \
