@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"os"
 
@@ -186,10 +187,11 @@ func getHypervisorAddress() (string, error) {
 	if reply.Error != "" {
 		return "", errors.New(reply.Error)
 	}
-	if len(reply.HypervisorAddresses) < 1 {
+	if numHyper := len(reply.HypervisorAddresses); numHyper < 1 {
 		return "", errors.New("no active Hypervisors in location")
+	} else {
+		return reply.HypervisorAddresses[rand.Intn(numHyper-1)], nil
 	}
-	return reply.HypervisorAddresses[0], nil
 }
 
 func getReader(filename string) (io.ReadCloser, int64, error) {
