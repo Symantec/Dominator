@@ -46,6 +46,14 @@ type AddSubnetsResponse struct {
 	Error string
 }
 
+type BecomePrimaryVmOwnerRequest struct {
+	IpAddress net.IP
+}
+
+type BecomePrimaryVmOwnerResponse struct {
+	Error string
+}
+
 type ChangeVmOwnerUsersRequest struct {
 	IpAddress  net.IP
 	OwnerUsers []string
