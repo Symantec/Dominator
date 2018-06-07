@@ -87,6 +87,11 @@ func (m *Manager) AddSubnets(subnets []proto.Subnet) error {
 	return m.addSubnets(subnets)
 }
 
+func (m *Manager) BecomePrimaryVmOwner(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	return m.becomePrimaryVmOwner(ipAddr, authInfo)
+}
+
 func (m *Manager) ChangeVmOwnerUsers(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, extraUsers []string) error {
 	return m.changeVmOwnerUsers(ipAddr, authInfo, extraUsers)

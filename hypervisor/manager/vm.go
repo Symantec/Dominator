@@ -192,6 +192,32 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest) (*vmInfoType, error) {
 	return vm, nil
 }
 
+func (m *Manager) becomePrimaryVmOwner(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) error {
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if vm.OwnerUsers[0] == authInfo.Username {
+		return errors.New("you already are the primary owner")
+	}
+	ownerUsers := make([]string, 1, len(vm.OwnerUsers[0]))
+	ownerUsers[0] = authInfo.Username
+	for _, user := range vm.OwnerUsers {
+		if user != authInfo.Username {
+			ownerUsers = append(ownerUsers, user)
+		}
+	}
+	vm.OwnerUsers = ownerUsers
+	vm.ownerUsers = make(map[string]struct{}, len(ownerUsers))
+	for _, user := range ownerUsers {
+		vm.ownerUsers[user] = struct{}{}
+	}
+	vm.writeAndSendInfo()
+	return nil
+}
+
 func (m *Manager) changeVmOwnerUsers(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, extraUsers []string) error {
 	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
