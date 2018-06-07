@@ -81,6 +81,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  add-address MACaddr [IPaddr]")
 	fmt.Fprintln(os.Stderr, "  add-subnet ID IPgateway IPmask DNSserver...")
+	fmt.Fprintln(os.Stderr, "  become-primary-vm-owner IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-owner-users IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-tags IPaddr")
 	fmt.Fprintln(os.Stderr, "  create-vm")
@@ -120,6 +121,7 @@ type subcommand struct {
 var subcommands = []subcommand{
 	{"add-address", 1, 2, addAddressSubcommand},
 	{"add-subnet", 4, -1, addSubnetSubcommand},
+	{"become-primary-vm-owner", 1, 1, becomePrimaryVmOwnerSubcommand},
 	{"change-vm-owner-users", 1, 1, changeVmOwnerUsersSubcommand},
 	{"change-vm-tags", 1, 1, changeVmTagsSubcommand},
 	{"create-vm", 0, 0, createVmSubcommand},
