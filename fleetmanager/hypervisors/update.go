@@ -20,6 +20,8 @@ import (
 var (
 	desiredAddressPoolSize = flag.Uint("desiredAddressPoolSize", 16,
 		"Desired number of free addresses to maintain in Hypervisor")
+	manageHypervisors = flag.Bool("manageHypervisors", false,
+		"If true, manage hypervisors")
 	maximumAddressPoolSize = flag.Uint("maximumAddressPoolSize", 24,
 		"Maximum number of free addresses to maintain in Hypervisor")
 	minimumAddressPoolSize = flag.Uint("minimumAddressPoolSize", 8,
@@ -275,10 +277,12 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 
 func (m *Manager) processHypervisorUpdate(h *hypervisorType,
 	update proto.Update, firstUpdate bool) {
-	if update.HaveSubnets { // Must do subnets first.
-		m.processSubnetsUpdates(h, update.Subnets)
+	if *manageHypervisors {
+		if update.HaveSubnets { // Must do subnets first.
+			m.processSubnetsUpdates(h, update.Subnets)
+		}
+		m.processAddressPoolUpdates(h, update)
 	}
-	m.processAddressPoolUpdates(h, update)
 	if update.HaveVMs {
 		if firstUpdate {
 			m.processInitialVMs(h, update.VMs)

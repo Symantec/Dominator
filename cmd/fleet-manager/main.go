@@ -14,6 +14,7 @@ import (
 	"github.com/Symantec/Dominator/fleetmanager/rpcd"
 	"github.com/Symantec/Dominator/fleetmanager/topology"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
@@ -52,6 +53,10 @@ func doCheck() {
 }
 
 func main() {
+	if err := loadflags.LoadForDaemon("fleet-manager"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	flag.Parse()
 	if *checkTopology {
 		doCheck()

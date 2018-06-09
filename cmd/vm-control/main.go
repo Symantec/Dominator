@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/cmdlogger"
@@ -150,6 +151,10 @@ var subcommands = []subcommand{
 }
 
 func main() {
+	if err := loadflags.LoadForCli("vm-control"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {
