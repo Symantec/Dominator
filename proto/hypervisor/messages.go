@@ -3,6 +3,8 @@ package hypervisor
 import (
 	"net"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/tags"
 )
 
 const (
@@ -65,7 +67,7 @@ type ChangeVmOwnerUsersResponse struct {
 
 type ChangeVmTagsRequest struct {
 	IpAddress net.IP
-	Tags      map[string]string
+	Tags      tags.Tags
 }
 
 type ChangeVmTagsResponse struct {
@@ -309,10 +311,10 @@ type VmInfo struct {
 	OwnerUsers    []string `json:",omitempty"`
 	SpreadVolumes bool     `json:",omitempty"`
 	State         State
-	Tags          map[string]string `json:",omitempty"`
-	SubnetId      string            `json:",omitempty"`
-	Uncommitted   bool              `json:",omitempty"`
-	Volumes       []Volume          `json:",omitempty"`
+	Tags          tags.Tags `json:",omitempty"`
+	SubnetId      string    `json:",omitempty"`
+	Uncommitted   bool      `json:",omitempty"`
+	Volumes       []Volume  `json:",omitempty"`
 }
 
 type Volume struct {
