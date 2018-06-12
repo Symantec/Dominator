@@ -5,11 +5,12 @@ import (
 	"sync"
 
 	"github.com/Symantec/Dominator/lib/log"
+	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 type IP [4]byte
 
-type IpStorer struct {
+type Storer struct {
 	topDir          string
 	logger          log.DebugLogger
 	mutex           sync.RWMutex
@@ -17,33 +18,51 @@ type IpStorer struct {
 	ipToHypervisor  map[IP]IP   // Key: IP address, value: hypervisor.
 }
 
-func New(topDir string, logger log.DebugLogger) (*IpStorer, error) {
-	ipStorer := &IpStorer{
+func New(topDir string, logger log.DebugLogger) (*Storer, error) {
+	storer := &Storer{
 		topDir:          topDir,
 		logger:          logger,
 		hypervisorToIPs: make(map[IP][]IP),
 		ipToHypervisor:  make(map[IP]IP),
 	}
-	if err := ipStorer.load(); err != nil {
+	if err := storer.load(); err != nil {
 		return nil, err
 	}
-	return ipStorer, nil
+	return storer, nil
 }
 
-func (s *IpStorer) AddIPsForHypervisor(hypervisor net.IP,
+func (s *Storer) AddIPsForHypervisor(hypervisor net.IP,
 	addrs []net.IP) error {
 	return s.addIPsForHypervisor(hypervisor, addrs)
 }
 
-func (s *IpStorer) CheckIpIsRegistered(addr net.IP) (bool, error) {
+func (s *Storer) CheckIpIsRegistered(addr net.IP) (bool, error) {
 	return s.checkIpIsRegistered(addr)
 }
 
-func (s *IpStorer) SetIPsForHypervisor(hypervisor net.IP,
+func (s *Storer) DeleteVm(hypervisor net.IP, ipAddr string) error {
+	return s.deleteVm(hypervisor, ipAddr)
+}
+
+func (s *Storer) ListVMs(hypervisor net.IP) ([]string, error) {
+	return s.listVMs(hypervisor)
+}
+
+func (s *Storer) ReadVm(hypervisor net.IP,
+	ipAddr string) (*proto.VmInfo, error) {
+	return s.readVm(hypervisor, ipAddr)
+}
+
+func (s *Storer) SetIPsForHypervisor(hypervisor net.IP,
 	addrs []net.IP) error {
 	return s.setIPsForHypervisor(hypervisor, addrs)
 }
 
-func (s *IpStorer) UnregisterHypervisor(hypervisor net.IP) error {
+func (s *Storer) UnregisterHypervisor(hypervisor net.IP) error {
 	return s.unregisterHypervisor(hypervisor)
+}
+
+func (s *Storer) WriteVm(hypervisor net.IP, ipAddr string,
+	vmInfo proto.VmInfo) error {
+	return s.writeVm(hypervisor, ipAddr, vmInfo)
 }

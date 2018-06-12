@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-func (s *IpStorer) checkIpIsRegistered(addr net.IP) (bool, error) {
+func (s *Storer) checkIpIsRegistered(addr net.IP) (bool, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	if ip, err := netIpToIp(addr); err != nil {
