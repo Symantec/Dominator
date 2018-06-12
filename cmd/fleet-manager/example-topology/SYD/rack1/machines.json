@@ -1,0 +1,14 @@
+[
+    {
+        "Hostname": "row00-rack1.syd.prod.company.com"
+    },
+    {
+        "Hostname": "row01-rack1.syd.prod.company.com"
+    },
+    {
+        "Hostname": "row02-rack1.syd.prod.company.com"
+    },
+    {
+        "Hostname": "row03-rack1.syd.prod.company.com"
+    }
+]

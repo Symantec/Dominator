@@ -1,0 +1,13 @@
+[
+    {
+        "Id": "Egress",
+        "IpGateway": "192.168.0.1",
+        "IpMask": "255.255.255.0",
+        "DomainName": "nyc.prod.company.com",
+        "DomainNameServers": [
+            "172.16.0.2",
+            "172.16.0.3"
+        ],
+	"VlanId": 30
+    }
+]
