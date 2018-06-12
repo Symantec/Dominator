@@ -1,0 +1,24 @@
+[
+    {
+        "Id": "Production",
+        "IpGateway": "10.10.0.1",
+        "IpMask": "255.255.255.0",
+        "DomainName": "sjc.prod.company.com",
+        "DomainNameServers": [
+            "172.16.10.2",
+            "172.16.10.3"
+        ],
+	"VlanId": 10
+    },
+    {
+        "Id": "Infrastructure",
+        "IpGateway": "172.16.10.1",
+        "IpMask": "255.255.255.0",
+        "DomainName": "sjc.prod.company.com",
+        "DomainNameServers": [
+            "172.16.10.2",
+            "172.16.10.3"
+        ],
+	"VlanId": 20
+    }
+]

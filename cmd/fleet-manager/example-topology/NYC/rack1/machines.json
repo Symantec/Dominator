@@ -1,0 +1,62 @@
+[
+    {
+        "Hostname": "row00-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row01-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row02-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row03-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row04-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row05-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row06-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row07-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row08-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row09-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row10-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row11-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row12-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row13-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row14-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row15-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row16-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row17-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row18-rack1.nyc.prod.company.com"
+    },
+    {
+        "Hostname": "row19-rack1.nyc.prod.company.com"
+    }
+]

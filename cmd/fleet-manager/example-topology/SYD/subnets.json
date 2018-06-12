@@ -1,0 +1,35 @@
+[
+    {
+        "Id": "Production",
+        "IpGateway": "10.20.0.1",
+        "IpMask": "255.255.255.0",
+        "DomainName": "syd.prod.company.com",
+        "DomainNameServers": [
+            "172.16.20.2",
+            "172.16.20.3"
+        ],
+	"VlanId": 10
+    },
+    {
+        "Id": "Infrastructure",
+        "IpGateway": "172.16.20.1",
+        "IpMask": "255.255.255.0",
+        "DomainName": "syd.prod.company.com",
+        "DomainNameServers": [
+            "172.16.20.2",
+            "172.16.20.3"
+        ],
+	"VlanId": 20
+    },
+    {
+        "Id": "Egress",
+        "IpGateway": "192.168.2.1",
+        "IpMask": "255.255.255.0",
+        "DomainName": "syd.prod.company.com",
+        "DomainNameServers": [
+            "172.16.20.2",
+            "172.16.20.3"
+        ],
+	"VlanId": 30
+    }
+]
