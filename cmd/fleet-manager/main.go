@@ -74,11 +74,12 @@ func main() {
 	if err != nil {
 		logger.Fatalf("Cannot watch for topology: %s\n", err)
 	}
-	ipStorer, err := fsstorer.New(filepath.Join(*stateDir, "ip-db"), logger)
+	storer, err := fsstorer.New(filepath.Join(*stateDir, "hypervisor-db"),
+		logger)
 	if err != nil {
-		logger.Fatalf("Cannot create IP DB: %s\n", err)
+		logger.Fatalf("Cannot create DB: %s\n", err)
 	}
-	hyperManager, err := hypervisors.New(ipStorer, logger)
+	hyperManager, err := hypervisors.New(storer, logger)
 	if err != nil {
 		logger.Fatalf("Cannot create hypervisors manager: %s\n", err)
 	}

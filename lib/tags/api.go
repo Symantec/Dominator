@@ -19,6 +19,10 @@ func (tags Tags) Copy() Tags {
 	return tags.copy()
 }
 
+func (left Tags) Equal(right Tags) bool {
+	return left.equal(right)
+}
+
 func (to Tags) Merge(from Tags) {
 	to.merge(from)
 }

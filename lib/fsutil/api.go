@@ -96,6 +96,13 @@ func MakeMutable(pathname ...string) error {
 	return makeMutable(pathname...)
 }
 
+// ReadDirnames will open the directory named dirname and will read the entries
+// in that directory. If ignoreMissing is true, no error is returned if the
+// directory does not exist.
+func ReadDirnames(dirname string, ignoreMissing bool) ([]string, error) {
+	return readDirnames(dirname, ignoreMissing)
+}
+
 // WaitFile waits for the file given by pathname to become available to read and
 // yields a io.ReadCloser when available, or an error if the timeout is
 // exceeded or an error (other than file not existing) is encountered. A

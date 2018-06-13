@@ -72,7 +72,7 @@ func (m *Manager) findFreeIPs(tSubnets []*topology.Subnet,
 		initialIp := copyIp(subnet.nextIp)
 		for numNeeded > 0 {
 			if !checkIpReserved(subnet.subnet, subnet.nextIp) {
-				registered, err := m.ipStorer.CheckIpIsRegistered(subnet.nextIp)
+				registered, err := m.storer.CheckIpIsRegistered(subnet.nextIp)
 				if err != nil {
 					return nil, err
 				}

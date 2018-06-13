@@ -12,12 +12,12 @@ import (
 
 const (
 	dirPerms = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP |
-		syscall.S_IXOTH
+		syscall.S_IROTH | syscall.S_IXOTH
 	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP |
 		syscall.S_IROTH
 )
 
-func (s *IpStorer) addIPsForHypervisor(hypervisor net.IP,
+func (s *Storer) addIPsForHypervisor(hypervisor net.IP,
 	netAddrs []net.IP) error {
 	hypervisorIP, err := netIpToIp(hypervisor)
 	if err != nil {
@@ -59,7 +59,7 @@ func (s *IpStorer) addIPsForHypervisor(hypervisor net.IP,
 	return nil
 }
 
-func (s *IpStorer) getHypervisorDirectory(hypervisor IP) string {
+func (s *Storer) getHypervisorDirectory(hypervisor IP) string {
 	return filepath.Join(s.topDir,
 		strconv.FormatUint(uint64(hypervisor[0]), 10),
 		strconv.FormatUint(uint64(hypervisor[1]), 10),
@@ -67,7 +67,7 @@ func (s *IpStorer) getHypervisorDirectory(hypervisor IP) string {
 		strconv.FormatUint(uint64(hypervisor[3]), 10))
 }
 
-func (s *IpStorer) setIPsForHypervisor(hypervisor net.IP,
+func (s *Storer) setIPsForHypervisor(hypervisor net.IP,
 	netAddrs []net.IP) error {
 	hypervisorIP, err := netIpToIp(hypervisor)
 	if err != nil {
@@ -113,7 +113,7 @@ func (s *IpStorer) setIPsForHypervisor(hypervisor net.IP,
 	return nil
 }
 
-func (s *IpStorer) unregisterHypervisor(hypervisor net.IP) error {
+func (s *Storer) unregisterHypervisor(hypervisor net.IP) error {
 	hypervisorIP, err := netIpToIp(hypervisor)
 	if err != nil {
 		return err
@@ -131,7 +131,7 @@ func (s *IpStorer) unregisterHypervisor(hypervisor net.IP) error {
 	return nil
 }
 
-func (s *IpStorer) writeIPsForHypervisor(hypervisor IP, ipList []IP,
+func (s *Storer) writeIPsForHypervisor(hypervisor IP, ipList []IP,
 	flags int) error {
 	dirname := s.getHypervisorDirectory(hypervisor)
 	filename := filepath.Join(dirname, "ip-list.raw")

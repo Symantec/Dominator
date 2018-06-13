@@ -28,6 +28,18 @@ func (tags Tags) copy() Tags {
 	return newTags
 }
 
+func (left Tags) equal(right Tags) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for key, leftValue := range left {
+		if leftValue != right[key] {
+			return false
+		}
+	}
+	return true
+}
+
 func (to Tags) merge(from Tags) {
 	for key, value := range from {
 		to[key] = value

@@ -50,7 +50,7 @@ func (m *Manager) updateTopology(t *topology.Topology) {
 	}
 	deleteList := m.updateTopologyLocked(t, machines)
 	for _, hypervisor := range deleteList {
-		m.ipStorer.UnregisterHypervisor(hypervisor.machine.HostIpAddress)
+		m.storer.UnregisterHypervisor(hypervisor.machine.HostIpAddress)
 		hypervisor.delete()
 	}
 }
@@ -124,6 +124,23 @@ func (h *hypervisorType) isDeleteScheduled() bool {
 }
 
 func (m *Manager) manageHypervisorLoop(h *hypervisorType, hostname string) {
+	vmList, err := m.storer.ListVMs(h.machine.HostIpAddress)
+	if err != nil {
+		h.logger.Printf("error reading VMs, not managing hypervisor: %s", err)
+		return
+	}
+	for _, vmIpAddr := range vmList {
+		pVmInfo, err := m.storer.ReadVm(h.machine.HostIpAddress, vmIpAddr)
+		if err != nil {
+			h.logger.Printf("error reading VM: %s, not managing hypervisor: %s",
+				vmIpAddr, err)
+		}
+		vmInfo := &vmInfoType{vmIpAddr, *pVmInfo, h}
+		h.vms[vmIpAddr] = vmInfo
+		m.mutex.Lock()
+		m.vms[vmIpAddr] = vmInfo
+		m.mutex.Unlock()
+	}
 	for !h.isDeleteScheduled() {
 		sleepTime := m.manageHypervisor(h, hostname)
 		time.Sleep(sleepTime)
@@ -196,7 +213,7 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 		for _, address := range update.AddressPool {
 			addresses = append(addresses, address.IpAddress)
 		}
-		err := m.ipStorer.SetIPsForHypervisor(h.machine.HostIpAddress,
+		err := m.storer.SetIPsForHypervisor(h.machine.HostIpAddress,
 			addresses)
 		if err != nil {
 			h.logger.Println(err)
@@ -244,7 +261,7 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 				h.logger.Println(err)
 				return
 			}
-			m.ipStorer.AddIPsForHypervisor(h.machine.HostIpAddress, freeIPs)
+			m.storer.AddIPsForHypervisor(h.machine.HostIpAddress, freeIPs)
 			h.logger.Debugf(0, "replenished pool with %d addresses\n",
 				len(addresses))
 		} else if update.NumFreeAddresses > *maximumAddressPoolSize {
@@ -298,22 +315,11 @@ func (m *Manager) processInitialVMs(h *hypervisorType,
 	defer m.mutex.Unlock()
 	vmsToDelete := make(map[string]struct{}, len(h.vms))
 	for ipAddr := range h.vms {
-		vmsToDelete[ipAddr] = struct{}{}
-	}
-	for ipAddr, protoVm := range vms {
-		delete(vmsToDelete, ipAddr)
-		if vm, ok := h.vms[ipAddr]; ok {
-			vm.VmInfo = *protoVm
-		} else {
-			vm := &vmInfoType{ipAddr, *protoVm, h}
-			h.vms[ipAddr] = vm
-			m.vms[ipAddr] = vm
+		if _, ok := vms[ipAddr]; !ok {
+			vmsToDelete[ipAddr] = struct{}{}
 		}
 	}
-	for ipAddr := range vmsToDelete {
-		delete(h.vms, ipAddr)
-		delete(m.vms, ipAddr)
-	}
+	m.processVmUpdatesWithLock(h, vms, vmsToDelete)
 }
 
 func (m *Manager) processSubnetsUpdates(h *hypervisorType,
@@ -373,18 +379,49 @@ func (m *Manager) processVmUpdates(h *hypervisorType,
 	updateVMs map[string]*proto.VmInfo) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
+	m.processVmUpdatesWithLock(h, updateVMs, make(map[string]struct{}))
+}
+
+func (m *Manager) processVmUpdatesWithLock(h *hypervisorType,
+	updateVMs map[string]*proto.VmInfo, vmsToDelete map[string]struct{}) {
 	for ipAddr, protoVm := range updateVMs {
 		if len(protoVm.Volumes) < 1 {
-			delete(h.vms, ipAddr)
-			delete(m.vms, ipAddr)
+			vmsToDelete[ipAddr] = struct{}{}
 		} else {
 			if vm, ok := h.vms[ipAddr]; ok {
+				if !vm.VmInfo.Equal(protoVm) {
+					err := m.storer.WriteVm(h.machine.HostIpAddress, ipAddr,
+						*protoVm)
+					if err != nil {
+						h.logger.Printf("error writing VM: %s: %s\n",
+							ipAddr, err)
+					} else {
+						h.logger.Debugf(0, "updated VM: %s\n", ipAddr)
+					}
+				}
 				vm.VmInfo = *protoVm
 			} else {
 				vm := &vmInfoType{ipAddr, *protoVm, h}
 				h.vms[ipAddr] = vm
 				m.vms[ipAddr] = vm
+				err := m.storer.WriteVm(h.machine.HostIpAddress, ipAddr,
+					*protoVm)
+				if err != nil {
+					h.logger.Printf("error writing VM: %s: %s\n", ipAddr, err)
+				} else {
+					h.logger.Debugf(0, "wrote VM: %s\n", ipAddr)
+				}
 			}
+		}
+	}
+	for ipAddr := range vmsToDelete {
+		delete(h.vms, ipAddr)
+		delete(m.vms, ipAddr)
+		err := m.storer.DeleteVm(h.machine.HostIpAddress, ipAddr)
+		if err != nil {
+			h.logger.Printf("error deleting VM: %s: %s\n", ipAddr, err)
+		} else {
+			h.logger.Debugf(0, "deleted VM: %s\n", ipAddr)
 		}
 	}
 }

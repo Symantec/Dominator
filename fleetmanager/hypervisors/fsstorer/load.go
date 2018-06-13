@@ -7,11 +7,13 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/Symantec/Dominator/lib/fsutil"
 )
 
 var zeroIP = IP{}
 
-func (s *IpStorer) load() error {
+func (s *Storer) load() error {
 	if err := s.readDirectory(nil, s.topDir); err != nil {
 		return err
 	}
@@ -23,7 +25,7 @@ func (s *IpStorer) load() error {
 	return nil
 }
 
-func (s *IpStorer) readDirectory(partialIP []byte, dirname string) error {
+func (s *Storer) readDirectory(partialIP []byte, dirname string) error {
 	if len(partialIP) == len(zeroIP) {
 		filename := filepath.Join(dirname, "ip-list.raw")
 		if file, err := os.Open(filename); err != nil {
@@ -53,11 +55,8 @@ func (s *IpStorer) readDirectory(partialIP []byte, dirname string) error {
 		}
 		return nil
 	}
-	names, err := readDirnames(dirname)
+	names, err := fsutil.ReadDirnames(dirname, true)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
 		return err
 	}
 	for _, name := range names {
@@ -74,14 +73,4 @@ func (s *IpStorer) readDirectory(partialIP []byte, dirname string) error {
 		}
 	}
 	return nil
-}
-
-func readDirnames(dirname string) ([]string, error) {
-	if file, err := os.Open(dirname); err != nil {
-		return nil, err
-	} else {
-		defer file.Close()
-		dirnames, err := file.Readdirnames(-1)
-		return dirnames, err
-	}
 }
