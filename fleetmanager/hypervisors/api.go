@@ -38,7 +38,7 @@ type IpStorer interface {
 }
 
 type Manager struct {
-	ipStorer    IpStorer
+	storer      Storer
 	logger      log.DebugLogger
 	invertTable [256]byte
 	mutex       sync.RWMutex
@@ -49,6 +49,11 @@ type Manager struct {
 }
 
 type probeStatus uint
+
+type Storer interface {
+	IpStorer
+	VmStorer
+}
 
 type subnetType struct {
 	subnet  *topology.Subnet
@@ -63,12 +68,19 @@ type vmInfoType struct {
 	hypervisor *hypervisorType
 }
 
-func New(ipStorer IpStorer, logger log.DebugLogger) (*Manager, error) {
+type VmStorer interface {
+	DeleteVm(hypervisor net.IP, ipAddr string) error
+	ListVMs(hypervisor net.IP) ([]string, error)
+	ReadVm(hypervisor net.IP, ipAddr string) (*proto.VmInfo, error)
+	WriteVm(hypervisor net.IP, ipAddr string, vmInfo proto.VmInfo) error
+}
+
+func New(storer Storer, logger log.DebugLogger) (*Manager, error) {
 	if err := checkPoolLimits(); err != nil {
 		return nil, err
 	}
 	manager := &Manager{
-		ipStorer:    ipStorer,
+		storer:      storer,
 		logger:      logger,
 		hypervisors: make(map[string]*hypervisorType),
 		subnets:     make(map[string]*subnetType),
