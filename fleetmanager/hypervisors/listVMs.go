@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/format"
@@ -75,12 +76,20 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 		case url.OutputTypeText:
 			fmt.Fprintln(writer, vm.ipAddr)
 		case url.OutputTypeHtml:
+			var rowStyle []string
+			if vm.hypervisor.probeStatus != probeStatusGood {
+				rowStyle = append(rowStyle, "color:grey")
+			}
 			if vm.Uncommitted {
-				fmt.Fprintln(writer, "  <tr style=\"background-color:yellow\">")
+				rowStyle = append(rowStyle, "background-color:yellow")
 			} else if topology.CheckIfIpIsReserved(vm.ipAddr) {
-				fmt.Fprintln(writer, "  <tr style=\"background-color:orange\">")
-			} else {
+				rowStyle = append(rowStyle, "background-color:orange")
+			}
+			if len(rowStyle) < 1 {
 				fmt.Fprintln(writer, "  <tr>")
+			} else {
+				fmt.Fprintf(writer, "  <tr style=\"%s\">\n",
+					strings.Join(rowStyle, ";"))
 			}
 			fmt.Fprintf(writer,
 				"    <td><a href=\"http://%s:%d/showVM?%s\">%s</a></td>\n",
