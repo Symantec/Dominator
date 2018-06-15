@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -11,9 +12,8 @@ import (
 
 func findHypervisor(vmIpAddr net.IP) (string, error) {
 	if *fleetManagerHostname != "" {
-		cm := fmt.Sprintf("%s:%d", *fleetManagerHostname,
-			*fleetManagerPortNum)
-		client, err := srpc.DialHTTP("tcp", cm, 0)
+		cm := fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum)
+		client, err := srpc.DialHTTP("tcp", cm, time.Second*10)
 		if err != nil {
 			return "", err
 		}
