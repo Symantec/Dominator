@@ -11,6 +11,13 @@ func (m *Manager) writeHtml(writer io.Writer) {
 		fmt.Fprintln(writer, err, "<br>")
 		return
 	}
+	if *manageHypervisors {
+		fmt.Fprintln(writer,
+			`Hypervisors <font color="green">are</font> being managed by this instance<br>`)
+	} else {
+		fmt.Fprintln(writer,
+			`<font color="grey">Hypervisors are not being managed by this instance</font><br>`)
+	}
 	numMachines := t.GetNumMachines()
 	var numConnected uint
 	m.mutex.RLock()
