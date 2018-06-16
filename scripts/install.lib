@@ -77,7 +77,7 @@ install_all ()
     local -r service="$1"
 
     $echo mkdir -p /etc/ssl/$service || exit
-    $echo cp -p ssl/CA*.pem /etc/ssl || exit
+    $echo cp -p ssl/CA*.pem ssl/IdentityCA*.pem /etc/ssl || exit
     $echo cp -p ssl/$service/*.pem /etc/ssl/$service || exit
     $echo mkdir -p /usr/local/sbin || exit
     $echo cp -p bin/* /usr/local/sbin || exit
