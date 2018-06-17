@@ -9,6 +9,9 @@ dominator.tarball:
 filegen-server.tarball:
 	@./scripts/make-tarball filegen-server -C $(ETCDIR) ssl
 
+fleet-manager.tarball:
+	@./scripts/make-tarball fleet-manager -C $(ETCDIR) ssl
+
 hypervisor.tarball:
 	@./scripts/make-tarball hypervisor -C $(ETCDIR) ssl
 

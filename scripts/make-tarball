@@ -18,9 +18,30 @@ else
     mv "$bin~" "$bin"
 fi
 
+readonly tmpdir="$(mktemp -d '/tmp/make-tarball.XXXXXX')" || exit
+trap "rm -rf $tmpdir" EXIT
+
+if [ -x "$PWD/cmd/$command/install" ]; then
+    cp -p "$PWD/cmd/$command/install" "$tmpdir"
+else
+    cat > "$tmpdir/install" <<EOF
+#! /bin/bash --posix
+
+set -o nounset
+
+cd "\${0%/*}"
+
+. ./scripts/install.lib
+
+install_all $command
+EOF
+    chmod a+rx "$tmpdir/install"
+fi
+
 tar --owner=0 --group=0 -czf $target \
     init.d/$command.* \
     scripts/install.lib \
     "$@" \
-    -C $PWD/cmd/$command health-check.yml install \
+    -C $PWD/cmd/$command health-check.yml \
+    -C "$tmpdir" install \
     -C $GOPATH bin/$command
