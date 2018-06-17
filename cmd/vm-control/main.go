@@ -162,7 +162,7 @@ func main() {
 		os.Exit(2)
 	}
 	logger = cmdlogger.New()
-	if err := setupclient.SetupTls(true); err != nil {
+	if err := setupclient.SetupTls(false); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
