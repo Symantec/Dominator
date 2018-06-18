@@ -54,6 +54,10 @@ func Fallocate(fd int, mode uint32, off int64, len int64) error {
 	return fallocate(fd, mode, off, len)
 }
 
+func Ioctl(fd int, request, argp uintptr) error {
+	return ioctl(fd, request, argp)
+}
+
 func Lstat(path string, statbuf *Stat_t) error {
 	var rawStatbuf syscall.Stat_t
 	if err := syscall.Lstat(path, &rawStatbuf); err != nil {
