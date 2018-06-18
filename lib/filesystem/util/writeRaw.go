@@ -193,19 +193,11 @@ func getDeviceSize(device string) (uint64, error) {
 	}
 	defer syscall.Close(fd)
 	var blk uint64
-	if err := ioctl(fd, BLKGETSIZE, uintptr(unsafe.Pointer(&blk))); err != nil {
+	err = wsyscall.Ioctl(fd, BLKGETSIZE, uintptr(unsafe.Pointer(&blk)))
+	if err != nil {
 		return 0, err
 	}
 	return blk << 9, nil
-}
-
-func ioctl(fd int, request, argp uintptr) error {
-	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), request,
-		argp)
-	if errno != 0 {
-		return os.NewSyscallError("ioctl", errno)
-	}
-	return nil
 }
 
 func makeAndWriteRoot(fs *filesystem.FileSystem,
