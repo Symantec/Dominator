@@ -56,7 +56,14 @@ func Setup(imdb *scanner.ImageDataBase, replicationMaster string,
 		archiveMode:         *archiveMode,
 		imagesBeingInjected: make(map[string]struct{}),
 	}
-	srpc.RegisterName("ImageServer", srpcObj)
+	srpc.RegisterNameWithOptions("ImageServer", srpcObj, srpc.ReceiverOptions{
+		PublicMethods: []string{
+			"CheckDirectory",
+			"CheckImage",
+			"FindLatestImage",
+			"ListDirectories",
+			"ListImages",
+		}})
 	if replicationMaster != "" {
 		go srpcObj.replicator()
 	}
