@@ -17,6 +17,7 @@ const (
 
 	AssignedOIDBase        = "1.3.6.1.4.1.9586.100.7"
 	PermittedMethodListOID = AssignedOIDBase + ".1"
+	GroupListOID           = AssignedOIDBase + ".2"
 )
 
 var RequiredPaths = map[string]rune{
