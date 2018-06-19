@@ -2,6 +2,7 @@ package net
 
 import (
 	"net"
+	"os"
 	"time"
 )
 
@@ -30,6 +31,21 @@ type TCPConn interface {
 func BindAndDial(network, localAddr, remoteAddr string, timeout time.Duration) (
 	net.Conn, error) {
 	return bindAndDial(network, localAddr, remoteAddr, timeout)
+}
+
+// CreateTapDevice will create a "tap" network device with a randomly chosen
+// interface name. The tap device file and the interface name are returned on
+// success, else an error is returned. The device will be destroyed when the
+// file is closed.
+func CreateTapDevice() (*os.File, string, error) {
+	return createTapDevice()
+}
+
+// GetBridgeVlanId will get the VLAN Id associated with the uplink EtherNet
+// interface for the specified bridge interface. If there is no uplink then the
+// returned VLAN Id will be -1.
+func GetBridgeVlanId(bridgeIf string) (int, error) {
+	return getBridgeVlanId(bridgeIf)
 }
 
 // ListBridges will return a list of EtherNet (layer 2) bridges.
