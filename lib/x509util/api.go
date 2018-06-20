@@ -3,7 +3,19 @@
 */
 package x509util
 
-import "crypto/x509"
+import (
+	"crypto/x509"
+
+	"github.com/Symantec/Dominator/lib/constants"
+)
+
+// GetGroupList decodes the list of groups in the certificate.
+// The group names are returned as keys in a map. An empty map indicates no
+// group listed. If there is a problem parsing the information an error is
+// returned.
+func GetGroupList(cert *x509.Certificate) (map[string]struct{}, error) {
+	return getList(cert, constants.GroupListOID)
+}
 
 // GetPermittedMethods decodes the list of permitted methods in the certificate.
 // The permitted methods are returned as keys in a map. An empty map indicates
