@@ -74,8 +74,19 @@ func main() {
 		logger.Fatalf("Cannot list bridges: %s\n", err)
 	}
 	bridgeNames := make([]string, 0, len(bridges))
+	vlanIdToBridge := make(map[uint]string)
 	for _, bridge := range bridges {
-		bridgeNames = append(bridgeNames, bridge.Name)
+		if vlanId, err := net.GetBridgeVlanId(bridge.Name); err != nil {
+			logger.Fatalf("Cannot get VLAN Id for bridge: %s: %s\n",
+				bridge.Name, err)
+		} else if vlanId < 0 {
+			logger.Printf("Bridge: %s has no EtherNet port, ignoring\n",
+				bridge.Name)
+		} else {
+			bridgeNames = append(bridgeNames, bridge.Name)
+			vlanIdToBridge[uint(vlanId)] = bridge.Name
+			logger.Printf("Bridge: %s, VLAN Id: %d\n", bridge.Name, vlanId)
+		}
 	}
 	dhcpServer, err := dhcpd.New(bridgeNames, logger)
 	if err != nil {
@@ -89,6 +100,7 @@ func main() {
 		ShowVgaConsole:    *showVGA,
 		StateDir:          *stateDir,
 		Username:          *username,
+		VlanIdToBridge:    vlanIdToBridge,
 		VolumeDirectories: volumeDirectories,
 	})
 	if err != nil {

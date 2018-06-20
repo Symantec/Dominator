@@ -46,6 +46,7 @@ type StartOptions struct {
 	ShowVgaConsole     bool
 	StateDir           string
 	Username           string
+	VlanIdToBridge     map[uint]string // Key: VLAN ID, value: bridge interface.
 	VolumeDirectories  []string
 }
 
