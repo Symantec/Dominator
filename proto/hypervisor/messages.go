@@ -290,6 +290,7 @@ type Subnet struct {
 	IpMask            net.IP // net.IPMask can't be JSON {en,de}coded.
 	DomainName        string `json:",omitempty"`
 	DomainNameServers []net.IP
+	VlanId            uint `json:",omitempty"`
 }
 
 type TraceVmMetadataRequest struct {
