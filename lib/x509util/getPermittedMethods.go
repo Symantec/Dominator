@@ -9,10 +9,10 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 )
 
-func getPermittedMethods(cert *x509.Certificate) (map[string]struct{}, error) {
-	methodList := make(map[string]struct{})
+func getList(cert *x509.Certificate, oid string) (map[string]struct{}, error) {
+	list := make(map[string]struct{})
 	for _, extension := range cert.Extensions {
-		if extension.Id.String() != constants.PermittedMethodListOID {
+		if extension.Id.String() != oid {
 			continue
 		}
 		var lines []string
@@ -21,17 +21,25 @@ func getPermittedMethods(cert *x509.Certificate) (map[string]struct{}, error) {
 			return nil, err
 		}
 		if len(rest) > 0 {
-			return nil, fmt.Errorf("%d extra bytes in method extension",
-				len(rest))
+			return nil, fmt.Errorf("%d extra bytes in extension", len(rest))
 		}
-		for _, sm := range lines {
-			if strings.Count(sm, ".") == 1 {
-				methodList[sm] = struct{}{}
-			} else {
-				return nil, fmt.Errorf("bad line: \"%s\"", sm)
-			}
+		for _, line := range lines {
+			list[line] = struct{}{}
 		}
-		return methodList, nil
+		return list, nil
+	}
+	return list, nil
+}
+
+func getPermittedMethods(cert *x509.Certificate) (map[string]struct{}, error) {
+	methodList, err := getList(cert, constants.PermittedMethodListOID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting method list: %s", err)
+	}
+	for method := range methodList {
+		if strings.Count(method, ".") != 1 {
+			return nil, fmt.Errorf("bad line: \"%s\"", method)
+		}
 	}
 	return methodList, nil
 }

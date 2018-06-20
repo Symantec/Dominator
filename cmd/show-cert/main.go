@@ -50,16 +50,31 @@ func showCert(filename string) {
 	}
 	if len(permittedMethods) > 0 {
 		fmt.Println("  Permitted methods:")
-		sortedList := make([]string, 0, len(permittedMethods))
-		for method := range permittedMethods {
-			sortedList = append(sortedList, method)
-		}
-		sort.Strings(sortedList)
-		for _, method := range sortedList {
-			fmt.Println("   ", method)
-		}
+		showList(permittedMethods)
 	} else {
 		fmt.Println("  No methods are permitted")
+	}
+	groupList, err := x509util.GetGroupList(cert)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to get group list: %s\n", err)
+		return
+	}
+	if len(groupList) > 0 {
+		fmt.Println("  Group list:")
+		showList(groupList)
+	} else {
+		fmt.Println("  No group memberships")
+	}
+}
+
+func showList(list map[string]struct{}) {
+	sortedList := make([]string, 0, len(list))
+	for entry := range list {
+		sortedList = append(sortedList, entry)
+	}
+	sort.Strings(sortedList)
+	for _, entry := range sortedList {
+		fmt.Println("   ", entry)
 	}
 }
 
