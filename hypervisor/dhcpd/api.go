@@ -47,3 +47,7 @@ func (s *DhcpServer) MakeRequestChannel(macAddr string) <-chan net.IP {
 func (s *DhcpServer) RemoveLease(ipAddr net.IP) {
 	s.removeLease(ipAddr)
 }
+
+func (s *DhcpServer) RemoveSubnet(subnetId string) {
+	s.removeSubnet(subnetId)
+}

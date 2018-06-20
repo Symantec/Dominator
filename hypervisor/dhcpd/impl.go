@@ -161,6 +161,18 @@ func (s *DhcpServer) removeLease(ipAddr net.IP) {
 	delete(s.ipAddrToMacAddr, ipStr)
 }
 
+func (s *DhcpServer) removeSubnet(subnetId string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	subnets := make([]proto.Subnet, 0, len(s.subnets)-1)
+	for _, subnet := range s.subnets {
+		if subnet.Id != subnetId {
+			subnets = append(subnets, subnet)
+		}
+	}
+	s.subnets = subnets
+}
+
 func (s *DhcpServer) ServeDHCP(req dhcp.Packet, msgType dhcp.MessageType,
 	options dhcp.Options) dhcp.Packet {
 	switch msgType {
