@@ -21,6 +21,7 @@ import (
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/Symantec/Dominator/lib/mbr"
+	libnet "github.com/Symantec/Dominator/lib/net"
 	objclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/tags"
@@ -63,6 +64,29 @@ func copyData(filename string, reader io.Reader, length uint64,
 	defer writer.Flush()
 	_, err = io.CopyN(writer, reader, int64(length))
 	return err
+}
+
+func createTapDevice(bridge string) (*os.File, error) {
+	tapFile, tapName, err := libnet.CreateTapDevice()
+	if err != nil {
+		return nil, fmt.Errorf("error creating tap device: %s", err)
+	}
+	doAutoClose := true
+	defer func() {
+		if doAutoClose {
+			tapFile.Close()
+		}
+	}()
+	cmd := exec.Command("ip", "link", "set", tapName, "up")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("error upping: %s: %s", err, output)
+	}
+	cmd = exec.Command("ip", "link", "set", tapName, "master", bridge)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("error attaching: %s: %s", err, output)
+	}
+	doAutoClose = false
+	return tapFile, nil
 }
 
 func getImage(client *srpc.Client, searchName string,
@@ -1382,13 +1406,33 @@ func (vm *vmInfoType) startVm() error {
 		nCpus++
 	}
 	bootlogFilename := path.Join(vm.dirname, "bootlog")
+	vm.manager.mutex.RLock()
+	subnet, ok := vm.manager.subnets[vm.SubnetId]
+	vm.manager.mutex.RUnlock()
+	if !ok {
+		return fmt.Errorf("subnet: %s not found", vm.SubnetId)
+	}
+	var bridge string
+	var vlanOption string
+	if bridge, ok = vm.manager.VlanIdToBridge[subnet.VlanId]; !ok {
+		if bridge, ok = vm.manager.VlanIdToBridge[0]; !ok {
+			return fmt.Errorf("no usable bridge")
+		} else {
+			vlanOption = fmt.Sprintf(",vlan=%d", subnet.VlanId)
+		}
+	}
+	tapFile, err := createTapDevice(bridge)
+	if err != nil {
+		return fmt.Errorf("error creating tap device: %s", err)
+	}
+	defer tapFile.Close()
 	cmd := exec.Command("qemu-system-x86_64", "-machine", "pc,accel=kvm",
 		"-nodefaults",
 		"-name", vm.ipAddress,
 		"-m", fmt.Sprintf("%dM", vm.MemoryInMiB),
 		"-smp", fmt.Sprintf("cpus=%d", nCpus),
 		"-net", "nic,model=virtio,macaddr="+vm.Address.MacAddress,
-		"-net", "tap",
+		"-net", "tap,fd=3"+vlanOption,
 		"-serial", "file:"+bootlogFilename,
 		"-chroot", "/tmp",
 		"-runas", vm.manager.Username,
@@ -1409,6 +1453,7 @@ func (vm *vmInfoType) startVm() error {
 				",if=virtio")
 	}
 	os.Remove(bootlogFilename)
+	cmd.ExtraFiles = []*os.File{tapFile} // fd=3 for QEMU.
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("error starting QEMU: %s: %s", err, output)
 	}
