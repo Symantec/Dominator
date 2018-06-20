@@ -4,6 +4,6 @@ package meminfo
 
 import "syscall"
 
-func GetMemInfo() (*MemInfo, error) {
-	return nil, syscall.ENOTSUPP
+func getMemInfo() (*MemInfo, error) {
+	return nil, syscall.ENOTSUP
 }
