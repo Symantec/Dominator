@@ -104,6 +104,40 @@ func (state *State) UnmarshalText(text []byte) error {
 	}
 }
 
+func (left *Subnet) Equal(right *Subnet) bool {
+	if left.Id != right.Id {
+		return false
+	}
+	if !left.IpGateway.Equal(right.IpGateway) {
+		return false
+	}
+	if !left.IpMask.Equal(right.IpMask) {
+		return false
+	}
+	if left.DomainName != right.DomainName {
+		return false
+	}
+	if !IpListsEqual(left.DomainNameServers, right.DomainNameServers) {
+		return false
+	}
+	if left.VlanId != right.VlanId {
+		return false
+	}
+	return true
+}
+
+func IpListsEqual(left, right []net.IP) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index, leftIP := range left {
+		if !leftIP.Equal(right[index]) {
+			return false
+		}
+	}
+	return true
+}
+
 func (subnet *Subnet) Shrink() {
 	subnet.IpGateway = shrinkIP(subnet.IpGateway)
 	subnet.IpMask = shrinkIP(subnet.IpMask)

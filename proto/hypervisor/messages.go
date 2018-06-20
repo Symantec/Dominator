@@ -301,6 +301,16 @@ type TraceVmMetadataResponse struct {
 	Error string
 } // A stream of strings (trace paths) follow.
 
+type UpdateSubnetsRequest struct {
+	Add    []Subnet
+	Change []Subnet
+	Delete []string
+}
+
+type UpdateSubnetsResponse struct {
+	Error string
+}
+
 type VmInfo struct {
 	Address       Address
 	Hostname      string `json:",omitempty"`
