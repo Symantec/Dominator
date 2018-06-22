@@ -40,14 +40,6 @@ type Address struct {
 	MacAddress string
 }
 
-type AddSubnetsRequest struct {
-	Subnets []Subnet
-}
-
-type AddSubnetsResponse struct {
-	Error string
-}
-
 type BecomePrimaryVmOwnerRequest struct {
 	IpAddress net.IP
 }
