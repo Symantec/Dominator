@@ -9,8 +9,8 @@ import (
 func (t *srpcType) AddSubnets(conn *srpc.Conn,
 	request hypervisor.AddSubnetsRequest,
 	reply *hypervisor.AddSubnetsResponse) error {
-	response := hypervisor.AddSubnetsResponse{
-		errors.ErrorToString(t.manager.AddSubnets(request.Subnets))}
-	*reply = response
+	*reply = hypervisor.AddSubnetsResponse{
+		errors.ErrorToString(t.manager.UpdateSubnets(
+			hypervisor.UpdateSubnetsRequest{Add: request.Subnets}))}
 	return nil
 }
