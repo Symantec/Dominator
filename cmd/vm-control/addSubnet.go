@@ -33,15 +33,15 @@ func addSubnet(subnetId, ipGateway, ipMask string, nameservers []string,
 		DomainNameServers: nsIPs,
 	}
 	subnet.Shrink()
-	request := proto.AddSubnetsRequest{Subnets: []proto.Subnet{subnet}}
-	var reply proto.AddSubnetsResponse
+	request := proto.UpdateSubnetsRequest{Add: []proto.Subnet{subnet}}
+	var reply proto.UpdateSubnetsResponse
 	clientName := fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum)
 	client, err := srpc.DialHTTP("tcp", clientName, 0)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
-	err = client.RequestReply("Hypervisor.AddSubnets", request, &reply)
+	err = client.RequestReply("Hypervisor.UpdateSubnets", request, &reply)
 	if err != nil {
 		return err
 	}
