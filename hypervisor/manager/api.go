@@ -23,6 +23,7 @@ type DhcpServer interface {
 	MakeAcknowledgmentChannel(ipAddr net.IP) <-chan struct{}
 	MakeRequestChannel(macAddr string) <-chan net.IP
 	RemoveLease(ipAddr net.IP)
+	RemoveSubnet(subnetId string)
 }
 
 type Manager struct {
@@ -85,7 +86,7 @@ func (m *Manager) AddAddressesToPool(addresses []proto.Address) error {
 }
 
 func (m *Manager) AddSubnets(subnets []proto.Subnet) error {
-	return m.addSubnets(subnets)
+	return m.updateSubnets(proto.UpdateSubnetsRequest{Add: subnets})
 }
 
 func (m *Manager) BecomePrimaryVmOwner(ipAddr net.IP,
@@ -241,6 +242,10 @@ func (m *Manager) StartVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 
 func (m *Manager) StopVm(ipAddr net.IP, authInfo *srpc.AuthInformation) error {
 	return m.stopVm(ipAddr, authInfo)
+}
+
+func (m *Manager) UpdateSubnets(request proto.UpdateSubnetsRequest) error {
+	return m.updateSubnets(request)
 }
 
 func (m *Manager) UnregisterVmMetadataNotifier(ipAddr net.IP,
