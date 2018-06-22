@@ -85,10 +85,6 @@ func (m *Manager) AddAddressesToPool(addresses []proto.Address) error {
 	return m.addAddressesToPool(addresses, true)
 }
 
-func (m *Manager) AddSubnets(subnets []proto.Subnet) error {
-	return m.updateSubnets(proto.UpdateSubnetsRequest{Add: subnets})
-}
-
 func (m *Manager) BecomePrimaryVmOwner(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
 	return m.becomePrimaryVmOwner(ipAddr, authInfo)
