@@ -42,6 +42,17 @@ func checkPoolLimits() error {
 	return nil
 }
 
+func (m *Manager) updateHypervisor(h *hypervisorType,
+	machine *topology.Machine) {
+	h.mutex.Lock()
+	h.machine = machine
+	subnets := h.subnets
+	h.mutex.Unlock()
+	if *manageHypervisors && h.probeStatus == probeStatusGood {
+		m.processSubnetsUpdates(h, subnets)
+	}
+}
+
 func (m *Manager) updateTopology(t *topology.Topology) {
 	machines, err := t.ListMachines("")
 	if err != nil {
@@ -67,7 +78,7 @@ func (m *Manager) updateTopologyLocked(t *topology.Topology,
 	for _, machine := range machines {
 		delete(hypervisorsToDelete, machine.Hostname)
 		if hypervisor, ok := m.hypervisors[machine.Hostname]; ok {
-			go hypervisor.update(machine)
+			go m.updateHypervisor(hypervisor, machine)
 		} else {
 			hypervisor := &hypervisorType{
 				logger:  prefixlogger.New(machine.Hostname+": ", m.logger),
@@ -99,12 +110,6 @@ func (m *Manager) updateTopologyLocked(t *topology.Topology,
 		delete(m.subnets, gatewayIp)
 	}
 	return deleteList
-}
-
-func (h *hypervisorType) update(machine *topology.Machine) {
-	h.mutex.Lock()
-	defer h.mutex.Unlock()
-	h.machine = machine
 }
 
 func (h *hypervisorType) delete() {
@@ -296,6 +301,9 @@ func (m *Manager) processHypervisorUpdate(h *hypervisorType,
 	update proto.Update, firstUpdate bool) {
 	if *manageHypervisors {
 		if update.HaveSubnets { // Must do subnets first.
+			h.mutex.Lock()
+			h.subnets = update.Subnets
+			h.mutex.Unlock()
 			m.processSubnetsUpdates(h, update.Subnets)
 		}
 		m.processAddressPoolUpdates(h, update)
@@ -338,19 +346,27 @@ func (m *Manager) processSubnetsUpdates(h *hypervisorType,
 		h.logger.Println(err)
 		return
 	}
-	subnetsToAdd := make([]proto.Subnet, 0)
+	subnetsToDelete := make(map[string]struct{}, len(haveSubnets))
+	for _, subnet := range haveSubnets {
+		subnetsToDelete[subnet.Id] = struct{}{}
+	}
+	var request proto.UpdateSubnetsRequest
 	for _, needSubnet := range needSubnets {
 		if index, ok := haveSubnetsMap[needSubnet.Id]; ok {
 			haveSubnet := haveSubnets[index]
-			if !needSubnet.IpGateway.Equal(haveSubnet.IpGateway) {
-				h.logger.Printf("subnet mismatch: %s: %s!=%s\n",
-					needSubnet.Id, needSubnet.IpGateway, haveSubnet.IpGateway)
+			delete(subnetsToDelete, haveSubnet.Id)
+			if !needSubnet.Equal(&haveSubnet) {
+				request.Change = append(request.Change, needSubnet.Subnet)
 			}
 		} else {
-			subnetsToAdd = append(subnetsToAdd, needSubnet.Subnet)
+			request.Add = append(request.Add, needSubnet.Subnet)
 		}
 	}
-	if len(subnetsToAdd) < 1 {
+	for subnetId := range subnetsToDelete {
+		request.Delete = append(request.Delete, subnetId)
+	}
+	if len(request.Add) < 1 && len(request.Change) < 1 &&
+		len(request.Delete) < 1 {
 		return
 	}
 	client, err := srpc.DialHTTP("tcp",
@@ -362,9 +378,8 @@ func (m *Manager) processSubnetsUpdates(h *hypervisorType,
 		return
 	}
 	defer client.Close()
-	request := proto.AddSubnetsRequest{Subnets: subnetsToAdd}
-	var reply proto.AddSubnetsResponse
-	err = client.RequestReply("Hypervisor.AddSubnets", request, &reply)
+	var reply proto.UpdateSubnetsResponse
+	err = client.RequestReply("Hypervisor.UpdateSubnets", request, &reply)
 	if err == nil {
 		err = errors.New(reply.Error)
 	}
@@ -372,7 +387,8 @@ func (m *Manager) processSubnetsUpdates(h *hypervisorType,
 		h.logger.Println(err)
 		return
 	}
-	h.logger.Debugf(0, "Added %d subnets\n", len(subnetsToAdd))
+	h.logger.Debugf(0, "Added %d, changed %d and deleted %d subnets\n",
+		len(request.Add), len(request.Change), len(request.Delete))
 }
 
 func (m *Manager) processVmUpdates(h *hypervisorType,

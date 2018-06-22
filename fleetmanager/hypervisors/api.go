@@ -27,6 +27,7 @@ type hypervisorType struct {
 	deleteScheduled bool
 	machine         *topology.Machine
 	probeStatus     probeStatus
+	subnets         []proto.Subnet
 	vms             map[string]*vmInfoType // Key: VM IP address.
 }
 
