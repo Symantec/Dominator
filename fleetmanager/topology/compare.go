@@ -1,7 +1,7 @@
 package topology
 
 import (
-	"net"
+	"github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 func (left *Topology) equal(right *Topology) bool {
@@ -59,29 +59,8 @@ func (left *Machine) equal(right *Machine) bool {
 }
 
 func (left *Subnet) equal(right *Subnet) bool {
-	if left.Id != right.Id {
+	if !left.Subnet.Equal(&right.Subnet) {
 		return false
 	}
-	if !left.IpGateway.Equal(right.IpGateway) {
-		return false
-	}
-	if !left.IpMask.Equal(right.IpMask) {
-		return false
-	}
-	if !ipListsEqual(left.DomainNameServers, right.DomainNameServers) {
-		return false
-	}
-	return ipListsEqual(left.ReservedIPs, right.ReservedIPs)
-}
-
-func ipListsEqual(left, right []net.IP) bool {
-	if len(left) != len(right) {
-		return false
-	}
-	for index, leftIP := range left {
-		if !leftIP.Equal(right[index]) {
-			return false
-		}
-	}
-	return true
+	return hypervisor.IpListsEqual(left.ReservedIPs, right.ReservedIPs)
 }

@@ -41,32 +41,72 @@ func getHypervisorSubnet() (proto.Subnet, error) {
 	}, nil
 }
 
-func (m *Manager) addSubnets(subnets []proto.Subnet) error {
-	for index := range subnets {
-		subnets[index].Shrink()
+func (m *Manager) updateSubnets(request proto.UpdateSubnetsRequest) error {
+	for index, subnet := range request.Add {
+		if subnet.Id == "hypervisor" {
+			return fmt.Errorf("cannot add hypervisor subnet")
+		}
+		request.Add[index].Shrink()
 	}
-	if err := m.addSubnetsInternal(subnets); err != nil {
+	for index, subnet := range request.Change {
+		if subnet.Id == "hypervisor" {
+			return fmt.Errorf("cannot change hypervisor subnet")
+		}
+		request.Change[index].Shrink()
+	}
+	for _, subnetId := range request.Delete {
+		if subnetId == "hypervisor" {
+			return fmt.Errorf("cannot delete hypervisor subnet")
+		}
+	}
+	if err := m.updateSubnetsLocked(request); err != nil {
 		return err
 	}
-	for _, subnet := range subnets {
+	for _, subnet := range request.Add {
 		m.DhcpServer.AddSubnet(subnet)
 		for _, ch := range m.subnetChannels {
 			ch <- subnet
 		}
 	}
+	for _, subnet := range request.Change {
+		m.DhcpServer.RemoveSubnet(subnet.Id)
+		m.DhcpServer.AddSubnet(subnet)
+		// TOOO(rgooch): Design a clean way to send updates to the channels.
+	}
+	for _, subnetId := range request.Delete {
+		m.DhcpServer.RemoveSubnet(subnetId)
+		// TOOO(rgooch): Design a clean way to send deletes to the channels.
+	}
 	return nil
 }
 
-func (m *Manager) addSubnetsInternal(subnets []proto.Subnet) error {
+func (m *Manager) updateSubnetsLocked(
+	request proto.UpdateSubnetsRequest) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	for _, subnet := range subnets {
+	for _, subnet := range request.Add {
 		if _, ok := m.subnets[subnet.Id]; ok {
 			return fmt.Errorf("subnet: %s already exists", subnet.Id)
 		}
 	}
-	for _, subnet := range subnets {
+	for _, subnet := range request.Change {
+		if _, ok := m.subnets[subnet.Id]; !ok {
+			return fmt.Errorf("subnet: %s does not exist", subnet.Id)
+		}
+	}
+	for _, subnetId := range request.Delete {
+		if _, ok := m.subnets[subnetId]; !ok {
+			return fmt.Errorf("subnet: %s does not exist", subnetId)
+		}
+	}
+	for _, subnet := range request.Add {
 		m.subnets[subnet.Id] = subnet
+	}
+	for _, subnet := range request.Change {
+		m.subnets[subnet.Id] = subnet
+	}
+	for _, subnetId := range request.Delete {
+		delete(m.subnets, subnetId)
 	}
 	subnetsToWrite := make([]proto.Subnet, 0, len(m.subnets)-1)
 	for _, subnet := range m.subnets {
