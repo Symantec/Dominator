@@ -10,6 +10,12 @@ import (
 	"github.com/Symantec/Dominator/lib/url"
 )
 
+func (h *hypervisorType) getNumVMs() uint {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	return uint(len(h.vms))
+}
+
 func (m *Manager) listHypervisors(topologyDir string, connectedOnly bool) (
 	[]*hypervisorType, error) {
 	m.mutex.RLock()
@@ -71,6 +77,7 @@ func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 	fmt.Fprintln(writer, "    <th>IP Addr</th>")
 	fmt.Fprintln(writer, "    <th>MAC Addr</th>")
 	fmt.Fprintln(writer, "    <th>Location</th>")
+	fmt.Fprintln(writer, "    <th>NumVMs</th>")
 	fmt.Fprintln(writer, "  </tr>")
 	for _, hypervisor := range hypervisors {
 		if matchConnectedOnly &&
@@ -86,6 +93,10 @@ func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 		fmt.Fprintf(writer, "    <td>%s</td>\n", machine.HostMacAddress)
 		location, _ := topology.GetLocationOfMachine(machine.Hostname)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", location)
+		fmt.Fprintf(writer,
+			"    <td><a href=\"http://%s:%d/listVMs\">%d</a></td>\n",
+			machine.Hostname, constants.HypervisorPortNumber,
+			hypervisor.getNumVMs())
 		fmt.Fprintf(writer, "  </tr>\n")
 	}
 	fmt.Fprintln(writer, "</table>")
