@@ -8,6 +8,7 @@ import (
 
 	"github.com/Symantec/Dominator/lib/awsutil"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	liblog "github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/cmdlogger"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
@@ -148,6 +149,10 @@ var subcommands = []subcommand{
 }
 
 func main() {
+	if err := loadflags.LoadForCli("ami-publisher"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	cmdlogger.SetDatestampsDefault(true)
 	flag.Usage = printUsage
 	flag.Parse()
