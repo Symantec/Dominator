@@ -124,6 +124,9 @@ func createInterface(bridge net.Interface, threadId int,
 	logger log.DebugLogger) error {
 	localName := bridge.Name + "-ll"
 	remoteName := bridge.Name + "-lr"
+	if _, err := net.InterfaceByName(localName); err == nil {
+		exec.Command("ip", "link", "delete", localName).Run()
+	}
 	cmd := exec.Command("ip", "link", "add", localName, "type", "veth",
 		"peer", "name", remoteName)
 	if output, err := cmd.CombinedOutput(); err != nil {

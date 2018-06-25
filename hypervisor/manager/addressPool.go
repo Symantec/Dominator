@@ -8,6 +8,7 @@ import (
 	"path"
 
 	"github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
@@ -69,64 +70,46 @@ func (m *Manager) loadAddressPool() error {
 	return nil
 }
 
-func (m *Manager) getFreeAddress(subnetId string) (
-	proto.Address, string, error) {
+func (m *Manager) getFreeAddress(subnetId string,
+	authInfo *srpc.AuthInformation) (proto.Address, string, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	if len(m.addressPool.Free) < 1 {
 		return proto.Address{}, "", errors.New("no free addresses in pool")
 	}
-	if subnetId == "" {
-		address := m.addressPool.Free[0]
-		subnetId = m.getMatchingSubnet(address.IpAddress)
-		if subnetId == "" {
-			return proto.Address{}, "",
-				fmt.Errorf("no subnet matching: %s", address.IpAddress)
+	if subnet, err := m.getSubnetAndAuth(subnetId, authInfo); err != nil {
+		return proto.Address{}, "", err
+	} else {
+		subnetMask := net.IPMask(subnet.IpMask)
+		subnetAddr := subnet.IpGateway.Mask(subnetMask)
+		foundPos := -1
+		for index, address := range m.addressPool.Free {
+			if address.IpAddress.Mask(subnetMask).Equal(subnetAddr) {
+				foundPos = index
+				break
+			}
 		}
-		newPool := addressPoolType{
-			Free:       make([]proto.Address, len(m.addressPool.Free)-1),
+		if foundPos < 0 {
+			return proto.Address{}, "",
+				fmt.Errorf("no free address in subnet: %s", subnetId)
+		}
+		addressPool := addressPoolType{
+			Free:       make([]proto.Address, 0, len(m.addressPool.Free)-1),
 			Registered: m.addressPool.Registered,
 		}
-		copy(newPool.Free, m.addressPool.Free[1:])
-		if err := m.writeAddressPool(newPool, false); err != nil {
+		for index, address := range m.addressPool.Free {
+			if index == foundPos {
+				break
+			}
+			addressPool.Free = append(addressPool.Free, address)
+		}
+		if err := m.writeAddressPool(addressPool, false); err != nil {
 			return proto.Address{}, "", err
 		}
-		m.addressPool = newPool
-		return address, subnetId, nil
+		address := m.addressPool.Free[foundPos]
+		m.addressPool = addressPool
+		return address, subnet.Id, nil
 	}
-	subnet, ok := m.subnets[subnetId]
-	if !ok {
-		return proto.Address{}, "", fmt.Errorf("no such subnet: %s", subnetId)
-	}
-	subnetMask := net.IPMask(subnet.IpMask)
-	subnetAddr := subnet.IpGateway.Mask(subnetMask)
-	foundPos := -1
-	for index, address := range m.addressPool.Free {
-		if address.IpAddress.Mask(subnetMask).Equal(subnetAddr) {
-			foundPos = index
-			break
-		}
-	}
-	if foundPos < 0 {
-		return proto.Address{}, "",
-			fmt.Errorf("no free address in subnet: %s", subnetId)
-	}
-	addressPool := addressPoolType{
-		Free:       make([]proto.Address, 0, len(m.addressPool.Free)-1),
-		Registered: m.addressPool.Registered,
-	}
-	for index, address := range m.addressPool.Free {
-		if index == foundPos {
-			break
-		}
-		addressPool.Free = append(addressPool.Free, address)
-	}
-	if err := m.writeAddressPool(addressPool, false); err != nil {
-		return proto.Address{}, "", err
-	}
-	address := m.addressPool.Free[foundPos]
-	m.addressPool = addressPool
-	return address, subnetId, nil
 }
 
 func (m *Manager) listAvailableAddresses() []proto.Address {

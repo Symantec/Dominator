@@ -123,6 +123,12 @@ func (left *Subnet) Equal(right *Subnet) bool {
 	if left.VlanId != right.VlanId {
 		return false
 	}
+	if !stringSlicesEqual(left.AllowedGroups, right.AllowedGroups) {
+		return false
+	}
+	if !stringSlicesEqual(left.AllowedUsers, right.AllowedUsers) {
+		return false
+	}
 	return true
 }
 
