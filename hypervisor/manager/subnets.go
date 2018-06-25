@@ -9,6 +9,7 @@ import (
 
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/net/util"
+	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
@@ -39,6 +40,138 @@ func getHypervisorSubnet() (proto.Subnet, error) {
 		IpMask:            net.IP(defaultRoute.Mask),
 		DomainNameServers: nameservers,
 	}, nil
+}
+
+// This must be called with the lock held.
+func (m *Manager) getMatchingSubnet(ipAddr net.IP) string {
+	for id, subnet := range m.subnets {
+		subnetMask := net.IPMask(subnet.IpMask)
+		subnetAddr := subnet.IpGateway.Mask(subnetMask)
+		if ipAddr.Mask(subnetMask).Equal(subnetAddr) {
+			return id
+		}
+	}
+	return ""
+}
+
+// This must be called with the lock held.
+func (m *Manager) getSubnetAndAuth(subnetId string,
+	authInfo *srpc.AuthInformation) (proto.Subnet, error) {
+	if len(m.subnets) < 1 {
+		return proto.Subnet{}, fmt.Errorf("no subnets exist")
+	}
+	if subnetId != "" {
+		if subnet, ok := m.subnets[subnetId]; !ok {
+			return proto.Subnet{}, fmt.Errorf("subnet: %s does not exist",
+				subnetId)
+		} else if !checkSubnetAccess(subnet, authInfo) {
+			return proto.Subnet{}, fmt.Errorf("no access to subnet: %s",
+				subnetId)
+		} else {
+			return subnet, nil
+		}
+	}
+	// Unspecified subnet: try to find one.
+	if len(m.subnets) == 1 {
+		if subnet, ok := m.subnets["hypervisor"]; !ok {
+			return proto.Subnet{}, fmt.Errorf(
+				"hypervisor subnet does not exist")
+		} else {
+			return subnet, nil
+		}
+	}
+	subnetsPermitted := make([]string, 0, 1)
+	for _, subnet := range m.subnets {
+		if subnet.Id == "hypervisor" {
+			continue
+		}
+		if !checkSubnetAccess(subnet, authInfo) {
+			continue
+		}
+		if len(subnetsPermitted) > 0 {
+			return proto.Subnet{}, fmt.Errorf(
+				"multiple available subnets: pick one")
+		}
+		subnetsPermitted = append(subnetsPermitted, subnet.Id)
+	}
+	if len(subnetsPermitted) < 1 {
+		return proto.Subnet{}, fmt.Errorf("no subnets permitted")
+	}
+	return m.subnets[subnetsPermitted[0]], nil
+}
+
+func checkSubnetAccess(subnet proto.Subnet,
+	authInfo *srpc.AuthInformation) bool {
+	if authInfo.HaveMethodAccess {
+		return true
+	}
+	if len(subnet.AllowedUsers) < 1 {
+		return true
+	}
+	for _, allowedUser := range subnet.AllowedUsers {
+		if authInfo.Username == allowedUser {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Manager) listSubnets(doSort bool) []proto.Subnet {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	subnets := make([]proto.Subnet, 0, len(m.subnets))
+	if !doSort {
+		for _, subnet := range m.subnets {
+			subnets = append(subnets, subnet)
+		}
+		return subnets
+	}
+	subnetIDs := make([]string, 0, len(m.subnets))
+	for subnetID := range m.subnets {
+		subnetIDs = append(subnetIDs, subnetID)
+	}
+	sort.Strings(subnetIDs)
+	for _, subnetID := range subnetIDs {
+		subnets = append(subnets, m.subnets[subnetID])
+	}
+	return subnets
+}
+
+// This returns with the Manager locked, waiting for existing subnets to be
+// drained from the channel by the caller before unlocking.
+func (m *Manager) makeSubnetChannel() <-chan proto.Subnet {
+	ch := make(chan proto.Subnet, 1)
+	m.mutex.Lock()
+	m.subnetChannels = append(m.subnetChannels, ch)
+	go func() {
+		defer m.mutex.Unlock()
+		for _, subnet := range m.subnets {
+			ch <- subnet
+		}
+	}()
+	return ch
+}
+
+func (m *Manager) loadSubnets() error {
+	var subnets []proto.Subnet
+	err := json.ReadFromFile(path.Join(m.StateDir, "subnets.json"), &subnets)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	for index := range subnets {
+		subnets[index].Shrink()
+		m.DhcpServer.AddSubnet(subnets[index])
+	}
+	m.subnets = make(map[string]proto.Subnet, len(subnets))
+	for _, subnet := range subnets {
+		m.subnets[subnet.Id] = subnet
+	}
+	if subnet, err := getHypervisorSubnet(); err != nil {
+		return err
+	} else {
+		m.subnets["hypervisor"] = subnet
+	}
+	return nil
 }
 
 func (m *Manager) updateSubnets(request proto.UpdateSubnetsRequest) error {
@@ -121,75 +254,5 @@ func (m *Manager) updateSubnetsLocked(
 	}
 	m.sendUpdateWithLock(
 		proto.Update{HaveSubnets: true, Subnets: subnetsToWrite})
-	return nil
-}
-
-// This must be called with the lock held.
-func (m *Manager) getMatchingSubnet(ipAddr net.IP) string {
-	for id, subnet := range m.subnets {
-		subnetMask := net.IPMask(subnet.IpMask)
-		subnetAddr := subnet.IpGateway.Mask(subnetMask)
-		if ipAddr.Mask(subnetMask).Equal(subnetAddr) {
-			return id
-		}
-	}
-	return ""
-}
-
-func (m *Manager) listSubnets(doSort bool) []proto.Subnet {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	subnets := make([]proto.Subnet, 0, len(m.subnets))
-	if !doSort {
-		for _, subnet := range m.subnets {
-			subnets = append(subnets, subnet)
-		}
-		return subnets
-	}
-	subnetIDs := make([]string, 0, len(m.subnets))
-	for subnetID := range m.subnets {
-		subnetIDs = append(subnetIDs, subnetID)
-	}
-	sort.Strings(subnetIDs)
-	for _, subnetID := range subnetIDs {
-		subnets = append(subnets, m.subnets[subnetID])
-	}
-	return subnets
-}
-
-// This returns with the Manager locked, waiting for existing subnets to be
-// drained from the channel by the caller before unlocking.
-func (m *Manager) makeSubnetChannel() <-chan proto.Subnet {
-	ch := make(chan proto.Subnet, 1)
-	m.mutex.Lock()
-	m.subnetChannels = append(m.subnetChannels, ch)
-	go func() {
-		defer m.mutex.Unlock()
-		for _, subnet := range m.subnets {
-			ch <- subnet
-		}
-	}()
-	return ch
-}
-
-func (m *Manager) loadSubnets() error {
-	var subnets []proto.Subnet
-	err := json.ReadFromFile(path.Join(m.StateDir, "subnets.json"), &subnets)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	for index := range subnets {
-		subnets[index].Shrink()
-		m.DhcpServer.AddSubnet(subnets[index])
-	}
-	m.subnets = make(map[string]proto.Subnet, len(subnets))
-	for _, subnet := range subnets {
-		m.subnets[subnet.Id] = subnet
-	}
-	if subnet, err := getHypervisorSubnet(); err != nil {
-		return err
-	} else {
-		m.subnets["hypervisor"] = subnet
-	}
 	return nil
 }

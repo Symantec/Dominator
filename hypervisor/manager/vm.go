@@ -163,8 +163,9 @@ func (m *Manager) acknowledgeVm(ipAddr net.IP,
 	return nil
 }
 
-func (m *Manager) allocateVm(req proto.CreateVmRequest) (*vmInfoType, error) {
-	address, subnetId, err := m.getFreeAddress(req.SubnetId)
+func (m *Manager) allocateVm(req proto.CreateVmRequest,
+	authInfo *srpc.AuthInformation) (*vmInfoType, error) {
+	address, subnetId, err := m.getFreeAddress(req.SubnetId, authInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +333,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		return errors.New("no authentication data")
 	}
 	ownerUsers = append(ownerUsers, request.OwnerUsers...)
-	vm, err := m.allocateVm(request)
+	vm, err := m.allocateVm(request, conn.GetAuthInformation())
 	if err != nil {
 		if err := maybeDrainAll(conn, request); err != nil {
 			return err
