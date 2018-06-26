@@ -14,7 +14,11 @@ func (conn *Conn) getAuthInformation() *AuthInformation {
 	if conn.parent != nil {
 		panic("cannot call GetAuthInformation() for client connection")
 	}
-	return &AuthInformation{conn.haveMethodAccess, conn.username}
+	return &AuthInformation{
+		GroupList:        conn.groupList,
+		HaveMethodAccess: conn.haveMethodAccess,
+		Username:         conn.username,
+	}
 }
 
 func (conn *Conn) getCloseNotifier() <-chan error {

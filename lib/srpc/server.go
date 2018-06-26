@@ -330,8 +330,8 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 			}
 		}
 		myConn.isEncrypted = true
-		myConn.username, myConn.permittedMethods, err = getAuth(
-			tlsConn.ConnectionState())
+		myConn.username, myConn.permittedMethods, myConn.groupList, err =
+			getAuth(tlsConn.ConnectionState())
 		if err != nil {
 			log.Println(err)
 			return
@@ -363,7 +363,8 @@ func checkVerifiedChains(verifiedChains [][]*x509.Certificate,
 	return false
 }
 
-func getAuth(state tls.ConnectionState) (string, map[string]struct{}, error) {
+func getAuth(state tls.ConnectionState) (string, map[string]struct{},
+	map[string]struct{}, error) {
 	var username string
 	permittedMethods := make(map[string]struct{})
 	trustCertMethods := false
@@ -371,19 +372,26 @@ func getAuth(state tls.ConnectionState) (string, map[string]struct{}, error) {
 		checkVerifiedChains(state.VerifiedChains, fullAuthCaCertPool) {
 		trustCertMethods = true
 	}
+	var groupList map[string]struct{}
 	for _, certChain := range state.VerifiedChains {
 		for _, cert := range certChain {
 			var err error
 			if username == "" {
 				username, err = x509util.GetUsername(cert)
 				if err != nil {
-					return "", nil, err
+					return "", nil, nil, err
+				}
+			}
+			if len(groupList) < 1 {
+				groupList, err = x509util.GetGroupList(cert)
+				if err != nil {
+					return "", nil, nil, err
 				}
 			}
 			if trustCertMethods {
 				pms, err := x509util.GetPermittedMethods(cert)
 				if err != nil {
-					return "", nil, err
+					return "", nil, nil, err
 				}
 				for method := range pms {
 					permittedMethods[method] = struct{}{}
@@ -391,7 +399,7 @@ func getAuth(state tls.ConnectionState) (string, map[string]struct{}, error) {
 			}
 		}
 	}
-	return username, permittedMethods, nil
+	return username, permittedMethods, groupList, nil
 }
 
 func handleConnection(conn *Conn) {
