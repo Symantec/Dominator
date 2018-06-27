@@ -1147,6 +1147,11 @@ func (vm *vmInfoType) checkAuth(authInfo *srpc.AuthInformation) error {
 	if _, ok := vm.ownerUsers[authInfo.Username]; ok {
 		return nil
 	}
+	for _, ownerGroup := range vm.OwnerGroups {
+		if _, ok := authInfo.GroupList[ownerGroup]; ok {
+			return nil
+		}
+	}
 	return errorNoAccessToResource
 }
 

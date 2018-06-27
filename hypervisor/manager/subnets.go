@@ -13,6 +13,27 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
+func checkSubnetAccess(subnet proto.Subnet,
+	authInfo *srpc.AuthInformation) bool {
+	if authInfo.HaveMethodAccess {
+		return true
+	}
+	if len(subnet.AllowedUsers) < 1 && len(subnet.AllowedGroups) < 1 {
+		return true
+	}
+	for _, allowedUser := range subnet.AllowedUsers {
+		if authInfo.Username == allowedUser {
+			return true
+		}
+	}
+	for _, allowedGroup := range subnet.AllowedGroups {
+		if _, ok := authInfo.GroupList[allowedGroup]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 func getHypervisorSubnet() (proto.Subnet, error) {
 	defaultRoute, err := util.GetDefaultRoute()
 	if err != nil {
@@ -98,22 +119,6 @@ func (m *Manager) getSubnetAndAuth(subnetId string,
 		return proto.Subnet{}, fmt.Errorf("no subnets permitted")
 	}
 	return m.subnets[subnetsPermitted[0]], nil
-}
-
-func checkSubnetAccess(subnet proto.Subnet,
-	authInfo *srpc.AuthInformation) bool {
-	if authInfo.HaveMethodAccess {
-		return true
-	}
-	if len(subnet.AllowedUsers) < 1 {
-		return true
-	}
-	for _, allowedUser := range subnet.AllowedUsers {
-		if authInfo.Username == allowedUser {
-			return true
-		}
-	}
-	return false
 }
 
 func (m *Manager) listSubnets(doSort bool) []proto.Subnet {
