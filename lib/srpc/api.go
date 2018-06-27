@@ -58,6 +58,7 @@ func LoadCertificates(directory string) ([]tls.Certificate, error) {
 }
 
 type AuthInformation struct {
+	GroupList        map[string]struct{}
 	HaveMethodAccess bool
 	Username         string
 }
@@ -290,6 +291,7 @@ type Conn struct {
 	isEncrypted bool
 	*bufio.ReadWriter
 	remoteAddr       string
+	groupList        map[string]struct{}
 	haveMethodAccess bool
 	username         string              // Empty string for unauthenticated.
 	permittedMethods map[string]struct{} // nil: all, empty: none permitted.
