@@ -157,8 +157,12 @@ func (target *targetResult) bootstrap(streamName string,
 	if image == nil {
 		return errors.New("no marketplace image found")
 	}
-	instance, err := launchInstance(awsService, image, nil, vpcSearchTags,
-		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName)
+	instanceTags := newImageTags.Copy()
+	instanceTags["ImageBeingCopied"] = newImageTags["Name"]
+	instanceTags["Name"] = "ImageCopier"
+	instance, err := launchInstance(awsService, image, instanceTags,
+		vpcSearchTags, subnetSearchTags, securityGroupSearchTags, instanceType,
+		sshKeyName)
 	if err != nil {
 		return err
 	}
