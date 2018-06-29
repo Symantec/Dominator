@@ -160,7 +160,7 @@ func (target *targetResult) bootstrap(streamName string,
 	instanceTags := newImageTags.Copy()
 	instanceTags["ImageBeingCopied"] = newImageTags["Name"]
 	instanceTags["Name"] = "ImageCopier"
-	instance, err := launchInstance(awsService, image, instanceTags,
+	instance, err := launchInstance(awsService, image, 0, instanceTags,
 		vpcSearchTags, subnetSearchTags, securityGroupSearchTags, instanceType,
 		sshKeyName)
 	if err != nil {
