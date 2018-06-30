@@ -155,20 +155,20 @@ func ImportKeyPair(targets awsutil.TargetList, skipList awsutil.TargetList,
 func LaunchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
 	imageSearchTags, vpcSearchTags, subnetSearchTags,
 	securityGroupSearchTags libtags.Tags, instanceType string,
-	sshKeyName string, tags map[string]string, replaceInstances bool,
-	logger log.Logger) ([]InstanceResult, error) {
+	rootVolumeSize uint, sshKeyName string, tags map[string]string,
+	replaceInstances bool, logger log.Logger) ([]InstanceResult, error) {
 	return launchInstances(targets, skipList, imageSearchTags, vpcSearchTags,
-		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName,
-		tags, replaceInstances, logger)
+		subnetSearchTags, securityGroupSearchTags, instanceType,
+		rootVolumeSize, sshKeyName, tags, replaceInstances, logger)
 }
 
 func LaunchInstancesForImages(images []Resource,
 	vpcSearchTags, subnetSearchTags, securityGroupSearchTags libtags.Tags,
-	instanceType string, sshKeyName string, tags map[string]string,
-	logger log.Logger) ([]InstanceResult, error) {
+	instanceType string, rootVolumeSize uint, sshKeyName string,
+	tags map[string]string, logger log.Logger) ([]InstanceResult, error) {
 	return launchInstancesForImages(images, vpcSearchTags,
-		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName,
-		tags, logger)
+		subnetSearchTags, securityGroupSearchTags, instanceType,
+		rootVolumeSize, sshKeyName, tags, logger)
 }
 
 func ListImages(targets awsutil.TargetList, skipList awsutil.TargetList,

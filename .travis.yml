@@ -1,7 +1,8 @@
 language: go
 
+# go1.11beta1 breaks the tests for lib/net/reverseconnection
 go:
-  - 1.x
+  - "1.10"
 
 before_install:
 - REPO_NAME=$(basename $PWD)

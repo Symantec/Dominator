@@ -17,8 +17,8 @@ import (
 func launchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
 	imageSearchTags, vpcSearchTags, subnetSearchTags,
 	securityGroupSearchTags libtags.Tags, instanceType string,
-	sshKeyName string, tags map[string]string, replaceInstances bool,
-	logger log.Logger) ([]InstanceResult, error) {
+	rootVolumeSize uint, sshKeyName string, tags map[string]string,
+	replaceInstances bool, logger log.Logger) ([]InstanceResult, error) {
 	if imageSearchTags["Name"] == "" {
 		return nil, errors.New("no image Name search tag")
 	}
@@ -27,8 +27,8 @@ func launchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
 			instanceId, privateIp, err := launchInstanceInTarget(awsService,
 				imageSearchTags, vpcSearchTags, subnetSearchTags,
-				securityGroupSearchTags, instanceType, sshKeyName, tags,
-				replaceInstances, logger)
+				securityGroupSearchTags, instanceType, rootVolumeSize,
+				sshKeyName, tags, replaceInstances, logger)
 			if err != nil {
 				logger.Println(err)
 			}
@@ -55,8 +55,9 @@ func launchInstances(targets awsutil.TargetList, skipList awsutil.TargetList,
 func launchInstanceInTarget(awsService *ec2.EC2,
 	imageSearchTags, vpcSearchTags, subnetSearchTags,
 	securityGroupSearchTags libtags.Tags,
-	instanceType string, sshKeyName string, tags libtags.Tags,
-	replaceInstances bool, logger log.Logger) (string, string, error) {
+	instanceType string, rootVolumeSize uint, sshKeyName string,
+	tags libtags.Tags, replaceInstances bool,
+	logger log.Logger) (string, string, error) {
 	oldInstances, err := getInstances(awsService, tags["Name"])
 	if err != nil {
 		return "", "", err
@@ -74,8 +75,9 @@ func launchInstanceInTarget(awsService *ec2.EC2,
 		// TODO(rgooch): Create bootstrap image (for unpackers only).
 		return "", "", errors.New("no image found")
 	}
-	instance, err := launchInstance(awsService, image, tags, vpcSearchTags,
-		subnetSearchTags, securityGroupSearchTags, instanceType, sshKeyName)
+	instance, err := launchInstance(awsService, image, rootVolumeSize, tags,
+		vpcSearchTags, subnetSearchTags, securityGroupSearchTags, instanceType,
+		sshKeyName)
 	if err != nil {
 		return "", "", err
 	}
@@ -115,15 +117,16 @@ func launchInstanceInTarget(awsService *ec2.EC2,
 
 func launchInstancesForImages(resources []Resource,
 	vpcSearchTags, subnetSearchTags, securityGroupSearchTags libtags.Tags,
-	instanceType string, sshKeyName string, tags map[string]string,
-	logger log.Logger) ([]InstanceResult, error) {
+	instanceType string, rootVolumeSize uint, sshKeyName string,
+	tags map[string]string, logger log.Logger) ([]InstanceResult, error) {
 	resultsChannel := make(chan InstanceResult, 1)
 	err := forEachResource(resources, false,
 		func(session *session.Session, awsService *ec2.EC2, resource Resource,
 			logger log.Logger) error {
 			instanceId, privateIp, err := launchInstanceForImage(awsService,
 				resource, vpcSearchTags, subnetSearchTags,
-				securityGroupSearchTags, instanceType, sshKeyName, tags, logger)
+				securityGroupSearchTags, instanceType, rootVolumeSize,
+				sshKeyName, tags, logger)
 			if err != nil {
 				logger.Println(err)
 			}
@@ -151,10 +154,11 @@ func launchInstancesForImages(resources []Resource,
 func launchInstanceForImage(awsService *ec2.EC2, resource Resource,
 	vpcSearchTags, subnetSearchTags,
 	securityGroupSearchTags libtags.Tags,
-	instanceType string, sshKeyName string, tags libtags.Tags,
-	logger log.Logger) (string, string, error) {
+	instanceType string, rootVolumeSize uint, sshKeyName string,
+	tags libtags.Tags, logger log.Logger) (string, string, error) {
 	instance, err := launchInstance(awsService,
 		&ec2.Image{ImageId: aws.String(resource.AmiId)},
+		rootVolumeSize,
 		tags, vpcSearchTags, subnetSearchTags, securityGroupSearchTags,
 		instanceType, sshKeyName)
 	if err != nil {

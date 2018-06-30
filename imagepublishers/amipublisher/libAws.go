@@ -15,7 +15,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
-const creationTimeFormat = "2006-01-02T15:04:05.000Z"
+const (
+	creationTimeFormat = "2006-01-02T15:04:05.000Z"
+	rootDevName        = "/dev/sda1"
+)
 
 func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 	logger log.Logger) error {
@@ -633,9 +636,10 @@ func getVpc(awsService *ec2.EC2, tags libtags.Tags) (*ec2.Vpc, error) {
 	return out.Vpcs[0], nil
 }
 
-func launchInstance(awsService *ec2.EC2, image *ec2.Image, tags libtags.Tags,
-	vpcSearchTags, subnetSearchTags, securityGroupSearchTags libtags.Tags,
-	instanceType string, sshKeyName string) (*ec2.Instance, error) {
+func launchInstance(awsService *ec2.EC2, image *ec2.Image, rootVolumeSize uint,
+	tags libtags.Tags, vpcSearchTags, subnetSearchTags,
+	securityGroupSearchTags libtags.Tags, instanceType string,
+	sshKeyName string) (*ec2.Instance, error) {
 	vpc, err := getVpc(awsService, vpcSearchTags)
 	if err != nil {
 		return nil, err
@@ -650,14 +654,25 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image, tags libtags.Tags,
 	if err != nil {
 		return nil, err
 	}
+	var blockDeviceMappings []*ec2.BlockDeviceMapping
+	if rootVolumeSize != 0 {
+		blockDeviceMappings = []*ec2.BlockDeviceMapping{{
+			DeviceName: aws.String(rootDevName),
+			Ebs: &ec2.EbsBlockDevice{
+				DeleteOnTermination: aws.Bool(true),
+				VolumeSize:          aws.Int64(int64(rootVolumeSize)),
+			}},
+		}
+	}
 	reservation, err := awsService.RunInstances(&ec2.RunInstancesInput{
-		ImageId:          image.ImageId,
-		InstanceType:     aws.String(instanceType),
-		KeyName:          aws.String(sshKeyName),
-		MaxCount:         aws.Int64(1),
-		MinCount:         aws.Int64(1),
-		SecurityGroupIds: []*string{sg.GroupId},
-		SubnetId:         subnet.SubnetId,
+		BlockDeviceMappings: blockDeviceMappings,
+		ImageId:             image.ImageId,
+		InstanceType:        aws.String(instanceType),
+		KeyName:             aws.String(sshKeyName),
+		MaxCount:            aws.Int64(1),
+		MinCount:            aws.Int64(1),
+		SecurityGroupIds:    []*string{sg.GroupId},
+		SubnetId:            subnet.SubnetId,
 		TagSpecifications: []*ec2.TagSpecification{
 			createTagSpecification(ec2.ResourceTypeInstance, tags),
 			createTagSpecification(ec2.ResourceTypeVolume, tags),
@@ -679,7 +694,6 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image, tags libtags.Tags,
 func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 	amiName string, imageName string, tags libtags.Tags, imageGiB uint64,
 	publishOptions *PublishOptions, logger log.Logger) (string, error) {
-	rootDevName := "/dev/sda1"
 	blkDevMaps := make([]*ec2.BlockDeviceMapping, 1)
 	var volumeSize *int64
 	if imageGiB > 0 {

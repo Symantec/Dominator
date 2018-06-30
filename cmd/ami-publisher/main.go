@@ -47,6 +47,8 @@ var (
 		"File to write CSV listing old image instances")
 	replaceInstances = flag.Bool("replaceInstances", false,
 		"If true, replace old instances when launching, else skip on old")
+	rootVolumeSize = flag.Uint("rootVolumeSize", 0,
+		"Size of root volume when launching instances")
 	s3Bucket = flag.String("s3Bucket", "",
 		"S3 bucket to upload bundle to (default is EBS-backed AMIs)")
 	s3Folder = flag.String("s3Folder", "",

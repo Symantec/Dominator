@@ -26,7 +26,8 @@ func launchInstances(bootImage string, logger log.DebugLogger) error {
 	searchTags["Name"] = bootImage
 	results, err := amipublisher.LaunchInstances(targets, skipTargets,
 		searchTags, vpcSearchTags, subnetSearchTags, securityGroupSearchTags,
-		*instanceType, *sshKeyName, tags, *replaceInstances, logger)
+		*instanceType, *rootVolumeSize, *sshKeyName, tags, *replaceInstances,
+		logger)
 	if err != nil {
 		return err
 	}
@@ -70,7 +71,7 @@ func launchInstancesForImages(resourcesFiles []string,
 	}
 	results, err := amipublisher.LaunchInstancesForImages(resources,
 		vpcSearchTags, subnetSearchTags, securityGroupSearchTags,
-		*instanceType, *sshKeyName, tags, logger)
+		*instanceType, *rootVolumeSize, *sshKeyName, tags, logger)
 	if err != nil {
 		return err
 	}
