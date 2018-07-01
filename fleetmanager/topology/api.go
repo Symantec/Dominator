@@ -69,6 +69,11 @@ func (t *Topology) CheckIfIpIsReserved(ipAddr string) bool {
 	return ok
 }
 
+func (t *Topology) CheckIfMachineHasSubnet(name, subnetId string) (
+	bool, error) {
+	return t.checkIfMachineHasSubnet(name, subnetId)
+}
+
 func (t *Topology) FindDirectory(dirname string) (*Directory, error) {
 	return t.findDirectory(dirname)
 }
