@@ -24,6 +24,7 @@ type ListHypervisorLocationsResponse struct {
 
 type ListHypervisorsInLocationRequest struct {
 	Location string
+	SubnetId string
 }
 
 type ListHypervisorsInLocationResponse struct {
