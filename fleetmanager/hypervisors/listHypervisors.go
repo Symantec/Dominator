@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/url"
+	proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
 
 func (h *hypervisorType) getNumVMs() uint {
@@ -16,7 +17,8 @@ func (h *hypervisorType) getNumVMs() uint {
 	return uint(len(h.vms))
 }
 
-func (m *Manager) listHypervisors(topologyDir string, connectedOnly bool) (
+func (m *Manager) listHypervisors(topologyDir string, connectedOnly bool,
+	subnetId string) (
 	[]*hypervisorType, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -26,6 +28,13 @@ func (m *Manager) listHypervisors(topologyDir string, connectedOnly bool) (
 	}
 	hypervisors := make([]*hypervisorType, 0, len(machines))
 	for _, machine := range machines {
+		if subnetId != "" {
+			hasSubnet, _ := m.topology.CheckIfMachineHasSubnet(
+				machine.Hostname, subnetId)
+			if !hasSubnet {
+				continue
+			}
+		}
 		hypervisor := m.hypervisors[machine.Hostname]
 		if !connectedOnly || hypervisor.probeStatus == probeStatusGood {
 			hypervisors = append(hypervisors, hypervisor)
@@ -48,7 +57,7 @@ func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 	if parsedQuery.Table["state"] == "connected" {
 		matchConnectedOnly = true
 	}
-	hypervisors, err := m.listHypervisors("", matchConnectedOnly)
+	hypervisors, err := m.listHypervisors("", matchConnectedOnly, "")
 	if err != nil {
 		fmt.Fprintln(writer, err)
 		return
@@ -103,8 +112,10 @@ func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 	fmt.Fprintln(writer, "</body>")
 }
 
-func (m *Manager) listHypervisorsInLocation(dirname string) ([]string, error) {
-	hypervisors, err := m.listHypervisors(dirname, true)
+func (m *Manager) listHypervisorsInLocation(
+	request proto.ListHypervisorsInLocationRequest) ([]string, error) {
+	hypervisors, err := m.listHypervisors(request.Location, true,
+		request.SubnetId)
 	if err != nil {
 		return nil, err
 	}

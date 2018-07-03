@@ -127,7 +127,7 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 }
 
 func (m *Manager) listVMsInLocation(dirname string) ([]net.IP, error) {
-	hypervisors, err := m.listHypervisors(dirname, true)
+	hypervisors, err := m.listHypervisors(dirname, true, "")
 	if err != nil {
 		return nil, err
 	}
