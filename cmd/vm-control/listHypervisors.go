@@ -27,7 +27,10 @@ func listHypervisors(logger log.DebugLogger) error {
 		return err
 	}
 	defer client.Close()
-	request := proto.ListHypervisorsInLocationRequest{*location}
+	request := proto.ListHypervisorsInLocationRequest{
+		Location: *location,
+		SubnetId: *subnetId,
+	}
 	var reply proto.ListHypervisorsInLocationResponse
 	err = client.RequestReply("FleetManager.ListHypervisorsInLocation",
 		request, &reply)

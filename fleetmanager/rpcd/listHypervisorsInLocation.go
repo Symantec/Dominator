@@ -9,8 +9,7 @@ import (
 func (t *srpcType) ListHypervisorsInLocation(conn *srpc.Conn,
 	request proto.ListHypervisorsInLocationRequest,
 	reply *proto.ListHypervisorsInLocationResponse) error {
-	addresses, err := t.hypervisorsManager.ListHypervisorsInLocation(
-		request.Location)
+	addresses, err := t.hypervisorsManager.ListHypervisorsInLocation(request)
 	*reply = proto.ListHypervisorsInLocationResponse{
 		HypervisorAddresses: addresses,
 		Error:               errors.ErrorToString(err),

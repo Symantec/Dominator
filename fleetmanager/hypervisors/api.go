@@ -9,7 +9,8 @@ import (
 	"github.com/Symantec/Dominator/fleetmanager/topology"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
+	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 const (
@@ -27,7 +28,7 @@ type hypervisorType struct {
 	deleteScheduled bool
 	machine         *topology.Machine
 	probeStatus     probeStatus
-	subnets         []proto.Subnet
+	subnets         []hyper_proto.Subnet
 	vms             map[string]*vmInfoType // Key: VM IP address.
 }
 
@@ -65,15 +66,15 @@ type subnetType struct {
 
 type vmInfoType struct {
 	ipAddr string
-	proto.VmInfo
+	hyper_proto.VmInfo
 	hypervisor *hypervisorType
 }
 
 type VmStorer interface {
 	DeleteVm(hypervisor net.IP, ipAddr string) error
 	ListVMs(hypervisor net.IP) ([]string, error)
-	ReadVm(hypervisor net.IP, ipAddr string) (*proto.VmInfo, error)
-	WriteVm(hypervisor net.IP, ipAddr string, vmInfo proto.VmInfo) error
+	ReadVm(hypervisor net.IP, ipAddr string) (*hyper_proto.VmInfo, error)
+	WriteVm(hypervisor net.IP, ipAddr string, vmInfo hyper_proto.VmInfo) error
 }
 
 func New(storer Storer, logger log.DebugLogger) (*Manager, error) {
@@ -98,8 +99,9 @@ func (m *Manager) GetHypervisorForVm(ipAddr net.IP) (string, error) {
 	return m.getHypervisorForVm(ipAddr)
 }
 
-func (m *Manager) ListHypervisorsInLocation(dirname string) ([]string, error) {
-	return m.listHypervisorsInLocation(dirname)
+func (m *Manager) ListHypervisorsInLocation(
+	request fm_proto.ListHypervisorsInLocationRequest) ([]string, error) {
+	return m.listHypervisorsInLocation(request)
 }
 
 func (m *Manager) ListLocations(dirname string) ([]string, error) {

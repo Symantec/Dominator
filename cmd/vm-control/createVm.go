@@ -177,7 +177,10 @@ func getHypervisorAddress() (string, error) {
 			return findHypervisorClient(client, adjacentVmIpAddr)
 		}
 	}
-	request := fm_proto.ListHypervisorsInLocationRequest{*location}
+	request := fm_proto.ListHypervisorsInLocationRequest{
+		Location: *location,
+		SubnetId: *subnetId,
+	}
 	var reply fm_proto.ListHypervisorsInLocationResponse
 	err = client.RequestReply("FleetManager.ListHypervisorsInLocation",
 		request, &reply)
