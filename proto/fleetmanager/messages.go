@@ -13,6 +13,8 @@ type GetHypervisorForVMResponse struct {
 	Error             string
 }
 
+type HardwareAddr net.HardwareAddr
+
 type ListHypervisorLocationsRequest struct {
 	TopLocation string
 }
@@ -41,4 +43,10 @@ type ListVMsInLocationRequest struct {
 type ListVMsInLocationResponse struct {
 	IpAddresses []net.IP
 	Error       string
+}
+
+type Machine struct {
+	Hostname       string       `json:",omitempty"`
+	HostIpAddress  net.IP       `json:",omitempty"`
+	HostMacAddress HardwareAddr `json:",omitempty"`
 }
