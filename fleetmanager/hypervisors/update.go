@@ -14,7 +14,8 @@ import (
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
+	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 var (
@@ -43,7 +44,7 @@ func checkPoolLimits() error {
 }
 
 func (m *Manager) updateHypervisor(h *hypervisorType,
-	machine *topology.Machine) {
+	machine *fm_proto.Machine) {
 	h.mutex.Lock()
 	h.machine = machine
 	subnets := h.subnets
@@ -67,7 +68,7 @@ func (m *Manager) updateTopology(t *topology.Topology) {
 }
 
 func (m *Manager) updateTopologyLocked(t *topology.Topology,
-	machines []*topology.Machine) []*hypervisorType {
+	machines []*fm_proto.Machine) []*hypervisorType {
 	hypervisorsToDelete := make(map[string]struct{}, len(machines))
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -199,7 +200,7 @@ func (m *Manager) manageHypervisor(h *hypervisorType,
 	h.logger.Debugln(0, "waiting for Update messages")
 	firstUpdate := true
 	for {
-		var update proto.Update
+		var update hyper_proto.Update
 		if err := decoder.Decode(&update); err != nil {
 			if err != io.EOF {
 				h.logger.Println(err)
@@ -212,7 +213,7 @@ func (m *Manager) manageHypervisor(h *hypervisorType,
 }
 
 func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
-	update proto.Update) {
+	update hyper_proto.Update) {
 	if update.HaveAddressPool {
 		addresses := make([]net.IP, 0, len(update.AddressPool))
 		for _, address := range update.AddressPool {
@@ -241,9 +242,9 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 				h.logger.Println(err)
 				return
 			}
-			addresses := make([]proto.Address, 0, len(freeIPs))
+			addresses := make([]hyper_proto.Address, 0, len(freeIPs))
 			for _, ip := range freeIPs {
-				addresses = append(addresses, proto.Address{
+				addresses = append(addresses, hyper_proto.Address{
 					IpAddress: ip,
 					MacAddress: fmt.Sprintf("52:54:%02x:%02x:%02x:%02x",
 						ip[0], ip[1], ip[2], ip[3]),
@@ -255,8 +256,8 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 				return
 			}
 			defer client.Close()
-			request := proto.AddAddressesToPoolRequest{addresses}
-			var reply proto.AddAddressesToPoolResponse
+			request := hyper_proto.AddAddressesToPoolRequest{addresses}
+			var reply hyper_proto.AddAddressesToPoolResponse
 			err = client.RequestReply("Hypervisor.AddAddressesToPool",
 				request, &reply)
 			if err == nil {
@@ -278,9 +279,9 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 				return
 			}
 			defer client.Close()
-			request := proto.RemoveExcessAddressesFromPoolRequest{
+			request := hyper_proto.RemoveExcessAddressesFromPoolRequest{
 				*desiredAddressPoolSize}
-			var reply proto.RemoveExcessAddressesFromPoolResponse
+			var reply hyper_proto.RemoveExcessAddressesFromPoolResponse
 			err = client.RequestReply(
 				"Hypervisor.RemoveExcessAddressesFromPool",
 				request, &reply)
@@ -298,7 +299,7 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 }
 
 func (m *Manager) processHypervisorUpdate(h *hypervisorType,
-	update proto.Update, firstUpdate bool) {
+	update hyper_proto.Update, firstUpdate bool) {
 	if *manageHypervisors {
 		if update.HaveSubnets { // Must do subnets first.
 			h.mutex.Lock()
@@ -318,7 +319,7 @@ func (m *Manager) processHypervisorUpdate(h *hypervisorType,
 }
 
 func (m *Manager) processInitialVMs(h *hypervisorType,
-	vms map[string]*proto.VmInfo) {
+	vms map[string]*hyper_proto.VmInfo) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	vmsToDelete := make(map[string]struct{}, len(h.vms))
@@ -331,7 +332,7 @@ func (m *Manager) processInitialVMs(h *hypervisorType,
 }
 
 func (m *Manager) processSubnetsUpdates(h *hypervisorType,
-	haveSubnets []proto.Subnet) {
+	haveSubnets []hyper_proto.Subnet) {
 	haveSubnetsMap := make(map[string]int, len(haveSubnets))
 	for index, subnet := range haveSubnets {
 		haveSubnetsMap[subnet.Id] = index
@@ -350,7 +351,7 @@ func (m *Manager) processSubnetsUpdates(h *hypervisorType,
 	for _, subnet := range haveSubnets {
 		subnetsToDelete[subnet.Id] = struct{}{}
 	}
-	var request proto.UpdateSubnetsRequest
+	var request hyper_proto.UpdateSubnetsRequest
 	for _, needSubnet := range needSubnets {
 		if index, ok := haveSubnetsMap[needSubnet.Id]; ok {
 			haveSubnet := haveSubnets[index]
@@ -378,7 +379,7 @@ func (m *Manager) processSubnetsUpdates(h *hypervisorType,
 		return
 	}
 	defer client.Close()
-	var reply proto.UpdateSubnetsResponse
+	var reply hyper_proto.UpdateSubnetsResponse
 	err = client.RequestReply("Hypervisor.UpdateSubnets", request, &reply)
 	if err == nil {
 		err = errors.New(reply.Error)
@@ -392,14 +393,14 @@ func (m *Manager) processSubnetsUpdates(h *hypervisorType,
 }
 
 func (m *Manager) processVmUpdates(h *hypervisorType,
-	updateVMs map[string]*proto.VmInfo) {
+	updateVMs map[string]*hyper_proto.VmInfo) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.processVmUpdatesWithLock(h, updateVMs, make(map[string]struct{}))
 }
 
 func (m *Manager) processVmUpdatesWithLock(h *hypervisorType,
-	updateVMs map[string]*proto.VmInfo, vmsToDelete map[string]struct{}) {
+	updateVMs map[string]*hyper_proto.VmInfo, vmsToDelete map[string]struct{}) {
 	for ipAddr, protoVm := range updateVMs {
 		if len(protoVm.Volumes) < 1 {
 			vmsToDelete[ipAddr] = struct{}{}

@@ -26,7 +26,7 @@ type hypervisorType struct {
 	mutex           sync.RWMutex
 	conn            *srpc.Conn
 	deleteScheduled bool
-	machine         *topology.Machine
+	machine         *fm_proto.Machine
 	probeStatus     probeStatus
 	subnets         []hyper_proto.Subnet
 	vms             map[string]*vmInfoType // Key: VM IP address.

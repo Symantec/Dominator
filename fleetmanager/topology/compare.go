@@ -33,7 +33,7 @@ func (left *Directory) equal(right *Directory) bool {
 		}
 	}
 	for index, leftMachine := range left.Machines {
-		if !leftMachine.equal(right.Machines[index]) {
+		if !leftMachine.Equal(right.Machines[index]) {
 			return false
 		}
 	}
@@ -41,19 +41,6 @@ func (left *Directory) equal(right *Directory) bool {
 		if !leftSubnet.equal(right.Subnets[index]) {
 			return false
 		}
-	}
-	return true
-}
-
-func (left *Machine) equal(right *Machine) bool {
-	if left.Hostname != right.Hostname {
-		return false
-	}
-	if !left.HostIpAddress.Equal(right.HostIpAddress) {
-		return false
-	}
-	if left.HostMacAddress.String() != right.HostMacAddress.String() {
-		return false
 	}
 	return true
 }
