@@ -50,7 +50,8 @@ type methodWrapper struct {
 
 type receiverType struct {
 	methods     map[string]*methodWrapper
-	blockMethod func(methodName string) bool
+	blockMethod func(methodName string,
+		authInfo *AuthInformation) (func(), error)
 }
 
 var (
@@ -102,14 +103,14 @@ func registerServerMetrics() {
 	bucketer = tricorder.NewGeometricBucketer(0.1, 1e5)
 }
 
-func defaultMethodBlocker(methodName string) bool {
-	return false
+func defaultMethodBlocker(methodName string,
+	authInfo *AuthInformation) (func(), error) {
+	return nil, nil
 }
 
 func registerName(name string, rcvr interface{},
 	options ReceiverOptions) error {
-	var receiver receiverType
-	receiver.methods = make(map[string]*methodWrapper)
+	receiver := receiverType{methods: make(map[string]*methodWrapper)}
 	typeOfReceiver := reflect.TypeOf(rcvr)
 	valueOfReceiver := reflect.ValueOf(rcvr)
 	receiverMetricsDir, err := serverMetricsDir.RegisterDirectory(name)
@@ -403,8 +404,10 @@ func getAuth(state tls.ConnectionState) (string, map[string]struct{},
 }
 
 func handleConnection(conn *Conn) {
+	defer conn.callReleaseNotifier()
 	defer conn.Flush()
 	for ; ; conn.Flush() {
+		conn.callReleaseNotifier()
 		serviceMethod, err := conn.ReadString('\n')
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return
@@ -450,6 +453,13 @@ func handleConnection(conn *Conn) {
 	}
 }
 
+func (conn *Conn) callReleaseNotifier() {
+	if releaseNotifier := conn.releaseNotifier; releaseNotifier != nil {
+		releaseNotifier()
+	}
+	conn.releaseNotifier = nil
+}
+
 func (conn *Conn) findMethod(serviceMethod string) (*methodWrapper, error) {
 	splitServiceMethod := strings.Split(serviceMethod, ".")
 	if len(splitServiceMethod) != 2 {
@@ -474,8 +484,11 @@ func (conn *Conn) findMethod(serviceMethod string) (*methodWrapper, error) {
 			return nil, ErrorAccessToMethodDenied
 		}
 	}
-	if receiver.blockMethod(methodName) {
-		return nil, ErrorMethodBlocked
+	authInfo := conn.GetAuthInformation()
+	if rn, err := receiver.blockMethod(methodName, authInfo); err != nil {
+		return nil, err
+	} else {
+		conn.releaseNotifier = rn
 	}
 	return method, nil
 }
