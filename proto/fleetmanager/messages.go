@@ -2,6 +2,8 @@ package fleetmanager
 
 import (
 	"net"
+
+	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 type GetHypervisorForVMRequest struct {
@@ -11,6 +13,21 @@ type GetHypervisorForVMRequest struct {
 type GetHypervisorForVMResponse struct {
 	HypervisorAddress string // host:port
 	Error             string
+}
+
+// The GetUpdates() RPC is fully streamed.
+// The client sends a single GetUpdatesRequest message.
+// The server sends a stream of Update messages.
+
+type GetUpdatesRequest struct {
+	Location string
+}
+
+type Update struct {
+	ChangedMachines []*Machine               `json:",omitempty"`
+	ChangedVMs      map[string]*proto.VmInfo `json:",omitempty"` // Key: IPaddr
+	DeletedMachines []string                 `json:",omitempty"` // Hostname
+	DeletedVMs      []string                 `json:",omitempty"` // IPaddr
 }
 
 type HardwareAddr net.HardwareAddr
