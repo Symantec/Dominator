@@ -26,6 +26,7 @@ type hypervisorType struct {
 	mutex           sync.RWMutex
 	conn            *srpc.Conn
 	deleteScheduled bool
+	location        string
 	machine         *fm_proto.Machine
 	probeStatus     probeStatus
 	subnets         []hyper_proto.Subnet
@@ -39,6 +40,10 @@ type IpStorer interface {
 	UnregisterHypervisor(hypervisor net.IP) error
 }
 
+type locationType struct {
+	notifiers map[<-chan fm_proto.Update]chan<- fm_proto.Update
+}
+
 type Manager struct {
 	storer      Storer
 	logger      log.DebugLogger
@@ -46,8 +51,10 @@ type Manager struct {
 	mutex       sync.RWMutex
 	topology    *topology.Topology
 	hypervisors map[string]*hypervisorType // Key: hypervisor machine name.
-	subnets     map[string]*subnetType     // Key: Gateway IP.
-	vms         map[string]*vmInfoType     // Key: VM IP address.
+	locations   map[string]*locationType   // Key: location.
+	notifiers   map[<-chan fm_proto.Update]*locationType
+	subnets     map[string]*subnetType // Key: Gateway IP.
+	vms         map[string]*vmInfoType // Key: VM IP address.
 }
 
 type probeStatus uint
@@ -95,6 +102,10 @@ func New(storer Storer, logger log.DebugLogger) (*Manager, error) {
 	return manager, nil
 }
 
+func (m *Manager) CloseUpdateChannel(channel <-chan fm_proto.Update) {
+	m.closeUpdateChannel(channel)
+}
+
 func (m *Manager) GetHypervisorForVm(ipAddr net.IP) (string, error) {
 	return m.getHypervisorForVm(ipAddr)
 }
@@ -110,6 +121,10 @@ func (m *Manager) ListLocations(dirname string) ([]string, error) {
 
 func (m *Manager) ListVMsInLocation(dirname string) ([]net.IP, error) {
 	return m.listVMsInLocation(dirname)
+}
+
+func (m *Manager) MakeUpdateChannel(location string) <-chan fm_proto.Update {
+	return m.makeUpdateChannel(location)
 }
 
 func (m *Manager) WriteHtml(writer io.Writer) {

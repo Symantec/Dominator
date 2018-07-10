@@ -43,14 +43,75 @@ func checkPoolLimits() error {
 	return nil
 }
 
+func testInLocation(location, enclosingLocation string) bool {
+	if enclosingLocation != "" && location != enclosingLocation {
+		if len(enclosingLocation) >= len(location) {
+			return false
+		}
+		if location[len(enclosingLocation)] != '/' {
+			return false
+		}
+		if location[:len(enclosingLocation)] != enclosingLocation {
+			return false
+		}
+	}
+	return true
+}
+
+func (m *Manager) closeUpdateChannel(channel <-chan fm_proto.Update) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	delete(m.notifiers[channel].notifiers, channel)
+	delete(m.notifiers, channel)
+}
+
+func (m *Manager) makeUpdateChannel(locationStr string) <-chan fm_proto.Update {
+	channel := make(chan fm_proto.Update, 16)
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	if m.locations == nil {
+		m.locations = make(map[string]*locationType)
+	}
+	if m.notifiers == nil {
+		m.notifiers = make(map[<-chan fm_proto.Update]*locationType)
+	}
+	location, ok := m.locations[locationStr]
+	if !ok {
+		location = &locationType{
+			notifiers: make(map[<-chan fm_proto.Update]chan<- fm_proto.Update),
+		}
+		m.locations[locationStr] = location
+	}
+	location.notifiers[channel] = channel
+	m.notifiers[channel] = location
+	machines := make([]*fm_proto.Machine, 0)
+	vms := make(map[string]*hyper_proto.VmInfo, len(m.vms))
+	for _, h := range m.hypervisors {
+		if !testInLocation(h.location, locationStr) {
+			continue
+		}
+		machines = append(machines, h.machine)
+		for addr, vm := range h.vms {
+			vms[addr] = &vm.VmInfo
+		}
+	}
+	channel <- fm_proto.Update{
+		ChangedMachines: machines,
+		ChangedVMs:      vms,
+	}
+	return channel
+}
+
 func (m *Manager) updateHypervisor(h *hypervisorType,
 	machine *fm_proto.Machine) {
+	location, _ := m.topology.GetLocationOfMachine(machine.Hostname)
 	h.mutex.Lock()
+	h.location = location
 	h.machine = machine
 	subnets := h.subnets
 	h.mutex.Unlock()
 	if *manageHypervisors && h.probeStatus == probeStatusGood {
-		m.processSubnetsUpdates(h, subnets)
+		go m.processSubnetsUpdates(h, subnets)
 	}
 }
 
@@ -76,24 +137,39 @@ func (m *Manager) updateTopologyLocked(t *topology.Topology,
 	for hypervisorName := range m.hypervisors {
 		hypervisorsToDelete[hypervisorName] = struct{}{}
 	}
+	var hypersToChange, hypersToDelete []*hypervisorType
 	for _, machine := range machines {
 		delete(hypervisorsToDelete, machine.Hostname)
 		if hypervisor, ok := m.hypervisors[machine.Hostname]; ok {
-			go m.updateHypervisor(hypervisor, machine)
+			if !hypervisor.machine.Equal(machine) {
+				hypersToChange = append(hypersToChange, hypervisor)
+			}
+			m.updateHypervisor(hypervisor, machine)
 		} else {
+			location, _ := m.topology.GetLocationOfMachine(machine.Hostname)
 			hypervisor := &hypervisorType{
-				logger:  prefixlogger.New(machine.Hostname+": ", m.logger),
-				machine: machine,
-				vms:     make(map[string]*vmInfoType),
+				logger:   prefixlogger.New(machine.Hostname+": ", m.logger),
+				location: location,
+				machine:  machine,
+				vms:      make(map[string]*vmInfoType),
 			}
 			m.hypervisors[machine.Hostname] = hypervisor
+			hypersToChange = append(hypersToChange, hypervisor)
 			go m.manageHypervisorLoop(hypervisor, machine.Hostname)
 		}
 	}
 	deleteList := make([]*hypervisorType, 0, len(hypervisorsToDelete))
 	for hypervisorName := range hypervisorsToDelete {
-		deleteList = append(deleteList, m.hypervisors[hypervisorName])
+		hypervisor := m.hypervisors[hypervisorName]
+		deleteList = append(deleteList, hypervisor)
 		delete(m.hypervisors, hypervisorName)
+		hypersToDelete = append(hypersToDelete, hypervisor)
+	}
+	if len(hypersToChange) > 0 || len(hypersToDelete) > 0 {
+		updates := m.splitChanges(hypersToChange, hypersToDelete)
+		for location, updateForLocation := range updates {
+			m.sendUpdate(location, updateForLocation)
+		}
 	}
 	subnetsToDelete := make(map[string]struct{}, len(m.subnets))
 	for gatewayIp := range m.subnets {
@@ -240,6 +316,9 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 				*desiredAddressPoolSize-update.NumFreeAddresses)
 			if err != nil {
 				h.logger.Println(err)
+				return
+			}
+			if len(freeIPs) < 1 {
 				return
 			}
 			addresses := make([]hyper_proto.Address, 0, len(freeIPs))
@@ -401,6 +480,7 @@ func (m *Manager) processVmUpdates(h *hypervisorType,
 
 func (m *Manager) processVmUpdatesWithLock(h *hypervisorType,
 	updateVMs map[string]*hyper_proto.VmInfo, vmsToDelete map[string]struct{}) {
+	update := fm_proto.Update{ChangedVMs: make(map[string]*hyper_proto.VmInfo)}
 	for ipAddr, protoVm := range updateVMs {
 		if len(protoVm.Volumes) < 1 {
 			vmsToDelete[ipAddr] = struct{}{}
@@ -429,6 +509,7 @@ func (m *Manager) processVmUpdatesWithLock(h *hypervisorType,
 					h.logger.Debugf(0, "wrote VM: %s\n", ipAddr)
 				}
 			}
+			update.ChangedVMs[ipAddr] = protoVm
 		}
 	}
 	for ipAddr := range vmsToDelete {
@@ -439,6 +520,49 @@ func (m *Manager) processVmUpdatesWithLock(h *hypervisorType,
 			h.logger.Printf("error deleting VM: %s: %s\n", ipAddr, err)
 		} else {
 			h.logger.Debugf(0, "deleted VM: %s\n", ipAddr)
+		}
+		update.DeletedVMs = append(update.DeletedVMs, ipAddr)
+	}
+	m.sendUpdate(h.location, &update)
+}
+
+func (m *Manager) splitChanges(hypersToChange []*hypervisorType,
+	hypersToDelete []*hypervisorType) map[string]*fm_proto.Update {
+	updates := make(map[string]*fm_proto.Update)
+	for _, h := range hypersToChange {
+		if locationUpdate, ok := updates[h.location]; !ok {
+			updates[h.location] = &fm_proto.Update{
+				ChangedMachines: []*fm_proto.Machine{h.machine},
+			}
+		} else {
+			locationUpdate.ChangedMachines = append(
+				locationUpdate.ChangedMachines, h.machine)
+		}
+	}
+	for _, h := range hypersToDelete {
+		if locationUpdate, ok := updates[h.location]; !ok {
+			updates[h.location] = &fm_proto.Update{
+				DeletedMachines: []string{h.machine.Hostname},
+			}
+		} else {
+			locationUpdate.DeletedMachines = append(
+				locationUpdate.DeletedMachines, h.machine.Hostname)
+		}
+	}
+	return updates
+}
+
+func (m *Manager) sendUpdate(hyperLocation string, update *fm_proto.Update) {
+	if len(update.ChangedMachines) < 1 && len(update.ChangedVMs) < 1 &&
+		len(update.DeletedMachines) < 1 && len(update.DeletedVMs) < 1 {
+		return
+	}
+	for locationStr, location := range m.locations {
+		if !testInLocation(hyperLocation, locationStr) {
+			continue
+		}
+		for _, channel := range location.notifiers {
+			channel <- *update
 		}
 	}
 }
