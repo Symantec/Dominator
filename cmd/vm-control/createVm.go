@@ -192,6 +192,8 @@ func getHypervisorAddress() (string, error) {
 	}
 	if numHyper := len(reply.HypervisorAddresses); numHyper < 1 {
 		return "", errors.New("no active Hypervisors in location")
+	} else if numHyper < 2 {
+		return reply.HypervisorAddresses[0], nil
 	} else {
 		return reply.HypervisorAddresses[rand.Intn(numHyper-1)], nil
 	}

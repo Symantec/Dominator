@@ -30,6 +30,7 @@ Some of the sub-commands available are:
                    available
 - **add-subnet**: manually add a subnet to a specific *Hypervisor*. This command
                   is only required if a *Fleet Manager* is not available
+- **become-primary-vm-owner**: become the primary owner of a VM
 - **change-vm-owner-users**: change the extra owners for a VM
 - **change-vm-tags**: change the tags for a VM
 - **create-vm**: create a VM
@@ -38,7 +39,8 @@ Some of the sub-commands available are:
 - **discard-vm-old-user-data**: discard the previous user data for a VM
 - **discard-vm-snapshot**: discard the previous snapshot for a VM
 - **get-updates**: get and show a continuous stream of updates from a
-  		   *Hypervisor*. This is primarily for debugging
+                   *Hypervisor* or *Fleet Manager*. This is primarily for
+                   debugging
 - **get-vm-info**: get and show the information for a VM
 - **import-local-vm**: import a local raw VM. This is primarily for debugging
 - **import-virsh-vm**: import a local virsh VM. The specified domain name must
