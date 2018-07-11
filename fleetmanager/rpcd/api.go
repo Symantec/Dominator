@@ -6,11 +6,13 @@ import (
 	"github.com/Symantec/Dominator/fleetmanager/hypervisors"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/srpc/serverutil"
 )
 
 type srpcType struct {
 	hypervisorsManager *hypervisors.Manager
 	logger             log.DebugLogger
+	*serverutil.PerUserMethodLimiter
 }
 
 type htmlWriter srpcType
@@ -24,11 +26,16 @@ func Setup(hypervisorsManager *hypervisors.Manager, logger log.DebugLogger) (
 	srpcObj := &srpcType{
 		hypervisorsManager: hypervisorsManager,
 		logger:             logger,
+		PerUserMethodLimiter: serverutil.NewPerUserMethodLimiter(
+			map[string]uint{
+				"GetUpdates": 1,
+			}),
 	}
 	srpc.RegisterNameWithOptions("FleetManager", srpcObj,
 		srpc.ReceiverOptions{
 			PublicMethods: []string{
 				"GetHypervisorForVM",
+				"GetUpdates",
 				"ListHypervisorLocations",
 				"ListHypervisorsInLocation",
 				"ListVMsInLocation",
