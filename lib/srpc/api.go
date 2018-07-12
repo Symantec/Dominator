@@ -31,7 +31,6 @@ var (
 	ErrorBadCertificate       = errors.New("bad certificate")
 	ErrorNoSrpcEndpoint       = errors.New("no SRPC endpoint")
 	ErrorAccessToMethodDenied = errors.New("access to method denied")
-	ErrorMethodBlocked        = errors.New("method blocked")
 )
 
 var (
@@ -72,9 +71,15 @@ type Encoder interface {
 }
 
 // MethodBlocker defines an interface to block method calls (after possible
-// authentication) for a receiver (passed to RegisterName).
+// authentication) for a receiver (passed to RegisterName). This may be used to
+// attach rate limiting polcies for method calls.
 type MethodBlocker interface {
-	BlockMethod(methodName string) bool // Return true to block method.
+	// BlockMethod is called after method access is granted, prior to calling
+	// the method. After the method call completes, the returned function is
+	// called. If this is nil, no function is called. If a non-nil error is
+	// returned then the method call is blocked and the remote caller will
+	// receive the error.
+	BlockMethod(methodName string, authInfo *AuthInformation) (func(), error)
 }
 
 // RegisterName publishes in the server the set of methods of the receiver
@@ -84,6 +89,8 @@ type MethodBlocker interface {
 //   func Method(*Conn, request, *response) error
 // The request/response method must not perform I/O on the Conn type. This is
 // passed only to provide access to connection metadata.
+// If rcvr implements MethodBlocker then the BlockMethod method will be called
+// as needed.
 // The name of the receiver (service) is given by name.
 func RegisterName(name string, rcvr interface{}) error {
 	return registerName(name, rcvr, ReceiverOptions{})
@@ -295,6 +302,7 @@ type Conn struct {
 	haveMethodAccess bool
 	username         string              // Empty string for unauthenticated.
 	permittedMethods map[string]struct{} // nil: all, empty: none permitted.
+	releaseNotifier  func()
 }
 
 // Close will close the connection to the Sevice.Method function, releasing the

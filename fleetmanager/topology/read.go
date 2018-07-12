@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"github.com/Symantec/Dominator/lib/json"
+	proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
 
 func cloneSet(set map[string]struct{}) map[string]struct{} {
@@ -32,8 +33,8 @@ func load(topologyDir string) (*Topology, error) {
 	return topology, nil
 }
 
-func loadMachines(filename string) ([]*Machine, error) {
-	var machines []*Machine
+func loadMachines(filename string) ([]*proto.Machine, error) {
+	var machines []*proto.Machine
 	if err := json.ReadFromFile(filename, &machines); err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil

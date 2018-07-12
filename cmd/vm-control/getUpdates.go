@@ -8,7 +8,8 @@ import (
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
+	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 func getUpdatesSubcommand(args []string, logger log.DebugLogger) {
@@ -20,8 +21,52 @@ func getUpdatesSubcommand(args []string, logger log.DebugLogger) {
 }
 
 func getUpdates(logger log.DebugLogger) error {
-	hypervisor := fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum)
-	return getUpdatesOnHypervisor(hypervisor, logger)
+	if *hypervisorHostname != "" {
+		return getUpdatesOnHypervisor(
+			fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum),
+			logger)
+	} else if *fleetManagerHostname != "" {
+		return getUpdatesOnFleetManager(
+			fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum),
+			logger)
+	} else {
+		return getUpdatesOnHypervisor(fmt.Sprintf(":%d", *hypervisorPortNum),
+			logger)
+	}
+
+}
+
+func getUpdatesOnFleetManager(fleetManager string,
+	logger log.DebugLogger) error {
+	client, err := srpc.DialHTTP("tcp", fleetManager, 0)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	conn, err := client.Call("FleetManager.GetUpdates")
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	encoder := gob.NewEncoder(conn)
+	request := fm_proto.GetUpdatesRequest{Location: *location}
+	if err := encoder.Encode(request); err != nil {
+		return err
+	}
+	if err := conn.Flush(); err != nil {
+		return err
+	}
+	decoder := gob.NewDecoder(conn)
+	for {
+		var update fm_proto.Update
+		if err := decoder.Decode(&update); err != nil {
+			return err
+		}
+		if err := json.WriteWithIndent(os.Stdout, "    ", update); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func getUpdatesOnHypervisor(hypervisor string, logger log.DebugLogger) error {
@@ -37,7 +82,7 @@ func getUpdatesOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 	defer conn.Close()
 	decoder := gob.NewDecoder(conn)
 	for {
-		var update proto.Update
+		var update hyper_proto.Update
 		if err := decoder.Decode(&update); err != nil {
 			return err
 		}

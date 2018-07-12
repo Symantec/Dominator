@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
 
 func splitPath(path string) []string {
@@ -26,7 +28,7 @@ func (t *Topology) findDirectory(dirname string) (*Directory, error) {
 	return directory, nil
 }
 
-func (t *Topology) listMachines(dirname string) ([]*Machine, error) {
+func (t *Topology) listMachines(dirname string) ([]*proto.Machine, error) {
 	directory, err := t.findDirectory(dirname)
 	if err != nil {
 		return nil, err
@@ -34,7 +36,7 @@ func (t *Topology) listMachines(dirname string) ([]*Machine, error) {
 	return directory.listMachines(), nil
 }
 
-func (directory *Directory) listMachines() []*Machine {
+func (directory *Directory) listMachines() []*proto.Machine {
 	machines := directory.Machines
 	for _, subdir := range directory.Directories {
 		machines = append(machines, subdir.listMachines()...)

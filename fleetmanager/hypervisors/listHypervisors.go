@@ -47,7 +47,7 @@ func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 	req *http.Request) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
-	topology, err := m.getTopology()
+	_, err := m.getTopology()
 	if err != nil {
 		fmt.Fprintln(writer, err)
 		return
@@ -100,8 +100,7 @@ func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 		fmt.Fprintf(writer, "    <td>%s</td>\n", hypervisor.probeStatus)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", machine.HostIpAddress)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", machine.HostMacAddress)
-		location, _ := topology.GetLocationOfMachine(machine.Hostname)
-		fmt.Fprintf(writer, "    <td>%s</td>\n", location)
+		fmt.Fprintf(writer, "    <td>%s</td>\n", hypervisor.location)
 		fmt.Fprintf(writer,
 			"    <td><a href=\"http://%s:%d/listVMs\">%d</a></td>\n",
 			machine.Hostname, constants.HypervisorPortNumber,

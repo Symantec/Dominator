@@ -113,9 +113,7 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 				"    <td><a href=\"http://%s:%d/\">%s</a></td>\n",
 				vm.hypervisor.machine.Hostname, constants.HypervisorPortNumber,
 				vm.hypervisor.machine.Hostname)
-			location, _ := topology.GetLocationOfMachine(
-				vm.hypervisor.machine.Hostname)
-			fmt.Fprintf(writer, "    <td>%s</td>\n", location)
+			fmt.Fprintf(writer, "    <td>%s</td>\n", vm.hypervisor.location)
 			fmt.Fprintf(writer, "  </tr>\n")
 		}
 	}

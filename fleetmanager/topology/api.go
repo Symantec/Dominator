@@ -5,13 +5,14 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/proto/hypervisor"
+	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
+	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 type Directory struct {
 	Name             string
 	Directories      []*Directory          `json:",omitempty"`
-	Machines         []*Machine            `json:",omitempty"`
+	Machines         []*fm_proto.Machine   `json:",omitempty"`
 	Subnets          []*Subnet             `json:",omitempty"`
 	nameToDirectory  map[string]*Directory // Key: directory name.
 	parent           *Directory
@@ -27,16 +28,8 @@ func (directory *Directory) Walk(fn func(*Directory) error) error {
 	return directory.walk(fn)
 }
 
-type HardwareAddr net.HardwareAddr
-
-type Machine struct {
-	Hostname       string       `json:",omitempty"`
-	HostIpAddress  net.IP       `json:",omitempty"`
-	HostMacAddress HardwareAddr `json:",omitempty"`
-}
-
 type Subnet struct {
-	hypervisor.Subnet
+	hyper_proto.Subnet
 	ReservedIPs     []net.IP            `json:",omitempty"`
 	reservedIpAddrs map[string]struct{} // Key: IP address.
 }
@@ -90,7 +83,7 @@ func (t *Topology) GetSubnetsForMachine(name string) ([]*Subnet, error) {
 	return t.getSubnetsForMachine(name)
 }
 
-func (t *Topology) ListMachines(dirname string) ([]*Machine, error) {
+func (t *Topology) ListMachines(dirname string) ([]*fm_proto.Machine, error) {
 	return t.listMachines(dirname)
 }
 
