@@ -118,6 +118,7 @@ func (g *hypervisorGeneratorType) updateVMs(vms map[string]*proto.VmInfo,
 			delete(g.vms, ipAddr)
 		} else {
 			g.vms[ipAddr] = vm
+			delete(vmsToDelete, ipAddr)
 		}
 	}
 	for ipAddr := range vmsToDelete {
