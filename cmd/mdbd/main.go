@@ -75,6 +75,14 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr,
 		"    url: URL which yields JSON with map of map of hosts with fqdn entries")
 	fmt.Fprintln(os.Stderr,
+		"  fleet-manager: manager-hostname [location]")
+	fmt.Fprintln(os.Stderr,
+		"    Query Fleet Manager")
+	fmt.Fprintln(os.Stderr,
+		"    manager-hostname: hostname of the Fleet Manager")
+	fmt.Fprintln(os.Stderr,
+		"    location: optional location to limit query to")
+	fmt.Fprintln(os.Stderr,
 		"  hypervisor")
 	fmt.Fprintln(os.Stderr,
 		"    Query Hypervisor on this machine")
@@ -99,6 +107,7 @@ var drivers = []driver{
 	{"aws-local", 0, 0, newAwsLocalGenerator},
 	{"cis", 1, 1, newCisGenerator},
 	{"ds.host.fqdn", 1, 1, newDsHostFqdnGenerator},
+	{"fleet-manager", 1, 2, newFleetManagerGenerator},
 	{"hypervisor", 0, 0, newHypervisorGenerator},
 	{"text", 1, 1, newTextGenerator},
 }

@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/gob"
+	"fmt"
 	"sync"
 	"time"
 
+	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -31,8 +33,9 @@ func newHypervisorGenerator(args []string,
 }
 
 func (g *hypervisorGeneratorType) daemon() {
+	address := fmt.Sprintf(":%d", constants.HypervisorPortNumber)
 	for {
-		if err := g.getUpdates("localhost:6976"); err != nil {
+		if err := g.getUpdates(address); err != nil {
 			g.logger.Println(err)
 			time.Sleep(time.Second)
 		}
