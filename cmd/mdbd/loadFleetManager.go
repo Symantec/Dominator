@@ -69,12 +69,14 @@ func (g *fleetManagerGeneratorType) getUpdates(fleetManager string) error {
 		return err
 	}
 	decoder := gob.NewDecoder(conn)
+	initialUpdate := true
 	for {
 		var update fm_proto.Update
 		if err := decoder.Decode(&update); err != nil {
 			return err
 		}
-		g.update(update)
+		g.update(update, initialUpdate)
+		initialUpdate = false
 		select {
 		case g.eventChannel <- struct{}{}:
 		default:
@@ -127,19 +129,38 @@ func (g *fleetManagerGeneratorType) RegisterEventChannel(
 	g.eventChannel = events
 }
 
-func (g *fleetManagerGeneratorType) update(update fm_proto.Update) {
+func (g *fleetManagerGeneratorType) update(update fm_proto.Update,
+	initialUpdate bool) {
+	machinesToDelete := make(map[string]struct{}, len(g.machines))
+	vmsToDelete := make(map[string]struct{}, len(g.vms))
+	if initialUpdate {
+		for hostname := range g.machines {
+			machinesToDelete[hostname] = struct{}{}
+		}
+		for ipAddr := range g.vms {
+			vmsToDelete[ipAddr] = struct{}{}
+		}
+	}
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 	for _, machine := range update.ChangedMachines {
 		g.machines[machine.Hostname] = machine
+		delete(machinesToDelete, machine.Hostname)
 	}
 	for _, hostname := range update.DeletedMachines {
 		delete(g.machines, hostname)
 	}
+	for hostname := range machinesToDelete {
+		delete(g.machines, hostname)
+	}
 	for ipAddr, vm := range update.ChangedVMs {
 		g.vms[ipAddr] = vm
+		delete(vmsToDelete, ipAddr)
 	}
 	for _, ipAddr := range update.DeletedVMs {
+		delete(g.vms, ipAddr)
+	}
+	for ipAddr := range vmsToDelete {
 		delete(g.vms, ipAddr)
 	}
 }

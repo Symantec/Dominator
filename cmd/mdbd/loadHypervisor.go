@@ -54,12 +54,14 @@ func (g *hypervisorGeneratorType) getUpdates(hypervisor string) error {
 	}
 	defer conn.Close()
 	decoder := gob.NewDecoder(conn)
+	initialUpdate := true
 	for {
 		var update proto.Update
 		if err := decoder.Decode(&update); err != nil {
 			return err
 		}
-		g.updateVMs(update.VMs)
+		g.updateVMs(update.VMs, initialUpdate)
+		initialUpdate = false
 		select {
 		case g.eventChannel <- struct{}{}:
 		default:
@@ -101,9 +103,13 @@ func (g *hypervisorGeneratorType) RegisterEventChannel(events chan<- struct{}) {
 	g.eventChannel = events
 }
 
-func (g *hypervisorGeneratorType) updateVMs(vms map[string]*proto.VmInfo) {
-	if len(vms) < 1 {
-		return
+func (g *hypervisorGeneratorType) updateVMs(vms map[string]*proto.VmInfo,
+	initialUpdate bool) {
+	vmsToDelete := make(map[string]struct{}, len(g.vms))
+	if initialUpdate {
+		for ipAddr := range g.vms {
+			vmsToDelete[ipAddr] = struct{}{}
+		}
 	}
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
@@ -113,5 +119,8 @@ func (g *hypervisorGeneratorType) updateVMs(vms map[string]*proto.VmInfo) {
 		} else {
 			g.vms[ipAddr] = vm
 		}
+	}
+	for ipAddr := range vmsToDelete {
+		delete(g.vms, ipAddr)
 	}
 }
