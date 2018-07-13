@@ -45,6 +45,9 @@ func (left *Machine) Equal(right *Machine) bool {
 	if left.HostMacAddress.String() != right.HostMacAddress.String() {
 		return false
 	}
+	if !left.Tags.Equal(right.Tags) {
+		return false
+	}
 	return true
 }
 

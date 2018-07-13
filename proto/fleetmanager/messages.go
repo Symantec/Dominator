@@ -3,6 +3,7 @@ package fleetmanager
 import (
 	"net"
 
+	"github.com/Symantec/Dominator/lib/tags"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
@@ -66,4 +67,5 @@ type Machine struct {
 	Hostname       string       `json:",omitempty"`
 	HostIpAddress  net.IP       `json:",omitempty"`
 	HostMacAddress HardwareAddr `json:",omitempty"`
+	Tags           tags.Tags    `json:",omitempty"`
 }
