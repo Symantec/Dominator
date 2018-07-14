@@ -80,8 +80,6 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  add-address MACaddr [IPaddr]")
-	fmt.Fprintln(os.Stderr, "  add-subnet ID IPgateway IPmask DNSserver...")
 	fmt.Fprintln(os.Stderr, "  become-primary-vm-owner IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-owner-users IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-tags IPaddr")
@@ -90,7 +88,6 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  discard-vm-old-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  discard-vm-old-user-data IPaddr")
 	fmt.Fprintln(os.Stderr, "  discard-vm-snapshot IPaddr")
-	fmt.Fprintln(os.Stderr, "  get-updates")
 	fmt.Fprintln(os.Stderr, "  get-vm-info IPaddr")
 	fmt.Fprintln(os.Stderr, "  import-local-vm info-file root-volume")
 	fmt.Fprintln(os.Stderr, "  import-virsh-vm domain")
@@ -98,7 +95,6 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  list-locations [TopLocation]")
 	fmt.Fprintln(os.Stderr, "  list-vms")
 	fmt.Fprintln(os.Stderr, "  probe-vm-port IPaddr")
-	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
 	fmt.Fprintln(os.Stderr, "  replace-vm-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  replace-vm-user-data IPaddr")
 	fmt.Fprintln(os.Stderr, "  restore-vm-from-snapshot IPaddr")
@@ -120,8 +116,6 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
-	{"add-address", 1, 2, addAddressSubcommand},
-	{"add-subnet", 4, -1, addSubnetSubcommand},
 	{"become-primary-vm-owner", 1, 1, becomePrimaryVmOwnerSubcommand},
 	{"change-vm-owner-users", 1, 1, changeVmOwnerUsersSubcommand},
 	{"change-vm-tags", 1, 1, changeVmTagsSubcommand},
@@ -130,7 +124,6 @@ var subcommands = []subcommand{
 	{"discard-vm-old-image", 1, 1, discardVmOldImageSubcommand},
 	{"discard-vm-old-user-data", 1, 1, discardVmOldUserDataSubcommand},
 	{"discard-vm-snapshot", 1, 1, discardVmSnapshotSubcommand},
-	{"get-updates", 0, 0, getUpdatesSubcommand},
 	{"get-vm-info", 1, 1, getVmInfoSubcommand},
 	{"import-local-vm", 2, 2, importLocalVmSubcommand},
 	{"import-virsh-vm", 1, 1, importVirshVmSubcommand},
@@ -138,7 +131,6 @@ var subcommands = []subcommand{
 	{"list-locations", 0, 1, listLocationsSubcommand},
 	{"list-vms", 0, 0, listVMsSubcommand},
 	{"probe-vm-port", 1, 1, probeVmPortSubcommand},
-	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
 	{"replace-vm-image", 1, 1, replaceVmImageSubcommand},
 	{"replace-vm-user-data", 1, 1, replaceVmUserDataSubcommand},
 	{"restore-vm-from-snapshot", 1, 1, restoreVmFromSnapshotSubcommand},
