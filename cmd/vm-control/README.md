@@ -1,8 +1,8 @@
 # vm-control
 A utility to manage Virtual Machines (VMs).
 
-The *vm-control* creates and manages VMs by communicating with a *Hypervisor*.
-It is typically run on a desktop, bastion or build machine.
+The *vm-control* utility creates and manages VMs by communicating with a
+*Hypervisor*. It is typically run on a desktop, bastion or build machine.
 
 ## Usage
 *vm-control* supports several sub-commands. There are many command-line flags

@@ -1,8 +1,8 @@
 # hyper-control
 A utility to manage Hypervisors.
 
-The *hyper-control* manages Hypervisors. It is typically run on a desktop or
-bastion machine.
+The *hyper-control* utility manages Hypervisors. It is typically run on a
+desktop or bastion machine.
 
 ## Usage
 *hyper-control* supports several sub-commands. There are many command-line flags
