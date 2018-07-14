@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/tags"
 	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
@@ -14,6 +15,7 @@ type Directory struct {
 	Directories      []*Directory          `json:",omitempty"`
 	Machines         []*fm_proto.Machine   `json:",omitempty"`
 	Subnets          []*Subnet             `json:",omitempty"`
+	Tags             tags.Tags             `json:",omitempty"`
 	nameToDirectory  map[string]*Directory // Key: directory name.
 	parent           *Directory
 	path             string

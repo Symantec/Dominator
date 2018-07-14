@@ -5,11 +5,17 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"sort"
 
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/tags"
 	proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
+
+type inheritingState struct {
+	subnetIds map[string]struct{}
+	tags      tags.Tags
+}
 
 func cloneSet(set map[string]struct{}) map[string]struct{} {
 	clone := make(map[string]struct{}, len(set))
@@ -25,7 +31,7 @@ func load(topologyDir string) (*Topology, error) {
 		reservedIpAddrs: make(map[string]struct{}),
 	}
 	directory, err := topology.readDirectory(topologyDir, "",
-		make(map[string]struct{}))
+		newInheritingState())
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +90,31 @@ func loadSubnets(filename string) ([]*Subnet, error) {
 	return subnets, nil
 }
 
+func loadTags(filename string) (tags.Tags, error) {
+	var loadedTags tags.Tags
+	if err := json.ReadFromFile(filename, &loadedTags); err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("error reading: %s: %s", filename, err)
+	}
+	return loadedTags, nil
+}
+
+func newInheritingState() *inheritingState {
+	return &inheritingState{
+		subnetIds: cloneSet(nil),
+		tags:      make(tags.Tags),
+	}
+}
+
+func (state *inheritingState) copy() *inheritingState {
+	return &inheritingState{
+		subnetIds: cloneSet(state.subnetIds),
+		tags:      state.tags.Copy(),
+	}
+}
+
 func (t *Topology) loadSubnets(directory *Directory, dirpath string,
 	subnetIds map[string]struct{}) error {
 	if err := directory.loadSubnets(dirpath, subnetIds); err != nil {
@@ -98,20 +129,23 @@ func (t *Topology) loadSubnets(directory *Directory, dirpath string,
 }
 
 func (t *Topology) readDirectory(topDir, dirname string,
-	subnetIds map[string]struct{}) (*Directory, error) {
+	state *inheritingState) (*Directory, error) {
 	directory := &Directory{
 		nameToDirectory:  make(map[string]*Directory),
 		path:             dirname,
 		subnetIdToSubnet: make(map[string]*Subnet),
 	}
 	dirpath := filepath.Join(topDir, dirname)
+	if err := t.loadSubnets(directory, dirpath, state.subnetIds); err != nil {
+		return nil, err
+	}
+	if err := directory.loadTags(dirpath, state.tags); err != nil {
+		return nil, err
+	}
 	if err := t.loadMachines(directory, dirpath); err != nil {
 		return nil, err
 	}
-	if err := t.loadSubnets(directory, dirpath, subnetIds); err != nil {
-		return nil, err
-	}
-	dirnames, err := readDirnames(dirpath)
+	dirnames, err := fsutil.ReadDirnames(dirpath, false)
 	if err != nil {
 		return nil, err
 	}
@@ -124,8 +158,8 @@ func (t *Topology) readDirectory(topDir, dirname string,
 		if !fi.IsDir() {
 			continue
 		}
-		subnetIds := cloneSet(subnetIds)
-		if subdir, err := t.readDirectory(topDir, path, subnetIds); err != nil {
+		state := state.copy()
+		if subdir, err := t.readDirectory(topDir, path, state); err != nil {
 			return nil, err
 		} else {
 			subdir.Name = name
@@ -137,22 +171,23 @@ func (t *Topology) readDirectory(topDir, dirname string,
 	return directory, nil
 }
 
-func readDirnames(dirname string) ([]string, error) {
-	if file, err := os.Open(dirname); err != nil {
-		return nil, err
-	} else {
-		defer file.Close()
-		dirnames, err := file.Readdirnames(-1)
-		sort.Strings(dirnames)
-		return dirnames, err
-	}
-}
-
 func (directory *Directory) loadMachines(dirname string) error {
 	var err error
 	directory.Machines, err = loadMachines(
 		filepath.Join(dirname, "machines.json"))
-	return err
+	if err != nil {
+		return err
+	}
+	for _, machine := range directory.Machines {
+		if machine.Tags == nil {
+			machine.Tags = directory.Tags
+		} else if directory.Tags != nil {
+			mergedTags := directory.Tags.Copy()
+			mergedTags.Merge(machine.Tags)
+			machine.Tags = mergedTags
+		}
+	}
+	return nil
 }
 
 func (directory *Directory) loadSubnets(dirname string,
@@ -169,6 +204,19 @@ func (directory *Directory) loadSubnets(dirname string,
 			subnetIds[subnet.Id] = struct{}{}
 			directory.subnetIdToSubnet[subnet.Id] = subnet
 		}
+	}
+	return nil
+}
+
+func (directory *Directory) loadTags(dirname string,
+	parentTags tags.Tags) error {
+	loadedTags, err := loadTags(filepath.Join(dirname, "tags.json"))
+	if err != nil {
+		return err
+	}
+	parentTags.Merge(loadedTags)
+	if len(parentTags) > 0 {
+		directory.Tags = parentTags
 	}
 	return nil
 }
