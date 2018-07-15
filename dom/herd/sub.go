@@ -610,14 +610,14 @@ func (sub *Sub) checkForUnsafeChange(request subproto.UpdateRequest) bool {
 	if sub.requiredImage.Filter == nil {
 		return false // Sparse image: no deletions.
 	}
-	if len(sub.fileSystem.InodeTable)>>1 <
-		len(sub.requiredImage.FileSystem.InodeTable) {
-		return false
+	if len(sub.requiredImage.FileSystem.InodeTable) <
+		len(sub.fileSystem.InodeTable)>>1 {
+		return true
 	}
-	if len(request.PathsToDelete) < len(sub.fileSystem.InodeTable)>>1 {
-		return false
+	if len(request.PathsToDelete) > len(sub.fileSystem.InodeTable)>>1 {
+		return true
 	}
-	return true
+	return false
 }
 
 func (sub *Sub) cleanup(srpcClient *srpc.Client) {
