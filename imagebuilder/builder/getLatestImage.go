@@ -17,6 +17,9 @@ func getLatestImage(client *srpc.Client, imageStream string,
 	if err != nil {
 		return "", nil, err
 	}
+	if imageName == "" {
+		return "", nil, nil
+	}
 	if img, err := getImage(client, imageName, buildLog); err != nil {
 		return "", nil, err
 	} else {
