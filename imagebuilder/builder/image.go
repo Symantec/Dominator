@@ -275,7 +275,7 @@ func loadFilter(manifestDir string) (*filter.Filter, bool, error) {
 		return nil, false, err
 	}
 	if imageFilter == nil && addFilter == nil {
-		return &filter.Filter{}, false, nil
+		return nil, false, nil
 	} else if imageFilter != nil && addFilter != nil {
 		return nil, false, errors.New(
 			"filter and filter.add files both present")
