@@ -94,9 +94,18 @@ func (g *fleetManagerGeneratorType) Generate(unused_datacentre string,
 		if len(machine.HostIpAddress) > 0 {
 			ipAddr = machine.HostIpAddress.String()
 		}
+		tags := machine.Tags
+		if tags == nil {
+			tags = emptyTags
+		}
+		_, disableUpdates := tags["DisableUpdates"]
 		newMdb.Machines = append(newMdb.Machines, mdb.Machine{
-			Hostname:  machine.Hostname,
-			IpAddress: ipAddr,
+			Hostname:       machine.Hostname,
+			IpAddress:      ipAddr,
+			RequiredImage:  tags["RequiredImage"],
+			PlannedImage:   tags["PlannedImage"],
+			DisableUpdates: disableUpdates,
+			Tags:           machine.Tags,
 		})
 	}
 	for ipAddr, vm := range g.vms {
