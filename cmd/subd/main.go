@@ -9,6 +9,7 @@ import (
 	"path"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/Symantec/Dominator/lib/constants"
@@ -51,8 +52,8 @@ var (
 		"Port number to allocate and listen on for HTTP/RPC")
 	rootDir = flag.String("rootDir", "/",
 		"Name of root of directory tree to manage")
-	scanExcludeList flagutil.StringList = constants.ScanExcludeList
-	showStats                           = flag.Bool("showStats", false,
+	scanExcludeList flagutil.StringList
+	showStats       = flag.Bool("showStats", false,
 		"If true, show statistics after each cycle")
 	subdDir = flag.String("subdDir", ".subd",
 		"Name of subd private directory, relative to rootDir. This must be on the same file-system as rootDir")
@@ -62,7 +63,7 @@ var (
 func init() {
 	runtime.LockOSThread()
 	flag.Var(&scanExcludeList, "scanExcludeList",
-		"Comma separated list of patterns to exclude from scanning")
+		`Comma separated list of patterns to exclude from scanning (default `+strings.Join(constants.ScanExcludeList, ",")+`")`)
 }
 
 func sanityCheck() bool {
@@ -319,10 +320,17 @@ func main() {
 	if configParams.ScanSpeedPercent < 1 {
 		configParams.ScanSpeedPercent = constants.DefaultScanSpeedPercent
 	}
+	filterLines := configParams.ScanExclusionList
+	if len(scanExcludeList) > 0 {
+		filterLines = scanExcludeList
+	}
+	if len(filterLines) < 1 {
+		filterLines = constants.ScanExcludeList
+	}
 	var err error
-	configuration.ScanFilter, err = filter.New(scanExcludeList)
+	configuration.ScanFilter, err = filter.New(filterLines)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to set default scan exclusions: %s\n",
+		fmt.Fprintf(os.Stderr, "Unable to set initial scan exclusions: %s\n",
 			err)
 		os.Exit(1)
 	}
