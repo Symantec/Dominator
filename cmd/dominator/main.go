@@ -12,6 +12,7 @@ import (
 	"github.com/Symantec/Dominator/dom/herd"
 	"github.com/Symantec/Dominator/dom/rpcd"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/mdb"
@@ -84,6 +85,10 @@ func newObjectServer(objectsDir string, logger log.DebugLogger) (
 func main() {
 	if os.Geteuid() == 0 {
 		fmt.Fprintln(os.Stderr, "Do not run the Dominator as root")
+		os.Exit(1)
+	}
+	if err := loadflags.LoadForDaemon("dominator"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	flag.Parse()
