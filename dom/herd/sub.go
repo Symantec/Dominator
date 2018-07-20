@@ -23,6 +23,8 @@ import (
 )
 
 var (
+	updateConfigurationsForSubs = flag.Bool("updateConfigurationsForSubs",
+		true, "If true, update the configurations for all subs")
 	logUnknownSubConnectErrors = flag.Bool("logUnknownSubConnectErrors", false,
 		"If true, log unknown sub connection errors")
 	showIP = flag.Bool("showIP", false,
@@ -453,6 +455,9 @@ func (sub *Sub) reclaim() {
 
 func (sub *Sub) updateConfiguration(srpcClient *srpc.Client,
 	pollReply subproto.PollResponse) {
+	if !*updateConfigurationsForSubs {
+		return
+	}
 	if pollReply.ScanCount < 1 {
 		return
 	}

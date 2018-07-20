@@ -28,6 +28,7 @@ var RequiredPaths = map[string]rune{
 }
 
 var ScanExcludeList = []string{
+	"/data/.*",
 	"/home/.*",
 	"/tmp/.*",
 	"/var/log/.*",

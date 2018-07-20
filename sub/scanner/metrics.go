@@ -29,6 +29,18 @@ func (configuration *Configuration) registerMetrics(
 	if err != nil {
 		return err
 	}
-	return configuration.NetworkReaderContext.RegisterMetrics(netDir,
+	err = configuration.NetworkReaderContext.RegisterMetrics(netDir,
 		units.BytePerSecond, "network speed")
+	if err != nil {
+		return err
+	}
+	if configuration.ScanFilter != nil {
+		list := tricorder.NewList(configuration.ScanFilter.FilterLines, false)
+		err := scannerDir.RegisterMetric("scan-filter", list, units.None,
+			"scan filter lines")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
