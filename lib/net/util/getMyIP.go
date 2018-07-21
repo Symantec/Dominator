@@ -3,7 +3,11 @@ package util
 import (
 	"errors"
 	"net"
+	"os"
+	"path/filepath"
 )
+
+const procNetVlan = "/proc/net/vlan"
 
 func getMyIP() (net.IP, error) {
 	var myIP net.IP
@@ -17,6 +21,9 @@ func getMyIP() (net.IP, error) {
 			continue
 		}
 		if iface.Flags&net.FlagBroadcast == 0 {
+			continue
+		}
+		if _, e := os.Stat(filepath.Join(procNetVlan, iface.Name)); e == nil {
 			continue
 		}
 		interfaceAddrs, err := iface.Addrs()
