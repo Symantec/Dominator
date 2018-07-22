@@ -23,6 +23,16 @@ import (
 
 const tftpbootPrefix = "/tftpboot"
 
+func cleanPath(filename string) string {
+	if strings.HasPrefix(filename, tftpbootPrefix) {
+		return filename[len(tftpbootPrefix):]
+	} else if filename[0] != '/' {
+		return "/" + filename
+	} else {
+		return filename
+	}
+}
+
 func readHandler(rf io.ReaderFrom, reader io.Reader,
 	logger log.DebugLogger) error {
 	startTime := time.Now()
@@ -41,6 +51,7 @@ func readHandler(rf io.ReaderFrom, reader io.Reader,
 func newServer(imageServerAddress, imageStreamName string,
 	logger log.DebugLogger) (*TftpbootServer, error) {
 	s := &TftpbootServer{
+		filesForIPs:        make(map[string]map[string][]byte),
 		imageServerAddress: imageServerAddress,
 		imageStreamName:    imageStreamName,
 		logger:             logger,
@@ -96,13 +107,10 @@ func (s *TftpbootServer) imageServerClientCloser() {
 }
 
 func (s *TftpbootServer) readHandler(filename string, rf io.ReaderFrom) error {
-	if strings.HasPrefix(filename, tftpbootPrefix) {
-		filename = filename[len(tftpbootPrefix):]
-	} else if filename[0] != '/' {
-		filename = "/" + filename
-	}
-	logger := prefixlogger.New("tftpd("+filename+"): ", s.logger)
-	if err := s.readHandlerInternal(filename, rf, logger); err != nil {
+	filename = cleanPath(filename)
+	rAddr := rf.(tftp.OutgoingTransfer).RemoteAddr().IP.String()
+	logger := prefixlogger.New("tftpd("+rAddr+":"+filename+"): ", s.logger)
+	if err := s.readHandlerInternal(filename, rf, rAddr, logger); err != nil {
 		logger.Println(err)
 		return err
 	}
@@ -110,8 +118,7 @@ func (s *TftpbootServer) readHandler(filename string, rf io.ReaderFrom) error {
 }
 
 func (s *TftpbootServer) readHandlerInternal(filename string, rf io.ReaderFrom,
-	logger log.DebugLogger) error {
-	remoteAddr := rf.(tftp.OutgoingTransfer).RemoteAddr().IP.String()
+	remoteAddr string, logger log.DebugLogger) error {
 	s.lock.Lock()
 	if files, ok := s.filesForIPs[remoteAddr]; ok {
 		if data, ok := files[filename]; ok {
@@ -165,12 +172,16 @@ func (s *TftpbootServer) readHandlerInternal(filename string, rf io.ReaderFrom,
 
 func (s *TftpbootServer) registerFiles(ipAddr net.IP, files map[string][]byte) {
 	address := ipAddr.String()
+	cleanedFiles := make(map[string][]byte, len(files))
+	for filename, data := range files {
+		cleanedFiles[cleanPath(filename)] = data
+	}
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	if len(files) < 1 {
 		delete(s.filesForIPs, address)
 	} else {
-		s.filesForIPs[address] = files
+		s.filesForIPs[address] = cleanedFiles
 	}
 }
 
