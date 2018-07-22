@@ -62,7 +62,7 @@ func (s *DhcpServer) acknowledgeLease(ipAddr net.IP) {
 }
 
 func (s *DhcpServer) addLease(address proto.Address, doNetboot bool,
-	hostname string) error {
+	hostname string, subnet *proto.Subnet) error {
 	address.Shrink()
 	if len(address.IpAddress) < 1 {
 		return errors.New("no IP address")
@@ -82,7 +82,8 @@ func (s *DhcpServer) addLease(address proto.Address, doNetboot bool,
 		}
 	}
 	s.ipAddrToMacAddr[ipAddr] = address.MacAddress
-	s.leases[address.MacAddress] = leaseType{address, hostname, doNetboot}
+	s.leases[address.MacAddress] = leaseType{
+		address, hostname, doNetboot, subnet}
 	return nil
 }
 
@@ -97,6 +98,8 @@ func (s *DhcpServer) findLease(macAddr string) (*leaseType, *proto.Subnet) {
 	defer s.mutex.RUnlock()
 	if lease, ok := s.leases[macAddr]; !ok {
 		return nil, nil
+	} else if lease.subnet != nil {
+		return &lease, lease.subnet
 	} else {
 		return &lease, s.findMatchingSubnet(lease.IpAddress)
 	}

@@ -24,6 +24,7 @@ type leaseType struct {
 	proto.Address
 	Hostname  string
 	doNetboot bool
+	subnet    *proto.Subnet
 }
 
 func New(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
@@ -31,14 +32,14 @@ func New(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
 }
 
 func (s *DhcpServer) AddLease(address proto.Address, hostname string) {
-	if err := s.addLease(address, false, hostname); err != nil {
+	if err := s.addLease(address, false, hostname, nil); err != nil {
 		s.logger.Println(err)
 	}
 }
 
 func (s *DhcpServer) AddNetbootLease(address proto.Address,
-	hostname string) error {
-	return s.addLease(address, true, hostname)
+	hostname string, subnet *proto.Subnet) error {
+	return s.addLease(address, true, hostname, subnet)
 }
 
 func (s *DhcpServer) AddSubnet(subnet proto.Subnet) {
