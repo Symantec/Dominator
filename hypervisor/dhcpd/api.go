@@ -9,19 +9,21 @@ import (
 )
 
 type DhcpServer struct {
-	logger          log.DebugLogger
-	myIP            net.IP
-	mutex           sync.RWMutex
-	ackChannels     map[string]chan struct{} // Key: IPaddr.
-	ipAddrToMacAddr map[string]string        // Key: IPaddr, V: MACaddr.
-	leases          map[string]leaseType     // Key: MACaddr.
-	requestChannels map[string]chan net.IP   // Key: MACaddr.
-	subnets         []proto.Subnet
+	logger           log.DebugLogger
+	myIP             net.IP
+	networkBootImage []byte
+	mutex            sync.RWMutex             // Protect everything below.
+	ackChannels      map[string]chan struct{} // Key: IPaddr.
+	ipAddrToMacAddr  map[string]string        // Key: IPaddr, V: MACaddr.
+	leases           map[string]leaseType     // Key: MACaddr.
+	requestChannels  map[string]chan net.IP   // Key: MACaddr.
+	subnets          []proto.Subnet
 }
 
 type leaseType struct {
 	proto.Address
-	Hostname string
+	Hostname  string
+	doNetboot bool
 }
 
 func New(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
@@ -29,7 +31,14 @@ func New(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
 }
 
 func (s *DhcpServer) AddLease(address proto.Address, hostname string) {
-	s.addLease(address, hostname)
+	if err := s.addLease(address, false, hostname); err != nil {
+		s.logger.Println(err)
+	}
+}
+
+func (s *DhcpServer) AddNetbootLease(address proto.Address,
+	hostname string) error {
+	return s.addLease(address, true, hostname)
 }
 
 func (s *DhcpServer) AddSubnet(subnet proto.Subnet) {
@@ -50,4 +59,9 @@ func (s *DhcpServer) RemoveLease(ipAddr net.IP) {
 
 func (s *DhcpServer) RemoveSubnet(subnetId string) {
 	s.removeSubnet(subnetId)
+}
+
+func (s *DhcpServer) SetNetworkBootImage(nbiName string) error {
+	s.networkBootImage = []byte(nbiName)
+	return nil
 }
