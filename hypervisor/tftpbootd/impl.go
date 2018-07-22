@@ -1,10 +1,12 @@
 package tftpbootd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -109,7 +111,15 @@ func (s *TftpbootServer) readHandler(filename string, rf io.ReaderFrom) error {
 
 func (s *TftpbootServer) readHandlerInternal(filename string, rf io.ReaderFrom,
 	logger log.DebugLogger) error {
+	remoteAddr := rf.(tftp.OutgoingTransfer).RemoteAddr().IP.String()
 	s.lock.Lock()
+	if files, ok := s.filesForIPs[remoteAddr]; ok {
+		if data, ok := files[filename]; ok {
+			s.lock.Unlock()
+			rf.(tftp.OutgoingTransfer).SetSize(int64(len(data)))
+			return readHandler(rf, bytes.NewReader(data), logger)
+		}
+	}
 	imageStreamName := s.imageStreamName
 	s.lock.Unlock()
 	if imageStreamName == "" {
@@ -153,6 +163,17 @@ func (s *TftpbootServer) readHandlerInternal(filename string, rf io.ReaderFrom,
 	}
 }
 
+func (s *TftpbootServer) registerFiles(ipAddr net.IP, files map[string][]byte) {
+	address := ipAddr.String()
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if len(files) < 1 {
+		delete(s.filesForIPs, address)
+	} else {
+		s.filesForIPs[address] = files
+	}
+}
+
 func (s *TftpbootServer) releaseImageServerClient() {
 	s.closeClientTimer.Reset(time.Minute)
 	s.lock.Lock()
@@ -165,4 +186,11 @@ func (s *TftpbootServer) setImageStreamName(name string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.imageStreamName = name
+}
+
+func (s *TftpbootServer) unregisterFiles(ipAddr net.IP) {
+	address := ipAddr.String()
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	delete(s.filesForIPs, address)
 }

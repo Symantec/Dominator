@@ -1,6 +1,7 @@
 package tftpbootd
 
 import (
+	"net"
 	"sync"
 	"time"
 
@@ -15,6 +16,7 @@ type TftpbootServer struct {
 	logger                 log.DebugLogger
 	tftpdServer            *tftp.Server
 	lock                   sync.Mutex
+	filesForIPs            map[string]map[string][]byte
 	imageServerClientInUse bool
 	imageStreamName        string
 	imageServerClientLock  sync.Mutex
@@ -26,6 +28,14 @@ func New(imageServerAddress, imageStreamName string,
 	return newServer(imageServerAddress, imageStreamName, logger)
 }
 
+func (s *TftpbootServer) RegisterFiles(ipAddr net.IP, files map[string][]byte) {
+	s.registerFiles(ipAddr, files)
+}
+
 func (s *TftpbootServer) SetImageStreamName(name string) {
 	s.setImageStreamName(name)
+}
+
+func (s *TftpbootServer) UnregisterFiles(ipAddr net.IP) {
+	s.unregisterFiles(ipAddr)
 }
