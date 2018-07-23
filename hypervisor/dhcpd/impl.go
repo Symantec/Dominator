@@ -70,8 +70,10 @@ func (s *DhcpServer) addLease(address proto.Address, doNetboot bool,
 	ipAddr := address.IpAddress.String()
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	if subnet := s.findMatchingSubnet(address.IpAddress); subnet == nil {
-		return errors.New("no subnet found for " + ipAddr)
+	if subnet == nil {
+		if subnet = s.findMatchingSubnet(address.IpAddress); subnet == nil {
+			return errors.New("no subnet found for " + ipAddr)
+		}
 	}
 	if doNetboot {
 		if len(s.networkBootImage) < 1 {
