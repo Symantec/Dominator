@@ -11,7 +11,9 @@ import (
 	"github.com/Symantec/Dominator/hypervisor/manager"
 	"github.com/Symantec/Dominator/hypervisor/metadatad"
 	"github.com/Symantec/Dominator/hypervisor/rpcd"
+	"github.com/Symantec/Dominator/hypervisor/tftpbootd"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/net"
@@ -30,6 +32,8 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
+	networkBootImage = flag.String("networkBootImage", "pxelinux.0",
+		"Name of boot image passed via DHCP option")
 	portNum = flag.Uint("portNum", constants.HypervisorPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
 	showVGA  = flag.Bool("showVGA", false, "If true, show VGA console")
@@ -37,6 +41,8 @@ var (
 		"Name of state directory")
 	testMemoryAvailable = flag.Uint64("testMemoryAvailable", 0,
 		"test if memory is allocatable and exit (units of MiB)")
+	tftpbootImageStream = flag.String("tftpbootImageStream", "",
+		"Name of default image stream for network booting")
 	username = flag.String("username", "nobody",
 		"Name of user to run VMs")
 	volumeDirectories flagutil.StringList
@@ -48,6 +54,10 @@ func init() {
 }
 
 func main() {
+	if err := loadflags.LoadForDaemon("hypervisor"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	flag.Parse()
 	if *testMemoryAvailable > 0 {
 		nBytes := *testMemoryAvailable << 20
@@ -92,16 +102,25 @@ func main() {
 	if err != nil {
 		logger.Fatalf("Cannot start DHCP server: %s\n", err)
 	}
+	if err := dhcpServer.SetNetworkBootImage(*networkBootImage); err != nil {
+		logger.Fatalf("Cannot set NetworkBootImage name: %s\n", err)
+	}
+	imageServerAddress := fmt.Sprintf("%s:%d",
+		*imageServerHostname, *imageServerPortNum)
+	tftpbootServer, err := tftpbootd.New(imageServerAddress,
+		*tftpbootImageStream, logger)
+	if err != nil {
+		logger.Fatalf("Cannot start tftpboot server: %s\n", err)
+	}
 	managerObj, err := manager.New(manager.StartOptions{
-		ImageServerAddress: fmt.Sprintf("%s:%d",
-			*imageServerHostname, *imageServerPortNum),
-		DhcpServer:        dhcpServer,
-		Logger:            logger,
-		ShowVgaConsole:    *showVGA,
-		StateDir:          *stateDir,
-		Username:          *username,
-		VlanIdToBridge:    vlanIdToBridge,
-		VolumeDirectories: volumeDirectories,
+		ImageServerAddress: imageServerAddress,
+		DhcpServer:         dhcpServer,
+		Logger:             logger,
+		ShowVgaConsole:     *showVGA,
+		StateDir:           *stateDir,
+		Username:           *username,
+		VlanIdToBridge:     vlanIdToBridge,
+		VolumeDirectories:  volumeDirectories,
 	})
 	if err != nil {
 		logger.Fatalf("Cannot start hypervisor: %s\n", err)
@@ -110,7 +129,8 @@ func main() {
 	if len(bridges) < 1 {
 		logger.Println("No bridges found: entering log-only mode")
 	} else {
-		rpcHtmlWriter, err := rpcd.Setup(managerObj, logger)
+		rpcHtmlWriter, err := rpcd.Setup(managerObj, dhcpServer, tftpbootServer,
+			logger)
 		if err != nil {
 			logger.Fatalf("Cannot start rpcd: %s\n", err)
 		}
