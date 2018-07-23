@@ -33,6 +33,8 @@ Some of the sub-commands available are:
 - **get-updates**: get and show a continuous stream of updates from a
                    *Hypervisor* or *Fleet Manager*. This is primarily for
                    debugging
+- **netboot-machine**: temporarily enable PXE-based network booting for a
+                       machine
 - **remove-excess-addresses**: remove free addresses for a specific *Hypervisor*
                                above the specified limit
 

@@ -175,6 +175,21 @@ type ListVolumeDirectoriesResponse struct {
 	Error       string
 }
 
+type NetbootMachineRequest struct {
+	Address                      Address
+	Files                        map[string][]byte
+	FilesExpiration              time.Duration
+	Hostname                     string
+	NumAcknowledgementsToWaitFor uint
+	OfferExpiration              time.Duration
+	Subnet                       *Subnet
+	WaitTimeout                  time.Duration
+}
+
+type NetbootMachineResponse struct {
+	Error string
+}
+
 type ProbeVmPortRequest struct {
 	IpAddress  net.IP
 	PortNumber uint

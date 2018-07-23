@@ -165,9 +165,8 @@ func (m *Manager) loadSubnets() error {
 	}
 	for index := range subnets {
 		subnets[index].Shrink()
-		m.DhcpServer.AddSubnet(subnets[index])
 	}
-	m.subnets = make(map[string]proto.Subnet, len(subnets))
+	m.subnets = make(map[string]proto.Subnet, len(subnets)+1)
 	for _, subnet := range subnets {
 		m.subnets[subnet.Id] = subnet
 	}
@@ -175,6 +174,9 @@ func (m *Manager) loadSubnets() error {
 		return err
 	} else {
 		m.subnets["hypervisor"] = subnet
+	}
+	for _, subnet := range m.subnets {
+		m.DhcpServer.AddSubnet(subnet)
 	}
 	return nil
 }

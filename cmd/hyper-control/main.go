@@ -4,12 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/cmdlogger"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
+	"github.com/Symantec/Dominator/lib/tags"
 )
 
 var (
@@ -24,9 +26,22 @@ var (
 		constants.HypervisorPortNumber, "Port number of hypervisor")
 	location = flag.String("location", "",
 		"Location to search for hypervisors")
+	offerTimeout = flag.Duration("offerTimeout", time.Minute+time.Second,
+		"How long to offer DHCP OFFERs and ACKs")
+	netbootFiles        tags.Tags
+	netbootFilesTimeout = flag.Duration("netbootFilesTimeout",
+		time.Minute+time.Second, "How long to provide extra files via TFTP")
+	netbootTimeout = flag.Duration("netbootTimeout", time.Minute,
+		"Time to wait for DHCP ACKs to be sent")
+	numAcknowledgementsToWaitFor = flag.Uint("numAcknowledgementsToWaitFor",
+		2, "Number of DHCP ACKs to wait for")
 
 	logger log.DebugLogger
 )
+
+func init() {
+	flag.Var(&netbootFiles, "netbootFiles", "Extra files served by TFTP server")
+}
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr,
@@ -37,6 +52,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  add-address MACaddr [IPaddr]")
 	fmt.Fprintln(os.Stderr, "  add-subnet ID IPgateway IPmask DNSserver...")
 	fmt.Fprintln(os.Stderr, "  get-updates")
+	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
 }
 
@@ -53,6 +69,7 @@ var subcommands = []subcommand{
 	{"add-address", 1, 2, addAddressSubcommand},
 	{"add-subnet", 4, -1, addSubnetSubcommand},
 	{"get-updates", 0, 0, getUpdatesSubcommand},
+	{"netboot-machine", 2, 3, netbootMachineSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
 }
 
