@@ -21,7 +21,8 @@ type GetHypervisorForVMResponse struct {
 // The server sends a stream of Update messages.
 
 type GetUpdatesRequest struct {
-	Location string
+	Location   string
+	MaxUpdates uint64 // Zero means infinite.
 }
 
 type Update struct {
@@ -29,6 +30,7 @@ type Update struct {
 	ChangedVMs      map[string]*proto.VmInfo `json:",omitempty"` // Key: IPaddr
 	DeletedMachines []string                 `json:",omitempty"` // Hostname
 	DeletedVMs      []string                 `json:",omitempty"` // IPaddr
+	Error           string                   `json:",omitempty"`
 }
 
 type HardwareAddr net.HardwareAddr
