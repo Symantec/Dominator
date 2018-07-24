@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
 
 	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/tags"
 )
 
 var zeroIP = IP{}
@@ -73,4 +75,44 @@ func (s *Storer) readDirectory(partialIP []byte, dirname string) error {
 		}
 	}
 	return nil
+}
+
+func (s *Storer) readMachineTags(hypervisor net.IP) (tags.Tags, error) {
+	hypervisorIP, err := netIpToIp(hypervisor)
+	if err != nil {
+		return nil, err
+	}
+	dirname := s.getHypervisorDirectory(hypervisorIP)
+	filename := filepath.Join(dirname, "tags.raw")
+	if file, err := os.Open(filename); err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+		return nil, nil
+	} else {
+		defer file.Close()
+		reader := bufio.NewReader(file)
+		var lastKey string
+		tgs := make(tags.Tags)
+		for {
+			if line, err := reader.ReadString('\n'); err != nil {
+				if err != io.EOF {
+					return nil, err
+				}
+				if lastKey != "" {
+					return nil, errors.New("missing value for key: " + lastKey)
+				}
+				break
+			} else {
+				line = line[:len(line)-1]
+				if lastKey == "" {
+					lastKey = line
+				} else {
+					tgs[lastKey] = line
+					lastKey = ""
+				}
+			}
+		}
+		return tgs, nil
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/tags"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
@@ -48,6 +49,10 @@ func (s *Storer) ListVMs(hypervisor net.IP) ([]string, error) {
 	return s.listVMs(hypervisor)
 }
 
+func (s *Storer) ReadMachineTags(hypervisor net.IP) (tags.Tags, error) {
+	return s.readMachineTags(hypervisor)
+}
+
 func (s *Storer) ReadVm(hypervisor net.IP,
 	ipAddr string) (*proto.VmInfo, error) {
 	return s.readVm(hypervisor, ipAddr)
@@ -60,6 +65,10 @@ func (s *Storer) SetIPsForHypervisor(hypervisor net.IP,
 
 func (s *Storer) UnregisterHypervisor(hypervisor net.IP) error {
 	return s.unregisterHypervisor(hypervisor)
+}
+
+func (s *Storer) WriteMachineTags(hypervisor net.IP, tgs tags.Tags) error {
+	return s.writeMachineTags(hypervisor, tgs)
 }
 
 func (s *Storer) WriteVm(hypervisor net.IP, ipAddr string,
