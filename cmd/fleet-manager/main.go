@@ -36,7 +36,9 @@ var (
 	stateDir = flag.String("stateDir", "/var/lib/fleet-manager",
 		"Name of state directory")
 	topologyDir = flag.String("topologyDir", "",
-		"Name of topology directory or Git repository")
+		"Name of local topology directory or direcory in Git repository")
+	topologyRepository = flag.String("topologyRepository", "",
+		"URL of Git repository containing repository")
 )
 
 func doCheck() {
@@ -69,7 +71,8 @@ func main() {
 	if err := os.MkdirAll(*stateDir, dirPerms); err != nil {
 		logger.Fatalf("Cannot create state directory: %s\n", err)
 	}
-	topologyChannel, err := topology.Watch(*topologyDir,
+	topologyChannel, err := topology.Watch(*topologyRepository,
+		filepath.Join(*stateDir, "topology"), *topologyDir,
 		*topologyCheckInterval, logger)
 	if err != nil {
 		logger.Fatalf("Cannot watch for topology: %s\n", err)
