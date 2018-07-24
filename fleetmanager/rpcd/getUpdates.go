@@ -21,7 +21,8 @@ func (t *srpcType) GetUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 	defer t.hypervisorsManager.CloseUpdateChannel(updateChannel)
 	flushTimer := time.NewTimer(flushDelay)
 	var numToFlush uint
-	for {
+	maxUpdates := request.MaxUpdates
+	for count := uint64(0); maxUpdates < 1 || count < maxUpdates; count++ {
 		select {
 		case update, ok := <-updateChannel:
 			if !ok {
@@ -32,6 +33,9 @@ func (t *srpcType) GetUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 			if err := encoder.Encode(update); err != nil {
 				t.logger.Printf("error sending update: %s\n", err)
 				return err
+			}
+			if update.Error != "" {
+				return nil
 			}
 			numToFlush++
 			flushTimer.Reset(flushDelay)
@@ -54,4 +58,5 @@ func (t *srpcType) GetUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 			return err
 		}
 	}
+	return nil
 }
