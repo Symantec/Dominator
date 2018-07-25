@@ -7,6 +7,15 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
+type ChangeMachineTagsRequest struct {
+	Hostname string
+	Tags     tags.Tags
+}
+
+type ChangeMachineTagsResponse struct {
+	Error string
+}
+
 type GetHypervisorForVMRequest struct {
 	IpAddress net.IP
 }
