@@ -14,6 +14,7 @@ import (
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/tags"
 	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
@@ -58,6 +59,54 @@ func testInLocation(location, enclosingLocation string) bool {
 	return true
 }
 
+func (m *Manager) changeMachineTags(hostname string, tgs tags.Tags) error {
+	if !*manageHypervisors {
+		return errors.New("this is a read-only Fleet Manager")
+	}
+	if h, err := m.getLockedHypervisor(hostname, true); err != nil {
+		return err
+	} else {
+		for key, localVal := range tgs { // Delete duplicates.
+			if machineVal := h.machine.Tags[key]; localVal == machineVal {
+				delete(tgs, key)
+			}
+		}
+		err := m.storer.WriteMachineTags(h.machine.HostIpAddress, tgs)
+		if err != nil {
+			return err
+		}
+		if len(tgs) > 0 {
+			h.localTags = tgs
+		} else {
+			h.localTags = nil
+		}
+		update := &fm_proto.Update{
+			ChangedMachines: []*fm_proto.Machine{h.getMachineLocked()},
+		}
+		location := h.location
+		h.mutex.Unlock()
+		m.sendUpdate(location, update)
+		return nil
+	}
+}
+
+func (h *hypervisorType) getMachine() *fm_proto.Machine {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	return h.getMachineLocked()
+}
+
+func (h *hypervisorType) getMachineLocked() *fm_proto.Machine {
+	if len(h.localTags) < 1 {
+		return h.machine
+	}
+	var machine fm_proto.Machine
+	machine = *h.machine
+	machine.Tags = h.machine.Tags.Copy()
+	machine.Tags.Merge(h.localTags)
+	return &machine
+}
+
 func (m *Manager) closeUpdateChannel(channel <-chan fm_proto.Update) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -84,13 +133,17 @@ func (m *Manager) makeUpdateChannel(locationStr string) <-chan fm_proto.Update {
 	}
 	location.notifiers[channel] = channel
 	m.notifiers[channel] = location
+	if !*manageHypervisors {
+		channel <- fm_proto.Update{Error: "this is a read-only Fleet Manager"}
+		return channel
+	}
 	machines := make([]*fm_proto.Machine, 0)
 	vms := make(map[string]*hyper_proto.VmInfo, len(m.vms))
 	for _, h := range m.hypervisors {
 		if !testInLocation(h.location, locationStr) {
 			continue
 		}
-		machines = append(machines, h.machine)
+		machines = append(machines, h.getMachine())
 		for addr, vm := range h.vms {
 			vms[addr] = &vm.VmInfo
 		}
@@ -105,10 +158,26 @@ func (m *Manager) makeUpdateChannel(locationStr string) <-chan fm_proto.Update {
 func (m *Manager) updateHypervisor(h *hypervisorType,
 	machine *fm_proto.Machine) {
 	location, _ := m.topology.GetLocationOfMachine(machine.Hostname)
+	var numTagsToDelete uint
 	h.mutex.Lock()
 	h.location = location
 	h.machine = machine
 	subnets := h.subnets
+	for key, localVal := range h.localTags {
+		if machineVal, ok := h.machine.Tags[key]; ok && localVal == machineVal {
+			delete(h.localTags, key)
+			numTagsToDelete++
+		}
+	}
+	if numTagsToDelete > 0 {
+		err := m.storer.WriteMachineTags(h.machine.HostIpAddress, h.localTags)
+		if err != nil {
+			h.logger.Printf("error writing tags: %s\n", err)
+		} else {
+			h.logger.Debugf(0, "Deleted %d obsolete local tags\n",
+				numTagsToDelete)
+		}
+	}
 	h.mutex.Unlock()
 	if *manageHypervisors && h.probeStatus == probeStatusGood {
 		go m.processSubnetsUpdates(h, subnets)
@@ -209,6 +278,11 @@ func (m *Manager) manageHypervisorLoop(h *hypervisorType, hostname string) {
 	vmList, err := m.storer.ListVMs(h.machine.HostIpAddress)
 	if err != nil {
 		h.logger.Printf("error reading VMs, not managing hypervisor: %s", err)
+		return
+	}
+	h.localTags, err = m.storer.ReadMachineTags(h.machine.HostIpAddress)
+	if err != nil {
+		h.logger.Printf("error reading tags, not managing hypervisor: %s", err)
 		return
 	}
 	for _, vmIpAddr := range vmList {
@@ -532,11 +606,11 @@ func (m *Manager) splitChanges(hypersToChange []*hypervisorType,
 	for _, h := range hypersToChange {
 		if locationUpdate, ok := updates[h.location]; !ok {
 			updates[h.location] = &fm_proto.Update{
-				ChangedMachines: []*fm_proto.Machine{h.machine},
+				ChangedMachines: []*fm_proto.Machine{h.getMachine()},
 			}
 		} else {
 			locationUpdate.ChangedMachines = append(
-				locationUpdate.ChangedMachines, h.machine)
+				locationUpdate.ChangedMachines, h.getMachine())
 		}
 	}
 	for _, h := range hypersToDelete {
