@@ -73,6 +73,7 @@ func (m *Manager) changeMachineTags(hostname string, tgs tags.Tags) error {
 		}
 		err := m.storer.WriteMachineTags(h.machine.HostIpAddress, tgs)
 		if err != nil {
+			h.mutex.Unlock()
 			return err
 		}
 		if len(tgs) > 0 {
