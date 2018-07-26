@@ -107,6 +107,7 @@ func New(storer Storer, logger log.DebugLogger) (*Manager, error) {
 	http.HandleFunc("/listHypervisors", manager.listHypervisorsHandler)
 	http.HandleFunc("/listLocations", manager.listLocationsHandler)
 	http.HandleFunc("/listVMs", manager.listVMsHandler)
+	http.HandleFunc("/showHypervisor", manager.showHypervisorHandler)
 	return manager, nil
 }
 
