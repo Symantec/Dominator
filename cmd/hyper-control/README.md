@@ -30,6 +30,7 @@ Some of the sub-commands available are:
                    available
 - **add-subnet**: manually add a subnet to a specific *Hypervisor*. This command
                   is only required if a *Fleet Manager* is not available
+- **change-tags**: change the tags for a specific *Hypervisor*
 - **get-updates**: get and show a continuous stream of updates from a
                    *Hypervisor* or *Fleet Manager*. This is primarily for
                    debugging

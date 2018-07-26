@@ -54,9 +54,11 @@ func Load(topologyDir string) (*Topology, error) {
 	return load(topologyDir)
 }
 
-func Watch(topologyDir string, checkInterval time.Duration,
+func Watch(topologyRepository, localRepositoryDir, topologyDir string,
+	checkInterval time.Duration,
 	logger log.DebugLogger) (<-chan *Topology, error) {
-	return watch(topologyDir, checkInterval, logger)
+	return watch(topologyRepository, localRepositoryDir, topologyDir,
+		checkInterval, logger)
 }
 
 func (t *Topology) CheckIfIpIsReserved(ipAddr string) bool {

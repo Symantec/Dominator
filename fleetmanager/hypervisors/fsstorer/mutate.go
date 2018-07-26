@@ -6,8 +6,12 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"syscall"
+
+	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/tags"
 )
 
 const (
@@ -163,4 +167,42 @@ func (s *Storer) writeIPsForHypervisor(hypervisor IP, ipList []IP,
 		return err
 	}
 	return file.Close()
+}
+
+func (s *Storer) writeMachineTags(hypervisor net.IP, tgs tags.Tags) error {
+	hypervisorIP, err := netIpToIp(hypervisor)
+	if err != nil {
+		return err
+	}
+	dirname := s.getHypervisorDirectory(hypervisorIP)
+	filename := filepath.Join(dirname, "tags.raw")
+	if len(tgs) < 1 {
+		if err := os.Remove(filename); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+		return nil
+	}
+	keys := make([]string, 0, len(tgs))
+	for key := range tgs {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	file, err := fsutil.CreateRenamingWriter(filename, filePerms)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+		return nil
+	}
+	defer file.Close()
+	writer := bufio.NewWriter(file)
+	for _, key := range keys {
+		if _, err := writer.WriteString(key + "\n"); err != nil {
+			return err
+		}
+		if _, err := writer.WriteString(tgs[key] + "\n"); err != nil {
+			return err
+		}
+	}
+	return writer.Flush()
 }

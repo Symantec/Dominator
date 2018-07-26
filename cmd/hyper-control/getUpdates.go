@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -60,6 +61,9 @@ func getUpdatesOnFleetManager(fleetManager string,
 	for {
 		var update fm_proto.Update
 		if err := decoder.Decode(&update); err != nil {
+			return err
+		}
+		if err := errors.New(update.Error); err != nil {
 			return err
 		}
 		if err := json.WriteWithIndent(os.Stdout, "    ", update); err != nil {

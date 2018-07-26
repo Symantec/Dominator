@@ -95,9 +95,12 @@ func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 		}
 		machine := hypervisor.machine
 		fmt.Fprintf(writer, "  <tr>\n")
+		fmt.Fprintf(writer,
+			"    <td><a href=\"showHypervisor?%s\">%s</a></td>\n",
+			machine.Hostname, machine.Hostname)
 		fmt.Fprintf(writer, "    <td><a href=\"http://%s:%d/\">%s</a></td>\n",
-			machine.Hostname, constants.HypervisorPortNumber, machine.Hostname)
-		fmt.Fprintf(writer, "    <td>%s</td>\n", hypervisor.probeStatus)
+			machine.Hostname, constants.HypervisorPortNumber,
+			hypervisor.probeStatus)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", machine.HostIpAddress)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", machine.HostMacAddress)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", hypervisor.location)

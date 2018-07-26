@@ -9,6 +9,7 @@ import (
 	"github.com/Symantec/Dominator/fleetmanager/topology"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/tags"
 	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
@@ -26,6 +27,7 @@ type hypervisorType struct {
 	mutex           sync.RWMutex
 	conn            *srpc.Conn
 	deleteScheduled bool
+	localTags       tags.Tags
 	location        string
 	machine         *fm_proto.Machine
 	probeStatus     probeStatus
@@ -33,7 +35,7 @@ type hypervisorType struct {
 	vms             map[string]*vmInfoType // Key: VM IP address.
 }
 
-type IpStorer interface {
+type ipStorer interface {
 	AddIPsForHypervisor(hypervisor net.IP, addrs []net.IP) error
 	CheckIpIsRegistered(addr net.IP) (bool, error)
 	SetIPsForHypervisor(hypervisor net.IP, addrs []net.IP) error
@@ -60,8 +62,9 @@ type Manager struct {
 type probeStatus uint
 
 type Storer interface {
-	IpStorer
-	VmStorer
+	ipStorer
+	tagsStorer
+	vmStorer
 }
 
 type subnetType struct {
@@ -71,13 +74,18 @@ type subnetType struct {
 	nextIp  net.IP
 }
 
+type tagsStorer interface {
+	ReadMachineTags(hypervisor net.IP) (tags.Tags, error)
+	WriteMachineTags(hypervisor net.IP, tgs tags.Tags) error
+}
+
 type vmInfoType struct {
 	ipAddr string
 	hyper_proto.VmInfo
 	hypervisor *hypervisorType
 }
 
-type VmStorer interface {
+type vmStorer interface {
 	DeleteVm(hypervisor net.IP, ipAddr string) error
 	ListVMs(hypervisor net.IP) ([]string, error)
 	ReadVm(hypervisor net.IP, ipAddr string) (*hyper_proto.VmInfo, error)
@@ -99,7 +107,12 @@ func New(storer Storer, logger log.DebugLogger) (*Manager, error) {
 	http.HandleFunc("/listHypervisors", manager.listHypervisorsHandler)
 	http.HandleFunc("/listLocations", manager.listLocationsHandler)
 	http.HandleFunc("/listVMs", manager.listVMsHandler)
+	http.HandleFunc("/showHypervisor", manager.showHypervisorHandler)
 	return manager, nil
+}
+
+func (m *Manager) ChangeMachineTags(hostname string, tgs tags.Tags) error {
+	return m.changeMachineTags(hostname, tgs)
 }
 
 func (m *Manager) CloseUpdateChannel(channel <-chan fm_proto.Update) {

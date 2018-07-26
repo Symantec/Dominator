@@ -150,6 +150,9 @@ func (t *Topology) readDirectory(topDir, dirname string,
 		return nil, err
 	}
 	for _, name := range dirnames {
+		if name == ".git" {
+			continue
+		}
 		path := filepath.Join(dirname, name)
 		fi, err := os.Lstat(filepath.Join(topDir, path))
 		if err != nil {

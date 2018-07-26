@@ -24,7 +24,8 @@ var (
 		"Hostname of hypervisor")
 	hypervisorPortNum = flag.Uint("hypervisorPortNum",
 		constants.HypervisorPortNumber, "Port number of hypervisor")
-	location = flag.String("location", "",
+	hypervisorTags tags.Tags
+	location       = flag.String("location", "",
 		"Location to search for hypervisors")
 	offerTimeout = flag.Duration("offerTimeout", time.Minute+time.Second,
 		"How long to offer DHCP OFFERs and ACKs")
@@ -40,6 +41,7 @@ var (
 )
 
 func init() {
+	flag.Var(&hypervisorTags, "hypervisorTags", "Tags to apply to Hypervisor")
 	flag.Var(&netbootFiles, "netbootFiles", "Extra files served by TFTP server")
 }
 
@@ -51,6 +53,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  add-address MACaddr [IPaddr]")
 	fmt.Fprintln(os.Stderr, "  add-subnet ID IPgateway IPmask DNSserver...")
+	fmt.Fprintln(os.Stderr, "  change-tags")
 	fmt.Fprintln(os.Stderr, "  get-updates")
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
@@ -68,6 +71,7 @@ type subcommand struct {
 var subcommands = []subcommand{
 	{"add-address", 1, 2, addAddressSubcommand},
 	{"add-subnet", 4, -1, addSubnetSubcommand},
+	{"change-tags", 0, 0, changeTagsSubcommand},
 	{"get-updates", 0, 0, getUpdatesSubcommand},
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
