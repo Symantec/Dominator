@@ -24,8 +24,8 @@ type statusType struct {
 
 func (s *server) startServer() error {
 	cmd := exec.Command("ebtables", "-t", "nat", "-F")
-	if err := cmd.Run(); err != nil {
-		return err
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("error running ebtables: %s: %s", err, string(output))
 	}
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
