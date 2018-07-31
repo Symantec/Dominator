@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/json"
@@ -61,14 +62,19 @@ func (m *Manager) showHypervisorHandler(w http.ResponseWriter,
 	if !*manageHypervisors {
 		fmt.Fprintln(writer, "No visibility into local tags<br>")
 	} else if len(h.localTags) > 0 {
+		keys := make([]string, 0, len(h.localTags))
+		for key := range h.localTags {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
 		fmt.Fprintln(writer, "Local tags:<br>")
 		fmt.Fprintln(writer, `<table border="1">`)
 		fmt.Fprintln(writer, "  <tr>")
 		fmt.Fprintln(writer, "    <th>Name</th>")
 		fmt.Fprintln(writer, "    <th>Value</th>")
 		fmt.Fprintln(writer, "  </tr>")
-		for name := range h.localTags {
-			writeString(writer, name, h.localTags[name])
+		for _, key := range keys {
+			writeString(writer, key, h.localTags[key])
 		}
 		fmt.Fprintln(writer, "</table>")
 	}

@@ -27,6 +27,8 @@ const (
 )
 
 var (
+	dhcpServerOnBridgesOnly = flag.Bool("dhcpServerOnBridgesOnly", false,
+		"If true, run the DHCP server on bridge interfaces only")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
 		"Hostname of image server")
 	imageServerPortNum = flag.Uint("imageServerPortNum",
@@ -93,7 +95,9 @@ func main() {
 			logger.Printf("Bridge: %s has no EtherNet port, ignoring\n",
 				bridge.Name)
 		} else {
-			bridgeNames = append(bridgeNames, bridge.Name)
+			if *dhcpServerOnBridgesOnly {
+				bridgeNames = append(bridgeNames, bridge.Name)
+			}
 			vlanIdToBridge[uint(vlanId)] = bridge.Name
 			logger.Printf("Bridge: %s, VLAN Id: %d\n", bridge.Name, vlanId)
 		}

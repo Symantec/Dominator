@@ -94,6 +94,9 @@ func getVolumeDirectories() ([]string, error) {
 		sysDir := filepath.Join(sysClassBlock, device)
 		linkTarget, err := os.Readlink(sysDir)
 		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
 			return nil, err
 		}
 		_, err = os.Stat(filepath.Join(sysDir, "partition"))
