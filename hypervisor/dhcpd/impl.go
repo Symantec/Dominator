@@ -3,18 +3,27 @@ package dhcpd
 import (
 	"errors"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/net/util"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 	dhcp "github.com/krolaw/dhcp4"
+	"golang.org/x/net/ipv4"
 )
 
 const sysClassNet = "/sys/class/net"
 const leaseTime = time.Hour * 48
 
-func newServer(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
+type serveIfConn struct {
+	ifIndices map[int]struct{}
+	conn      *ipv4.PacketConn
+	cm        *ipv4.ControlMessage
+}
+
+func newServer(interfaceNames []string, logger log.DebugLogger) (
+	*DhcpServer, error) {
 	dhcpServer := &DhcpServer{
 		logger:          logger,
 		ackChannels:     make(map[string]chan struct{}),
@@ -27,25 +36,46 @@ func newServer(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
 	} else {
 		dhcpServer.myIP = myIP
 	}
-	if len(bridges) < 1 {
-		logger.Debugf(0, "Starting DHCP server on all interfaces, addr: %s\n",
-			dhcpServer.myIP)
-		go func() {
-			if err := dhcp.ListenAndServe(dhcpServer); err != nil {
-				logger.Println(err)
+	if len(interfaceNames) < 1 {
+		logger.Debugln(0, "Starting DHCP server on all broadcast interfaces")
+		if interfaces, err := net.Interfaces(); err != nil {
+			return nil, err
+		} else {
+			for _, iface := range interfaces {
+				if iface.Flags&net.FlagBroadcast != 0 {
+					interfaceNames = append(interfaceNames, iface.Name)
+				}
 			}
-		}()
-		return dhcpServer, nil
+		}
+	} else {
+		logger.Debugln(0, "Starting DHCP server on interfaces: "+
+			strings.Join(interfaceNames, ","))
 	}
-	for _, bridge := range bridges {
-		logger.Debugf(0, "Starting DHCP server on interface: %s, addr: %s\n",
-			bridge, dhcpServer.myIP)
-		go func(bridge string) {
-			if err := dhcp.ListenAndServeIf(bridge, dhcpServer); err != nil {
-				logger.Println(bridge+":", err)
-			}
-		}(bridge)
+	serveConn := &serveIfConn{
+		ifIndices: make(map[int]struct{}, len(interfaceNames)),
 	}
+	for _, interfaceName := range interfaceNames {
+		if iface, err := net.InterfaceByName(interfaceName); err != nil {
+			return nil, err
+		} else {
+			serveConn.ifIndices[iface.Index] = struct{}{}
+		}
+	}
+	listener, err := net.ListenPacket("udp4", ":67")
+	if err != nil {
+		return nil, err
+	}
+	pktConn := ipv4.NewPacketConn(listener)
+	if err := pktConn.SetControlMessage(ipv4.FlagInterface, true); err != nil {
+		listener.Close()
+		return nil, err
+	}
+	serveConn.conn = pktConn
+	go func() {
+		if err := dhcp.Serve(serveConn, dhcpServer); err != nil {
+			logger.Println(err)
+		}
+	}()
 	return dhcpServer, nil
 }
 
@@ -272,4 +302,22 @@ func (s *DhcpServer) ServeDHCP(req dhcp.Packet, msgType dhcp.MessageType,
 		s.logger.Debugf(0, "Unsupported message type: %s\n", msgType)
 	}
 	return nil
+}
+
+func (s *serveIfConn) ReadFrom(b []byte) (n int, addr net.Addr, err error) {
+	for {
+		n, s.cm, addr, err = s.conn.ReadFrom(b)
+		if err != nil || s.cm == nil {
+			break
+		}
+		if _, ok := s.ifIndices[s.cm.IfIndex]; ok {
+			break
+		}
+	}
+	return
+}
+
+func (s *serveIfConn) WriteTo(b []byte, addr net.Addr) (n int, err error) {
+	s.cm.Src = nil
+	return s.conn.WriteTo(b, s.cm, addr)
 }
