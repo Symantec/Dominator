@@ -98,6 +98,21 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 			}
 		}
 	}
+	// Check address pool for used addresses with no VM.
+	freeIPs := make(map[string]struct{}, len(manager.addressPool.Free))
+	for _, addr := range manager.addressPool.Free {
+		freeIPs[addr.IpAddress.String()] = struct{}{}
+	}
+	for _, addr := range manager.addressPool.Registered {
+		ipAddr := addr.IpAddress.String()
+		if _, ok := freeIPs[ipAddr]; ok {
+			continue
+		}
+		if _, ok := manager.vms[ipAddr]; !ok {
+			manager.Logger.Printf("%s shown as used but no corresponding VM\n",
+				ipAddr)
+		}
+	}
 	if len(manager.volumeDirectories) < 1 {
 		manager.volumeDirectories, err = getVolumeDirectories()
 		if err != nil {
