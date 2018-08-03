@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -11,6 +12,11 @@ import (
 	"github.com/Symantec/Dominator/lib/net/util"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
+)
+
+var (
+	addHypervisorSubnet = flag.Bool("addHypervisorSubnet", false,
+		"If true, automatically add the subnet for the default gateway (deprecated)")
 )
 
 func checkSubnetAccess(subnet proto.Subnet,
@@ -170,10 +176,12 @@ func (m *Manager) loadSubnets() error {
 	for _, subnet := range subnets {
 		m.subnets[subnet.Id] = subnet
 	}
-	if subnet, err := getHypervisorSubnet(); err != nil {
-		return err
-	} else {
-		m.subnets["hypervisor"] = subnet
+	if *addHypervisorSubnet {
+		if subnet, err := getHypervisorSubnet(); err != nil {
+			return err
+		} else {
+			m.subnets["hypervisor"] = subnet
+		}
 	}
 	for _, subnet := range m.subnets {
 		m.DhcpServer.AddSubnet(subnet)
