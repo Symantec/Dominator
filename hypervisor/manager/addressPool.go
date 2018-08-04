@@ -99,7 +99,7 @@ func (m *Manager) getFreeAddress(subnetId string,
 		}
 		for index, address := range m.addressPool.Free {
 			if index == foundPos {
-				break
+				continue
 			}
 			addressPool.Free = append(addressPool.Free, address)
 		}

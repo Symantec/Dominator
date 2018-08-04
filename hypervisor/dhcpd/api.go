@@ -27,8 +27,8 @@ type leaseType struct {
 	subnet    *proto.Subnet
 }
 
-func New(bridges []string, logger log.DebugLogger) (*DhcpServer, error) {
-	return newServer(bridges, logger)
+func New(interfaceNames []string, logger log.DebugLogger) (*DhcpServer, error) {
+	return newServer(interfaceNames, logger)
 }
 
 func (s *DhcpServer) AddLease(address proto.Address, hostname string) {
