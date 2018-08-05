@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"time"
 
 	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/log"
@@ -16,6 +17,10 @@ import (
 	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
+
+func init() {
+	rand.Seed(time.Now().Unix() + time.Now().UnixNano())
+}
 
 func createVmSubcommand(args []string, logger log.DebugLogger) {
 	if err := createVm(logger); err != nil {
@@ -82,6 +87,7 @@ func createVm(logger log.DebugLogger) error {
 	if hypervisor, err := getHypervisorAddress(); err != nil {
 		return err
 	} else {
+		logger.Debugf(0, "creating VM on %s\n", hypervisor)
 		return createVmOnHypervisor(hypervisor, logger)
 	}
 }
