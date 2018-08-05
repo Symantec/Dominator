@@ -38,6 +38,8 @@ Some of the sub-commands available are:
                        machine
 - **remove-excess-addresses**: remove free addresses for a specific *Hypervisor*
                                above the specified limit
+- **rollout-image**: safely roll out specified image to all *Hypervisors* in a
+                     location
 
 ## Security
 The *Hypervisor* restricts RPC access using TLS client authentication.

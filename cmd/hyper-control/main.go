@@ -24,8 +24,13 @@ var (
 		"Hostname of hypervisor")
 	hypervisorPortNum = flag.Uint("hypervisorPortNum",
 		constants.HypervisorPortNumber, "Port number of hypervisor")
-	hypervisorTags tags.Tags
-	location       = flag.String("location", "",
+	hypervisorTags      tags.Tags
+	imageServerHostname = flag.String("imageServerHostname", "localhost",
+		"Hostname of image server")
+	imageServerPortNum = flag.Uint("imageServerPortNum",
+		constants.ImageServerPortNumber,
+		"Port number of image server")
+	location = flag.String("location", "",
 		"Location to search for hypervisors")
 	offerTimeout = flag.Duration("offerTimeout", time.Minute+time.Second,
 		"How long to offer DHCP OFFERs and ACKs")
@@ -57,6 +62,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  get-updates")
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
+	fmt.Fprintln(os.Stderr, "  rollout-image name")
 }
 
 type commandFunc func([]string, log.DebugLogger)
@@ -75,6 +81,7 @@ var subcommands = []subcommand{
 	{"get-updates", 0, 0, getUpdatesSubcommand},
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
+	{"rollout-image", 1, 1, rolloutImageSubcommand},
 }
 
 func main() {
