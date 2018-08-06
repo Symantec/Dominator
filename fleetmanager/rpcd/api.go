@@ -28,13 +28,15 @@ func Setup(hypervisorsManager *hypervisors.Manager, logger log.DebugLogger) (
 		logger:             logger,
 		PerUserMethodLimiter: serverutil.NewPerUserMethodLimiter(
 			map[string]uint{
-				"GetUpdates": 1,
+				"GetMachineInfo": 1,
+				"GetUpdates":     1,
 			}),
 	}
 	srpc.RegisterNameWithOptions("FleetManager", srpcObj,
 		srpc.ReceiverOptions{
 			PublicMethods: []string{
 				"GetHypervisorForVM",
+				"GetMachineInfo",
 				"GetUpdates",
 				"ListHypervisorLocations",
 				"ListHypervisorsInLocation",
