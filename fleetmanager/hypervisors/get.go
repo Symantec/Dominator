@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/Symantec/Dominator/fleetmanager/topology"
+	proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
 
 func (m *Manager) getLockedHypervisor(name string,
@@ -31,6 +32,15 @@ func (m *Manager) getHypervisorForVm(ipAddr net.IP) (string, error) {
 		return "", errors.New("VM not found")
 	} else {
 		return vm.hypervisor.machine.Hostname, nil
+	}
+}
+
+func (m *Manager) getMachineInfo(hostname string) (proto.Machine, error) {
+	if hypervisor, err := m.getLockedHypervisor(hostname, false); err != nil {
+		return proto.Machine{}, err
+	} else {
+		defer hypervisor.mutex.RUnlock()
+		return *hypervisor.getMachineLocked(), nil
 	}
 }
 
