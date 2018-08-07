@@ -123,6 +123,14 @@ func (m *Manager) GetHypervisorForVm(ipAddr net.IP) (string, error) {
 	return m.getHypervisorForVm(ipAddr)
 }
 
+func (m *Manager) GetMachineInfo(hostname string) (fm_proto.Machine, error) {
+	return m.getMachineInfo(hostname)
+}
+
+func (m *Manager) GetTopology() (*topology.Topology, error) {
+	return m.getTopology()
+}
+
 func (m *Manager) ListHypervisorsInLocation(
 	request fm_proto.ListHypervisorsInLocationRequest) ([]string, error) {
 	return m.listHypervisorsInLocation(request)

@@ -25,6 +25,16 @@ type GetHypervisorForVMResponse struct {
 	Error             string
 }
 
+type GetMachineInfoRequest struct {
+	Hostname string
+}
+
+type GetMachineInfoResponse struct {
+	Error   string          `json:",omitempty"`
+	Machine Machine         `json:",omitempty"`
+	Subnets []*proto.Subnet `json:",omitempty"`
+}
+
 // The GetUpdates() RPC is fully streamed.
 // The client sends a single GetUpdatesRequest message.
 // The server sends a stream of Update messages.

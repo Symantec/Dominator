@@ -59,6 +59,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  add-address MACaddr [IPaddr]")
 	fmt.Fprintln(os.Stderr, "  add-subnet ID IPgateway IPmask DNSserver...")
 	fmt.Fprintln(os.Stderr, "  change-tags")
+	fmt.Fprintln(os.Stderr, "  get-machine-info hostname")
 	fmt.Fprintln(os.Stderr, "  get-updates")
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
@@ -78,6 +79,7 @@ var subcommands = []subcommand{
 	{"add-address", 1, 2, addAddressSubcommand},
 	{"add-subnet", 4, -1, addSubnetSubcommand},
 	{"change-tags", 0, 0, changeTagsSubcommand},
+	{"get-machine-info", 1, 1, getMachineInfoSubcommand},
 	{"get-updates", 0, 0, getUpdatesSubcommand},
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
