@@ -120,6 +120,9 @@ func (left *Subnet) Equal(right *Subnet) bool {
 	if !IpListsEqual(left.DomainNameServers, right.DomainNameServers) {
 		return false
 	}
+	if left.Manage != right.Manage {
+		return false
+	}
 	if left.VlanId != right.VlanId {
 		return false
 	}

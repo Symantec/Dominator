@@ -65,6 +65,9 @@ func (m *Manager) findFreeIPs(tSubnets []*topology.Subnet,
 	numNeeded uint) ([]net.IP, error) {
 	var freeIPs []net.IP
 	for _, tSubnet := range tSubnets {
+		if !tSubnet.Manage {
+			continue
+		}
 		subnet, ok := m.subnets[tSubnet.IpGateway.String()]
 		if !ok {
 			continue
