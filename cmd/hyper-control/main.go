@@ -41,6 +41,8 @@ var (
 		"Time to wait for DHCP ACKs to be sent")
 	numAcknowledgementsToWaitFor = flag.Uint("numAcknowledgementsToWaitFor",
 		2, "Number of DHCP ACKs to wait for")
+	topologyDir = flag.String("topologyDir", "",
+		"Name of local topology directory in Git repository")
 
 	logger log.DebugLogger
 )

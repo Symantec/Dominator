@@ -6,12 +6,16 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
+	"syscall"
 	"time"
 
 	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/errors"
+	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/Symantec/Dominator/lib/rpcclientpool"
@@ -21,6 +25,11 @@ import (
 	sub_proto "github.com/Symantec/Dominator/proto/sub"
 	subclient "github.com/Symantec/Dominator/sub/client"
 	"github.com/Symantec/tricorder/go/tricorder/messages"
+)
+
+const (
+	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP |
+		syscall.S_IROTH
 )
 
 type hypervisorType struct {
@@ -41,7 +50,30 @@ func rolloutImageSubcommand(args []string, logger log.DebugLogger) {
 	os.Exit(0)
 }
 
+func gitCommand(repositoryDirectory string, command ...string) ([]byte, error) {
+	cmd := exec.Command("git", command...)
+	cmd.Dir = repositoryDirectory
+	cmd.Stderr = os.Stderr
+	if output, err := cmd.Output(); err != nil {
+		return nil, err
+	} else {
+		return output, nil
+	}
+}
+
 func rolloutImage(imageName string, logger log.DebugLogger) error {
+	if *topologyDir != "" {
+		stdout, err := gitCommand(*topologyDir, "status", "--porcelain")
+		if err != nil {
+			return err
+		}
+		if len(stdout) > 0 {
+			return errors.New("Git repository is not clean")
+		}
+		if _, err := gitCommand(*topologyDir, "pull"); err != nil {
+			return err
+		}
+	}
 	if foundImage, err := checkImage(imageName); err != nil {
 		return err
 	} else if !foundImage {
@@ -112,6 +144,36 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 		if err != nil {
 			return fmt.Errorf("error upgrading: %s: %s",
 				hypervisor.hostname, err)
+		}
+	}
+	if *topologyDir != "" {
+		var tgs tags.Tags
+		tagsFilename := filepath.Join(*topologyDir, *location, "tags.json")
+		if err := json.ReadFromFile(tagsFilename, &tgs); err != nil {
+			return err
+		}
+		oldImageName := tgs["RequiredImage"]
+		tgs["RequiredImage"] = imageName
+		delete(tgs, "PlannedImage")
+		err := json.WriteToFile(tagsFilename, filePerms, "    ", tgs)
+		if err != nil {
+			return err
+		}
+		if _, err := gitCommand(*topologyDir, "add", tagsFilename); err != nil {
+			return err
+		}
+		var locationInsert string
+		if *location != "" {
+			locationInsert = "in " + *location
+		}
+		_, err = gitCommand(*topologyDir, "commit", "-m",
+			fmt.Sprintf("Upgrade %sfrom %s to %s",
+				locationInsert, oldImageName, imageName))
+		if err != nil {
+			return err
+		}
+		if _, err := gitCommand(*topologyDir, "push"); err != nil {
+			return err
 		}
 	}
 	return nil
