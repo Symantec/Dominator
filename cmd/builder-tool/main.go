@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/cmdlogger"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -74,7 +75,7 @@ func getImaginatorClient() *srpc.Client {
 			*imaginatorHostname, *imaginatorPortNum)
 		imaginatorSrpcClient, err = srpc.DialHTTP("tcp", clientName, 0)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
+			fmt.Fprintf(os.Stderr, "Error dialing: %s: %s\n", clientName, err)
 			os.Exit(1)
 		}
 	}
@@ -88,7 +89,7 @@ func getImageServerClient() *srpc.Client {
 			*imageServerHostname, *imageServerPortNum)
 		imageServerSrpcClient, err = srpc.DialHTTP("tcp", clientName, 0)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
+			fmt.Fprintf(os.Stderr, "Error dialing: %s: %s\n", clientName, err)
 			os.Exit(1)
 		}
 	}
@@ -96,6 +97,10 @@ func getImageServerClient() *srpc.Client {
 }
 
 func main() {
+	if err := loadflags.LoadForCli("builder-tool"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {
