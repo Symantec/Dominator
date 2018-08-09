@@ -61,3 +61,31 @@ The *Hypervisor* restricts RPC access using TLS client authentication.
 `~/.ssl` directory. *vm-control* will present these certificates to
 the *Hypervisor*. If one of the certificates is signed by a certificate
 authority that the *Hypervisor* trusts, the *Hypervisor* will grant access.
+Most operations only require a certificate that proves *identity*. The
+*[Keymaster](https://github.com/Symantec/keymaster)* is a good choice for
+issuing these certificates.
+
+## Importing virsh (libvirt) VMs
+A libvirt VM may be imported into the *Hypervisor*. This is only supported for
+simple VMs with a single network interface and IP address. Once the VM is
+*committed* it is removed from the libvirt database and is fully "owned" by the
+*Hypervisor*. Importing a VM requires root access on the *Hypervisor* (the
+*vm-control* tool will use the `sudo` command if needed).
+
+There are a few simple steps that should be followed to import a VM. In the
+example below, the MAC address of the VM to be imported is `52:54:de:ad:be:ef`
+and the hostname (DNS entry) is `jump.prod.company.com`. The IP address of the
+VM may also be used. In either case, the hostname or IP address provided must
+match the libvirt *domain name*.
+- log into the VM and determine its MAC address
+- run `vm-control import-virsh-vm 52:54:de:ad:be:ef jump.prod.company.com`
+- enter `shutdown` at the prompt
+- wait for the VM to start and log in and check that it is functioning properly
+- respond to the `commit/defer/abandon` prompt:
+  - `commit`: the VM is removed from the libvirt database
+  - `defer`: the VM is left running on the *Hypervisor*. It may later be
+             committed (and the `virsh undefine` command should be used to
+             remove it from the libvirt database) or destroyed. This is not
+             recommended
+  - `abandon`: the VM is deleted from the *Hypervisor* and will need to be
+               manually started with the `virsh` command

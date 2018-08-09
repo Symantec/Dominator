@@ -74,9 +74,14 @@ The compiled binaries will be available in `$HOME/go/bin`.
 ## Making certificates
 In order for the various components of the **Dominator** to communicate, each
 component will need SSL certificate+key pairs and/or Certificate Authority (CA)
-files, so that trust relationships can be established. This is necessary for
-operational security, so that you can control and audit who creates images and
-who can issue update requests to the *subs*.
+files, so that trust relationships can be established. This is commonly known as
+*TLS client authentication and authorisation*. Clients present a certificate to
+servers (endpoints) which proves their identity (authentication) and lists the
+RPC methods which they are permitted to call (authorisation). These certificates
+give unrestricted access to the listed RPC methods.
+
+This is necessary for operational security, so that you can control and audit
+who creates images and who can issue update requests to the *subs*.
 
 ### Creating a root CA
 You will need to create a CA which will be used as the root of trust for all the
@@ -103,6 +108,16 @@ addition, the `root.pem` file that is created should be copied to
 [imageserver](../cmd/imageserver/README.md) and [subd](../cmd/subd/README.md)).
 The simplest approach is to copy this file to all machines and/or including it
 in the installation image that every machine is booted with.
+
+### Identity-only certificates
+Some components (endpoints) permit access to selected RPC methods based on
+identity only (these are "public" RPC methods). The same root CA may be used to
+sign these identity-only certificates if needed, however this requires you to
+build a certificate issuing system for users. An alternate *Identity CA* is
+supported. The *[Keymaster](https://github.com/Symantec/keymaster)* is a good
+choice for issuing these certificates. This root CA should be placed in
+`/etc/ssl/IdentityCA.pem` and will be trusted for identity only (not for
+granting unlimited access to RPC methods).
 
 ### Creating a certificate+key for [subd](../cmd/subd/README.md)
 Using the previously created root certificate+key, you can create and sign a
