@@ -55,20 +55,20 @@ func (s *server) startServerOnBridge(bridge net.Interface) error {
 		return status.err
 	}
 	subnetChannel := s.manager.MakeSubnetChannel()
-	go s.addSubnets(status.namespaceFd, subnetChannel, logger)
+	go s.addSubnets(bridge, status.namespaceFd, subnetChannel, logger)
 	return nil
 }
 
-func (s *server) addSubnets(namespaceFd int, subnetChannel <-chan proto.Subnet,
-	logger log.DebugLogger) {
+func (s *server) addSubnets(bridge net.Interface, namespaceFd int,
+	subnetChannel <-chan proto.Subnet, logger log.DebugLogger) {
+	logger.Debugf(0, "waiting for subnet updates in namespaceFD=%d\n",
+		namespaceFd)
 	if err := wsyscall.SetNetNamespace(namespaceFd); err != nil {
 		logger.Println(err)
 		return
 	}
 	for subnet := range subnetChannel {
-		for _, bridge := range s.bridges {
-			addRouteForBridge(bridge, subnet, logger)
-		}
+		addRouteForBridge(bridge, subnet, logger)
 	}
 }
 
