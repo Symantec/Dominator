@@ -36,6 +36,24 @@ func parseMAC(text []byte) (HardwareAddr, error) {
 }
 
 func (left *Machine) Equal(right *Machine) bool {
+	if !left.NetworkEntry.Equal(&right.NetworkEntry) {
+		return false
+	}
+	if len(left.SecondaryNetworkEntries) != len(right.SecondaryNetworkEntries) {
+		return false
+	}
+	for index, leftNetworkEntry := range left.SecondaryNetworkEntries {
+		if !leftNetworkEntry.Equal(&right.SecondaryNetworkEntries[index]) {
+			return false
+		}
+	}
+	if !left.Tags.Equal(right.Tags) {
+		return false
+	}
+	return true
+}
+
+func (left *NetworkEntry) Equal(right *NetworkEntry) bool {
 	if left.Hostname != right.Hostname {
 		return false
 	}
@@ -43,9 +61,6 @@ func (left *Machine) Equal(right *Machine) bool {
 		return false
 	}
 	if left.HostMacAddress.String() != right.HostMacAddress.String() {
-		return false
-	}
-	if !left.Tags.Equal(right.Tags) {
 		return false
 	}
 	return true
