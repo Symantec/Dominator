@@ -21,21 +21,31 @@ func getMachineInfoSubcommand(args []string, logger log.DebugLogger) {
 }
 
 func getMachineInfo(hostname string, logger log.DebugLogger) error {
+	fmCR := srpc.NewClientResource("tcp",
+		fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum))
+	defer fmCR.ScheduleClose()
+	if info, err := getInfoForMachine(fmCR, hostname); err != nil {
+		return err
+	} else {
+		return json.WriteWithIndent(os.Stdout, "    ", info)
+	}
+}
+
+func getInfoForMachine(fmCR *srpc.ClientResource, hostname string) (
+	proto.GetMachineInfoResponse, error) {
 	request := proto.GetMachineInfoRequest{Hostname: hostname}
 	var reply proto.GetMachineInfoResponse
-	clientName := fmt.Sprintf("%s:%d",
-		*fleetManagerHostname, *fleetManagerPortNum)
-	client, err := srpc.DialHTTP("tcp", clientName, 0)
+	client, err := fmCR.GetHTTP(nil, 0)
 	if err != nil {
-		return err
+		return proto.GetMachineInfoResponse{}, err
 	}
-	defer client.Close()
+	defer client.Put()
 	err = client.RequestReply("FleetManager.GetMachineInfo", request, &reply)
 	if err != nil {
-		return err
+		return proto.GetMachineInfoResponse{}, err
 	}
 	if err := errors.New(reply.Error); err != nil {
-		return err
+		return proto.GetMachineInfoResponse{}, err
 	}
-	return json.WriteWithIndent(os.Stdout, "    ", reply)
+	return reply, nil
 }

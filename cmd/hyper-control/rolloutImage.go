@@ -233,12 +233,17 @@ func getTagsForHypervisors(clientResource *srpc.ClientResource) (
 
 func listGoodHypervisors(clientResource *srpc.ClientResource) (
 	[]string, error) {
+	return listGoodHypervisorsInLocation(clientResource, *location)
+}
+
+func listGoodHypervisorsInLocation(clientResource *srpc.ClientResource,
+	location string) ([]string, error) {
 	client, err := clientResource.GetHTTP(nil, 0)
 	if err != nil {
 		return nil, err
 	}
 	defer client.Put()
-	request := fm_proto.ListHypervisorsInLocationRequest{Location: *location}
+	request := fm_proto.ListHypervisorsInLocationRequest{Location: location}
 	var reply fm_proto.ListHypervisorsInLocationResponse
 	err = client.RequestReply("FleetManager.ListHypervisorsInLocation",
 		request, &reply)
