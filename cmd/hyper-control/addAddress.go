@@ -30,16 +30,16 @@ func addAddress(macAddr, ipAddr string, logger log.DebugLogger) error {
 		address.IpAddress = net.ParseIP(ipAddr)
 	}
 	address.Shrink()
-	request := proto.AddAddressesToPoolRequest{
-		Addresses: []proto.Address{address}}
-	var reply proto.AddAddressesToPoolResponse
+	request := proto.ChangeAddressPoolRequest{
+		AddressesToAdd: []proto.Address{address}}
+	var reply proto.ChangeAddressPoolResponse
 	clientName := fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum)
 	client, err := srpc.DialHTTP("tcp", clientName, 0)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
-	err = client.RequestReply("Hypervisor.AddAddressesToPool", request, &reply)
+	err = client.RequestReply("Hypervisor.ChangeAddressPool", request, &reply)
 	if err != nil {
 		return err
 	}

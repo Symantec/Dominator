@@ -1,6 +1,7 @@
 package hypervisors
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/Symantec/Dominator/fleetmanager/topology"
@@ -61,38 +62,31 @@ func (m *Manager) makeSubnet(tSubnet *topology.Subnet) *subnetType {
 	}
 }
 
-func (m *Manager) findFreeIPs(tSubnets []*topology.Subnet,
+func (m *Manager) findFreeIPs(tSubnet *topology.Subnet,
 	numNeeded uint) ([]net.IP, error) {
 	var freeIPs []net.IP
-	for _, tSubnet := range tSubnets {
-		if !tSubnet.Manage {
-			continue
-		}
-		subnet, ok := m.subnets[tSubnet.IpGateway.String()]
-		if !ok {
-			continue
-		}
-		initialIp := copyIp(subnet.nextIp)
-		for numNeeded > 0 {
-			if !checkIpReserved(subnet.subnet, subnet.nextIp) {
-				registered, err := m.storer.CheckIpIsRegistered(subnet.nextIp)
-				if err != nil {
-					return nil, err
-				}
-				if !registered {
-					freeIPs = append(freeIPs, copyIp(subnet.nextIp))
-					numNeeded--
-				}
+	gatewayIp := tSubnet.IpGateway.String()
+	subnet, ok := m.subnets[gatewayIp]
+	if !ok {
+		return nil, fmt.Errorf("subnet for gateway: %s not found", gatewayIp)
+	}
+	initialIp := copyIp(subnet.nextIp)
+	for numNeeded > 0 {
+		if !checkIpReserved(subnet.subnet, subnet.nextIp) {
+			registered, err := m.storer.CheckIpIsRegistered(subnet.nextIp)
+			if err != nil {
+				return nil, err
 			}
-			incrementIp(subnet.nextIp)
-			if subnet.nextIp.Equal(subnet.stopIp) {
-				copy(subnet.nextIp, subnet.startIp)
-			}
-			if initialIp.Equal(subnet.nextIp) {
-				break
+			if !registered {
+				freeIPs = append(freeIPs, copyIp(subnet.nextIp))
+				numNeeded--
 			}
 		}
-		if numNeeded < 1 {
+		incrementIp(subnet.nextIp)
+		if subnet.nextIp.Equal(subnet.stopIp) {
+			copy(subnet.nextIp, subnet.startIp)
+		}
+		if initialIp.Equal(subnet.nextIp) {
 			break
 		}
 	}

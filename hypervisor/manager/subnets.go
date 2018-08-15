@@ -71,11 +71,13 @@ func getHypervisorSubnet() (proto.Subnet, error) {
 
 // This must be called with the lock held.
 func (m *Manager) getMatchingSubnet(ipAddr net.IP) string {
-	for id, subnet := range m.subnets {
-		subnetMask := net.IPMask(subnet.IpMask)
-		subnetAddr := subnet.IpGateway.Mask(subnetMask)
-		if ipAddr.Mask(subnetMask).Equal(subnetAddr) {
-			return id
+	if len(ipAddr) > 0 {
+		for id, subnet := range m.subnets {
+			subnetMask := net.IPMask(subnet.IpMask)
+			subnetAddr := subnet.IpGateway.Mask(subnetMask)
+			if ipAddr.Mask(subnetMask).Equal(subnetAddr) {
+				return id
+			}
 		}
 	}
 	return ""
