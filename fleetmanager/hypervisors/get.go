@@ -36,6 +36,10 @@ func (m *Manager) getHypervisorForVm(ipAddr net.IP) (string, error) {
 }
 
 func (m *Manager) getMachineInfo(hostname string) (proto.Machine, error) {
+	if !*manageHypervisors {
+		return proto.Machine{},
+			errors.New("this is a read-only Fleet Manager: full machine information is not available")
+	}
 	if hypervisor, err := m.getLockedHypervisor(hostname, false); err != nil {
 		return proto.Machine{}, err
 	} else {

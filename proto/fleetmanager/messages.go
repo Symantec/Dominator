@@ -30,9 +30,10 @@ type GetMachineInfoRequest struct {
 }
 
 type GetMachineInfoResponse struct {
-	Error   string          `json:",omitempty"`
-	Machine Machine         `json:",omitempty"`
-	Subnets []*proto.Subnet `json:",omitempty"`
+	Error    string          `json:",omitempty"`
+	Location string          `json:",omitempty"`
+	Machine  Machine         `json:",omitempty"`
+	Subnets  []*proto.Subnet `json:",omitempty"`
 }
 
 // The GetUpdates() RPC is fully streamed.
@@ -85,8 +86,13 @@ type ListVMsInLocationResponse struct {
 }
 
 type Machine struct {
+	NetworkEntry            `json:",omitempty"`
+	SecondaryNetworkEntries []NetworkEntry `json:",omitempty"`
+	Tags                    tags.Tags      `json:",omitempty"`
+}
+
+type NetworkEntry struct {
 	Hostname       string       `json:",omitempty"`
 	HostIpAddress  net.IP       `json:",omitempty"`
 	HostMacAddress HardwareAddr `json:",omitempty"`
-	Tags           tags.Tags    `json:",omitempty"`
 }

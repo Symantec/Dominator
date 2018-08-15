@@ -63,6 +63,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  change-tags")
 	fmt.Fprintln(os.Stderr, "  get-machine-info hostname")
 	fmt.Fprintln(os.Stderr, "  get-updates")
+	fmt.Fprintln(os.Stderr, "  netboot-host hostname")
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
 	fmt.Fprintln(os.Stderr, "  rollout-image name")
@@ -83,6 +84,7 @@ var subcommands = []subcommand{
 	{"change-tags", 0, 0, changeTagsSubcommand},
 	{"get-machine-info", 1, 1, getMachineInfoSubcommand},
 	{"get-updates", 0, 0, getUpdatesSubcommand},
+	{"netboot-host", 1, 1, netbootHostSubcommand},
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
 	{"rollout-image", 1, 1, rolloutImageSubcommand},
