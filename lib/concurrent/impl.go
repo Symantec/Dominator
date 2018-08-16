@@ -4,20 +4,25 @@ import (
 	"runtime"
 )
 
-func newState(numConcurrent uint) *State {
-	state := new(State)
+func newState(numConcurrent uint, p putter) *State {
+	state := &State{errorChannel: make(chan error), putter: p}
 	if numConcurrent > 0 {
 		state.semaphore = make(chan struct{}, numConcurrent)
 	} else {
 		state.semaphore = make(chan struct{}, runtime.NumCPU())
 	}
-	state.errorChannel = make(chan error)
 	return state
+}
+
+func (*nilPutter) put() {
 }
 
 func (state *State) goRun(doFunc func() error) error {
 	if state.entered {
 		panic("GoRun is not re-entrant safe")
+	}
+	if state.reaped {
+		panic("state has been reaped")
 	}
 	state.entered = true
 	defer func() { state.entered = false }()
@@ -34,6 +39,7 @@ func (state *State) goRun(doFunc func() error) error {
 			go func() {
 				state.errorChannel <- doFunc()
 				<-state.semaphore
+				state.putter.put()
 			}()
 			return nil
 		}
@@ -41,6 +47,10 @@ func (state *State) goRun(doFunc func() error) error {
 }
 
 func (state *State) reap() error {
+	state.reaped = true
+	if state.entered {
+		panic("GoRun is running")
+	}
 	close(state.semaphore)
 	for ; state.pending > 0; state.pending-- {
 		if err := <-state.errorChannel; err != nil {

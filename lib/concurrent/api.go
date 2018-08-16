@@ -8,17 +8,31 @@
 */
 package concurrent
 
+type nilPutter struct{}
+
+type putter interface {
+	put()
+}
+
 // State maintains state needed to manage running functions concurrently.
 type State struct {
 	entered      bool
-	semaphore    chan struct{}
 	errorChannel chan error
 	pending      uint64
+	putter       putter
+	reaped       bool
+	semaphore    chan struct{}
 }
 
 // NewState returns a new State.
 func NewState(numConcurrent uint) *State {
-	return newState(numConcurrent)
+	return newState(numConcurrent, &nilPutter{})
+}
+
+func NewStateWithLinearConcurrencyIncrease(initialNumConcurrent uint,
+	maximumNumConcurrent uint) *State {
+	return newStateWithLinearConcurrencyIncrease(initialNumConcurrent,
+		maximumNumConcurrent)
 }
 
 // GoRun will run the provided function in a goroutine. If the function returns
