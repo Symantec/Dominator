@@ -82,7 +82,7 @@ func (m *Manager) AcknowledgeVm(ipAddr net.IP,
 }
 
 func (m *Manager) AddAddressesToPool(addresses []proto.Address) error {
-	return m.addAddressesToPool(addresses, true)
+	return m.addAddressesToPool(addresses)
 }
 
 func (m *Manager) BecomePrimaryVmOwner(ipAddr net.IP,
@@ -191,7 +191,7 @@ func (m *Manager) NotifyVmMetadataRequest(ipAddr net.IP, path string) {
 	m.notifyVmMetadataRequest(ipAddr, path)
 }
 
-func (m *Manager) RemoveExcessAddressesFromPool(maxFree uint) error {
+func (m *Manager) RemoveExcessAddressesFromPool(maxFree map[string]uint) error {
 	return m.removeExcessAddressesFromPool(maxFree)
 }
 

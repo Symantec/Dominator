@@ -363,6 +363,21 @@ func (m *Manager) manageHypervisor(h *hypervisorType,
 	}
 }
 
+func (m *Manager) getSubnetsForMachine(h *hypervisorType) (
+	map[string]*topology.Subnet, error) {
+	m.mutex.Lock()
+	subnetsSlice, err := m.topology.GetSubnetsForMachine(h.machine.Hostname)
+	m.mutex.Unlock()
+	if err != nil {
+		return nil, err
+	}
+	subnetsMap := make(map[string]*topology.Subnet, len(subnetsSlice))
+	for _, subnet := range subnetsSlice {
+		subnetsMap[subnet.Id] = subnet
+	}
+	return subnetsMap, nil
+}
+
 func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 	update hyper_proto.Update) {
 	if update.HaveAddressPool {
@@ -376,79 +391,85 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 			h.logger.Println(err)
 		}
 	}
-	if update.HaveNumFree {
-		if update.NumFreeAddresses < *minimumAddressPoolSize {
-			hypervisorAddress := fmt.Sprintf("%s:%d",
-				h.machine.Hostname, constants.HypervisorPortNumber)
+	ipsToAdd := make([]net.IP, 0)
+	addressesToAdd := make([]hyper_proto.Address, 0)
+	maxFreeAddresses := make(map[string]uint)
+	tSubnets, err := m.getSubnetsForMachine(h)
+	if err != nil {
+		h.logger.Println(err)
+		return
+	}
+	var numAddressesToRemove uint
+	for subnetId, numFreeAddresses := range update.NumFreeAddresses {
+		tSubnet := tSubnets[subnetId]
+		if tSubnet == nil {
+			h.logger.Printf("update for missing subnet: %s\n", subnetId)
+			return
+		}
+		if !tSubnet.Manage {
+			continue
+		}
+		if numFreeAddresses < *minimumAddressPoolSize {
 			m.mutex.Lock()
-			defer m.mutex.Unlock()
-			tSubnets, err := m.topology.GetSubnetsForMachine(h.machine.Hostname)
-			if err != nil {
-				h.logger.Println(err)
-				return
-			}
-			freeIPs, err := m.findFreeIPs(tSubnets,
-				*desiredAddressPoolSize-update.NumFreeAddresses)
+			freeIPs, err := m.findFreeIPs(tSubnet,
+				*desiredAddressPoolSize-numFreeAddresses)
+			m.mutex.Unlock()
 			if err != nil {
 				h.logger.Println(err)
 				return
 			}
 			if len(freeIPs) < 1 {
-				return
+				continue
 			}
-			addresses := make([]hyper_proto.Address, 0, len(freeIPs))
 			for _, ip := range freeIPs {
-				addresses = append(addresses, hyper_proto.Address{
+				ipsToAdd = append(ipsToAdd, ip)
+				addressesToAdd = append(addressesToAdd, hyper_proto.Address{
 					IpAddress: ip,
 					MacAddress: fmt.Sprintf("52:54:%02x:%02x:%02x:%02x",
 						ip[0], ip[1], ip[2], ip[3]),
 				})
 			}
-			client, err := srpc.DialHTTP("tcp", hypervisorAddress, time.Minute)
-			if err != nil {
-				h.logger.Println(err)
-				return
-			}
-			defer client.Close()
-			request := hyper_proto.AddAddressesToPoolRequest{addresses}
-			var reply hyper_proto.AddAddressesToPoolResponse
-			err = client.RequestReply("Hypervisor.AddAddressesToPool",
-				request, &reply)
-			if err == nil {
-				err = errors.New(reply.Error)
-			}
-			if err != nil {
-				h.logger.Println(err)
-				return
-			}
-			m.storer.AddIPsForHypervisor(h.machine.HostIpAddress, freeIPs)
-			h.logger.Debugf(0, "replenished pool with %d addresses\n",
-				len(addresses))
-		} else if update.NumFreeAddresses > *maximumAddressPoolSize {
-			hypervisorAddress := fmt.Sprintf("%s:%d",
-				h.machine.Hostname, constants.HypervisorPortNumber)
-			client, err := srpc.DialHTTP("tcp", hypervisorAddress, time.Minute)
-			if err != nil {
-				h.logger.Println(err)
-				return
-			}
-			defer client.Close()
-			request := hyper_proto.RemoveExcessAddressesFromPoolRequest{
-				*desiredAddressPoolSize}
-			var reply hyper_proto.RemoveExcessAddressesFromPoolResponse
-			err = client.RequestReply(
-				"Hypervisor.RemoveExcessAddressesFromPool",
-				request, &reply)
-			if err == nil {
-				err = errors.New(reply.Error)
-			}
-			if err != nil {
-				h.logger.Println(err)
-				return
-			}
-			h.logger.Debugf(0, "removed %d excess addresses from pool\n",
-				update.NumFreeAddresses-*desiredAddressPoolSize)
+			h.logger.Debugf(0, "Adding %d addresses to subnet: %s\n",
+				len(freeIPs), subnetId)
+		} else if numFreeAddresses > *maximumAddressPoolSize {
+			maxFreeAddresses[subnetId] = *desiredAddressPoolSize
+			numAddressesToRemove += numFreeAddresses - *desiredAddressPoolSize
+			h.logger.Debugf(0, "Removing %d excess addresses from subnet: %s\n",
+				numFreeAddresses-*maximumAddressPoolSize, subnetId)
 		}
+	}
+	if len(addressesToAdd) < 1 && len(maxFreeAddresses) < 1 {
+		return
+	}
+	client, err := srpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
+		h.machine.Hostname, constants.HypervisorPortNumber), time.Minute)
+	if err != nil {
+		h.logger.Println(err)
+		return
+	}
+	defer client.Close()
+	request := hyper_proto.ChangeAddressPoolRequest{
+		AddressesToAdd:       addressesToAdd,
+		MaximumFreeAddresses: maxFreeAddresses,
+	}
+	var reply hyper_proto.ChangeAddressPoolResponse
+	err = client.RequestReply("Hypervisor.ChangeAddressPool",
+		request, &reply)
+	if err == nil {
+		err = errors.New(reply.Error)
+	}
+	if err != nil {
+		h.logger.Println(err)
+		return
+	}
+	m.storer.AddIPsForHypervisor(h.machine.HostIpAddress, ipsToAdd)
+	if len(addressesToAdd) > 0 {
+		h.logger.Debugf(0, "replenished pool with %d addresses\n",
+			len(addressesToAdd))
+	}
+	if len(maxFreeAddresses) > 0 {
+		h.logger.Debugf(0, "removed %d excess addresses from pool\n",
+			numAddressesToRemove)
 	}
 }
 

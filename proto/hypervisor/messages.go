@@ -27,14 +27,6 @@ type AcknowledgeVmResponse struct {
 	Error string
 }
 
-type AddAddressesToPoolRequest struct {
-	Addresses []Address
-}
-
-type AddAddressesToPoolResponse struct {
-	Error string
-}
-
 type Address struct {
 	IpAddress  net.IP `json:",omitempty"`
 	MacAddress string
@@ -45,6 +37,15 @@ type BecomePrimaryVmOwnerRequest struct {
 }
 
 type BecomePrimaryVmOwnerResponse struct {
+	Error string
+}
+
+type ChangeAddressPoolRequest struct {
+	AddressesToAdd       []Address
+	MaximumFreeAddresses map[string]uint // Key: subnet ID.
+}
+
+type ChangeAddressPoolResponse struct {
 	Error string
 }
 
@@ -133,8 +134,7 @@ type DiscardVmSnapshotResponse struct {
 type Update struct {
 	HaveAddressPool  bool               `json:",omitempty"`
 	AddressPool      []Address          `json:",omitempty"` // Used & free.
-	HaveNumFree      bool               `json:",omitempty"`
-	NumFreeAddresses uint               `json:",omitempty"`
+	NumFreeAddresses map[string]uint    `json:",omitempty"` // Key: subnet ID.
 	HaveSubnets      bool               `json:",omitempty"`
 	Subnets          []Subnet           `json:",omitempty"`
 	HaveVMs          bool               `json:",omitempty"`
@@ -199,14 +199,6 @@ type ProbeVmPortRequest struct {
 type ProbeVmPortResponse struct {
 	PortIsOpen bool
 	Error      string
-}
-
-type RemoveExcessAddressesFromPoolRequest struct {
-	MaximumFreeAddresses uint
-}
-
-type RemoveExcessAddressesFromPoolResponse struct {
-	Error string
 }
 
 type ReplaceVmImageRequest struct {

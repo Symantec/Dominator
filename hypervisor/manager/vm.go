@@ -172,7 +172,7 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest,
 	freeAddress := true
 	defer func() {
 		if freeAddress {
-			err := m.releaseAddressInPool(address, true)
+			err := m.releaseAddressInPool(address)
 			if err != nil {
 				m.Logger.Println(err)
 			}
@@ -298,10 +298,13 @@ func (m *Manager) commitImportedVm(ipAddr net.IP,
 	if !vm.Uncommitted {
 		return fmt.Errorf("%s is already committed")
 	}
+	m.mutex.Lock()
 	m.addressPool.Registered = append(m.addressPool.Registered, vm.Address)
-	if err := m.writeAddressPool(m.addressPool, true); err != nil {
+	if err := m.writeAddressPoolWithLock(m.addressPool, true); err != nil {
+		m.mutex.Unlock()
 		return err
 	}
+	m.mutex.Unlock()
 	vm.Uncommitted = false
 	vm.writeAndSendInfo()
 	return nil
@@ -351,7 +354,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		m.mutex.Lock()
 		delete(m.vms, vm.ipAddress)
 		m.sendVmInfo(vm.ipAddress, nil)
-		err := m.releaseAddressInPool(vm.Address, false)
+		err := m.releaseAddressInPoolWithLock(vm.Address)
 		if err != nil {
 			m.Logger.Println(err)
 		}
@@ -1181,7 +1184,7 @@ func (vm *vmInfoType) delete() {
 	vm.manager.sendVmInfo(vm.ipAddress, nil)
 	var err error
 	if !vm.Uncommitted {
-		err = vm.manager.releaseAddressInPool(vm.Address, false)
+		err = vm.manager.releaseAddressInPoolWithLock(vm.Address)
 	}
 	vm.manager.mutex.Unlock()
 	if err != nil {
