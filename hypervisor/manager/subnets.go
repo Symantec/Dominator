@@ -264,12 +264,23 @@ func (m *Manager) updateSubnetsLocked(
 			subnetsToWrite = append(subnetsToWrite, subnet)
 		}
 	}
-	err := json.WriteToFile(path.Join(m.StateDir, "subnets.json"),
+	// TODO(rgooch): Should precompute the numFreeAddresses map.
+	numFreeAddresses, err := m.computeNumFreeAddressesMap(m.addressPool)
+	if err != nil {
+		return err
+	}
+	err = json.WriteToFile(path.Join(m.StateDir, "subnets.json"),
 		publicFilePerms, "    ", subnetsToWrite)
 	if err != nil {
 		return err
 	}
 	m.sendUpdateWithLock(
-		proto.Update{HaveSubnets: true, Subnets: subnetsToWrite})
+		proto.Update{
+			HaveAddressPool:  true,
+			AddressPool:      m.addressPool.Registered,
+			NumFreeAddresses: numFreeAddresses,
+			HaveSubnets:      true,
+			Subnets:          subnetsToWrite,
+		})
 	return nil
 }
