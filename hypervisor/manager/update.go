@@ -15,7 +15,7 @@ func (m *Manager) makeUpdateChannel() <-chan proto.Update {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.notifiers[channel] = channel
-	subnets := make([]proto.Subnet, 0, len(m.subnets)-1)
+	subnets := make([]proto.Subnet, 0, len(m.subnets))
 	for id, subnet := range m.subnets {
 		if id != "hypervisor" {
 			subnets = append(subnets, subnet)
