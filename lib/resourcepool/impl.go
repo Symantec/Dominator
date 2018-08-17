@@ -10,6 +10,13 @@ func newPool(max uint, metricsSubDirname string) *Pool {
 	return pool
 }
 
+func (pool *Pool) create(allocateReleaser AllocateReleaser) *Resource {
+	return &Resource{
+		pool:             pool,
+		allocateReleaser: allocateReleaser,
+		semaphore:        make(chan struct{}, 1)}
+}
+
 func (pool *Pool) getSlot(cancelChannel <-chan struct{}) bool {
 	// Grab a slot (the right to have a resource in use).
 	select {
@@ -26,10 +33,24 @@ func (pool *Pool) getSlot(cancelChannel <-chan struct{}) bool {
 }
 
 func (resource *Resource) get(cancelChannel <-chan struct{}) error {
-	pool := resource.pool
-	if resource.inUse {
-		panic("Resource is already in use")
+	drainSemaphore := false
+	defer func() {
+		if drainSemaphore {
+			<-resource.semaphore
+		}
+	}()
+	select {
+	case resource.semaphore <- struct{}{}:
+		drainSemaphore = true
+	default:
+		select {
+		case resource.semaphore <- struct{}{}:
+			drainSemaphore = true
+		case <-cancelChannel:
+			return ErrorPutTimeout
+		}
 	}
+	pool := resource.pool
 	if !pool.getSlot(cancelChannel) {
 		return ErrorResourceLimitExceeded
 	}
@@ -38,7 +59,7 @@ func (resource *Resource) get(cancelChannel <-chan struct{}) error {
 	if resource.allocated {
 		delete(pool.unused, resource)
 		pool.numUnused = uint(len(pool.unused))
-		resource.inUse = true
+		drainSemaphore = false
 		pool.numUsed++
 		return nil
 	}
@@ -69,7 +90,6 @@ func (resource *Resource) get(cancelChannel <-chan struct{}) error {
 	}
 	resource.allocating = true
 	resource.allocated = true
-	resource.inUse = true
 	pool.numUsed++
 	pool.lock.Unlock()
 	resource.releasing.Lock() // Wait for myself to finish releasing.
@@ -79,11 +99,11 @@ func (resource *Resource) get(cancelChannel <-chan struct{}) error {
 	resource.allocating = false
 	if err != nil {
 		resource.allocated = false
-		resource.inUse = false
 		pool.numUsed--
 		<-pool.semaphore // Free up a slot for someone else.
 		return err
 	}
+	drainSemaphore = false
 	return nil
 }
 
@@ -94,7 +114,7 @@ func (resource *Resource) put() {
 		pool.lock.Unlock()
 		return
 	}
-	if !resource.inUse {
+	if len(resource.semaphore) < 1 {
 		pool.lock.Unlock()
 		panic("Resource was not gotten")
 	}
@@ -104,7 +124,7 @@ func (resource *Resource) put() {
 	}
 	pool.unused[resource] = struct{}{}
 	pool.numUnused = uint(len(pool.unused))
-	resource.inUse = false
+	<-resource.semaphore
 	pool.numUsed--
 	pool.lock.Unlock()
 	<-pool.semaphore // Free up a slot for someone else.
@@ -126,9 +146,10 @@ func (resource *Resource) release(haveLock bool) error {
 	delete(resource.pool.unused, resource)
 	pool.numUnused = uint(len(pool.unused))
 	resource.allocated = false
-	wasUsed := resource.inUse
-	resource.inUse = false
-	if wasUsed {
+	wasUsed := false
+	if len(resource.semaphore) > 0 {
+		wasUsed = true
+		<-resource.semaphore
 		pool.numUsed--
 	}
 	pool.numReleasing++
@@ -145,7 +166,7 @@ func (resource *Resource) release(haveLock bool) error {
 
 func (resource *Resource) scheduleRelease() error {
 	resource.pool.lock.Lock()
-	if resource.inUse {
+	if len(resource.semaphore) > 0 {
 		resource.releaseOnPut = true
 		resource.pool.lock.Unlock()
 		return nil
