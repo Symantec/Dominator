@@ -9,19 +9,24 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
 	imageclient "github.com/Symantec/Dominator/imageserver/client"
+	"github.com/Symantec/Dominator/lib/concurrent"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/cpusharer"
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
+	libnet "github.com/Symantec/Dominator/lib/net"
 	"github.com/Symantec/Dominator/lib/rpcclientpool"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/tags"
 	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
+	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 	sub_proto "github.com/Symantec/Dominator/proto/sub"
 	subclient "github.com/Symantec/Dominator/sub/client"
 	"github.com/Symantec/tricorder/go/tricorder/messages"
@@ -35,9 +40,11 @@ const (
 type hypervisorType struct {
 	healthAgentClientResource *rpcclientpool.ClientResource
 	hostname                  string
+	hypervisorClientResource  *srpc.ClientResource
 	initialTags               tags.Tags
 	initialUnhealthyList      map[string]struct{}
 	logger                    log.DebugLogger
+	noVMs                     bool
 	subClientResource         *srpc.ClientResource
 }
 
@@ -62,7 +69,9 @@ func gitCommand(repositoryDirectory string, command ...string) ([]byte, error) {
 }
 
 func rolloutImage(imageName string, logger log.DebugLogger) error {
+	cpuSharer := cpusharer.NewFifoCpuSharer()
 	if *topologyDir != "" {
+		logger.Debugln(0, "updating Git repository")
 		stdout, err := gitCommand(*topologyDir, "status", "--porcelain")
 		if err != nil {
 			return err
@@ -74,6 +83,7 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 			return err
 		}
 	}
+	logger.Debugln(0, "checking image")
 	if foundImage, err := checkImage(imageName); err != nil {
 		return err
 	} else if !foundImage {
@@ -82,6 +92,7 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 	fleetManagerClientResource := srpc.NewClientResource("tcp",
 		fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum))
 	defer fleetManagerClientResource.ScheduleClose()
+	logger.Debugln(0, "finding good Hypervisors")
 	hypervisorAddresses, err := listGoodHypervisors(fleetManagerClientResource)
 	if err != nil {
 		return err
@@ -89,6 +100,7 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 	hypervisors := make([]*hypervisorType, 0, len(hypervisorAddresses))
 	defer closeHypervisors(hypervisors)
 	tagsForHypervisors, err := getTagsForHypervisors(fleetManagerClientResource)
+	logger.Debugln(0, "checking and tagging Hypervisors")
 	if err != nil {
 		return fmt.Errorf("failure getting tags: %s", err)
 	}
@@ -106,45 +118,58 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 					path.Dir(currentRequiredImage), path.Dir(imageName))
 				continue
 			}
-			hypervisor := &hypervisorType{
+			h := &hypervisorType{
 				healthAgentClientResource: rpcclientpool.New("tcp",
 					fmt.Sprintf("%s:%d", hostname, 6910), true, ""),
-				hostname:             hostname,
+				hostname: hostname,
+				hypervisorClientResource: srpc.NewClientResource("tcp",
+					fmt.Sprintf("%s:%d", hostname,
+						constants.HypervisorPortNumber)),
 				initialTags:          tgs,
 				initialUnhealthyList: make(map[string]struct{}),
 				logger:               logger,
 				subClientResource: srpc.NewClientResource("tcp",
 					fmt.Sprintf("%s:%d", hostname, constants.SubPortNumber)),
 			}
-			if lastImage, err := hypervisor.getLastImageName(); err != nil {
+			if lastImage, err := h.getLastImageName(cpuSharer); err != nil {
 				logger.Printf("skipping %s: %s\n", hostname, err)
 			} else if lastImage == imageName {
 				logger.Printf("%s already updated, skipping\n", hostname)
 			} else {
-				err := hypervisor.updateTagForHypervisor(
+				err := h.updateTagForHypervisor(
 					fleetManagerClientResource, "PlannedImage", imageName)
 				if err != nil {
 					return fmt.Errorf("%s: failure updating tags: %s",
 						hostname, err)
 				}
-				hypervisors = append(hypervisors, hypervisor)
+				hypervisors = append(hypervisors, h)
 			}
 		}
 	}
-	for _, hypervisor := range hypervisors {
-		if list, _, err := hypervisor.getFailingHealthChecks(); err != nil {
-			hypervisor.logger.Println(err)
-			continue
-		} else if len(list) > 0 {
-			for _, failed := range list {
-				hypervisor.initialUnhealthyList[failed] = struct{}{}
-			}
-		}
-		err := hypervisor.upgrade(fleetManagerClientResource, imageName)
-		if err != nil {
-			return fmt.Errorf("error upgrading: %s: %s",
-				hypervisor.hostname, err)
-		}
+	logger.Debugln(0, "splitting unused/used Hypervisors")
+	unusedHypervisors, usedHypervisors := markUnusedHypervisors(hypervisors,
+		cpuSharer)
+	logger.Debugf(0, "%d unused, %d used Hypervisors\n",
+		len(unusedHypervisors), len(usedHypervisors))
+	logger.Debugln(0, "upgrading unused Hypervisors")
+	err = upgradeOneThenAll(fleetManagerClientResource, imageName,
+		unusedHypervisors, cpuSharer, uint(len(unusedHypervisors)))
+	if err != nil {
+		return err
+	}
+	numConcurrent := uint(len(usedHypervisors) / 2)
+	if numConcurrent < 1 {
+		numConcurrent = 1
+	} else if numConcurrent > uint(len(unusedHypervisors)) {
+		numConcurrent = 1
+	} else if numConcurrent*10 < uint(len(usedHypervisors)) {
+		numConcurrent++
+	}
+	logger.Debugln(0, "upgrading used Hypervisors")
+	err = upgradeOneThenAll(fleetManagerClientResource, imageName,
+		usedHypervisors, cpuSharer, numConcurrent)
+	if err != nil {
+		return err
 	}
 	if *topologyDir != "" {
 		var tgs tags.Tags
@@ -164,7 +189,7 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 		}
 		var locationInsert string
 		if *location != "" {
-			locationInsert = "in " + *location
+			locationInsert = "in " + *location + " "
 		}
 		_, err = gitCommand(*topologyDir, "commit", "-m",
 			fmt.Sprintf("Upgrade %sfrom %s to %s",
@@ -192,6 +217,7 @@ func checkImage(imageName string) (bool, error) {
 
 func closeHypervisors(hypervisors []*hypervisorType) {
 	for _, hypervisor := range hypervisors {
+		hypervisor.hypervisorClientResource.ScheduleClose()
 		hypervisor.subClientResource.ScheduleClose()
 	}
 }
@@ -256,6 +282,74 @@ func listGoodHypervisorsInLocation(clientResource *srpc.ClientResource,
 	return reply.HypervisorAddresses, nil
 }
 
+func markUnusedHypervisors(hypervisors []*hypervisorType,
+	cpuSharer cpusharer.CpuSharer) (
+	map[*hypervisorType]struct{}, map[*hypervisorType]struct{}) {
+	dialer := libnet.NewCpuSharingDialer(&net.Dialer{}, cpuSharer)
+	waitGroup := &sync.WaitGroup{}
+	for _, hypervisor_ := range hypervisors {
+		waitGroup.Add(1)
+		go func(h *hypervisorType) {
+			defer waitGroup.Done()
+			cpuSharer.GrabCpu()
+			defer cpuSharer.ReleaseCpu()
+			client, err := h.hypervisorClientResource.GetHTTPWithDialer(nil,
+				dialer)
+			if err != nil {
+				h.logger.Println(err)
+				return
+			}
+			defer client.Put()
+			request := hyper_proto.ListVMsRequest{}
+			var reply hyper_proto.ListVMsResponse
+			err = client.RequestReply("Hypervisor.ListVMs", request, &reply)
+			if err != nil {
+				h.logger.Println(err)
+				return
+			}
+			if len(reply.IpAddresses) < 1 {
+				h.noVMs = true
+			}
+		}(hypervisor_)
+	}
+	waitGroup.Wait()
+	unusedHypervisors := make(map[*hypervisorType]struct{})
+	usedHypervisors := make(map[*hypervisorType]struct{})
+	for _, hypervisor := range hypervisors {
+		if hypervisor.noVMs {
+			unusedHypervisors[hypervisor] = struct{}{}
+		} else {
+			usedHypervisors[hypervisor] = struct{}{}
+		}
+	}
+	return unusedHypervisors, usedHypervisors
+}
+
+func upgradeOneThenAll(fleetManagerClientResource *srpc.ClientResource,
+	imageName string, hypervisors map[*hypervisorType]struct{},
+	cpuSharer *cpusharer.FifoCpuSharer, maxConcurrent uint) error {
+	if len(hypervisors) < 1 {
+		return nil
+	}
+	state := concurrent.NewStateWithLinearConcurrencyIncrease(1, maxConcurrent)
+	for hypervisor := range hypervisors {
+		hypervisor := hypervisor
+		err := state.GoRun(func() error {
+			err := hypervisor.upgrade(fleetManagerClientResource, imageName,
+				cpuSharer)
+			if err != nil {
+				return fmt.Errorf("error upgrading: %s: %s",
+					hypervisor.hostname, err)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return state.Reap()
+}
+
 func (h *hypervisorType) getFailingHealthChecks() ([]string, time.Time, error) {
 	client, err := h.healthAgentClientResource.Get(nil)
 	if err != nil {
@@ -281,9 +375,10 @@ func (h *hypervisorType) getFailingHealthChecks() ([]string, time.Time, error) {
 	}
 }
 
-func (h *hypervisorType) getLastImageName() (string, error) {
+func (h *hypervisorType) getLastImageName(cpuSharer *cpusharer.FifoCpuSharer) (
+	string, error) {
 	stopTime := time.Now().Add(time.Minute * 5)
-	for ; time.Until(stopTime) > 0; time.Sleep(time.Second) {
+	for ; time.Until(stopTime) > 0; cpuSharer.Sleep(time.Second) {
 		client, err := h.subClientResource.GetHTTP(nil, 0)
 		if err != nil {
 			h.logger.Debugln(0, err)
@@ -333,7 +428,17 @@ func (h *hypervisorType) updateTagForHypervisor(
 }
 
 func (h *hypervisorType) upgrade(clientResource *srpc.ClientResource,
-	imageName string) error {
+	imageName string, cpuSharer *cpusharer.FifoCpuSharer) error {
+	cpuSharer.GrabCpu()
+	defer cpuSharer.ReleaseCpu()
+	if list, _, err := h.getFailingHealthChecks(); err != nil {
+		h.logger.Println(err)
+		return nil
+	} else if len(list) > 0 {
+		for _, failed := range list {
+			h.initialUnhealthyList[failed] = struct{}{}
+		}
+	}
 	h.logger.Debugln(0, "upgrading")
 	err := h.updateTagForHypervisor(clientResource, "RequiredImage", imageName)
 	if err != nil {
@@ -341,8 +446,8 @@ func (h *hypervisorType) upgrade(clientResource *srpc.ClientResource,
 	}
 	stopTime := time.Now().Add(time.Minute * 15)
 	updateCompleted := false
-	for ; time.Until(stopTime) > 0; time.Sleep(time.Second) {
-		if syncedImage, err := h.getLastImageName(); err != nil {
+	for ; time.Until(stopTime) > 0; cpuSharer.Sleep(time.Second) {
+		if syncedImage, err := h.getLastImageName(cpuSharer); err != nil {
 			return err
 		} else if syncedImage == imageName {
 			updateCompleted = true
@@ -353,7 +458,7 @@ func (h *hypervisorType) upgrade(clientResource *srpc.ClientResource,
 		return errors.New("timed out waiting for image update to complete")
 	}
 	h.logger.Debugln(0, "upgraded")
-	time.Sleep(time.Second * 15)
+	cpuSharer.Sleep(time.Second * 15)
 	if list, _, err := h.getFailingHealthChecks(); err != nil {
 		return err
 	} else {
