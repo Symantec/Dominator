@@ -37,6 +37,7 @@ import (
 )
 
 var (
+	ErrorPutTimeout            = errors.New("timed out waiting for put")
 	ErrorResourceLimitExceeded = errors.New("resource limit exceeded")
 )
 
@@ -71,7 +72,7 @@ type Resource struct {
 	pool             *Pool
 	allocateReleaser AllocateReleaser
 	allocating       bool
-	inUse            bool
+	semaphore        chan struct{}
 	releasing        sync.Mutex
 	releaseOnPut     bool
 	allocated        bool
@@ -89,7 +90,7 @@ func New(max uint, metricsSubDirname string) *Pool {
 // underlying resources is given by allocateReleaser. Create does not allocate
 // resources.
 func (pool *Pool) Create(allocateReleaser AllocateReleaser) *Resource {
-	return &Resource{pool: pool, allocateReleaser: allocateReleaser}
+	return pool.create(allocateReleaser)
 }
 
 // Get attempts to allocate an underlying resource. It calls the Allocate method
