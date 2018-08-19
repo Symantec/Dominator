@@ -484,7 +484,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 	if err := sendUpdate(conn, encoder, "starting VM"); err != nil {
 		return err
 	}
-	dhcpTimedOut, err := vm.startManaging(request.DhcpTimeout)
+	dhcpTimedOut, err := vm.startManaging(request.DhcpTimeout, false)
 	if err != nil {
 		return sendError(conn, encoder, err)
 	}
@@ -722,7 +722,7 @@ func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 			dirname, destFilename})
 	}
 	m.vms[ipAddress] = vm
-	if _, err := vm.startManaging(0); err != nil {
+	if _, err := vm.startManaging(0, true); err != nil {
 		return err
 	}
 	vm = nil // Cancel cleanup.
@@ -1055,7 +1055,7 @@ func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		return false, errors.New("VM is stopping")
 	case proto.StateStopped, proto.StateFailedToStart:
 		vm.setState(proto.StateStarting)
-		return vm.startManaging(dhcpTimeout)
+		return vm.startManaging(dhcpTimeout, false)
 	case proto.StateDestroying:
 		return false, errors.New("VM is destroying")
 	default:
@@ -1327,7 +1327,8 @@ func (vm *vmInfoType) setupVolumes(rootSize uint64,
 	return nil
 }
 
-func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration) (bool, error) {
+func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration,
+	haveManagerLock bool) (bool, error) {
 	vm.monitorSockname = path.Join(vm.dirname, "monitor.sock")
 	switch vm.State {
 	case proto.StateStarting:
@@ -1357,7 +1358,7 @@ func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration) (bool, error) {
 	if err != nil {
 		vm.logger.Debugf(0, "error connecting to: %s: %s\n",
 			vm.monitorSockname, err)
-		if err := vm.startVm(); err != nil {
+		if err := vm.startVm(haveManagerLock); err != nil {
 			vm.logger.Println(err)
 			vm.setState(proto.StateFailedToStart)
 			return false, err
@@ -1403,7 +1404,7 @@ func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration) (bool, error) {
 	return false, nil
 }
 
-func (vm *vmInfoType) startVm() error {
+func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 	if err := checkAvailableMemory(vm.MemoryInMiB); err != nil {
 		return err
 	}
@@ -1415,9 +1416,13 @@ func (vm *vmInfoType) startVm() error {
 		nCpus++
 	}
 	bootlogFilename := path.Join(vm.dirname, "bootlog")
-	vm.manager.mutex.RLock()
+	if !haveManagerLock {
+		vm.manager.mutex.RLock()
+	}
 	subnet, ok := vm.manager.subnets[vm.SubnetId]
-	vm.manager.mutex.RUnlock()
+	if !haveManagerLock {
+		vm.manager.mutex.RUnlock()
+	}
 	if !ok {
 		return fmt.Errorf("subnet: %s not found", vm.SubnetId)
 	}
