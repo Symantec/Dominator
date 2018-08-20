@@ -151,7 +151,7 @@ type GetVmInfoResponse struct {
 }
 
 type ImportLocalVmRequest struct {
-	VerificationCookie []byte
+	VerificationCookie []byte `json:",omitempty"`
 	VmInfo
 	VolumeFilenames []string
 }
