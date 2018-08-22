@@ -90,7 +90,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  discard-vm-snapshot IPaddr")
 	fmt.Fprintln(os.Stderr, "  get-vm-info IPaddr")
 	fmt.Fprintln(os.Stderr, "  import-local-vm info-file root-volume")
-	fmt.Fprintln(os.Stderr, "  import-virsh-vm domain")
+	fmt.Fprintln(os.Stderr, "  import-virsh-vm MACaddr domain")
 	fmt.Fprintln(os.Stderr, "  list-hypervisors")
 	fmt.Fprintln(os.Stderr, "  list-locations [TopLocation]")
 	fmt.Fprintln(os.Stderr, "  list-vms")
@@ -126,7 +126,7 @@ var subcommands = []subcommand{
 	{"discard-vm-snapshot", 1, 1, discardVmSnapshotSubcommand},
 	{"get-vm-info", 1, 1, getVmInfoSubcommand},
 	{"import-local-vm", 2, 2, importLocalVmSubcommand},
-	{"import-virsh-vm", 1, 1, importVirshVmSubcommand},
+	{"import-virsh-vm", 2, 2, importVirshVmSubcommand},
 	{"list-hypervisors", 0, 0, listHypervisorsSubcommand},
 	{"list-locations", 0, 1, listLocationsSubcommand},
 	{"list-vms", 0, 0, listVMsSubcommand},

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/Symantec/Dominator/lib/errors"
@@ -25,25 +26,46 @@ const (
 	privateFilePerms = syscall.S_IRUSR | syscall.S_IWUSR
 )
 
+var (
+	errorCommitAbandoned = errors.New("you abandoned your VM")
+	errorCommitDeferred  = errors.New("you deferred committing your VM")
+)
+
 func askForCommitDecision(client *srpc.Client, ipAddress net.IP) error {
+	response, err := askForInputChoice("Commit VM "+ipAddress.String(),
+		[]string{"commit", "defer", "abandon"})
+	if err != nil {
+		return err
+	}
+	switch response {
+	case "abandon":
+		err := destroyVmOnHypervisorClient(client, ipAddress)
+		if err != nil {
+			return err
+		}
+		return errorCommitAbandoned
+	case "commit":
+		return commitVm(client, ipAddress)
+	case "defer":
+		return errorCommitDeferred
+	}
+	return fmt.Errorf("invalid response: %s", response)
+}
+
+func askForInputChoice(prompt string, choices []string) (string, error) {
 	reader := bufio.NewReader(os.Stdin)
+	choicesMap := make(map[string]struct{}, len(choices))
+	for _, choice := range choices {
+		choicesMap[choice] = struct{}{}
+	}
 	for {
-		fmt.Fprintf(os.Stderr, "Commit VM %s (commit/defer/abandon)? ",
-			ipAddress)
+		fmt.Fprintf(os.Stderr, "%s (%s)? ", prompt, strings.Join(choices, "/"))
 		if response, err := reader.ReadString('\n'); err != nil {
-			return fmt.Errorf("deferring, error reading input: %s", err)
+			return "", fmt.Errorf("deferring, error reading input: %s", err)
 		} else {
-			switch response[:len(response)-1] {
-			case "abandon":
-				err := destroyVmOnHypervisorClient(client, ipAddress)
-				if err != nil {
-					return err
-				}
-				return fmt.Errorf("you abandoned your VM")
-			case "commit":
-				return commitVm(client, ipAddress)
-			case "defer":
-				return fmt.Errorf("you deferred committing your VM")
+			response = response[:len(response)-1]
+			if _, ok := choicesMap[response]; ok {
+				return response, nil
 			}
 		}
 	}
