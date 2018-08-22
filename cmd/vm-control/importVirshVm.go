@@ -245,6 +245,18 @@ func importVirshVm(macAddr, domainName string, logger log.DebugLogger) error {
 		return err
 	}
 	if err := askForCommitDecision(client, ipList[0]); err != nil {
+		if err == errorCommitAbandoned {
+			response, _ := askForInputChoice(
+				"Do you want to restart the old VM", []string{"y", "n"})
+			if response != "y" {
+				return err
+			}
+			cmd = exec.Command("virsh", "start", domainName)
+			if output, err := cmd.CombinedOutput(); err != nil {
+				logger.Println(string(output))
+				return err
+			}
+		}
 		return err
 	}
 	defer virshInfo.deleteVolumes()

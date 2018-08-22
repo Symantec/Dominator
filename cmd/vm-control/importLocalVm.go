@@ -26,6 +26,11 @@ const (
 	privateFilePerms = syscall.S_IRUSR | syscall.S_IWUSR
 )
 
+var (
+	errorCommitAbandoned = errors.New("you abandoned your VM")
+	errorCommitDeferred  = errors.New("you deferred committing your VM")
+)
+
 func askForCommitDecision(client *srpc.Client, ipAddress net.IP) error {
 	response, err := askForInputChoice("Commit VM "+ipAddress.String(),
 		[]string{"commit", "defer", "abandon"})
@@ -38,11 +43,11 @@ func askForCommitDecision(client *srpc.Client, ipAddress net.IP) error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("you abandoned your VM")
+		return errorCommitAbandoned
 	case "commit":
 		return commitVm(client, ipAddress)
 	case "defer":
-		return fmt.Errorf("you deferred committing your VM")
+		return errorCommitDeferred
 	}
 	return fmt.Errorf("invalid response: %s", response)
 }
