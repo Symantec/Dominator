@@ -140,7 +140,7 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 			userDataReader = bufio.NewReader(io.LimitReader(file, size))
 		}
 	}
-	client, err := srpc.DialHTTP("tcp", hypervisor, 0)
+	client, err := dialHypervisor(hypervisor)
 	if err != nil {
 		return err
 	}
@@ -169,9 +169,8 @@ func getHypervisorAddress() (string, error) {
 		return fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum),
 			nil
 	}
-	client, err := srpc.DialHTTP("tcp",
-		fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum),
-		0)
+	client, err := dialFleetManager(fmt.Sprintf("%s:%d",
+		*fleetManagerHostname, *fleetManagerPortNum))
 	if err != nil {
 		return "", err
 	}

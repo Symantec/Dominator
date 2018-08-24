@@ -29,7 +29,7 @@ func destroyVm(vmHostname string, logger log.DebugLogger) error {
 
 func destroyVmOnHypervisor(hypervisor string, ipAddr net.IP,
 	logger log.DebugLogger) error {
-	client, err := srpc.DialHTTP("tcp", hypervisor, 0)
+	client, err := dialHypervisor(hypervisor)
 	if err != nil {
 		return err
 	}

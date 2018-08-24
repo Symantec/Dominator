@@ -7,7 +7,6 @@ import (
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/verstr"
 	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
@@ -33,7 +32,7 @@ func listVMs(logger log.DebugLogger) error {
 
 func listVMsByLocation(fleetManager string, location string,
 	logger log.DebugLogger) error {
-	client, err := srpc.DialHTTP("tcp", fleetManager, 0)
+	client, err := dialFleetManager(fleetManager)
 	if err != nil {
 		return err
 	}
@@ -78,7 +77,7 @@ func listVMsByLocation(fleetManager string, location string,
 }
 
 func listVMsOnHypervisor(hypervisor string, logger log.DebugLogger) error {
-	client, err := srpc.DialHTTP("tcp", hypervisor, 0)
+	client, err := dialHypervisor(hypervisor)
 	if err != nil {
 		return err
 	}
