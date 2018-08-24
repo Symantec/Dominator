@@ -6,7 +6,6 @@ import (
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
 
@@ -25,7 +24,7 @@ func listLocationsSubcommand(args []string, logger log.DebugLogger) {
 func listLocations(topLocation string, logger log.DebugLogger) error {
 	fleetManager := fmt.Sprintf("%s:%d",
 		*fleetManagerHostname, *fleetManagerPortNum)
-	client, err := srpc.DialHTTP("tcp", fleetManager, 0)
+	client, err := dialFleetManager(fleetManager)
 	if err != nil {
 		return err
 	}

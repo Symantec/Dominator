@@ -97,7 +97,7 @@ func replaceVmImageOnHypervisor(hypervisor string, ipAddr net.IP,
 	} else {
 		return errors.New("no image specified")
 	}
-	client, err := srpc.DialHTTP("tcp", hypervisor, 0)
+	client, err := dialHypervisor(hypervisor)
 	if err != nil {
 		return err
 	}

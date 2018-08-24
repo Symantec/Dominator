@@ -7,7 +7,6 @@ import (
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
@@ -33,7 +32,7 @@ func startVmOnHypervisor(hypervisor string, ipAddr net.IP,
 		DhcpTimeout: *dhcpTimeout,
 		IpAddress:   ipAddr,
 	}
-	client, err := srpc.DialHTTP("tcp", hypervisor, 0)
+	client, err := dialHypervisor(hypervisor)
 	if err != nil {
 		return err
 	}

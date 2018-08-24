@@ -7,7 +7,6 @@ import (
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
@@ -31,7 +30,7 @@ func snapshotVmOnHypervisor(hypervisor string, ipAddr net.IP,
 	logger log.DebugLogger) error {
 	request := proto.SnapshotVmRequest{ipAddr, *forceIfNotStopped,
 		*snapshotRootOnly}
-	client, err := srpc.DialHTTP("tcp", hypervisor, 0)
+	client, err := dialHypervisor(hypervisor)
 	if err != nil {
 		return err
 	}
