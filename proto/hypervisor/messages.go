@@ -141,6 +141,16 @@ type Update struct {
 	VMs              map[string]*VmInfo `json:",omitempty"` // Key: IP address.
 }
 
+type GetVmAccessTokenRequest struct {
+	IpAddress net.IP
+	Lifetime  time.Duration
+}
+
+type GetVmAccessTokenResponse struct {
+	Token []byte `json:",omitempty"`
+	Error string
+}
+
 type GetVmInfoRequest struct {
 	IpAddress net.IP
 }
