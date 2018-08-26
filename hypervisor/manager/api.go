@@ -52,7 +52,9 @@ type StartOptions struct {
 }
 
 type vmInfoType struct {
-	mutex sync.Mutex
+	mutex                      sync.Mutex
+	accessToken                []byte
+	accessTokenCleanupNotifier chan<- struct{}
 	proto.VmInfo
 	VolumeLocations  []volumeType
 	manager          *Manager
@@ -148,6 +150,11 @@ func (m *Manager) GetNumVMs() (uint, uint) {
 
 func (m *Manager) GetVmBootLog(ipAddr net.IP) (io.ReadCloser, error) {
 	return m.getVmBootLog(ipAddr)
+}
+
+func (m *Manager) GetVmAccessToken(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, lifetime time.Duration) ([]byte, error) {
+	return m.getVmAccessToken(ipAddr, authInfo, lifetime)
 }
 
 func (m *Manager) GetVmInfo(ipAddr net.IP) (proto.VmInfo, error) {

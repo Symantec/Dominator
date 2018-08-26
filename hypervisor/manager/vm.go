@@ -3,6 +3,7 @@ package manager
 import (
 	"bufio"
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -568,6 +569,46 @@ func (m *Manager) getNumVMs() (uint, uint) {
 		}
 	}
 	return numRunning, numStopped
+}
+
+func (m *Manager) getVmAccessToken(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, lifetime time.Duration) ([]byte, error) {
+	if lifetime < time.Minute {
+		return nil, errors.New("lifetime is less than 1 minute")
+	}
+	if lifetime > time.Hour*24 {
+		return nil, errors.New("lifetime is greater than 1 day")
+	}
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	if err != nil {
+		return nil, err
+	}
+	defer vm.mutex.Unlock()
+	if vm.accessToken != nil {
+		return nil, errors.New("someone else has the access token")
+	}
+	vm.accessToken = nil
+	token := make([]byte, 32)
+	if _, err := rand.Read(token); err != nil {
+		return nil, err
+	}
+	vm.accessToken = token
+	cleanupNotifier := make(chan struct{}, 1)
+	vm.accessTokenCleanupNotifier = cleanupNotifier
+	go func() {
+		timer := time.NewTimer(lifetime)
+		select {
+		case <-timer.C:
+		case <-cleanupNotifier:
+		}
+		vm.mutex.Lock()
+		defer vm.mutex.Unlock()
+		for index := 0; index < len(vm.accessToken); index++ {
+			vm.accessToken[index] = 0 // Scrub sensitive data.
+		}
+		vm.accessToken = nil
+	}()
+	return token, nil
 }
 
 func (m *Manager) getVmAndLock(ipAddr net.IP) (*vmInfoType, error) {
@@ -1175,6 +1216,10 @@ func (vm *vmInfoType) copyRootVolume(request proto.CreateVmRequest,
 }
 
 func (vm *vmInfoType) delete() {
+	select {
+	case vm.accessTokenCleanupNotifier <- struct{}{}:
+	default:
+	}
 	for ch := range vm.metadataChannels {
 		close(ch)
 	}
