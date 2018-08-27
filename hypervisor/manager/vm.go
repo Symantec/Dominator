@@ -155,7 +155,7 @@ func setVolumeSize(filename string, size uint64) error {
 
 func (m *Manager) acknowledgeVm(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest,
 
 func (m *Manager) becomePrimaryVmOwner(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -246,7 +246,7 @@ func (m *Manager) becomePrimaryVmOwner(ipAddr net.IP,
 
 func (m *Manager) changeVmOwnerUsers(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, extraUsers []string) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -267,7 +267,7 @@ func (m *Manager) changeVmOwnerUsers(ipAddr net.IP,
 
 func (m *Manager) changeVmTags(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	tgs tags.Tags) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -291,7 +291,7 @@ func (m *Manager) checkVmHasHealthAgent(ipAddr net.IP) (bool, error) {
 
 func (m *Manager) commitImportedVm(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -504,7 +504,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 
 func (m *Manager) destroyVm(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -529,7 +529,7 @@ func (m *Manager) destroyVm(ipAddr net.IP,
 
 func (m *Manager) discardVmOldImage(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -539,7 +539,7 @@ func (m *Manager) discardVmOldImage(ipAddr net.IP,
 
 func (m *Manager) discardVmOldUserData(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -549,7 +549,7 @@ func (m *Manager) discardVmOldUserData(ipAddr net.IP,
 
 func (m *Manager) discardVmSnapshot(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -579,7 +579,7 @@ func (m *Manager) getVmAccessToken(ipAddr net.IP,
 	if lifetime > time.Hour*24 {
 		return nil, errors.New("lifetime is greater than 1 day")
 	}
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -625,12 +625,12 @@ func (m *Manager) getVmAndLock(ipAddr net.IP) (*vmInfoType, error) {
 }
 
 func (m *Manager) getVmLockAndAuth(ipAddr net.IP,
-	authInfo *srpc.AuthInformation) (*vmInfoType, error) {
+	authInfo *srpc.AuthInformation, accessToken []byte) (*vmInfoType, error) {
 	vm, err := m.getVmAndLock(ipAddr)
 	if err != nil {
 		return nil, err
 	}
-	if err := vm.checkAuth(authInfo); err != nil {
+	if err := vm.checkAuth(authInfo, accessToken); err != nil {
 		vm.mutex.Unlock()
 		return nil, err
 	}
@@ -803,7 +803,7 @@ func (m *Manager) notifyVmMetadataRequest(ipAddr net.IP, path string) {
 
 func (m *Manager) registerVmMetadataNotifier(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, pathChannel chan<- string) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -832,7 +832,7 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 	if err := decoder.Decode(&request); err != nil {
 		return err
 	}
-	vm, err := m.getVmLockAndAuth(request.IpAddress, authInfo)
+	vm, err := m.getVmLockAndAuth(request.IpAddress, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -947,7 +947,7 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 
 func (m *Manager) replaceVmUserData(ipAddr net.IP, reader io.Reader,
 	size uint64, authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -972,7 +972,7 @@ func (m *Manager) replaceVmUserData(ipAddr net.IP, reader io.Reader,
 
 func (m *Manager) restoreVmFromSnapshot(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, forceIfNotStopped bool) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -995,7 +995,7 @@ func (m *Manager) restoreVmFromSnapshot(ipAddr net.IP,
 
 func (m *Manager) restoreVmImage(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -1019,7 +1019,7 @@ func (m *Manager) restoreVmImage(ipAddr net.IP,
 
 func (m *Manager) restoreVmUserData(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -1043,7 +1043,7 @@ func (m *Manager) sendVmInfo(ipAddress string, vm *proto.VmInfo) {
 
 func (m *Manager) snapshotVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	forceIfNotStopped, snapshotRootOnly bool) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -1079,7 +1079,7 @@ func (m *Manager) snapshotVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 
 func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	dhcpTimeout time.Duration) (bool, error) {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return false, err
 	}
@@ -1106,7 +1106,7 @@ func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 }
 
 func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo)
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -1184,11 +1184,15 @@ func (vm *vmInfoType) changeIpAddress(ipAddress string) error {
 	return nil
 }
 
-func (vm *vmInfoType) checkAuth(authInfo *srpc.AuthInformation) error {
+func (vm *vmInfoType) checkAuth(authInfo *srpc.AuthInformation,
+	accessToken []byte) error {
 	if authInfo.HaveMethodAccess {
 		return nil
 	}
 	if _, ok := vm.ownerUsers[authInfo.Username]; ok {
+		return nil
+	}
+	if len(vm.accessToken) >= 32 && bytes.Equal(vm.accessToken, accessToken) {
 		return nil
 	}
 	for _, ownerGroup := range vm.OwnerGroups {
