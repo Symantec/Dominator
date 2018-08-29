@@ -67,6 +67,7 @@ type vmInfoType struct {
 	logger           log.DebugLogger
 	destroyTimer     *time.Timer
 	metadataChannels map[chan<- string]struct{}
+	stoppedNotifier  chan<- struct{}
 }
 
 type volumeType struct {

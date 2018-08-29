@@ -1110,7 +1110,12 @@ func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation) error {
 	if err != nil {
 		return err
 	}
-	defer vm.mutex.Unlock()
+	doUnlock := true
+	defer func() {
+		if doUnlock {
+			vm.mutex.Unlock()
+		}
+	}()
 	switch vm.State {
 	case proto.StateStarting:
 		return errors.New("VM is starting")
@@ -1118,9 +1123,14 @@ func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation) error {
 		if len(vm.Address.IpAddress) < 1 {
 			return errors.New("cannot stop VM with externally managed lease")
 		}
+		stoppedNotifier := make(chan struct{}, 1)
+		vm.stoppedNotifier = stoppedNotifier
 		vm.setState(proto.StateStopping)
 		vm.commandChannel <- "system_powerdown"
 		time.AfterFunc(time.Second*15, vm.kill)
+		vm.mutex.Unlock()
+		doUnlock = false
+		<-stoppedNotifier
 	case proto.StateStopping:
 		return errors.New("VM is stopping")
 	case proto.StateStopped, proto.StateFailedToStart:
@@ -1331,6 +1341,10 @@ func (vm *vmInfoType) processMonitorResponses(monitorSock net.Conn) {
 		return
 	case proto.StateStopping:
 		vm.setState(proto.StateStopped)
+		select {
+		case vm.stoppedNotifier <- struct{}{}:
+		default:
+		}
 	case proto.StateStopped:
 		return
 	case proto.StateDestroying:
