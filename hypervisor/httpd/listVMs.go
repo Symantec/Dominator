@@ -3,11 +3,13 @@ package httpd
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/url"
+	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 func (s state) listVMsHandler(w http.ResponseWriter, req *http.Request) {
@@ -69,13 +71,8 @@ func (s state) listVMsHandler(w http.ResponseWriter, req *http.Request) {
 				format.FormatBytes(vm.MemoryInMiB<<20))
 			fmt.Fprintf(writer, "    <td>%g</td>\n",
 				float64(vm.MilliCPUs)*1e-3)
-			fmt.Fprintf(writer, "    <td>%d</td>\n", len(vm.Volumes))
-			var storage uint64
-			for _, volume := range vm.Volumes {
-				storage += volume.Size
-			}
-			fmt.Fprintf(writer, "    <td>%s</td>\n",
-				format.FormatBytes(storage))
+			writeNumVolumesTableEntry(writer, vm)
+			writeStorageTotalTableEntry(writer, vm)
 			fmt.Fprintf(writer, "    <td>%s</td>\n", vm.OwnerUsers[0])
 			fmt.Fprintf(writer, "  </tr>\n")
 		}
@@ -85,4 +82,22 @@ func (s state) listVMsHandler(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintln(writer, "</table>")
 		fmt.Fprintln(writer, "</body>")
 	}
+}
+
+func writeNumVolumesTableEntry(writer io.Writer, vm proto.VmInfo) {
+	var comment string
+	for _, volume := range vm.Volumes {
+		if comment == "" && volume.Format != proto.VolumeFormatRaw {
+			comment = `<font style="color:grey;font-size:12px"> (!RAW)</font>`
+		}
+	}
+	fmt.Fprintf(writer, "    <td>%d%s</td>\n", len(vm.Volumes), comment)
+}
+
+func writeStorageTotalTableEntry(writer io.Writer, vm proto.VmInfo) {
+	var storage uint64
+	for _, volume := range vm.Volumes {
+		storage += volume.Size
+	}
+	fmt.Fprintf(writer, "    <td>%s</td>\n", format.FormatBytes(storage))
 }
