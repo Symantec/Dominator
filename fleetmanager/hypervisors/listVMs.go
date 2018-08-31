@@ -3,6 +3,7 @@ package hypervisors
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/url"
 	"github.com/Symantec/Dominator/lib/verstr"
+	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 func (m *Manager) getVMs(doSort bool) []vmInfoType {
@@ -101,13 +103,8 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 				format.FormatBytes(vm.MemoryInMiB<<20))
 			fmt.Fprintf(writer, "    <td>%g</td>\n",
 				float64(vm.MilliCPUs)*1e-3)
-			fmt.Fprintf(writer, "    <td>%d</td>\n", len(vm.Volumes))
-			var storage uint64
-			for _, volume := range vm.Volumes {
-				storage += volume.Size
-			}
-			fmt.Fprintf(writer, "    <td>%s</td>\n",
-				format.FormatBytes(storage))
+			vm.writeNumVolumesTableEntry(writer)
+			vm.writeStorageTotalTableEntry(writer)
 			fmt.Fprintf(writer, "    <td>%s</td>\n", vm.OwnerUsers[0])
 			fmt.Fprintf(writer,
 				"    <td><a href=\"http://%s:%d/\">%s</a></td>\n",
@@ -138,4 +135,22 @@ func (m *Manager) listVMsInLocation(dirname string) ([]net.IP, error) {
 		hypervisor.mutex.RUnlock()
 	}
 	return addresses, nil
+}
+
+func (vm *vmInfoType) writeNumVolumesTableEntry(writer io.Writer) {
+	var comment string
+	for _, volume := range vm.Volumes {
+		if comment == "" && volume.Format != proto.VolumeFormatRaw {
+			comment = `<font style="color:grey;font-size:12px"> (!RAW)</font>`
+		}
+	}
+	fmt.Fprintf(writer, "    <td>%d%s</td>\n", len(vm.Volumes), comment)
+}
+
+func (vm *vmInfoType) writeStorageTotalTableEntry(writer io.Writer) {
+	var storage uint64
+	for _, volume := range vm.Volumes {
+		storage += volume.Size
+	}
+	fmt.Fprintf(writer, "    <td>%s</td>\n", format.FormatBytes(storage))
 }
