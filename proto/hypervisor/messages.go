@@ -160,6 +160,18 @@ type GetVmInfoResponse struct {
 	Error  string
 }
 
+// The GetVmVolume() RPC is followed by the proto/rsync.GetBlocks message.
+
+type GetVmVolumeRequest struct {
+	AccessToken []byte
+	IpAddress   net.IP
+	VolumeIndex uint
+}
+
+type GetVmVolumeResponse struct {
+	Error string
+}
+
 type ImportLocalVmRequest struct {
 	VerificationCookie []byte `json:",omitempty"`
 	VmInfo
