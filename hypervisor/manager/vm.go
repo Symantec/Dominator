@@ -24,6 +24,7 @@ import (
 	"github.com/Symantec/Dominator/lib/mbr"
 	libnet "github.com/Symantec/Dominator/lib/net"
 	objclient "github.com/Symantec/Dominator/lib/objectserver/client"
+	"github.com/Symantec/Dominator/lib/rsync"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/tags"
 	"github.com/Symantec/Dominator/lib/verstr"
@@ -664,6 +665,37 @@ func (m *Manager) getVmUserData(ipAddr net.IP) (io.ReadCloser, error) {
 	filename := path.Join(vm.dirname, "user-data.raw")
 	vm.mutex.Unlock()
 	return os.Open(filename)
+}
+
+func (m *Manager) getVmVolume(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder) error {
+	var request proto.GetVmVolumeRequest
+	if err := decoder.Decode(&request); err != nil {
+		return err
+	}
+	vm, err := m.getVmLockAndAuth(request.IpAddress, conn.GetAuthInformation(),
+		request.AccessToken)
+	if err != nil {
+		return encoder.Encode(proto.GetVmVolumeResponse{Error: err.Error()})
+	}
+	defer vm.mutex.Unlock()
+	if request.VolumeIndex >= uint(len(vm.VolumeLocations)) {
+		return encoder.Encode(proto.GetVmVolumeResponse{
+			Error: "index too large"})
+	}
+	file, err := os.Open(vm.VolumeLocations[request.VolumeIndex].Filename)
+	if err != nil {
+		return encoder.Encode(proto.GetVmVolumeResponse{Error: err.Error()})
+	}
+	defer file.Close()
+	if err := encoder.Encode(proto.GetVmVolumeResponse{}); err != nil {
+		return err
+	}
+	if err := conn.Flush(); err != nil {
+		return err
+	}
+	return rsync.ServeBlocks(conn, decoder, encoder, file,
+		vm.Volumes[request.VolumeIndex].Size)
 }
 
 func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,

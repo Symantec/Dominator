@@ -166,6 +166,11 @@ func (m *Manager) GetVmUserData(ipAddr net.IP) (io.ReadCloser, error) {
 	return m.getVmUserData(ipAddr)
 }
 
+func (m *Manager) GetVmVolume(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder) error {
+	return m.getVmVolume(conn, decoder, encoder)
+}
+
 func (m *Manager) ImportLocalVm(authInfo *srpc.AuthInformation,
 	request proto.ImportLocalVmRequest) error {
 	return m.importLocalVm(authInfo, request)
