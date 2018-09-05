@@ -62,8 +62,11 @@ var (
 		"If true, trace metadata calls until interrupted")
 	userDataFile = flag.String("userDataFile", "",
 		"Name file containing user-data accessible from the metadata server")
-	vmHostname = flag.String("vmHostname", "", "Hostname for VM")
-	vmTags     tags.Tags
+	vmHostname     = flag.String("vmHostname", "", "Hostname for VM")
+	vmTags         tags.Tags
+	volumeFilename = flag.String("volumeFilename", "",
+		"Name of file to write volume data to")
+	volumeIndex = flag.Uint("volumeIndex", 0, "Index of volume to get")
 
 	logger log.DebugLogger
 )
@@ -91,6 +94,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  discard-vm-old-user-data IPaddr")
 	fmt.Fprintln(os.Stderr, "  discard-vm-snapshot IPaddr")
 	fmt.Fprintln(os.Stderr, "  get-vm-info IPaddr")
+	fmt.Fprintln(os.Stderr, "  get-vm-volume IPaddr")
 	fmt.Fprintln(os.Stderr, "  import-local-vm info-file root-volume")
 	fmt.Fprintln(os.Stderr, "  import-virsh-vm MACaddr domain")
 	fmt.Fprintln(os.Stderr, "  list-hypervisors")
@@ -127,6 +131,7 @@ var subcommands = []subcommand{
 	{"discard-vm-old-user-data", 1, 1, discardVmOldUserDataSubcommand},
 	{"discard-vm-snapshot", 1, 1, discardVmSnapshotSubcommand},
 	{"get-vm-info", 1, 1, getVmInfoSubcommand},
+	{"get-vm-volume", 1, 1, getVmVolumeSubcommand},
 	{"import-local-vm", 2, 2, importLocalVmSubcommand},
 	{"import-virsh-vm", 2, 2, importVirshVmSubcommand},
 	{"list-hypervisors", 0, 0, listHypervisorsSubcommand},
