@@ -160,6 +160,16 @@ type GetVmInfoResponse struct {
 	Error  string
 }
 
+type GetVmUserDataRequest struct {
+	AccessToken []byte
+	IpAddress   net.IP
+}
+
+type GetVmUserDataResponse struct {
+	Error  string
+	Length uint64
+} // Data (length=Length) are streamed afterwards.
+
 // The GetVmVolume() RPC is followed by the proto/rsync.GetBlocks message.
 
 type GetVmVolumeRequest struct {
