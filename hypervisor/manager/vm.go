@@ -657,14 +657,21 @@ func (m *Manager) getVmInfo(ipAddr net.IP) (proto.VmInfo, error) {
 	return vm.VmInfo, nil
 }
 
-func (m *Manager) getVmUserData(ipAddr net.IP) (io.ReadCloser, error) {
-	vm, err := m.getVmAndLock(ipAddr)
+func (m *Manager) getVmUserData(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	accessToken []byte) (io.ReadCloser, uint64, error) {
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, accessToken)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	filename := path.Join(vm.dirname, "user-data.raw")
 	vm.mutex.Unlock()
-	return os.Open(filename)
+	if file, err := os.Open(filename); err != nil {
+		return nil, 0, err
+	} else if fi, err := file.Stat(); err != nil {
+		return nil, 0, err
+	} else {
+		return file, uint64(fi.Size()), nil
+	}
 }
 
 func (m *Manager) getVmVolume(conn *srpc.Conn, decoder srpc.Decoder,

@@ -163,7 +163,16 @@ func (m *Manager) GetVmInfo(ipAddr net.IP) (proto.VmInfo, error) {
 }
 
 func (m *Manager) GetVmUserData(ipAddr net.IP) (io.ReadCloser, error) {
-	return m.getVmUserData(ipAddr)
+	rc, _, err := m.getVmUserData(ipAddr,
+		&srpc.AuthInformation{HaveMethodAccess: true},
+		nil)
+	return rc, err
+}
+
+func (m *Manager) GetVmUserDataRPC(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, accessToken []byte) (
+	io.ReadCloser, uint64, error) {
+	return m.getVmUserData(ipAddr, authInfo, accessToken)
 }
 
 func (m *Manager) GetVmVolume(conn *srpc.Conn, decoder srpc.Decoder,
