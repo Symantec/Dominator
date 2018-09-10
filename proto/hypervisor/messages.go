@@ -14,6 +14,7 @@ const (
 	StateStopping      = 3
 	StateStopped       = 4
 	StateDestroying    = 5
+	StateMigrating     = 6
 
 	VolumeFormatRaw   = 0
 	VolumeFormatQCOW2 = 1
@@ -219,6 +220,16 @@ type NetbootMachineRequest struct {
 }
 
 type NetbootMachineResponse struct {
+	Error string
+}
+
+type PrepareVmForMigrationRequest struct {
+	AccessToken []byte
+	Enable      bool
+	IpAddress   net.IP
+}
+
+type PrepareVmForMigrationResponse struct {
 	Error string
 }
 
