@@ -213,6 +213,11 @@ func (m *Manager) NotifyVmMetadataRequest(ipAddr net.IP, path string) {
 	m.notifyVmMetadataRequest(ipAddr, path)
 }
 
+func (m *Manager) PrepareVmForMigration(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, accessToken []byte, enable bool) error {
+	return m.prepareVmForMigration(ipAddr, authInfo, accessToken, enable)
+}
+
 func (m *Manager) RemoveExcessAddressesFromPool(maxFree map[string]uint) error {
 	return m.removeExcessAddressesFromPool(maxFree)
 }

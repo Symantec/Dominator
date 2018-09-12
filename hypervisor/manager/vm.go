@@ -300,13 +300,9 @@ func (m *Manager) commitImportedVm(ipAddr net.IP,
 	if !vm.Uncommitted {
 		return fmt.Errorf("%s is already committed")
 	}
-	m.mutex.Lock()
-	m.addressPool.Registered = append(m.addressPool.Registered, vm.Address)
-	if err := m.writeAddressPoolWithLock(m.addressPool, true); err != nil {
-		m.mutex.Unlock()
+	if err := m.registerAddress(vm.Address); err != nil {
 		return err
 	}
-	m.mutex.Unlock()
 	vm.Uncommitted = false
 	vm.writeAndSendInfo()
 	return nil
@@ -518,7 +514,7 @@ func (m *Manager) destroyVm(ipAddr net.IP,
 		vm.commandChannel <- "quit"
 	case proto.StateStopping:
 		return errors.New("VM is stopping")
-	case proto.StateStopped, proto.StateFailedToStart:
+	case proto.StateStopped, proto.StateFailedToStart, proto.StateMigrating:
 		vm.delete()
 	case proto.StateDestroying:
 		return errors.New("VM is already destroying")
@@ -840,6 +836,46 @@ func (m *Manager) notifyVmMetadataRequest(ipAddr net.IP, path string) {
 	}
 }
 
+func (m *Manager) prepareVmForMigration(ipAddr net.IP,
+	authInfoP *srpc.AuthInformation, accessToken []byte, enable bool) error {
+	authInfo := *authInfoP
+	authInfo.HaveMethodAccess = false // Require VM ownership or token.
+	vm, err := m.getVmLockAndAuth(ipAddr, &authInfo, accessToken)
+	if err != nil {
+		return nil
+	}
+	defer vm.mutex.Unlock()
+	if enable {
+		if vm.Uncommitted {
+			return errors.New("VM is uncommitted")
+		}
+		if vm.State != proto.StateStopped {
+			return errors.New("VM is not stopped")
+		}
+		// Block reallocation of address until VM is destroyed, then release
+		// claim on address.
+		vm.Uncommitted = true
+		vm.setState(proto.StateMigrating)
+		if err := m.unregisterAddress(vm.Address); err != nil {
+			vm.Uncommitted = false
+			vm.setState(proto.StateStopped)
+			return err
+		}
+	} else {
+		if vm.State != proto.StateMigrating {
+			return errors.New("VM is not migrating")
+		}
+		// Reclaim address and then allow reallocation if VM is later destroyed.
+		if err := m.registerAddress(vm.Address); err != nil {
+			vm.setState(proto.StateStopped)
+			return err
+		}
+		vm.Uncommitted = false
+		vm.setState(proto.StateStopped)
+	}
+	return nil
+}
+
 func (m *Manager) registerVmMetadataNotifier(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, pathChannel chan<- string) error {
 	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
@@ -1138,6 +1174,8 @@ func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		return vm.startManaging(dhcpTimeout, false)
 	case proto.StateDestroying:
 		return false, errors.New("VM is destroying")
+	case proto.StateMigrating:
+		return false, errors.New("VM is migrating")
 	default:
 		return false, errors.New("unknown state: " + vm.State.String())
 	}
@@ -1176,6 +1214,8 @@ func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation) error {
 		return errors.New("VM is already stopped")
 	case proto.StateDestroying:
 		return errors.New("VM is destroying")
+	case proto.StateMigrating:
+		return errors.New("VM is migrating")
 	default:
 		return errors.New("unknown state: " + vm.State.String())
 	}
@@ -1389,6 +1429,8 @@ func (vm *vmInfoType) processMonitorResponses(monitorSock net.Conn) {
 	case proto.StateDestroying:
 		vm.delete()
 		return
+	case proto.StateMigrating:
+		return
 	default:
 		vm.logger.Println("unknown state: " + vm.State.String())
 	}
@@ -1450,6 +1492,8 @@ func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration,
 		return false, nil
 	case proto.StateDestroying:
 		vm.delete()
+		return false, nil
+	case proto.StateMigrating:
 		return false, nil
 	default:
 		vm.logger.Println("unknown state: " + vm.State.String())
