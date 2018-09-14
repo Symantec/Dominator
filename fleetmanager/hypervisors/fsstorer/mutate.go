@@ -138,35 +138,14 @@ func (s *Storer) unregisterHypervisor(hypervisor net.IP) error {
 func (s *Storer) writeIPsForHypervisor(hypervisor IP, ipList []IP,
 	flags int) error {
 	dirname := s.getHypervisorDirectory(hypervisor)
-	filename := filepath.Join(dirname, "ip-list.raw")
-	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|flags,
-		filePerms)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
+	if dirfile, err := os.Open(dirname); err != nil {
 		if err := os.MkdirAll(dirname, dirPerms); err != nil {
 			return err
 		}
-		file, err = os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, filePerms)
-		if err != nil {
-			return err
-		}
+	} else {
+		dirfile.Close()
 	}
-	defer file.Close()
-	writer := bufio.NewWriter(file)
-	defer writer.Flush()
-	for _, ip := range ipList {
-		if nWritten, err := writer.Write(ip[:]); err != nil {
-			return err
-		} else if nWritten != len(ip) {
-			return errors.New("short write")
-		}
-	}
-	if err := writer.Flush(); err != nil {
-		return err
-	}
-	return file.Close()
+	return writeIpList(filepath.Join(dirname, "ip-list.raw"), ipList, flags)
 }
 
 func (s *Storer) writeMachineTags(hypervisor net.IP, tgs tags.Tags) error {
@@ -205,4 +184,25 @@ func (s *Storer) writeMachineTags(hypervisor net.IP, tgs tags.Tags) error {
 		}
 	}
 	return writer.Flush()
+}
+
+func writeIpList(filename string, ipList []IP, flags int) error {
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|flags, filePerms)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+	for _, ip := range ipList {
+		if nWritten, err := writer.Write(ip[:]); err != nil {
+			return err
+		} else if nWritten != len(ip) {
+			return errors.New("short write")
+		}
+	}
+	if err := writer.Flush(); err != nil {
+		return err
+	}
+	return file.Close()
 }

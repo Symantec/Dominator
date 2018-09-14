@@ -15,6 +15,32 @@ import (
 
 var zeroIP = IP{}
 
+func readIpList(filename string) ([]IP, error) {
+	if file, err := os.Open(filename); err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	} else {
+		defer file.Close()
+		reader := bufio.NewReader(file)
+		var ipList []IP
+		for {
+			var ip IP
+			if nRead, err := reader.Read(ip[:]); err != nil {
+				if err == io.EOF {
+					break
+				}
+				return nil, err
+			} else if nRead != len(ip) {
+				return nil, errors.New("incomplete read of IP address")
+			}
+			ipList = append(ipList, ip)
+		}
+		return ipList, nil
+	}
+}
+
 func (s *Storer) load() error {
 	if err := s.readDirectory(nil, s.topDir); err != nil {
 		return err
@@ -30,29 +56,11 @@ func (s *Storer) load() error {
 func (s *Storer) readDirectory(partialIP []byte, dirname string) error {
 	if len(partialIP) == len(zeroIP) {
 		filename := filepath.Join(dirname, "ip-list.raw")
-		if file, err := os.Open(filename); err != nil {
-			if os.IsNotExist(err) {
-				return nil
-			}
+		if ipList, err := readIpList(filename); err != nil {
 			return err
 		} else {
-			defer file.Close()
-			reader := bufio.NewReader(file)
 			var hyperAddr IP
 			copy(hyperAddr[:], partialIP)
-			var ipList []IP
-			for {
-				var ip IP
-				if nRead, err := reader.Read(ip[:]); err != nil {
-					if err == io.EOF {
-						break
-					}
-					return err
-				} else if nRead != len(ip) {
-					return errors.New("incomplete read of IP address")
-				}
-				ipList = append(ipList, ip)
-			}
 			s.hypervisorToIPs[hyperAddr] = ipList
 		}
 		return nil
