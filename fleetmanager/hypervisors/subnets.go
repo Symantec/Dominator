@@ -45,23 +45,22 @@ func invertByte(input byte) byte {
 	return inverted
 }
 
-func (m *Manager) makeSubnet(tSubnet *topology.Subnet) *subnetType {
-	networkIp := tSubnet.IpGateway.Mask(net.IPMask(tSubnet.IpMask))
-	startIp := copyIp(networkIp)
-	incrementIp(startIp)
-	stopIp := make(net.IP, len(networkIp))
-	for index, value := range m.invertIP(tSubnet.IpMask) {
-		stopIp[index] = networkIp[index] | value
+// This must be called with the lock held.
+func (m *Manager) checkIpReserved(tSubnet *topology.Subnet, ip net.IP) bool {
+	if ip.Equal(tSubnet.IpGateway) {
+		return true
 	}
-	nextIp := copyIp(startIp)
-	return &subnetType{
-		subnet:  tSubnet,
-		startIp: startIp,
-		stopIp:  stopIp,
-		nextIp:  nextIp,
+	ipAddr := ip.String()
+	if _, ok := tSubnet.GetReservedIpSet()[ipAddr]; ok {
+		return true
 	}
+	if _, ok := m.migratingIPs[ipAddr]; ok {
+		return true
+	}
+	return false
 }
 
+// This must be called with the lock held.
 func (m *Manager) findFreeIPs(tSubnet *topology.Subnet,
 	numNeeded uint) ([]net.IP, error) {
 	var freeIPs []net.IP
@@ -72,7 +71,7 @@ func (m *Manager) findFreeIPs(tSubnet *topology.Subnet,
 	}
 	initialIp := copyIp(subnet.nextIp)
 	for numNeeded > 0 {
-		if !checkIpReserved(subnet.subnet, subnet.nextIp) {
+		if !m.checkIpReserved(subnet.subnet, subnet.nextIp) {
 			registered, err := m.storer.CheckIpIsRegistered(subnet.nextIp)
 			if err != nil {
 				return nil, err
@@ -107,10 +106,19 @@ func (m *Manager) invertIP(input net.IP) net.IP {
 	return inverted
 }
 
-func checkIpReserved(tSubnet *topology.Subnet, ip net.IP) bool {
-	if ip.Equal(tSubnet.IpGateway) {
-		return true
+func (m *Manager) makeSubnet(tSubnet *topology.Subnet) *subnetType {
+	networkIp := tSubnet.IpGateway.Mask(net.IPMask(tSubnet.IpMask))
+	startIp := copyIp(networkIp)
+	incrementIp(startIp)
+	stopIp := make(net.IP, len(networkIp))
+	for index, value := range m.invertIP(tSubnet.IpMask) {
+		stopIp[index] = networkIp[index] | value
 	}
-	_, ok := tSubnet.GetReservedIpSet()[ip.String()]
-	return ok
+	nextIp := copyIp(startIp)
+	return &subnetType{
+		subnet:  tSubnet,
+		startIp: startIp,
+		stopIp:  stopIp,
+		nextIp:  nextIp,
+	}
 }

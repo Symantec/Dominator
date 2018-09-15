@@ -30,6 +30,7 @@ type hypervisorType struct {
 	localTags       tags.Tags
 	location        string
 	machine         *fm_proto.Machine
+	migratingVms    map[string]*vmInfoType // Key: VM IP address.
 	probeStatus     probeStatus
 	subnets         []hyper_proto.Subnet
 	vms             map[string]*vmInfoType // Key: VM IP address.
@@ -47,16 +48,17 @@ type locationType struct {
 }
 
 type Manager struct {
-	storer      Storer
-	logger      log.DebugLogger
-	invertTable [256]byte
-	mutex       sync.RWMutex
-	topology    *topology.Topology
-	hypervisors map[string]*hypervisorType // Key: hypervisor machine name.
-	locations   map[string]*locationType   // Key: location.
-	notifiers   map[<-chan fm_proto.Update]*locationType
-	subnets     map[string]*subnetType // Key: Gateway IP.
-	vms         map[string]*vmInfoType // Key: VM IP address.
+	storer       Storer
+	logger       log.DebugLogger
+	invertTable  [256]byte
+	mutex        sync.RWMutex
+	topology     *topology.Topology
+	hypervisors  map[string]*hypervisorType // Key: hypervisor machine name.
+	locations    map[string]*locationType   // Key: location.
+	migratingIPs map[string]struct{}        // Key: VM IP address.
+	notifiers    map[<-chan fm_proto.Update]*locationType
+	subnets      map[string]*subnetType // Key: Gateway IP.
+	vms          map[string]*vmInfoType // Key: VM IP address.
 }
 
 type probeStatus uint
@@ -97,11 +99,12 @@ func New(storer Storer, logger log.DebugLogger) (*Manager, error) {
 		return nil, err
 	}
 	manager := &Manager{
-		storer:      storer,
-		logger:      logger,
-		hypervisors: make(map[string]*hypervisorType),
-		subnets:     make(map[string]*subnetType),
-		vms:         make(map[string]*vmInfoType),
+		storer:       storer,
+		logger:       logger,
+		hypervisors:  make(map[string]*hypervisorType),
+		migratingIPs: make(map[string]struct{}),
+		subnets:      make(map[string]*subnetType),
+		vms:          make(map[string]*vmInfoType),
 	}
 	manager.initInvertTable()
 	http.HandleFunc("/listHypervisors", manager.listHypervisorsHandler)
