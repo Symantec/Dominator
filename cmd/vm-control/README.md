@@ -52,10 +52,12 @@ Some of the sub-commands available are:
 - **restore-vm-image**: restore the previously saved root image for a VM. The VM
                         must not be running
 - **restore-vm-user-data**: restore the previously saved user data for a VM
+- **set-vm-migrating**: change the VM state to migrating. For debugging only
 - **snapshot-vm**: create a snapshot of the VM volumes, discarding previous one
 - **start-vm**: start a stopped VM
 - **stop-vm**: stop a running VM. All data and metadata are preserved
 - **trace-vm-metadata**: trace the requests a VM makes to the metadata service
+- **unset-vm-migrating**: change the VM state to stopped. For debugging only
 
 ## Security
 The *Hypervisor* restricts RPC access using TLS client authentication.

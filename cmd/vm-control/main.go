@@ -107,10 +107,12 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  restore-vm-from-snapshot IPaddr")
 	fmt.Fprintln(os.Stderr, "  restore-vm-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  restore-vm-user-data IPaddr")
+	fmt.Fprintln(os.Stderr, "  set-vm-migrating IPaddr")
 	fmt.Fprintln(os.Stderr, "  snapshot-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  start-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  stop-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  trace-vm-metadata IPaddr")
+	fmt.Fprintln(os.Stderr, "  unset-vm-migrating IPaddr")
 }
 
 type commandFunc func([]string, log.DebugLogger)
@@ -145,10 +147,12 @@ var subcommands = []subcommand{
 	{"restore-vm-from-snapshot", 1, 1, restoreVmFromSnapshotSubcommand},
 	{"restore-vm-image", 1, 1, restoreVmImageSubcommand},
 	{"restore-vm-user-data", 1, 1, restoreVmUserDataSubcommand},
+	{"set-vm-migrating", 1, 1, setVmMigratingSubcommand},
 	{"snapshot-vm", 1, 1, snapshotVmSubcommand},
 	{"start-vm", 1, 1, startVmSubcommand},
 	{"stop-vm", 1, 1, stopVmSubcommand},
 	{"trace-vm-metadata", 1, 1, traceVmMetadataSubcommand},
+	{"unset-vm-migrating", 1, 1, unsetVmMigratingSubcommand},
 }
 
 func main() {
