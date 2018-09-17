@@ -104,6 +104,15 @@ type DestroyVmResponse struct {
 	Error string
 }
 
+type DiscardVmAccessTokenRequest struct {
+	AccessToken []byte
+	IpAddress   net.IP
+}
+
+type DiscardVmAccessTokenResponse struct {
+	Error string
+}
+
 type DiscardVmOldImageRequest struct {
 	IpAddress net.IP
 }
