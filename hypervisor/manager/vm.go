@@ -524,6 +524,20 @@ func (m *Manager) destroyVm(ipAddr net.IP,
 	return nil
 }
 
+func (m *Manager) discardVmAccessToken(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, accessToken []byte) error {
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, accessToken)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	for index := range vm.accessToken { // Scrub token.
+		vm.accessToken[index] = 0
+	}
+	vm.accessToken = nil
+	return nil
+}
+
 func (m *Manager) discardVmOldImage(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
 	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)

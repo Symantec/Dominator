@@ -126,6 +126,11 @@ func (m *Manager) DestroyVm(ipAddr net.IP,
 	return m.destroyVm(ipAddr, authInfo)
 }
 
+func (m *Manager) DiscardVmAccessToken(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, accessToken []byte) error {
+	return m.discardVmAccessToken(ipAddr, authInfo, accessToken)
+}
+
 func (m *Manager) DiscardVmOldImage(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
 	return m.discardVmOldImage(ipAddr, authInfo)
