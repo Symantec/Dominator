@@ -11,6 +11,7 @@ import (
 	"strings"
 	"syscall"
 
+	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/json"
@@ -39,7 +40,7 @@ func askForCommitDecision(client *srpc.Client, ipAddress net.IP) error {
 	}
 	switch response {
 	case "abandon":
-		err := destroyVmOnHypervisorClient(client, ipAddress)
+		err := hyperclient.DestroyVm(client, ipAddress, nil)
 		if err != nil {
 			return err
 		}

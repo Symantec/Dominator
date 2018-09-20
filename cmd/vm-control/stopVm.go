@@ -5,9 +5,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/errors"
+	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
 	"github.com/Symantec/Dominator/lib/log"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 func stopVmSubcommand(args []string, logger log.DebugLogger) {
@@ -28,16 +27,10 @@ func stopVm(vmHostname string, logger log.DebugLogger) error {
 
 func stopVmOnHypervisor(hypervisor string, ipAddr net.IP,
 	logger log.DebugLogger) error {
-	request := proto.StopVmRequest{ipAddr}
 	client, err := dialHypervisor(hypervisor)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
-	var reply proto.StopVmResponse
-	err = client.RequestReply("Hypervisor.StopVm", request, &reply)
-	if err != nil {
-		return err
-	}
-	return errors.New(reply.Error)
+	return hyperclient.StopVm(client, ipAddr, nil)
 }

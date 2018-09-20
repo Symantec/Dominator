@@ -499,9 +499,9 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 	return nil
 }
 
-func (m *Manager) destroyVm(ipAddr net.IP,
-	authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
+func (m *Manager) destroyVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	accessToken []byte) error {
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, accessToken)
 	if err != nil {
 		return err
 	}
@@ -1167,8 +1167,8 @@ func (m *Manager) snapshotVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 }
 
 func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
-	dhcpTimeout time.Duration) (bool, error) {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
+	accessToken []byte, dhcpTimeout time.Duration) (bool, error) {
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, accessToken)
 	if err != nil {
 		return false, err
 	}
@@ -1196,8 +1196,9 @@ func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	return false, nil
 }
 
-func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation) error {
-	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, nil)
+func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	accessToken []byte) error {
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, accessToken)
 	if err != nil {
 		return err
 	}
@@ -1250,7 +1251,8 @@ func (m *Manager) unregisterVmMetadataNotifier(ipAddr net.IP,
 func (vm *vmInfoType) autoDestroy() {
 	vm.logger.Println("VM was not acknowledged, destroying")
 	authInfo := &srpc.AuthInformation{HaveMethodAccess: true}
-	if err := vm.manager.destroyVm(vm.Address.IpAddress, authInfo); err != nil {
+	err := vm.manager.destroyVm(vm.Address.IpAddress, authInfo, nil)
+	if err != nil {
 		vm.logger.Println(err)
 	}
 }

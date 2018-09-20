@@ -5,10 +5,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/errors"
+	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
 	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 func destroyVmSubcommand(args []string, logger log.DebugLogger) {
@@ -34,15 +32,5 @@ func destroyVmOnHypervisor(hypervisor string, ipAddr net.IP,
 		return err
 	}
 	defer client.Close()
-	return destroyVmOnHypervisorClient(client, ipAddr)
-}
-
-func destroyVmOnHypervisorClient(client *srpc.Client, ipAddr net.IP) error {
-	request := proto.DestroyVmRequest{ipAddr}
-	var reply proto.DestroyVmResponse
-	err := client.RequestReply("Hypervisor.DestroyVm", request, &reply)
-	if err != nil {
-		return err
-	}
-	return errors.New(reply.Error)
+	return hyperclient.DestroyVm(client, ipAddr, nil)
 }

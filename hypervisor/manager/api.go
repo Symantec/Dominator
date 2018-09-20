@@ -122,8 +122,8 @@ func (m *Manager) CreateVm(conn *srpc.Conn, decoder srpc.Decoder,
 }
 
 func (m *Manager) DestroyVm(ipAddr net.IP,
-	authInfo *srpc.AuthInformation) error {
-	return m.destroyVm(ipAddr, authInfo)
+	authInfo *srpc.AuthInformation, accessToken []byte) error {
+	return m.destroyVm(ipAddr, authInfo, accessToken)
 }
 
 func (m *Manager) DiscardVmAccessToken(ipAddr net.IP,
@@ -263,13 +263,14 @@ func (m *Manager) SnapshotVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 }
 
 func (m *Manager) StartVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
-	dhcpTimeout time.Duration) (
+	accessToken []byte, dhcpTimeout time.Duration) (
 	bool, error) {
-	return m.startVm(ipAddr, authInfo, dhcpTimeout)
+	return m.startVm(ipAddr, authInfo, accessToken, dhcpTimeout)
 }
 
-func (m *Manager) StopVm(ipAddr net.IP, authInfo *srpc.AuthInformation) error {
-	return m.stopVm(ipAddr, authInfo)
+func (m *Manager) StopVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	accessToken []byte) error {
+	return m.stopVm(ipAddr, authInfo, accessToken)
 }
 
 func (m *Manager) UpdateSubnets(request proto.UpdateSubnetsRequest) error {

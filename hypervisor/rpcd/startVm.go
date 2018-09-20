@@ -10,7 +10,7 @@ func (t *srpcType) StartVm(conn *srpc.Conn,
 	request hypervisor.StartVmRequest,
 	reply *hypervisor.StartVmResponse) error {
 	dhcpTimedOut, err := t.manager.StartVm(request.IpAddress,
-		conn.GetAuthInformation(), request.DhcpTimeout)
+		conn.GetAuthInformation(), request.AccessToken, request.DhcpTimeout)
 	response := hypervisor.StartVmResponse{dhcpTimedOut,
 		errors.ErrorToString(err)}
 	*reply = response

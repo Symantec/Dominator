@@ -97,7 +97,8 @@ type CreateVmResponse struct { // Multiple responses are sent.
 }
 
 type DestroyVmRequest struct {
-	IpAddress net.IP
+	AccessToken []byte
+	IpAddress   net.IP
 }
 
 type DestroyVmResponse struct {
@@ -316,6 +317,7 @@ type SnapshotVmResponse struct {
 }
 
 type StartVmRequest struct {
+	AccessToken []byte
 	DhcpTimeout time.Duration
 	IpAddress   net.IP
 }
@@ -326,7 +328,8 @@ type StartVmResponse struct {
 }
 
 type StopVmRequest struct {
-	IpAddress net.IP
+	AccessToken []byte
+	IpAddress   net.IP
 }
 
 type StopVmResponse struct {

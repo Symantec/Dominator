@@ -10,7 +10,7 @@ func (t *srpcType) StopVm(conn *srpc.Conn,
 	request hypervisor.StopVmRequest, reply *hypervisor.StopVmResponse) error {
 	response := hypervisor.StopVmResponse{
 		errors.ErrorToString(t.manager.StopVm(request.IpAddress,
-			conn.GetAuthInformation()))}
+			conn.GetAuthInformation(), request.AccessToken))}
 	*reply = response
 	return nil
 }
