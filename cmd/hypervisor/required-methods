@@ -1,3 +1,4 @@
+Hypervisor.PrepareVmForMigration
 ImageServer.CheckDirectory
 ImageServer.FindLatestImage
 ImageServer.GetImage
