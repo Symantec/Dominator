@@ -23,7 +23,7 @@ func init() {
 	srpc.RegisterName("Logger", loggerMap)
 }
 
-func newLoggerWithFlags(name string, flags int) *Logger {
+func newLogger(name string, flags int) *Logger {
 	loggerMap.Lock()
 	defer loggerMap.Unlock()
 	if _, ok := loggerMap.loggerMap[name]; ok {
