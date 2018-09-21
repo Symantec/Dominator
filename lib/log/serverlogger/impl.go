@@ -23,14 +23,14 @@ func init() {
 	srpc.RegisterName("Logger", loggerMap)
 }
 
-func newLogger(name string) *Logger {
+func newLogger(name string, flags int) *Logger {
 	loggerMap.Lock()
 	defer loggerMap.Unlock()
 	if _, ok := loggerMap.loggerMap[name]; ok {
 		panic("logger already exists: " + name)
 	}
 	circularBuffer := logbuf.New()
-	debugLogger := debuglogger.New(log.New(circularBuffer, "", log.LstdFlags))
+	debugLogger := debuglogger.New(log.New(circularBuffer, "", flags))
 	if *initialLogDebugLevel >= 0 {
 		debugLogger.SetLevel(int16(*initialLogDebugLevel))
 	}

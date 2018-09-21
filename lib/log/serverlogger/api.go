@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"github.com/Symantec/Dominator/lib/log/debuglogger"
@@ -28,7 +29,11 @@ type Logger struct {
 // identify the logger for RPC methods such as Logger.SetDebugLevel. The first
 // or primary logger should be created with name "" (the empty string).
 func New(name string) *Logger {
-	return newLogger(name)
+	return newLogger(name, log.LstdFlags)
+}
+
+func NewWithFlags(name string, flags int) *Logger {
+	return newLogger(name, flags)
 }
 
 func (l *Logger) Fatal(v ...interface{}) {
