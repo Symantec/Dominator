@@ -218,6 +218,24 @@ type ListVolumeDirectoriesResponse struct {
 	Error       string
 }
 
+type MigrateVmRequest struct {
+	AccessToken      []byte
+	DhcpTimeout      time.Duration
+	IpAddress        net.IP
+	SourceHypervisor string
+}
+
+type MigrateVmResponse struct { // Multiple responses are sent.
+	Error           string
+	Final           bool // If true, this is the final response.
+	ProgressMessage string
+	RequestCommit   bool
+}
+
+type MigrateVmResponseResponse struct {
+	Commit bool
+}
+
 type NetbootMachineRequest struct {
 	Address                      Address
 	Files                        map[string][]byte
