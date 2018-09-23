@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/rand"
-	"errors"
+	"encoding/gob"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,7 +15,9 @@ import (
 	"path"
 	"time"
 
+	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
 	imclient "github.com/Symantec/Dominator/imageserver/client"
+	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/fsutil"
@@ -342,25 +344,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		return sendError(conn, encoder, err)
 	}
 	defer func() {
-		if vm == nil {
-			return
-		}
-		select {
-		case vm.commandChannel <- "quit":
-		default:
-		}
-		m.mutex.Lock()
-		delete(m.vms, vm.ipAddress)
-		m.sendVmInfo(vm.ipAddress, nil)
-		err := m.releaseAddressInPoolWithLock(vm.Address)
-		if err != nil {
-			m.Logger.Println(err)
-		}
-		os.RemoveAll(vm.dirname)
-		for _, volume := range vm.VolumeLocations {
-			os.RemoveAll(volume.DirectoryToCleanup)
-		}
-		m.mutex.Unlock()
+		vm.cleanup() // Evaluate vm at return time, not defer time.
 	}()
 	memoryError := tryAllocateMemory(request.MemoryInMiB)
 	vm.OwnerUsers = ownerUsers
@@ -830,6 +814,334 @@ func (m *Manager) listVMs(doSort bool) []string {
 		verstr.Sort(ipAddrs)
 	}
 	return ipAddrs
+}
+
+func (m *Manager) migrateVm(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder) error {
+	var request proto.MigrateVmRequest
+	if err := decoder.Decode(&request); err != nil {
+		return err
+	}
+	hypervisor, err := srpc.DialHTTP("tcp", request.SourceHypervisor, 0)
+	if err != nil {
+		return err
+	}
+	defer hypervisor.Close()
+	defer func() {
+		req := proto.DiscardVmAccessTokenRequest{
+			AccessToken: request.AccessToken,
+			IpAddress:   request.IpAddress}
+		var reply proto.DiscardVmAccessTokenResponse
+		hypervisor.RequestReply("Hypervisor.DiscardVmAccessToken",
+			req, &reply)
+	}()
+	ipAddress := request.IpAddress.String()
+	m.mutex.RLock()
+	_, ok := m.vms[ipAddress]
+	subnetId := m.getMatchingSubnet(request.IpAddress)
+	m.mutex.RUnlock()
+	if ok {
+		return errors.New("cannot migrate to the same hypervisor")
+	}
+	if subnetId == "" {
+		return fmt.Errorf("no matching subnet for: %s\n", request.IpAddress)
+	}
+	getInfoRequest := proto.GetVmInfoRequest{request.IpAddress}
+	var getInfoReply proto.GetVmInfoResponse
+	err = hypervisor.RequestReply("Hypervisor.GetVmInfo", getInfoRequest,
+		&getInfoReply)
+	if err != nil {
+		return err
+	}
+	accessToken := request.AccessToken
+	vmInfo := getInfoReply.VmInfo
+	if subnetId != vmInfo.SubnetId {
+		return fmt.Errorf("subnet ID changing from: %s to: %s",
+			vmInfo.SubnetId, subnetId)
+	}
+	if !request.IpAddress.Equal(vmInfo.Address.IpAddress) {
+		return fmt.Errorf("inconsistent IP address: %s",
+			vmInfo.Address.IpAddress)
+	}
+	if err := m.migrateVmChecks(vmInfo); err != nil {
+		return err
+	}
+	volumeDirectories, err := m.getVolumeDirectories(vmInfo.Volumes[0].Size,
+		vmInfo.Volumes[1:], vmInfo.SpreadVolumes)
+	if err != nil {
+		return err
+	}
+	vm := &vmInfoType{
+		VmInfo:           vmInfo,
+		VolumeLocations:  make([]volumeType, 0, len(volumeDirectories)),
+		manager:          m,
+		dirname:          path.Join(m.StateDir, "VMs", ipAddress),
+		doNotWriteOrSend: true,
+		ipAddress:        ipAddress,
+		logger:           prefixlogger.New(ipAddress+": ", m.Logger),
+		metadataChannels: make(map[chan<- string]struct{}),
+	}
+	vm.Uncommitted = true
+	defer func() { // Evaluate vm at return time, not defer time.
+		if vm == nil {
+			return
+		}
+		vm.cleanup()
+		hyperclient.PrepareVmForMigration(hypervisor, request.IpAddress,
+			accessToken, false)
+		if vmInfo.State == proto.StateRunning {
+			hyperclient.StartVm(hypervisor, request.IpAddress, accessToken)
+		}
+	}()
+	vm.ownerUsers = make(map[string]struct{}, len(vm.OwnerUsers))
+	for _, username := range vm.OwnerUsers {
+		vm.ownerUsers[username] = struct{}{}
+	}
+	if err := os.MkdirAll(vm.dirname, dirPerms); err != nil {
+		return err
+	}
+	for index, _dirname := range volumeDirectories {
+		dirname := path.Join(_dirname, ipAddress)
+		if err := os.MkdirAll(dirname, dirPerms); err != nil {
+			return err
+		}
+		var filename string
+		if index == 0 {
+			filename = path.Join(dirname, "root")
+		} else {
+			filename = path.Join(dirname,
+				fmt.Sprintf("secondary-volume.%d", index-1))
+		}
+		vm.VolumeLocations = append(vm.VolumeLocations, volumeType{
+			DirectoryToCleanup: dirname,
+			Filename:           filename,
+		})
+	}
+	if vmInfo.State == proto.StateStopped {
+		err := hyperclient.PrepareVmForMigration(hypervisor, request.IpAddress,
+			request.AccessToken, true)
+		if err != nil {
+			return err
+		}
+	}
+	// Begin copying over the volumes.
+	err = sendVmMigrationMessage(conn, encoder, "initial volume(s) copy")
+	if err != nil {
+		return err
+	}
+	if err := vm.migrateVmVolumes(hypervisor, accessToken); err != nil {
+		return err
+	}
+	if vmInfo.State != proto.StateStopped {
+		err = sendVmMigrationMessage(conn, encoder, "stopping VM")
+		if err != nil {
+			return err
+		}
+		err := hyperclient.StopVm(hypervisor, request.IpAddress,
+			request.AccessToken)
+		if err != nil {
+			return err
+		}
+		err = hyperclient.PrepareVmForMigration(hypervisor, request.IpAddress,
+			request.AccessToken, true)
+		if err != nil {
+			return err
+		}
+		err = sendVmMigrationMessage(conn, encoder, "update volume(s)")
+		if err != nil {
+			return err
+		}
+		if err := vm.migrateVmVolumes(hypervisor, accessToken); err != nil {
+			return err
+		}
+	}
+	err = migratevmUserData(hypervisor, path.Join(vm.dirname, "user-data.raw"),
+		request.IpAddress, accessToken)
+	if err != nil {
+		return err
+	}
+	if err := sendVmMigrationMessage(conn, encoder, "starting VM"); err != nil {
+		return err
+	}
+	m.mutex.Lock()
+	m.vms[ipAddress] = vm
+	m.mutex.Unlock()
+	dhcpTimedOut, err := vm.startManaging(request.DhcpTimeout, false)
+	if err != nil {
+		return err
+	}
+	if dhcpTimedOut {
+		return fmt.Errorf("DHCP timed out")
+	}
+	err = encoder.Encode(proto.MigrateVmResponse{RequestCommit: true})
+	if err != nil {
+		return err
+	}
+	if err := conn.Flush(); err != nil {
+		return err
+	}
+	var reply proto.MigrateVmResponseResponse
+	if err := decoder.Decode(&reply); err != nil {
+		return err
+	}
+	if !reply.Commit {
+		return fmt.Errorf("VM migration abandoned")
+	}
+	if err := m.registerAddress(vm.Address); err != nil {
+		return err
+	}
+	vm.doNotWriteOrSend = false
+	vm.Uncommitted = false
+	vm.writeAndSendInfo()
+	err = hyperclient.DestroyVm(hypervisor, request.IpAddress, accessToken)
+	if err != nil {
+		m.Logger.Printf("error cleaning up old migrated VM: %s\n", ipAddress)
+	}
+	vm = nil // Cancel cleanup.
+	return nil
+}
+
+func sendVmMigrationMessage(conn *srpc.Conn, encoder srpc.Encoder,
+	message string) error {
+	request := proto.MigrateVmResponse{ProgressMessage: message}
+	if err := encoder.Encode(request); err != nil {
+		return err
+	}
+	return conn.Flush()
+}
+
+func (m *Manager) migrateVmChecks(vmInfo proto.VmInfo) error {
+	switch vmInfo.State {
+	case proto.StateStopped:
+	case proto.StateRunning:
+	default:
+		return fmt.Errorf("VM state: %s is not stopped/running", vmInfo.State)
+	}
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	if err := m.checkSufficientCPUWithLock(vmInfo.MilliCPUs); err != nil {
+		return err
+	}
+	if err := m.checkSufficientMemoryWithLock(vmInfo.MemoryInMiB); err != nil {
+		return err
+	}
+	if err := <-tryAllocateMemory(vmInfo.MemoryInMiB); err != nil {
+		return err
+	}
+	return nil
+}
+
+func migratevmUserData(hypervisor *srpc.Client, filename string,
+	ipAddr net.IP, accessToken []byte) error {
+	conn, err := hypervisor.Call("Hypervisor.GetVmUserData")
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	encoder := gob.NewEncoder(conn)
+	decoder := gob.NewDecoder(conn)
+	request := proto.GetVmUserDataRequest{
+		AccessToken: accessToken,
+		IpAddress:   ipAddr,
+	}
+	if err := encoder.Encode(request); err != nil {
+		return fmt.Errorf("error encoding request: %s", err)
+	}
+	if err := conn.Flush(); err != nil {
+		return err
+	}
+	var reply proto.GetVmUserDataResponse
+	if err := decoder.Decode(&reply); err != nil {
+		return err
+	}
+	if err := errors.New(reply.Error); err != nil {
+		return err
+	}
+	if reply.Length < 1 {
+		return nil
+	}
+	writer, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL,
+		privateFilePerms)
+	if err != nil {
+		io.CopyN(ioutil.Discard, conn, int64(reply.Length))
+		return err
+	}
+	defer writer.Close()
+	if _, err := io.CopyN(writer, conn, int64(reply.Length)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (vm *vmInfoType) migrateVmVolumes(hypervisor *srpc.Client,
+	accessToken []byte) error {
+	for index, volume := range vm.VolumeLocations {
+		_, err := migrateVmVolume(hypervisor, volume.Filename, uint(index),
+			vm.Volumes[index].Size, vm.Address.IpAddress, accessToken)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func migrateVmVolume(hypervisor *srpc.Client, filename string,
+	volumeIndex uint, size uint64, ipAddr net.IP, accessToken []byte) (
+	*rsync.Stats, error) {
+	var initialFileSize uint64
+	reader, err := os.OpenFile(filename, os.O_RDONLY, 0)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+	} else {
+		defer reader.Close()
+		if fi, err := reader.Stat(); err != nil {
+			return nil, err
+		} else {
+			initialFileSize = uint64(fi.Size())
+			if initialFileSize > size {
+				return nil, errors.New("file larger than volume")
+			}
+		}
+	}
+	writer, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE,
+		privateFilePerms)
+	if err != nil {
+		return nil, err
+	}
+	defer writer.Close()
+	request := proto.GetVmVolumeRequest{
+		AccessToken: accessToken,
+		IpAddress:   ipAddr,
+		VolumeIndex: volumeIndex,
+	}
+	conn, err := hypervisor.Call("Hypervisor.GetVmVolume")
+	if err != nil {
+		if reader == nil {
+			os.Remove(filename)
+		}
+		return nil, err
+	}
+	defer conn.Close()
+	encoder := gob.NewEncoder(conn)
+	decoder := gob.NewDecoder(conn)
+	if err := encoder.Encode(request); err != nil {
+		return nil, fmt.Errorf("error encoding request: %s", err)
+	}
+	if err := conn.Flush(); err != nil {
+		return nil, err
+	}
+	var response proto.GetVmVolumeResponse
+	if err := decoder.Decode(&response); err != nil {
+		return nil, err
+	}
+	if err := errors.New(response.Error); err != nil {
+		return nil, err
+	}
+	stats, err := rsync.GetBlocks(conn, decoder, encoder, reader, writer, size,
+		initialFileSize)
+	return &stats, err
 }
 
 func (m *Manager) notifyVmMetadataRequest(ipAddr net.IP, path string) {
@@ -1308,6 +1620,32 @@ func (vm *vmInfoType) checkAuth(authInfo *srpc.AuthInformation,
 	return errorNoAccessToResource
 }
 
+func (vm *vmInfoType) cleanup() {
+	if vm == nil {
+		return
+	}
+	select {
+	case vm.commandChannel <- "quit":
+	default:
+	}
+	m := vm.manager
+	m.mutex.Lock()
+	delete(m.vms, vm.ipAddress)
+	if !vm.doNotWriteOrSend {
+		m.sendVmInfo(vm.ipAddress, nil)
+	}
+	if !vm.Uncommitted {
+		if err := m.releaseAddressInPoolWithLock(vm.Address); err != nil {
+			m.Logger.Println(err)
+		}
+	}
+	os.RemoveAll(vm.dirname)
+	for _, volume := range vm.VolumeLocations {
+		os.RemoveAll(volume.DirectoryToCleanup)
+	}
+	m.mutex.Unlock()
+}
+
 func (vm *vmInfoType) copyRootVolume(request proto.CreateVmRequest,
 	reader io.Reader, dataSize uint64) error {
 	size := computeSize(request.MinimumFreeBytes, request.RoundupPower,
@@ -1455,7 +1793,9 @@ func (vm *vmInfoType) processMonitorResponses(monitorSock net.Conn) {
 
 func (vm *vmInfoType) setState(state proto.State) {
 	vm.State = state
-	vm.writeAndSendInfo()
+	if !vm.doNotWriteOrSend {
+		vm.writeAndSendInfo()
+	}
 }
 
 func (vm *vmInfoType) setupVolumes(rootSize uint64,

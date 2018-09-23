@@ -59,6 +59,7 @@ type vmInfoType struct {
 	VolumeLocations  []volumeType
 	manager          *Manager
 	dirname          string
+	doNotWriteOrSend bool
 	hasHealthAgent   bool
 	ipAddress        string
 	monitorSockname  string
@@ -212,6 +213,11 @@ func (m *Manager) MakeSubnetChannel() <-chan proto.Subnet {
 
 func (m *Manager) MakeUpdateChannel() <-chan proto.Update {
 	return m.makeUpdateChannel()
+}
+
+func (m *Manager) MigrateVm(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder) error {
+	return m.migrateVm(conn, decoder, encoder)
 }
 
 func (m *Manager) NotifyVmMetadataRequest(ipAddr net.IP, path string) {
