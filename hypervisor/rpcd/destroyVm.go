@@ -11,7 +11,7 @@ func (t *srpcType) DestroyVm(conn *srpc.Conn,
 	reply *hypervisor.DestroyVmResponse) error {
 	response := hypervisor.DestroyVmResponse{
 		errors.ErrorToString(t.manager.DestroyVm(request.IpAddress,
-			conn.GetAuthInformation()))}
+			conn.GetAuthInformation(), request.AccessToken))}
 	*reply = response
 	return nil
 }

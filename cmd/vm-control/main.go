@@ -62,8 +62,11 @@ var (
 		"If true, trace metadata calls until interrupted")
 	userDataFile = flag.String("userDataFile", "",
 		"Name file containing user-data accessible from the metadata server")
-	vmHostname = flag.String("vmHostname", "", "Hostname for VM")
-	vmTags     tags.Tags
+	vmHostname     = flag.String("vmHostname", "", "Hostname for VM")
+	vmTags         tags.Tags
+	volumeFilename = flag.String("volumeFilename", "",
+		"Name of file to write volume data to")
+	volumeIndex = flag.Uint("volumeIndex", 0, "Index of volume to get")
 
 	logger log.DebugLogger
 )
@@ -91,21 +94,26 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  discard-vm-old-user-data IPaddr")
 	fmt.Fprintln(os.Stderr, "  discard-vm-snapshot IPaddr")
 	fmt.Fprintln(os.Stderr, "  get-vm-info IPaddr")
+	fmt.Fprintln(os.Stderr, "  get-vm-user-data IPaddr")
+	fmt.Fprintln(os.Stderr, "  get-vm-volume IPaddr")
 	fmt.Fprintln(os.Stderr, "  import-local-vm info-file root-volume")
 	fmt.Fprintln(os.Stderr, "  import-virsh-vm MACaddr domain")
 	fmt.Fprintln(os.Stderr, "  list-hypervisors")
 	fmt.Fprintln(os.Stderr, "  list-locations [TopLocation]")
 	fmt.Fprintln(os.Stderr, "  list-vms")
+	fmt.Fprintln(os.Stderr, "  migrate-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  probe-vm-port IPaddr")
 	fmt.Fprintln(os.Stderr, "  replace-vm-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  replace-vm-user-data IPaddr")
 	fmt.Fprintln(os.Stderr, "  restore-vm-from-snapshot IPaddr")
 	fmt.Fprintln(os.Stderr, "  restore-vm-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  restore-vm-user-data IPaddr")
+	fmt.Fprintln(os.Stderr, "  set-vm-migrating IPaddr")
 	fmt.Fprintln(os.Stderr, "  snapshot-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  start-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  stop-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  trace-vm-metadata IPaddr")
+	fmt.Fprintln(os.Stderr, "  unset-vm-migrating IPaddr")
 }
 
 type commandFunc func([]string, log.DebugLogger)
@@ -127,21 +135,26 @@ var subcommands = []subcommand{
 	{"discard-vm-old-user-data", 1, 1, discardVmOldUserDataSubcommand},
 	{"discard-vm-snapshot", 1, 1, discardVmSnapshotSubcommand},
 	{"get-vm-info", 1, 1, getVmInfoSubcommand},
+	{"get-vm-user-data", 1, 1, getVmUserDataSubcommand},
+	{"get-vm-volume", 1, 1, getVmVolumeSubcommand},
 	{"import-local-vm", 2, 2, importLocalVmSubcommand},
 	{"import-virsh-vm", 2, 2, importVirshVmSubcommand},
 	{"list-hypervisors", 0, 0, listHypervisorsSubcommand},
 	{"list-locations", 0, 1, listLocationsSubcommand},
 	{"list-vms", 0, 0, listVMsSubcommand},
+	{"migrate-vm", 1, 1, migrateVmSubcommand},
 	{"probe-vm-port", 1, 1, probeVmPortSubcommand},
 	{"replace-vm-image", 1, 1, replaceVmImageSubcommand},
 	{"replace-vm-user-data", 1, 1, replaceVmUserDataSubcommand},
 	{"restore-vm-from-snapshot", 1, 1, restoreVmFromSnapshotSubcommand},
 	{"restore-vm-image", 1, 1, restoreVmImageSubcommand},
 	{"restore-vm-user-data", 1, 1, restoreVmUserDataSubcommand},
+	{"set-vm-migrating", 1, 1, setVmMigratingSubcommand},
 	{"snapshot-vm", 1, 1, snapshotVmSubcommand},
 	{"start-vm", 1, 1, startVmSubcommand},
 	{"stop-vm", 1, 1, stopVmSubcommand},
 	{"trace-vm-metadata", 1, 1, traceVmMetadataSubcommand},
+	{"unset-vm-migrating", 1, 1, unsetVmMigratingSubcommand},
 }
 
 func main() {

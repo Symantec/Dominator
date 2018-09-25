@@ -114,7 +114,7 @@ func (g *hypervisorGeneratorType) updateVMs(vms map[string]*proto.VmInfo,
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 	for ipAddr, vm := range vms {
-		if vm == nil {
+		if vm == nil || len(vm.Volumes) < 1 {
 			delete(g.vms, ipAddr)
 		} else {
 			g.vms[ipAddr] = vm

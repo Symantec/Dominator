@@ -52,11 +52,14 @@ type StartOptions struct {
 }
 
 type vmInfoType struct {
-	mutex sync.Mutex
+	mutex                      sync.Mutex
+	accessToken                []byte
+	accessTokenCleanupNotifier chan<- struct{}
 	proto.VmInfo
 	VolumeLocations  []volumeType
 	manager          *Manager
 	dirname          string
+	doNotWriteOrSend bool
 	hasHealthAgent   bool
 	ipAddress        string
 	monitorSockname  string
@@ -65,6 +68,7 @@ type vmInfoType struct {
 	logger           log.DebugLogger
 	destroyTimer     *time.Timer
 	metadataChannels map[chan<- string]struct{}
+	stoppedNotifier  chan<- struct{}
 }
 
 type volumeType struct {
@@ -119,8 +123,13 @@ func (m *Manager) CreateVm(conn *srpc.Conn, decoder srpc.Decoder,
 }
 
 func (m *Manager) DestroyVm(ipAddr net.IP,
-	authInfo *srpc.AuthInformation) error {
-	return m.destroyVm(ipAddr, authInfo)
+	authInfo *srpc.AuthInformation, accessToken []byte) error {
+	return m.destroyVm(ipAddr, authInfo, accessToken)
+}
+
+func (m *Manager) DiscardVmAccessToken(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, accessToken []byte) error {
+	return m.discardVmAccessToken(ipAddr, authInfo, accessToken)
 }
 
 func (m *Manager) DiscardVmOldImage(ipAddr net.IP,
@@ -150,12 +159,31 @@ func (m *Manager) GetVmBootLog(ipAddr net.IP) (io.ReadCloser, error) {
 	return m.getVmBootLog(ipAddr)
 }
 
+func (m *Manager) GetVmAccessToken(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, lifetime time.Duration) ([]byte, error) {
+	return m.getVmAccessToken(ipAddr, authInfo, lifetime)
+}
+
 func (m *Manager) GetVmInfo(ipAddr net.IP) (proto.VmInfo, error) {
 	return m.getVmInfo(ipAddr)
 }
 
 func (m *Manager) GetVmUserData(ipAddr net.IP) (io.ReadCloser, error) {
-	return m.getVmUserData(ipAddr)
+	rc, _, err := m.getVmUserData(ipAddr,
+		&srpc.AuthInformation{HaveMethodAccess: true},
+		nil)
+	return rc, err
+}
+
+func (m *Manager) GetVmUserDataRPC(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, accessToken []byte) (
+	io.ReadCloser, uint64, error) {
+	return m.getVmUserData(ipAddr, authInfo, accessToken)
+}
+
+func (m *Manager) GetVmVolume(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder) error {
+	return m.getVmVolume(conn, decoder, encoder)
 }
 
 func (m *Manager) ImportLocalVm(authInfo *srpc.AuthInformation,
@@ -187,8 +215,18 @@ func (m *Manager) MakeUpdateChannel() <-chan proto.Update {
 	return m.makeUpdateChannel()
 }
 
+func (m *Manager) MigrateVm(conn *srpc.Conn, decoder srpc.Decoder,
+	encoder srpc.Encoder) error {
+	return m.migrateVm(conn, decoder, encoder)
+}
+
 func (m *Manager) NotifyVmMetadataRequest(ipAddr net.IP, path string) {
 	m.notifyVmMetadataRequest(ipAddr, path)
+}
+
+func (m *Manager) PrepareVmForMigration(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, accessToken []byte, enable bool) error {
+	return m.prepareVmForMigration(ipAddr, authInfo, accessToken, enable)
 }
 
 func (m *Manager) RemoveExcessAddressesFromPool(maxFree map[string]uint) error {
@@ -231,13 +269,14 @@ func (m *Manager) SnapshotVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 }
 
 func (m *Manager) StartVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
-	dhcpTimeout time.Duration) (
+	accessToken []byte, dhcpTimeout time.Duration) (
 	bool, error) {
-	return m.startVm(ipAddr, authInfo, dhcpTimeout)
+	return m.startVm(ipAddr, authInfo, accessToken, dhcpTimeout)
 }
 
-func (m *Manager) StopVm(ipAddr net.IP, authInfo *srpc.AuthInformation) error {
-	return m.stopVm(ipAddr, authInfo)
+func (m *Manager) StopVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	accessToken []byte) error {
+	return m.stopVm(ipAddr, authInfo, accessToken)
 }
 
 func (m *Manager) UpdateSubnets(request proto.UpdateSubnetsRequest) error {

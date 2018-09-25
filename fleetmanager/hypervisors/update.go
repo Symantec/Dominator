@@ -218,10 +218,11 @@ func (m *Manager) updateTopologyLocked(t *topology.Topology,
 		} else {
 			location, _ := m.topology.GetLocationOfMachine(machine.Hostname)
 			hypervisor := &hypervisorType{
-				logger:   prefixlogger.New(machine.Hostname+": ", m.logger),
-				location: location,
-				machine:  machine,
-				vms:      make(map[string]*vmInfoType),
+				logger:       prefixlogger.New(machine.Hostname+": ", m.logger),
+				location:     location,
+				machine:      machine,
+				migratingVms: make(map[string]*vmInfoType),
+				vms:          make(map[string]*vmInfoType),
 			}
 			m.hypervisors[machine.Hostname] = hypervisor
 			hypersToChange = append(hypersToChange, hypervisor)
@@ -497,13 +498,17 @@ func (m *Manager) processInitialVMs(h *hypervisorType,
 	vms map[string]*hyper_proto.VmInfo) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	vmsToDelete := make(map[string]struct{}, len(h.vms))
 	for ipAddr := range h.vms {
 		if _, ok := vms[ipAddr]; !ok {
-			vmsToDelete[ipAddr] = struct{}{}
+			vms[ipAddr] = nil
 		}
 	}
-	m.processVmUpdatesWithLock(h, vms, vmsToDelete)
+	for ipAddr := range h.migratingVms {
+		if _, ok := vms[ipAddr]; !ok {
+			vms[ipAddr] = nil
+		}
+	}
+	m.processVmUpdatesWithLock(h, vms)
 }
 
 func (m *Manager) processSubnetsUpdates(h *hypervisorType,
@@ -569,19 +574,37 @@ func (m *Manager) processSubnetsUpdates(h *hypervisorType,
 
 func (m *Manager) processVmUpdates(h *hypervisorType,
 	updateVMs map[string]*hyper_proto.VmInfo) {
+	for ipAddr, vm := range updateVMs {
+		if len(vm.Volumes) < 1 {
+			updateVMs[ipAddr] = nil
+		}
+	}
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	m.processVmUpdatesWithLock(h, updateVMs, make(map[string]struct{}))
+	m.processVmUpdatesWithLock(h, updateVMs)
 }
 
 func (m *Manager) processVmUpdatesWithLock(h *hypervisorType,
-	updateVMs map[string]*hyper_proto.VmInfo, vmsToDelete map[string]struct{}) {
+	updateVMs map[string]*hyper_proto.VmInfo) {
 	update := fm_proto.Update{ChangedVMs: make(map[string]*hyper_proto.VmInfo)}
+	vmsToDelete := make(map[string]struct{})
 	for ipAddr, protoVm := range updateVMs {
-		if len(protoVm.Volumes) < 1 {
-			vmsToDelete[ipAddr] = struct{}{}
+		if protoVm == nil {
+			if _, ok := h.migratingVms[ipAddr]; !ok {
+				vmsToDelete[ipAddr] = struct{}{}
+			} else {
+				delete(h.migratingVms, ipAddr)
+				delete(m.migratingIPs, ipAddr)
+				h.logger.Debugf(0, "forgot migrating VM: %s\n", ipAddr)
+			}
 		} else {
-			if vm, ok := h.vms[ipAddr]; ok {
+			if protoVm.State == hyper_proto.StateMigrating {
+				if _, ok := h.vms[ipAddr]; ok {
+					vmsToDelete[ipAddr] = struct{}{}
+				}
+				h.migratingVms[ipAddr] = &vmInfoType{ipAddr, *protoVm, h}
+				m.migratingIPs[ipAddr] = struct{}{}
+			} else if vm, ok := h.vms[ipAddr]; ok {
 				if !vm.VmInfo.Equal(protoVm) {
 					err := m.storer.WriteVm(h.machine.HostIpAddress, ipAddr,
 						*protoVm)
@@ -593,7 +616,12 @@ func (m *Manager) processVmUpdatesWithLock(h *hypervisorType,
 					}
 				}
 				vm.VmInfo = *protoVm
+				update.ChangedVMs[ipAddr] = protoVm
 			} else {
+				if _, ok := h.migratingVms[ipAddr]; ok {
+					delete(h.migratingVms, ipAddr)
+					delete(m.migratingIPs, ipAddr)
+				}
 				vm := &vmInfoType{ipAddr, *protoVm, h}
 				h.vms[ipAddr] = vm
 				m.vms[ipAddr] = vm
@@ -604,8 +632,8 @@ func (m *Manager) processVmUpdatesWithLock(h *hypervisorType,
 				} else {
 					h.logger.Debugf(0, "wrote VM: %s\n", ipAddr)
 				}
+				update.ChangedVMs[ipAddr] = protoVm
 			}
-			update.ChangedVMs[ipAddr] = protoVm
 		}
 	}
 	for ipAddr := range vmsToDelete {

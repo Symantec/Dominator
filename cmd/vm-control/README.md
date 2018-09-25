@@ -32,6 +32,8 @@ Some of the sub-commands available are:
 - **discard-vm-old-user-data**: discard the previous user data for a VM
 - **discard-vm-snapshot**: discard the previous snapshot for a VM
 - **get-vm-info**: get and show the information for a VM
+- **get-vm-user-data**: get (copy) the user data for a VM
+- **get-vm-volume**: get (copy) a specified VM volume
 - **import-local-vm**: import a local raw VM. This is primarily for debugging
 - **import-virsh-vm**: import a local virsh VM. The specified domain name must
                        be a FQDN, which is used to obtain the IP address of the
@@ -40,6 +42,7 @@ Some of the sub-commands available are:
 - **list-hypervisors**: list healthy Hypervisors in the specified location
 - **list-locations**: list locations within the specified top location
 - **list-vms**: list the IP addresses for all VMs
+- **migrate-vm*: migrate a VM to another Hypervisor
 - **probe-vm-port**: probe (from its *Hypervisor*) a TCP port for a VM
 - **replace-vm-image**: replace the root image for a VM. The old root image is
                         saved. The VM must not be running
@@ -50,10 +53,12 @@ Some of the sub-commands available are:
 - **restore-vm-image**: restore the previously saved root image for a VM. The VM
                         must not be running
 - **restore-vm-user-data**: restore the previously saved user data for a VM
+- **set-vm-migrating**: change the VM state to migrating. For debugging only
 - **snapshot-vm**: create a snapshot of the VM volumes, discarding previous one
 - **start-vm**: start a stopped VM
 - **stop-vm**: stop a running VM. All data and metadata are preserved
 - **trace-vm-metadata**: trace the requests a VM makes to the metadata service
+- **unset-vm-migrating**: change the VM state to stopped. For debugging only
 
 ## Security
 The *Hypervisor* restricts RPC access using TLS client authentication.

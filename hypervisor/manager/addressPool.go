@@ -142,6 +142,16 @@ func (m *Manager) listAvailableAddresses() []proto.Address {
 	return addresses
 }
 
+func (m *Manager) registerAddress(address proto.Address) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	m.addressPool.Registered = append(m.addressPool.Registered, address)
+	if err := m.writeAddressPoolWithLock(m.addressPool, true); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (m *Manager) releaseAddressInPool(address proto.Address) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -195,6 +205,25 @@ func (m *Manager) removeExcessAddressesFromPool(maxFree map[string]uint) error {
 	}
 	m.addressPool = newPool
 	return nil
+}
+
+func (m *Manager) unregisterAddress(address proto.Address) error {
+	found := false
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	addresses := make([]proto.Address, 0, len(m.addressPool.Registered)-1)
+	for _, addr := range m.addressPool.Registered {
+		if address.Equal(&addr) {
+			found = true
+		} else {
+			addresses = append(addresses, addr)
+		}
+	}
+	if !found {
+		return fmt.Errorf("%v not registered", address)
+	}
+	m.addressPool.Registered = addresses
+	return m.writeAddressPoolWithLock(m.addressPool, true)
 }
 
 func (m *Manager) writeAddressPool(addressPool addressPoolType,

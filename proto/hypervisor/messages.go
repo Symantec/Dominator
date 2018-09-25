@@ -14,6 +14,7 @@ const (
 	StateStopping      = 3
 	StateStopped       = 4
 	StateDestroying    = 5
+	StateMigrating     = 6
 
 	VolumeFormatRaw   = 0
 	VolumeFormatQCOW2 = 1
@@ -96,10 +97,20 @@ type CreateVmResponse struct { // Multiple responses are sent.
 }
 
 type DestroyVmRequest struct {
-	IpAddress net.IP
+	AccessToken []byte
+	IpAddress   net.IP
 }
 
 type DestroyVmResponse struct {
+	Error string
+}
+
+type DiscardVmAccessTokenRequest struct {
+	AccessToken []byte
+	IpAddress   net.IP
+}
+
+type DiscardVmAccessTokenResponse struct {
 	Error string
 }
 
@@ -141,6 +152,16 @@ type Update struct {
 	VMs              map[string]*VmInfo `json:",omitempty"` // Key: IP address.
 }
 
+type GetVmAccessTokenRequest struct {
+	IpAddress net.IP
+	Lifetime  time.Duration
+}
+
+type GetVmAccessTokenResponse struct {
+	Token []byte `json:",omitempty"`
+	Error string
+}
+
 type GetVmInfoRequest struct {
 	IpAddress net.IP
 }
@@ -148,6 +169,28 @@ type GetVmInfoRequest struct {
 type GetVmInfoResponse struct {
 	VmInfo VmInfo
 	Error  string
+}
+
+type GetVmUserDataRequest struct {
+	AccessToken []byte
+	IpAddress   net.IP
+}
+
+type GetVmUserDataResponse struct {
+	Error  string
+	Length uint64
+} // Data (length=Length) are streamed afterwards.
+
+// The GetVmVolume() RPC is followed by the proto/rsync.GetBlocks message.
+
+type GetVmVolumeRequest struct {
+	AccessToken []byte
+	IpAddress   net.IP
+	VolumeIndex uint
+}
+
+type GetVmVolumeResponse struct {
+	Error string
 }
 
 type ImportLocalVmRequest struct {
@@ -175,6 +218,24 @@ type ListVolumeDirectoriesResponse struct {
 	Error       string
 }
 
+type MigrateVmRequest struct {
+	AccessToken      []byte
+	DhcpTimeout      time.Duration
+	IpAddress        net.IP
+	SourceHypervisor string
+}
+
+type MigrateVmResponse struct { // Multiple responses are sent.
+	Error           string
+	Final           bool // If true, this is the final response.
+	ProgressMessage string
+	RequestCommit   bool
+}
+
+type MigrateVmResponseResponse struct {
+	Commit bool
+}
+
 type NetbootMachineRequest struct {
 	Address                      Address
 	Files                        map[string][]byte
@@ -187,6 +248,16 @@ type NetbootMachineRequest struct {
 }
 
 type NetbootMachineResponse struct {
+	Error string
+}
+
+type PrepareVmForMigrationRequest struct {
+	AccessToken []byte
+	Enable      bool
+	IpAddress   net.IP
+}
+
+type PrepareVmForMigrationResponse struct {
 	Error string
 }
 
@@ -264,6 +335,7 @@ type SnapshotVmResponse struct {
 }
 
 type StartVmRequest struct {
+	AccessToken []byte
 	DhcpTimeout time.Duration
 	IpAddress   net.IP
 }
@@ -274,7 +346,8 @@ type StartVmResponse struct {
 }
 
 type StopVmRequest struct {
-	IpAddress net.IP
+	AccessToken []byte
+	IpAddress   net.IP
 }
 
 type StopVmResponse struct {

@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
@@ -29,19 +30,27 @@ func getVmInfo(vmHostname string, logger log.DebugLogger) error {
 
 func getVmInfoOnHypervisor(hypervisor string, ipAddr net.IP,
 	logger log.DebugLogger) error {
-	request := proto.GetVmInfoRequest{ipAddr}
 	client, err := dialHypervisor(hypervisor)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
-	var reply proto.GetVmInfoResponse
-	err = client.RequestReply("Hypervisor.GetVmInfo", request, &reply)
-	if err != nil {
+	if vmInfo, err := getVmInfoClient(client, ipAddr); err != nil {
 		return err
+	} else {
+		return json.WriteWithIndent(os.Stdout, "    ", vmInfo)
+	}
+}
+
+func getVmInfoClient(client *srpc.Client, ipAddr net.IP) (proto.VmInfo, error) {
+	request := proto.GetVmInfoRequest{ipAddr}
+	var reply proto.GetVmInfoResponse
+	err := client.RequestReply("Hypervisor.GetVmInfo", request, &reply)
+	if err != nil {
+		return proto.VmInfo{}, err
 	}
 	if err := errors.New(reply.Error); err != nil {
-		return err
+		return proto.VmInfo{}, err
 	}
-	return json.WriteWithIndent(os.Stdout, "    ", reply.VmInfo)
+	return reply.VmInfo, nil
 }

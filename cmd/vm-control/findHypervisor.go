@@ -61,3 +61,24 @@ func lookupVmAndHypervisor(vmHostname string) (net.IP, string, error) {
 		return vmIpAddr, hypervisor, nil
 	}
 }
+
+func searchVmAndHypervisor(vmHostname string) (net.IP, string, error) {
+	if *fleetManagerHostname == "" {
+		return nil, "", fmt.Errorf("no fleet manager specified")
+	}
+	vmIpAddr, err := lookupIP(vmHostname)
+	if err != nil {
+		return nil, "", err
+	}
+	cm := fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum)
+	client, err := srpc.DialHTTP("tcp", cm, time.Second*10)
+	if err != nil {
+		return nil, "", err
+	}
+	defer client.Close()
+	if hypervisor, err := findHypervisorClient(client, vmIpAddr); err != nil {
+		return nil, "", err
+	} else {
+		return vmIpAddr, hypervisor, nil
+	}
+}
