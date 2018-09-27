@@ -350,7 +350,20 @@ func upgradeOneThenAll(fleetManagerClientResource *srpc.ClientResource,
 	return state.Reap()
 }
 
-func (h *hypervisorType) getFailingHealthChecks() ([]string, time.Time, error) {
+func (h *hypervisorType) getFailingHealthChecks(
+	cpuSharer *cpusharer.FifoCpuSharer,
+	timeout time.Duration) ([]string, time.Time, error) {
+	stopTime := time.Now().Add(timeout)
+	for ; time.Until(stopTime) >= 0; cpuSharer.Sleep(time.Second) {
+		if list, timestamp, err := h.getFailingHealthChecksOnce(); err == nil {
+			return list, timestamp, nil
+		}
+	}
+	return nil, time.Time{}, errors.New("timed out getting health status")
+}
+
+func (h *hypervisorType) getFailingHealthChecksOnce() (
+	[]string, time.Time, error) {
 	client, err := h.healthAgentClientResource.Get(nil)
 	if err != nil {
 		return nil, time.Time{}, err
@@ -364,7 +377,6 @@ func (h *hypervisorType) getFailingHealthChecks() ([]string, time.Time, error) {
 		return nil, time.Time{}, err
 	}
 	if list, ok := metric.Value.([]string); !ok {
-		client.Close()
 		return nil, time.Time{}, errors.New("list metric is not []string")
 	} else {
 		if timestamp, ok := metric.TimeStamp.(time.Time); ok {
@@ -431,7 +443,8 @@ func (h *hypervisorType) upgrade(clientResource *srpc.ClientResource,
 	imageName string, cpuSharer *cpusharer.FifoCpuSharer) error {
 	cpuSharer.GrabCpu()
 	defer cpuSharer.ReleaseCpu()
-	if list, _, err := h.getFailingHealthChecks(); err != nil {
+	list, _, err := h.getFailingHealthChecks(cpuSharer, time.Second)
+	if err != nil {
 		h.logger.Println(err)
 		return nil
 	} else if len(list) > 0 {
@@ -440,7 +453,7 @@ func (h *hypervisorType) upgrade(clientResource *srpc.ClientResource,
 		}
 	}
 	h.logger.Debugln(0, "upgrading")
-	err := h.updateTagForHypervisor(clientResource, "RequiredImage", imageName)
+	err = h.updateTagForHypervisor(clientResource, "RequiredImage", imageName)
 	if err != nil {
 		return err
 	}
@@ -459,7 +472,8 @@ func (h *hypervisorType) upgrade(clientResource *srpc.ClientResource,
 	}
 	h.logger.Debugln(0, "upgraded")
 	cpuSharer.Sleep(time.Second * 15)
-	if list, _, err := h.getFailingHealthChecks(); err != nil {
+	list, _, err = h.getFailingHealthChecks(cpuSharer, time.Minute)
+	if err != nil {
 		return err
 	} else {
 		for _, entry := range list {
