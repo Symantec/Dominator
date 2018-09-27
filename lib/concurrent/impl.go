@@ -48,9 +48,6 @@ func (state *State) goRun(doFunc func() error) error {
 
 func (state *State) reap() error {
 	state.reaped = true
-	if state.entered {
-		panic("GoRun is running")
-	}
 	close(state.semaphore)
 	for ; state.pending > 0; state.pending-- {
 		if err := <-state.errorChannel; err != nil {

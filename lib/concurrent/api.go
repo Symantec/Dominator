@@ -45,5 +45,8 @@ func (state *State) GoRun(doFunc func() error) error {
 // Reap returns the first error encountered by the functions and waits for
 // remaining functions to complete. The State can no longer be used after Reap.
 func (state *State) Reap() error {
+	if state.entered {
+		panic("GoRun is running")
+	}
 	return state.reap()
 }
