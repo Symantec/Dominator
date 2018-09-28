@@ -3,6 +3,7 @@ package fsstorer
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -44,7 +45,7 @@ func (s *Storer) addIPsForHypervisor(hypervisor net.IP,
 			newAddrs = append(newAddrs, addr)
 		} else {
 			if hIP != hypervisorIP {
-				return errors.New("cannot move IP between hypervisors")
+				return fmt.Errorf("cannot move IP: %s from: %s", addr, hIP)
 			}
 		}
 	}
@@ -99,7 +100,7 @@ func (s *Storer) setIPsForHypervisor(hypervisor net.IP,
 			addedSome = true
 		} else {
 			if hIP != hypervisorIP {
-				return errors.New("cannot move IP between hypervisors")
+				return fmt.Errorf("cannot move IP: %s from: %s", addr, hIP)
 			}
 		}
 	}

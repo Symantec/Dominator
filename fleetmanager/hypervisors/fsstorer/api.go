@@ -32,6 +32,10 @@ func New(topDir string, logger log.DebugLogger) (*Storer, error) {
 	return storer, nil
 }
 
+func (ip IP) String() string {
+	return ip.string()
+}
+
 func (s *Storer) AddIPsForHypervisor(hypervisor net.IP,
 	addrs []net.IP) error {
 	return s.addIPsForHypervisor(hypervisor, addrs)
