@@ -107,8 +107,5 @@ func replaceVmImageOnHypervisor(hypervisor string, ipAddr net.IP,
 	if err != nil {
 		return err
 	}
-	if reply.DhcpTimedOut {
-		return errors.New("DHCP ACK timed out")
-	}
-	return maybeWatchVm(client, hypervisor, ipAddr, logger)
+	return nil
 }
