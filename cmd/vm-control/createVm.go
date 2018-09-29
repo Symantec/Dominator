@@ -41,34 +41,34 @@ func callCreateVm(client *srpc.Client, request hyper_proto.CreateVmRequest,
 	logger log.DebugLogger) error {
 	conn, err := client.Call("Hypervisor.CreateVm")
 	if err != nil {
-		return err
+		return fmt.Errorf("error calling Hypervisor.CreateVm: %s", err)
 	}
 	defer conn.Close()
 	encoder := gob.NewEncoder(conn)
 	decoder := gob.NewDecoder(conn)
 	if err := encoder.Encode(request); err != nil {
-		return err
+		return fmt.Errorf("error encoding request: %s", err)
 	}
 	// Stream any required data.
 	if imageReader != nil {
 		logger.Debugln(0, "uploading image")
 		if _, err := io.Copy(conn, imageReader); err != nil {
-			return err
+			return fmt.Errorf("error uploading image: %s", err)
 		}
 	}
 	if userDataReader != nil {
 		logger.Debugln(0, "uploading user data")
 		if _, err := io.Copy(conn, userDataReader); err != nil {
-			return err
+			return fmt.Errorf("error uploading user data: %s", err)
 		}
 	}
 	if err := conn.Flush(); err != nil {
-		return err
+		return fmt.Errorf("error flushing: %s", err)
 	}
 	for {
 		var response hyper_proto.CreateVmResponse
 		if err := decoder.Decode(&response); err != nil {
-			return err
+			return fmt.Errorf("error decoding: %s", err)
 		}
 		if response.Error != "" {
 			return errors.New(response.Error)
@@ -152,7 +152,7 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 		return err
 	}
 	if err := acknowledgeVm(client, reply.IpAddress); err != nil {
-		return err
+		return fmt.Errorf("error acknowledging VM: %s", err)
 	}
 	fmt.Println(reply.IpAddress)
 	if reply.DhcpTimedOut {
@@ -226,7 +226,8 @@ func parseSizes(strSizes flagutil.StringList) ([]hyper_proto.Volume, error) {
 		} else if _, err := fmt.Sscanf(strSize, "%dG", &size); err == nil {
 			volumes = append(volumes, hyper_proto.Volume{Size: size << 30})
 		} else {
-			return nil, err
+			return nil,
+				fmt.Errorf("error parsing secondary volume sizes: %s", err)
 		}
 	}
 	return volumes, nil
