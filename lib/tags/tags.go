@@ -61,7 +61,7 @@ func (tags *Tags) set(value string) error {
 		return nil
 	}
 	for _, tag := range strings.Split(value, ",") {
-		if len(tag) < 3 {
+		if len(tag) < 1 {
 			return errors.New(`malformed tag: "` + tag + `"`)
 		}
 		if tag[0] == '@' {
@@ -75,9 +75,6 @@ func (tags *Tags) set(value string) error {
 		splitTag := strings.Split(tag, "=")
 		if len(splitTag) != 2 {
 			return errors.New(`malformed tag: "` + tag + `"`)
-		}
-		if splitTag[0] == "" {
-			return errors.New("empty tag key")
 		}
 		newTags[splitTag[0]] = splitTag[1]
 	}
