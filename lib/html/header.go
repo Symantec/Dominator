@@ -23,6 +23,12 @@ var (
 	lastCpuStats  *cpuStats = startCpuStats
 )
 
+func setSecurityHeaders(w http.ResponseWriter) {
+	w.Header().Set("X-Frame-Options", "DENY")
+	w.Header().Set("X-XSS-Protection", "1")
+	w.Header().Set("Content-Security-Policy", "default-src 'self' ;style-src 'self' 'unsafe-inline'")
+}
+
 func writeCpuStats(writer io.Writer, prefix string, start, current *cpuStats) {
 	userCpuTime := current.userTime.Sub(start.userTime)
 	sysCpuTime := current.sysTime.Sub(start.sysTime)
