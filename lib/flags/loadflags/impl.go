@@ -5,10 +5,19 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
-func loadFlags(filename string) error {
+func loadFlags(dirname string) error {
+	err := loadFlagsFromFile(filepath.Join(dirname, "flags.default"))
+	if err != nil {
+		return err
+	}
+	return loadFlagsFromFile(filepath.Join(dirname, "flags.extra"))
+}
+
+func loadFlagsFromFile(filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
