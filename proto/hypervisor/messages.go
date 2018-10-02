@@ -146,6 +146,7 @@ type Update struct {
 	HaveAddressPool  bool               `json:",omitempty"`
 	AddressPool      []Address          `json:",omitempty"` // Used & free.
 	NumFreeAddresses map[string]uint    `json:",omitempty"` // Key: subnet ID.
+	HealthStatus     string             `json:",omitempty"`
 	HaveSubnets      bool               `json:",omitempty"`
 	Subnets          []Subnet           `json:",omitempty"`
 	HaveVMs          bool               `json:",omitempty"`
