@@ -35,10 +35,6 @@ func (w *countingWriter) Write(p []byte) (n int, err error) {
 	return
 }
 
-func setSecurityHeaders(w http.ResponseWriter) {
-	html.SetSecurityHeaders(w)
-}
-
 func (lb *LogBuffer) addHttpHandlers() {
 	http.HandleFunc("/logs", lb.httpListHandler)
 	http.HandleFunc("/logs/dump", lb.httpDumpHandler)
@@ -52,7 +48,7 @@ func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
-	setSecurityHeaders(w)
+	html.SetSecurityHeaders(w)
 	parsedQuery := url.ParseQuery(req.URL)
 	_, recentFirst := parsedQuery.Flags["recentFirst"]
 	names, panicMap, err := lb.list(recentFirst)
@@ -166,7 +162,7 @@ func (lb *LogBuffer) httpDumpHandler(w http.ResponseWriter, req *http.Request) {
 	defer file.Close()
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
-	setSecurityHeaders(w)
+	html.SetSecurityHeaders(w)
 	if recentFirst {
 		scanner := bufio.NewScanner(file)
 		lines := make([]string, 0)
@@ -226,7 +222,7 @@ func (lb *LogBuffer) httpShowLastHandler(w http.ResponseWriter,
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		} else {
-			setSecurityHeaders(w)
+			html.SetSecurityHeaders(w)
 			lb.showRecent(w, time.Duration(val)*unit, recentFirst)
 			return
 		}
@@ -308,7 +304,7 @@ func (lb *LogBuffer) httpShowPreviousPanicHandler(w http.ResponseWriter,
 	req *http.Request) {
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
-	setSecurityHeaders(w)
+	html.SetSecurityHeaders(w)
 	panicLogfile := lb.panicLogfile
 	if panicLogfile == nil {
 		fmt.Fprintln(writer, "Last invocation did not panic!")
