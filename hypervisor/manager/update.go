@@ -33,6 +33,7 @@ func (m *Manager) makeUpdateChannel() <-chan proto.Update {
 		HaveAddressPool:  true,
 		AddressPool:      m.addressPool.Registered,
 		NumFreeAddresses: numFreeAddresses,
+		HealthStatus:     m.healthStatus,
 		HaveSubnets:      true,
 		Subnets:          subnets,
 		HaveVMs:          true,
@@ -48,6 +49,7 @@ func (m *Manager) sendUpdate(update proto.Update) {
 }
 
 func (m *Manager) sendUpdateWithLock(update proto.Update) {
+	update.HealthStatus = m.healthStatus
 	for readChannel, writeChannel := range m.notifiers {
 		select {
 		case writeChannel <- update:
