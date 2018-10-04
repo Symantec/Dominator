@@ -4,8 +4,8 @@ func (s probeStatus) String() string {
 	switch s {
 	case probeStatusNotYetProbed:
 		return "not yet probed"
-	case probeStatusGood:
-		return "good"
+	case probeStatusConnected:
+		return "connected"
 	case probeStatusNoSrpc:
 		return "no SRPC"
 	case probeStatusNoService:
