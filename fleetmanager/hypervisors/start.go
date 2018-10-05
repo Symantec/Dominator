@@ -23,5 +23,6 @@ func newManager(storer Storer, logger log.DebugLogger) (*Manager, error) {
 	http.HandleFunc("/listLocations", manager.listLocationsHandler)
 	http.HandleFunc("/listVMs", manager.listVMsHandler)
 	http.HandleFunc("/showHypervisor", manager.showHypervisorHandler)
+	go manager.notifierLoop()
 	return manager, nil
 }
