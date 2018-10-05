@@ -34,6 +34,7 @@ type Manager struct {
 	volumeDirectories []string
 	mutex             sync.RWMutex // Lock everthing below (those can change).
 	addressPool       addressPoolType
+	healthStatus      string
 	notifiers         map[<-chan proto.Update]chan<- proto.Update
 	subnets           map[string]proto.Subnet // Key: Subnet ID.
 	subnetChannels    []chan<- proto.Subnet

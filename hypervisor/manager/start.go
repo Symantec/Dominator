@@ -7,13 +7,18 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/Symantec/Dominator/lib/meminfo"
+	"github.com/Symantec/Dominator/lib/rpcclientpool"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Symantec/tricorder/go/tricorder/messages"
+	trimsg "github.com/Symantec/tricorder/go/tricorder/messages"
 )
 
 const (
@@ -127,5 +132,46 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 			return nil, err
 		}
 	}
+	go manager.loopCheckHealthStatus()
 	return manager, nil
+}
+
+func (m *Manager) loopCheckHealthStatus() {
+	cr := rpcclientpool.New("tcp", ":6910", true, "")
+	for ; ; time.Sleep(time.Second * 10) {
+		healthStatus := m.checkHealthStatus(cr)
+		m.mutex.Lock()
+		if m.healthStatus != healthStatus {
+			m.healthStatus = healthStatus
+			m.sendUpdateWithLock(proto.Update{})
+		}
+		m.mutex.Unlock()
+	}
+}
+
+func (m *Manager) checkHealthStatus(cr *rpcclientpool.ClientResource) string {
+	client, err := cr.Get(nil)
+	if err != nil {
+		m.Logger.Printf("error getting health-agent client: %s", err)
+		return "bad health-agent"
+	}
+	defer client.Put()
+	var metric messages.Metric
+	err = client.Call("MetricsServer.GetMetric", "/sys/storage/health", &metric)
+	if err != nil {
+		if strings.Contains(err.Error(), trimsg.ErrMetricNotFound.Error()) {
+			return ""
+		}
+		m.Logger.Printf("error getting health-agent metrics: %s", err)
+		client.Close()
+		return "failed getting health metrics"
+	}
+	if healthStatus, ok := metric.Value.(string); !ok {
+		m.Logger.Println("list metric is not string")
+		return "bad health metric type"
+	} else if healthStatus == "good" {
+		return "healthy"
+	} else {
+		return healthStatus
+	}
 }

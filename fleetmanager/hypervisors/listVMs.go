@@ -16,6 +16,38 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
+const commonStyleSheet string = `<style>
+table, th, td {
+border-collapse: collapse;
+}
+</style>
+`
+
+const (
+	rowStyleProbeBad = iota
+	rowStyleHealthMarginal
+	rowStyleHealthAtRisk
+	rowStyleHighlight
+	rowStyleReservedIP
+	rowStyleUncommittedIP
+)
+
+type rowStyleType struct {
+	html        string
+	highlighted bool
+}
+
+var (
+	rowStyles = map[uint]rowStyleType{
+		rowStyleProbeBad:       {"color:red", false},
+		rowStyleHealthMarginal: {"color:#800000", false},
+		rowStyleHealthAtRisk:   {"color:#c00000", false},
+		rowStyleHighlight:      {"background-color:#fafafa", true},
+		rowStyleReservedIP:     {"background-color:orange", true},
+		rowStyleUncommittedIP:  {"background-color:yellow", true},
+	}
+)
+
 func (m *Manager) getVMs(doSort bool) []vmInfoType {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -53,11 +85,7 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 	}
 	if parsedQuery.OutputType() == url.OutputTypeHtml {
 		fmt.Fprintf(writer, "<title>List of VMs</title>\n")
-		fmt.Fprintln(writer, `<style>
-                          table, th, td {
-                          border-collapse: collapse;
-                          }
-                          </style>`)
+		writer.WriteString(commonStyleSheet)
 		fmt.Fprintln(writer, "<body>")
 		fmt.Fprintln(writer, `<table border="1" style="width:100%">`)
 		fmt.Fprintln(writer, "  <tr>")
@@ -73,25 +101,43 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 		fmt.Fprintln(writer, "    <th>Location</th>")
 		fmt.Fprintln(writer, "  </tr>")
 	}
+	lastRowHighlighted := true
 	for _, vm := range vms {
 		switch parsedQuery.OutputType() {
 		case url.OutputTypeText:
 			fmt.Fprintln(writer, vm.ipAddr)
 		case url.OutputTypeHtml:
-			var rowStyle []string
-			if vm.hypervisor.probeStatus != probeStatusGood {
-				rowStyle = append(rowStyle, "color:grey")
+			var rowStyle []rowStyleType
+			if vm.hypervisor.probeStatus != probeStatusConnected {
+				rowStyle = append(rowStyle, rowStyles[rowStyleProbeBad])
+			} else if vm.hypervisor.healthStatus == "at risk" {
+				rowStyle = append(rowStyle, rowStyles[rowStyleHealthAtRisk])
+			} else if vm.hypervisor.healthStatus == "marginal" {
+				rowStyle = append(rowStyle, rowStyles[rowStyleHealthMarginal])
 			}
 			if vm.Uncommitted {
-				rowStyle = append(rowStyle, "background-color:yellow")
+				rowStyle = append(rowStyle, rowStyles[rowStyleUncommittedIP])
 			} else if topology.CheckIfIpIsReserved(vm.ipAddr) {
-				rowStyle = append(rowStyle, "background-color:orange")
+				rowStyle = append(rowStyle, rowStyles[rowStyleReservedIP])
 			}
-			if len(rowStyle) < 1 {
+			styles := make([]string, 0, len(rowStyle))
+			highlighted := false
+			for _, style := range rowStyle {
+				styles = append(styles, style.html)
+				if style.highlighted {
+					highlighted = true
+				}
+			}
+			if !highlighted && !lastRowHighlighted {
+				styles = append(styles, rowStyles[rowStyleHighlight].html)
+				highlighted = true
+			}
+			lastRowHighlighted = highlighted
+			if len(styles) < 1 {
 				fmt.Fprintln(writer, "  <tr>")
 			} else {
 				fmt.Fprintf(writer, "  <tr style=\"%s\">\n",
-					strings.Join(rowStyle, ";"))
+					strings.Join(styles, ";"))
 			}
 			fmt.Fprintf(writer,
 				"    <td><a href=\"http://%s:%d/showVM?%s\">%s</a></td>\n",
@@ -122,7 +168,7 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 }
 
 func (m *Manager) listVMsInLocation(dirname string) ([]net.IP, error) {
-	hypervisors, err := m.listHypervisors(dirname, true, "")
+	hypervisors, err := m.listHypervisors(dirname, showAll, "")
 	if err != nil {
 		return nil, err
 	}

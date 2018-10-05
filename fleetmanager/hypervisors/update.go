@@ -180,7 +180,7 @@ func (m *Manager) updateHypervisor(h *hypervisorType,
 		}
 	}
 	h.mutex.Unlock()
-	if *manageHypervisors && h.probeStatus == probeStatusGood {
+	if *manageHypervisors && h.probeStatus == probeStatusConnected {
 		go m.processSubnetsUpdates(h, subnets)
 	}
 }
@@ -340,7 +340,7 @@ func (m *Manager) manageHypervisor(h *hypervisorType,
 		return time.Second
 	}
 	h.mutex.Lock()
-	h.probeStatus = probeStatusGood
+	h.probeStatus = probeStatusConnected
 	if h.deleteScheduled {
 		h.mutex.Unlock()
 		conn.Close()
@@ -476,6 +476,9 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 
 func (m *Manager) processHypervisorUpdate(h *hypervisorType,
 	update hyper_proto.Update, firstUpdate bool) {
+	h.mutex.Lock()
+	h.healthStatus = update.HealthStatus
+	h.mutex.Unlock()
 	if *manageHypervisors {
 		if update.HaveSubnets { // Must do subnets first.
 			h.mutex.Lock()

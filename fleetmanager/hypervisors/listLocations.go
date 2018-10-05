@@ -24,7 +24,9 @@ func (m *Manager) listLocations(dirname string) ([]string, error) {
 			if err != nil {
 				continue
 			}
-			if hypervisor.probeStatus == probeStatusGood {
+			if hypervisor.probeStatus == probeStatusConnected &&
+				(hypervisor.healthStatus == "" ||
+					hypervisor.healthStatus == "healthy") {
 				locations = append(locations, directory.GetPath())
 				hypervisor.mutex.RUnlock()
 				return nil

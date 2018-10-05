@@ -3,7 +3,6 @@ package hypervisors
 import (
 	"io"
 	"net"
-	"net/http"
 	"sync"
 
 	"github.com/Symantec/Dominator/fleetmanager/topology"
@@ -16,7 +15,7 @@ import (
 
 const (
 	probeStatusNotYetProbed probeStatus = iota
-	probeStatusGood
+	probeStatusConnected
 	probeStatusNoSrpc
 	probeStatusNoService
 	probeStatusBad
@@ -27,6 +26,7 @@ type hypervisorType struct {
 	mutex           sync.RWMutex
 	conn            *srpc.Conn
 	deleteScheduled bool
+	healthStatus    string
 	localTags       tags.Tags
 	location        string
 	machine         *fm_proto.Machine
@@ -95,23 +95,7 @@ type vmStorer interface {
 }
 
 func New(storer Storer, logger log.DebugLogger) (*Manager, error) {
-	if err := checkPoolLimits(); err != nil {
-		return nil, err
-	}
-	manager := &Manager{
-		storer:       storer,
-		logger:       logger,
-		hypervisors:  make(map[string]*hypervisorType),
-		migratingIPs: make(map[string]struct{}),
-		subnets:      make(map[string]*subnetType),
-		vms:          make(map[string]*vmInfoType),
-	}
-	manager.initInvertTable()
-	http.HandleFunc("/listHypervisors", manager.listHypervisorsHandler)
-	http.HandleFunc("/listLocations", manager.listLocationsHandler)
-	http.HandleFunc("/listVMs", manager.listVMsHandler)
-	http.HandleFunc("/showHypervisor", manager.showHypervisorHandler)
-	return manager, nil
+	return newManager(storer, logger)
 }
 
 func (m *Manager) ChangeMachineTags(hostname string, tgs tags.Tags) error {

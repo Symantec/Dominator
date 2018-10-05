@@ -19,11 +19,15 @@ func (m *Manager) writeHtml(writer io.Writer) {
 			`<font color="grey">Hypervisors are not being managed by this instance</font><br>`)
 	}
 	numMachines := t.GetNumMachines()
-	var numConnected uint
+	var numConnected, numOK uint
 	m.mutex.RLock()
 	for _, hypervisor := range m.hypervisors {
-		if hypervisor.probeStatus == probeStatusGood {
+		if hypervisor.probeStatus == probeStatusConnected {
 			numConnected++
+			switch hypervisor.healthStatus {
+			case "", "healthy":
+				numOK++
+			}
 		}
 	}
 	numVMs := uint(len(m.vms))
@@ -32,6 +36,8 @@ func (m *Manager) writeHtml(writer io.Writer) {
 		"listHypervisors?state=", numMachines)
 	writeCountLinksHT(writer, "Number of hypervisors connected",
 		"listHypervisors?state=connected", numConnected)
+	writeCountLinksHT(writer, "Number of hypervisors OK",
+		"listHypervisors?state=OK", numOK)
 	writeCountLinksHTJ(writer, "Number of VMs known",
 		"listVMs?", numVMs)
 	fmt.Fprintln(writer, `Hypervisor <a href="listLocations">locations</a><br>`)
