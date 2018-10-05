@@ -19,6 +19,10 @@ func RegisterHtmlWriterForPattern(pattern, title string,
 	registerHtmlWriterForPattern(pattern, title, htmlWriter)
 }
 
+func SetSecurityHeaders(w http.ResponseWriter) {
+	setSecurityHeaders(w)
+}
+
 func WriteFooter(writer io.Writer) {
 	writeFooter(writer)
 }
