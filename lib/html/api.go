@@ -14,6 +14,11 @@ func BenchmarkedHandler(handler func(io.Writer,
 	return benchmarkedHandler(handler)
 }
 
+func HandleFunc(pattern string,
+	handler func(w http.ResponseWriter, req *http.Request)) {
+	handleFunc(pattern, handler)
+}
+
 func RegisterHtmlWriterForPattern(pattern, title string,
 	htmlWriter HtmlWriter) {
 	registerHtmlWriterForPattern(pattern, title, htmlWriter)

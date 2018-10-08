@@ -23,10 +23,19 @@ var (
 	lastCpuStats  *cpuStats = startCpuStats
 )
 
+func handleFunc(pattern string,
+	handler func(w http.ResponseWriter, req *http.Request)) {
+	http.HandleFunc(pattern, func(w http.ResponseWriter, req *http.Request) {
+		SetSecurityHeaders(w) // Compliance checkbox.
+		handler(w, req)
+	})
+}
+
 func setSecurityHeaders(w http.ResponseWriter) {
 	w.Header().Set("X-Frame-Options", "DENY")
 	w.Header().Set("X-XSS-Protection", "1")
-	w.Header().Set("Content-Security-Policy", "default-src 'self' ;style-src 'self' 'unsafe-inline'")
+	w.Header().Set("Content-Security-Policy",
+		"default-src 'self' ;style-src 'self' 'unsafe-inline'")
 }
 
 func writeCpuStats(writer io.Writer, prefix string, start, current *cpuStats) {
