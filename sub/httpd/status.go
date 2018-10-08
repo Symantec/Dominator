@@ -10,7 +10,6 @@ import (
 )
 
 func statusHandler(w http.ResponseWriter, req *http.Request) {
-	html.SetSecurityHeaders(w) // Compliance checkbox.
 	if req.URL.Path != "/" {
 		http.NotFound(w, req)
 		return
