@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Symantec/Dominator/hypervisor/manager"
+	"github.com/Symantec/Dominator/lib/html"
 )
 
 type HtmlWriter interface {
@@ -25,13 +26,13 @@ func StartServer(portNum uint, managerObj *manager.Manager, daemon bool) error {
 		return err
 	}
 	myState := state{managerObj}
-	http.HandleFunc("/", myState.statusHandler)
-	http.HandleFunc("/listAvailableAddresses",
+	html.HandleFunc("/", myState.statusHandler)
+	html.HandleFunc("/listAvailableAddresses",
 		myState.listAvailableAddressesHandler)
-	http.HandleFunc("/listSubnets", myState.listSubnetsHandler)
-	http.HandleFunc("/listVMs", myState.listVMsHandler)
-	http.HandleFunc("/showVmBootLog", myState.showBootLogHandler)
-	http.HandleFunc("/showVM", myState.showVMHandler)
+	html.HandleFunc("/listSubnets", myState.listSubnetsHandler)
+	html.HandleFunc("/listVMs", myState.listVMsHandler)
+	html.HandleFunc("/showVmBootLog", myState.showBootLogHandler)
+	html.HandleFunc("/showVM", myState.showVMHandler)
 	if daemon {
 		go http.Serve(listener, nil)
 	} else {

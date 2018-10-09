@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Symantec/Dominator/imagebuilder/builder"
+	"github.com/Symantec/Dominator/lib/html"
 )
 
 type HtmlWriter interface {
@@ -26,11 +27,11 @@ func StartServer(portNum uint, builderObj *builder.Builder,
 		return err
 	}
 	myState := state{builderObj}
-	http.HandleFunc("/", myState.statusHandler)
-	http.HandleFunc("/showCurrentBuildLog", myState.showCurrentBuildLogHandler)
-	http.HandleFunc("/showImageStream", myState.showImageStreamHandler)
-	http.HandleFunc("/showImageStreams", myState.showImageStreamsHandler)
-	http.HandleFunc("/showLastBuildLog", myState.showLastBuildLogHandler)
+	html.HandleFunc("/", myState.statusHandler)
+	html.HandleFunc("/showCurrentBuildLog", myState.showCurrentBuildLogHandler)
+	html.HandleFunc("/showImageStream", myState.showImageStreamHandler)
+	html.HandleFunc("/showImageStreams", myState.showImageStreamsHandler)
+	html.HandleFunc("/showLastBuildLog", myState.showLastBuildLogHandler)
 	if daemon {
 		go http.Serve(listener, nil)
 	} else {
