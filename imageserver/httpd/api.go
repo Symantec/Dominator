@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Symantec/Dominator/imageserver/scanner"
+	"github.com/Symantec/Dominator/lib/html"
 	"github.com/Symantec/Dominator/lib/objectserver/filesystem"
 )
 
@@ -28,17 +29,17 @@ func StartServer(portNum uint, imdb *scanner.ImageDataBase,
 		return err
 	}
 	myState := state{imageDataBase: imdb, objectServer: objSrv}
-	http.HandleFunc("/", statusHandler)
-	http.HandleFunc("/listBuildLog", myState.listBuildLogHandler)
-	http.HandleFunc("/listComputedInodes", myState.listComputedInodesHandler)
-	http.HandleFunc("/listDirectories", myState.listDirectoriesHandler)
-	http.HandleFunc("/listFilter", myState.listFilterHandler)
-	http.HandleFunc("/listImage", myState.listImageHandler)
-	http.HandleFunc("/listImages", myState.listImagesHandler)
-	http.HandleFunc("/listPackages", myState.listPackagesHandler)
-	http.HandleFunc("/listReleaseNotes", myState.listReleaseNotesHandler)
-	http.HandleFunc("/listTriggers", myState.listTriggersHandler)
-	http.HandleFunc("/showImage", myState.showImageHandler)
+	html.HandleFunc("/", statusHandler)
+	html.HandleFunc("/listBuildLog", myState.listBuildLogHandler)
+	html.HandleFunc("/listComputedInodes", myState.listComputedInodesHandler)
+	html.HandleFunc("/listDirectories", myState.listDirectoriesHandler)
+	html.HandleFunc("/listFilter", myState.listFilterHandler)
+	html.HandleFunc("/listImage", myState.listImageHandler)
+	html.HandleFunc("/listImages", myState.listImagesHandler)
+	html.HandleFunc("/listPackages", myState.listPackagesHandler)
+	html.HandleFunc("/listReleaseNotes", myState.listReleaseNotesHandler)
+	html.HandleFunc("/listTriggers", myState.listTriggersHandler)
+	html.HandleFunc("/showImage", myState.showImageHandler)
 	if daemon {
 		go http.Serve(listener, nil)
 	} else {

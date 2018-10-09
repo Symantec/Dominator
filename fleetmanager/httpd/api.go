@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/Symantec/Dominator/fleetmanager/topology"
+	"github.com/Symantec/Dominator/lib/html"
 	"github.com/Symantec/Dominator/lib/log"
 )
 
@@ -28,7 +29,7 @@ func StartServer(portNum uint, logger log.DebugLogger) (*Server, error) {
 		return nil, err
 	}
 	server := &Server{logger: logger}
-	http.HandleFunc("/", server.statusHandler)
+	html.HandleFunc("/", server.statusHandler)
 	go http.Serve(listener, nil)
 	return server, nil
 }

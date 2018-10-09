@@ -1,8 +1,7 @@
 package hypervisors
 
 import (
-	"net/http"
-
+	"github.com/Symantec/Dominator/lib/html"
 	"github.com/Symantec/Dominator/lib/log"
 )
 
@@ -19,10 +18,10 @@ func newManager(storer Storer, logger log.DebugLogger) (*Manager, error) {
 		vms:          make(map[string]*vmInfoType),
 	}
 	manager.initInvertTable()
-	http.HandleFunc("/listHypervisors", manager.listHypervisorsHandler)
-	http.HandleFunc("/listLocations", manager.listLocationsHandler)
-	http.HandleFunc("/listVMs", manager.listVMsHandler)
-	http.HandleFunc("/showHypervisor", manager.showHypervisorHandler)
+	html.HandleFunc("/listHypervisors", manager.listHypervisorsHandler)
+	html.HandleFunc("/listLocations", manager.listLocationsHandler)
+	html.HandleFunc("/listVMs", manager.listVMsHandler)
+	html.HandleFunc("/showHypervisor", manager.showHypervisorHandler)
 	go manager.notifierLoop()
 	return manager, nil
 }

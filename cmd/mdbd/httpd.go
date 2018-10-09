@@ -27,8 +27,8 @@ func startHttpServer(portNum uint) (*httpServer, error) {
 		return nil, err
 	}
 	s := &httpServer{mdb: &mdb.Mdb{}}
-	http.HandleFunc("/", s.statusHandler)
-	http.HandleFunc("/showMdb", s.showMdbHandler)
+	html.HandleFunc("/", s.statusHandler)
+	html.HandleFunc("/showMdb", s.showMdbHandler)
 	go http.Serve(listener, nil)
 	return s, nil
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Symantec/Dominator/imageunpacker/unpacker"
+	"github.com/Symantec/Dominator/lib/html"
 )
 
 type HtmlWriter interface {
@@ -26,8 +27,8 @@ func StartServer(portNum uint, unpackerObj *unpacker.Unpacker,
 		return err
 	}
 	myState := state{unpackerObj}
-	http.HandleFunc("/", myState.statusHandler)
-	http.HandleFunc("/showFileSystem", myState.showFileSystemHandler)
+	html.HandleFunc("/", myState.statusHandler)
+	html.HandleFunc("/showFileSystem", myState.showFileSystemHandler)
 	if daemon {
 		go http.Serve(listener, nil)
 	} else {

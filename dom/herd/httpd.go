@@ -13,20 +13,20 @@ func (herd *Herd) startServer(portNum uint, daemon bool) error {
 	if err != nil {
 		return err
 	}
-	http.HandleFunc("/", herd.statusHandler)
-	http.HandleFunc("/listReachableSubs", herd.listReachableSubsHandler)
-	http.HandleFunc("/listSubs", herd.listSubsHandler)
-	http.HandleFunc("/showAliveSubs",
+	html.HandleFunc("/", herd.statusHandler)
+	html.HandleFunc("/listReachableSubs", herd.listReachableSubsHandler)
+	html.HandleFunc("/listSubs", herd.listSubsHandler)
+	html.HandleFunc("/showAliveSubs",
 		html.BenchmarkedHandler(herd.showAliveSubsHandler))
-	http.HandleFunc("/showAllSubs",
+	html.HandleFunc("/showAllSubs",
 		html.BenchmarkedHandler(herd.showAllSubsHandler))
-	http.HandleFunc("/showCompliantSubs",
+	html.HandleFunc("/showCompliantSubs",
 		html.BenchmarkedHandler(herd.showCompliantSubsHandler))
-	http.HandleFunc("/showDeviantSubs",
+	html.HandleFunc("/showDeviantSubs",
 		html.BenchmarkedHandler(herd.showDeviantSubsHandler))
-	http.HandleFunc("/showReachableSubs",
+	html.HandleFunc("/showReachableSubs",
 		html.BenchmarkedHandler(herd.showReachableSubsHandler))
-	http.HandleFunc("/showSub", html.BenchmarkedHandler(herd.showSubHandler))
+	html.HandleFunc("/showSub", html.BenchmarkedHandler(herd.showSubHandler))
 	if daemon {
 		go http.Serve(listener, nil)
 	} else {

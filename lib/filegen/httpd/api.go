@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Symantec/Dominator/lib/filegen"
+	"github.com/Symantec/Dominator/lib/html"
 )
 
 type HtmlWriter interface {
@@ -25,8 +26,8 @@ func StartServer(portNum uint, manager *filegen.Manager, daemon bool) error {
 		return err
 	}
 	myState := &state{manager}
-	http.HandleFunc("/", myState.statusHandler)
-	http.HandleFunc("/listGenerators", myState.listGeneratorsHandler)
+	html.HandleFunc("/", myState.statusHandler)
+	html.HandleFunc("/listGenerators", myState.listGeneratorsHandler)
 	if daemon {
 		go http.Serve(listener, nil)
 	} else {
