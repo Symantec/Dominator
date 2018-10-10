@@ -51,6 +51,7 @@ func readHandler(rf io.ReaderFrom, reader io.Reader,
 func newServer(imageServerAddress, imageStreamName string,
 	logger log.DebugLogger) (*TftpbootServer, error) {
 	s := &TftpbootServer{
+		cachedFileSystems:  make(map[string]*cachedFileSystem),
 		filesForIPs:        make(map[string]map[string][]byte),
 		imageServerAddress: imageServerAddress,
 		imageStreamName:    imageStreamName,
@@ -76,8 +77,62 @@ func (s *TftpbootServer) closeImageServerClient() {
 	if s.imageServerClient != nil {
 		s.imageServerClient.Close()
 		s.imageServerClient = nil
-		s.logger.Debugf(0, "Closed connection to: %s\n", s.imageServerAddress)
+		s.logger.Debugf(0, "closed connection to: %s\n", s.imageServerAddress)
 	}
+}
+
+func (s *TftpbootServer) getFileSystem(imageStreamName string,
+	client *srpc.Client) (*filesystem.FileSystem, error) {
+	if fs, err := s.getCachedFileSystem(imageStreamName); err != nil {
+		return nil, err
+	} else if fs != nil {
+		return fs, nil
+	}
+	imageName, err := imageclient.FindLatestImage(client, imageStreamName,
+		false)
+	if err != nil {
+		return nil, fmt.Errorf("error finding latest image in stream: %s: %s",
+			imageStreamName, err)
+	}
+	if imageName == "" {
+		return nil, fmt.Errorf("no images in stream: %s", imageStreamName)
+	}
+	image, err := imageclient.GetImage(client, imageName)
+	if err != nil {
+		return nil, fmt.Errorf("error getting image: %s: %s", imageName, err)
+	}
+	if err := image.FileSystem.RebuildInodePointers(); err != nil {
+		return nil, err
+	}
+	entry := cachedFileSystem{
+		deleteTimer: time.NewTimer(time.Minute),
+		fileSystem:  image.FileSystem,
+	}
+	s.lock.Lock()
+	s.cachedFileSystems[imageStreamName] = &entry
+	s.lock.Unlock()
+	go func() {
+		<-entry.deleteTimer.C
+		s.lock.Lock()
+		delete(s.cachedFileSystems, imageStreamName)
+		s.lock.Unlock()
+		s.logger.Debugf(0, "removed from cache: %s\n", imageStreamName)
+	}()
+	return image.FileSystem, nil
+}
+
+func (s *TftpbootServer) getCachedFileSystem(imageStreamName string) (
+	*filesystem.FileSystem, error) {
+	if imageStreamName == "" {
+		return nil, errors.New("no image stream defined")
+	}
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if entry, ok := s.cachedFileSystems[imageStreamName]; ok {
+		entry.deleteTimer.Reset(time.Minute)
+		return entry.fileSystem, nil
+	}
+	return nil, nil
 }
 
 func (s *TftpbootServer) getImageServerClient() *srpc.Client {
@@ -110,6 +165,7 @@ func (s *TftpbootServer) readHandler(filename string, rf io.ReaderFrom) error {
 	filename = cleanPath(filename)
 	rAddr := rf.(tftp.OutgoingTransfer).RemoteAddr().IP.String()
 	logger := prefixlogger.New("tftpd("+rAddr+":"+filename+"): ", s.logger)
+	logger.Debugln(1, "received request")
 	if err := s.readHandlerInternal(filename, rf, rAddr, logger); err != nil {
 		logger.Println(err)
 		return err
@@ -129,31 +185,17 @@ func (s *TftpbootServer) readHandlerInternal(filename string, rf io.ReaderFrom,
 	}
 	imageStreamName := s.imageStreamName
 	s.lock.Unlock()
-	if imageStreamName == "" {
-		return errors.New("no image stream defined")
-	}
 	client := s.getImageServerClient()
 	defer s.releaseImageServerClient()
-	imageName, err := imageclient.FindLatestImage(client, imageStreamName,
-		false)
+	fs, err := s.getFileSystem(imageStreamName, client)
 	if err != nil {
-		return fmt.Errorf("error finding latest image in stream: %s: %s",
-			imageStreamName, err)
-	}
-	if imageName == "" {
-		return fmt.Errorf("no images in stream: %s", imageStreamName)
-	}
-	image, err := imageclient.GetImage(client, imageName)
-	if err != nil {
-		return fmt.Errorf("error getting image: %s: %s", imageName, err)
-	}
-	if err := image.FileSystem.RebuildInodePointers(); err != nil {
 		return err
 	}
-	filenameToInodeTable := image.FileSystem.FilenameToInodeTable()
+	defer s.getCachedFileSystem(imageStreamName) // Reset expiration timer.
+	filenameToInodeTable := fs.FilenameToInodeTable()
 	if inum, ok := filenameToInodeTable[filename]; !ok {
 		return os.ErrNotExist
-	} else if gInode, ok := image.FileSystem.InodeTable[inum]; !ok {
+	} else if gInode, ok := fs.InodeTable[inum]; !ok {
 		return fmt.Errorf("inode: %d does not exist", inum)
 	} else if inode, ok := gInode.(*filesystem.RegularInode); !ok {
 		return fmt.Errorf("inode is not a regular file: %d", inum)
