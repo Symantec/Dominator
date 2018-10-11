@@ -36,7 +36,8 @@ var (
 		"How long to offer DHCP OFFERs and ACKs")
 	netbootFiles        tags.Tags
 	netbootFilesTimeout = flag.Duration("netbootFilesTimeout",
-		time.Minute+time.Second, "How long to provide extra files via TFTP")
+		time.Minute+time.Second,
+		"How long to provide files via TFTP after last DHCP ACK")
 	netbootTimeout = flag.Duration("netbootTimeout", time.Minute,
 		"Time to wait for DHCP ACKs to be sent")
 	numAcknowledgementsToWaitFor = flag.Uint("numAcknowledgementsToWaitFor",
