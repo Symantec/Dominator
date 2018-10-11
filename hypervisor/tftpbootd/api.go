@@ -5,10 +5,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/pin/tftp"
 )
+
+type cachedFileSystem struct {
+	deleteTimer *time.Timer
+	fileSystem  *filesystem.FileSystem
+}
 
 type TftpbootServer struct {
 	closeClientTimer       *time.Timer
@@ -16,6 +22,7 @@ type TftpbootServer struct {
 	logger                 log.DebugLogger
 	tftpdServer            *tftp.Server
 	lock                   sync.Mutex
+	cachedFileSystems      map[string]*cachedFileSystem // Key: image stream.
 	filesForIPs            map[string]map[string][]byte
 	imageServerClientInUse bool
 	imageStreamName        string

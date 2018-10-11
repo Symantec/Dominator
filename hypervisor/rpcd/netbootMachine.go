@@ -31,10 +31,6 @@ func (t *srpcType) netbootMachine(
 	if request.FilesExpiration < request.WaitTimeout+time.Second {
 		request.FilesExpiration = request.WaitTimeout + time.Second
 	}
-	if len(request.Files) > 0 {
-		go expireFilesAfter(t.tftpbootServer, request.Address.IpAddress,
-			request.FilesExpiration)
-	}
 	if request.OfferExpiration < request.WaitTimeout+time.Second {
 		request.OfferExpiration = request.WaitTimeout + time.Second
 	}
@@ -48,8 +44,16 @@ func (t *srpcType) netbootMachine(
 		case <-ackChannel:
 			count++
 		case <-timer.C:
+			if len(request.Files) > 0 {
+				t.tftpbootServer.UnregisterFiles(request.Address.IpAddress)
+			}
 			return errors.New("timed out receiving lease acknowledgement")
 		}
+	}
+	t.dhcpServer.RemoveLease(request.Address.IpAddress)
+	if len(request.Files) > 0 {
+		go expireFilesAfter(t.tftpbootServer, request.Address.IpAddress,
+			request.FilesExpiration)
 	}
 	return nil
 }
