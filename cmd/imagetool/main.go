@@ -34,7 +34,7 @@ var (
 	debug = flag.Bool("debug", false,
 		"If true, show debugging output")
 	deleteFilter = flag.String("deleteFilter", "",
-		"Name of delete filter file for addi, adds subcommand and right image")
+		"Name of delete filter file for addi, adds and diff subcommands")
 	expiresIn = flag.Duration("expiresIn", 0,
 		"How long before the image expires (auto deletes). Default: never")
 	filterFile = flag.String("filterFile", "",
