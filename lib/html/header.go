@@ -23,12 +23,13 @@ var (
 	lastCpuStats  *cpuStats = startCpuStats
 )
 
-func handleFunc(pattern string,
+func handleFunc(serveMux *http.ServeMux, pattern string,
 	handler func(w http.ResponseWriter, req *http.Request)) {
-	http.HandleFunc(pattern, func(w http.ResponseWriter, req *http.Request) {
-		SetSecurityHeaders(w) // Compliance checkbox.
-		handler(w, req)
-	})
+	serveMux.HandleFunc(pattern,
+		func(w http.ResponseWriter, req *http.Request) {
+			SetSecurityHeaders(w) // Compliance checkbox.
+			handler(w, req)
+		})
 }
 
 func setSecurityHeaders(w http.ResponseWriter) {
