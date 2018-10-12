@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/log/debuglogger"
 )
 
 type flusher interface {
@@ -11,12 +12,27 @@ type flusher interface {
 }
 
 type Logger struct {
-	one log.Logger
-	two log.Logger
+	one log.DebugLogger
+	two log.DebugLogger
 }
 
 func New(one, two log.Logger) *Logger {
-	return &Logger{one, two}
+	return &Logger{debuglogger.Upgrade(one), debuglogger.Upgrade(two)}
+}
+
+func (l *Logger) Debug(level uint8, v ...interface{}) {
+	l.one.Debug(level, v...)
+	l.two.Debug(level, v...)
+}
+
+func (l *Logger) Debugf(level uint8, format string, v ...interface{}) {
+	l.one.Debugf(level, format, v...)
+	l.two.Debugf(level, format, v...)
+}
+
+func (l *Logger) Debugln(level uint8, v ...interface{}) {
+	l.one.Debugln(level, v...)
+	l.two.Debugln(level, v...)
 }
 
 func (l *Logger) Fatal(v ...interface{}) {
