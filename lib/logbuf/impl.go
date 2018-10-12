@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/format"
 )
 
@@ -27,13 +28,16 @@ const (
 	timeLayout    = "2006-01-02:15:04:05.999"
 )
 
-func newLogBuffer(length uint, dirname string, maxFileSize uint64,
-	quota uint64) *LogBuffer {
+func newLogBuffer(options Options) *LogBuffer {
+	if options.MaxFileSize < 16384 {
+		options.MaxFileSize = 16384
+	}
+	if options.Quota < 65536 {
+		options.Quota = 65536
+	}
 	logBuffer := &LogBuffer{
-		buffer:      ring.New(int(length)),
-		logDir:      dirname,
-		maxFileSize: maxFileSize,
-		quota:       quota,
+		options: options,
+		buffer:  ring.New(int(options.MaxBufferLines)),
 	}
 	if err := logBuffer.setupFileLogging(); err != nil {
 		fmt.Fprintln(logBuffer, err)
@@ -43,7 +47,7 @@ func newLogBuffer(length uint, dirname string, maxFileSize uint64,
 }
 
 func (lb *LogBuffer) setupFileLogging() error {
-	if lb.logDir == "" {
+	if lb.options.Directory == "" {
 		return nil
 	}
 	if err := lb.createLogDirectory(); err != nil {
@@ -56,24 +60,25 @@ func (lb *LogBuffer) setupFileLogging() error {
 }
 
 func (lb *LogBuffer) createLogDirectory() error {
-	if fi, err := os.Stat(lb.logDir); err != nil {
-		if err := os.Mkdir(lb.logDir, dirPerms); err != nil {
-			return fmt.Errorf("error creating: %s: %s", lb.logDir, err)
+	if fi, err := os.Stat(lb.options.Directory); err != nil {
+		if err := os.Mkdir(lb.options.Directory, dirPerms); err != nil {
+			return fmt.Errorf("error creating: %s: %s",
+				lb.options.Directory, err)
 		}
-		fi, err = os.Stat(lb.logDir)
+		fi, err = os.Stat(lb.options.Directory)
 	} else if !fi.IsDir() {
-		return errors.New(lb.logDir + ": is not a directory")
+		return errors.New(lb.options.Directory + ": is not a directory")
 	}
 	lb.scanPreviousForPanic()
 	return lb.enforceQuota()
 }
 
 func (lb *LogBuffer) scanPreviousForPanic() {
-	target, err := os.Readlink(path.Join(lb.logDir, "latest"))
+	target, err := os.Readlink(path.Join(lb.options.Directory, "latest"))
 	if err != nil {
 		return
 	}
-	targetPath := path.Join(lb.logDir, target)
+	targetPath := path.Join(lb.options.Directory, target)
 	file, err := os.Open(targetPath)
 	if err != nil {
 		return
@@ -122,7 +127,7 @@ func (lb *LogBuffer) flush() error {
 }
 
 func (lb *LogBuffer) write(p []byte) (n int, err error) {
-	if *alsoLogToStderr {
+	if lb.options.AlsoLogToStderr {
 		os.Stderr.Write(p)
 	}
 	val := make([]byte, len(p))
@@ -144,12 +149,12 @@ func (lb *LogBuffer) writeToLogFile(p []byte) bool {
 		return false
 	}
 	lb.writer.Write(p)
-	lb.fileSize += uint64(len(p))
-	if lb.fileSize > lb.maxFileSize {
+	lb.fileSize += flagutil.Size(len(p))
+	if lb.fileSize > lb.options.MaxFileSize {
 		lb.closeAndOpenNewFile()
 	}
-	lb.usage += uint64(len(p))
-	if lb.usage > lb.quota {
+	lb.usage += flagutil.Size(len(p))
+	if lb.usage > lb.options.Quota {
 		lb.enforceQuota()
 	}
 	return true
@@ -162,7 +167,7 @@ func (lb *LogBuffer) closeAndOpenNewFile() error {
 	hour, minute, second := now.Clock()
 	nWritten, _ := fmt.Fprintf(lb.writer, "%d/%02d/%02d %02d:%02d:%02d %s\n",
 		year, month, day, hour, minute, second, reopenMessage)
-	lb.usage += uint64(nWritten)
+	lb.usage += flagutil.Size(nWritten)
 	lb.writer.Flush()
 	lb.writer = nil
 	lb.file.Close()
@@ -176,18 +181,18 @@ func (lb *LogBuffer) closeAndOpenNewFile() error {
 func (lb *LogBuffer) openNewFile() error {
 	lb.fileSize = 0
 	filename := time.Now().Format(timeLayout)
-	file, err := os.OpenFile(path.Join(lb.logDir, filename),
+	file, err := os.OpenFile(path.Join(lb.options.Directory, filename),
 		os.O_CREATE|os.O_WRONLY, filePerms)
 	if err != nil {
 		return err
 	}
-	if !*alsoLogToStderr {
+	if !lb.options.AlsoLogToStderr {
 		syscall.Dup2(int(file.Fd()), int(os.Stdout.Fd()))
 		syscall.Dup2(int(file.Fd()), int(os.Stderr.Fd()))
 	}
 	lb.file = file
 	lb.writer = bufio.NewWriter(file)
-	symlink := path.Join(lb.logDir, "latest")
+	symlink := path.Join(lb.options.Directory, "latest")
 	tmpSymlink := symlink + "~"
 	os.Remove(tmpSymlink)
 	os.Symlink(filename, tmpSymlink)
@@ -196,7 +201,7 @@ func (lb *LogBuffer) openNewFile() error {
 
 // This should be called with the lock held.
 func (lb *LogBuffer) enforceQuota() error {
-	file, err := os.Open(lb.logDir)
+	file, err := os.Open(lb.options.Directory)
 	if err != nil {
 		return err
 	}
@@ -206,12 +211,13 @@ func (lb *LogBuffer) enforceQuota() error {
 		return err
 	}
 	sort.Strings(names)
-	var usage, numBytesDeleted, numFilesDeleted uint64
+	var numBytesDeleted, numFilesDeleted uint64
+	var usage flagutil.Size
 	deletedLatestFile := false
 	deleteRemainingFiles := false
 	latestFile := true
 	for index := len(names) - 1; index >= 0; index-- {
-		filename := path.Join(lb.logDir, names[index])
+		filename := path.Join(lb.options.Directory, names[index])
 		fi, err := os.Lstat(filename)
 		if err == os.ErrNotExist {
 			continue
@@ -220,11 +226,11 @@ func (lb *LogBuffer) enforceQuota() error {
 			return err
 		}
 		if fi.Mode().IsRegular() {
-			size := uint64(fi.Size())
-			if size < lb.quota>>10 {
-				size = lb.quota >> 10 // Limit number of files to 1024.
+			size := flagutil.Size(fi.Size())
+			if size < lb.options.Quota>>10 {
+				size = lb.options.Quota >> 10 // Limit number of files to 1024.
 			}
-			if size+usage > lb.quota || deleteRemainingFiles {
+			if size+usage > lb.options.Quota || deleteRemainingFiles {
 				os.Remove(filename)
 				numBytesDeleted += uint64(fi.Size())
 				numFilesDeleted++
@@ -258,15 +264,15 @@ func (lb *LogBuffer) enforceQuota() error {
 			"%d/%02d/%02d %02d:%02d:%02d Deleted %s in %d files\n",
 			year, month, day, hour, minute, second,
 			format.FormatBytes(numBytesDeleted), numFilesDeleted)
-		lb.fileSize += uint64(nWritten)
-		lb.usage += uint64(nWritten)
+		lb.fileSize += flagutil.Size(nWritten)
+		lb.usage += flagutil.Size(nWritten)
 	}
 	return nil
 }
 
 func (lb *LogBuffer) flushWhenIdle(writeNotifier <-chan struct{}) {
 	flushTimer := time.NewTimer(time.Second)
-	idleMarkDuration := *idleMarkTimeout
+	idleMarkDuration := lb.options.IdleMarkTimeout
 	if idleMarkDuration < 1 {
 		idleMarkDuration = time.Hour * 24 * 365 * 280 // Far in the future.
 	}
@@ -301,7 +307,8 @@ func (lb *LogBuffer) getEntries() [][]byte {
 func (lb *LogBuffer) dumpSince(writer io.Writer, name string,
 	earliestTime time.Time, prefix, postfix string, recentFirst bool) (
 	bool, error) {
-	file, err := os.Open(path.Join(lb.logDir, path.Base(path.Clean(name))))
+	file, err := os.Open(path.Join(lb.options.Directory,
+		path.Base(path.Clean(name))))
 	if err != nil {
 		return false, err
 	}

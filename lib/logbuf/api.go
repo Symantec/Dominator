@@ -12,22 +12,21 @@ import (
 	"container/ring"
 	"flag"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"sync"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/flagutil"
 )
 
 var (
-	alsoLogToStderr = new(bool)
-	idleMarkTimeout = new(time.Duration)
-	logbufLines     = new(uint)
-	logDir          = new(string)
-	logFileMaxSize  = new(uint)
-	logQuota        = new(uint)
-)
-
-var (
+	stdOptions = Options{
+		HttpServeMux: http.DefaultServeMux,
+		MaxFileSize:  10 << 20,
+		Quota:        100 << 20,
+	}
 	kSoleLogBuffer *LogBuffer
 	kOnce          sync.Once
 )
@@ -35,58 +34,70 @@ var (
 // LogBuffer is a circular buffer suitable for holding logs. It satisfies the
 // io.Writer interface. It is usually passed to the log.New function.
 type LogBuffer struct {
+	options       Options
 	rwMutex       sync.RWMutex
 	buffer        *ring.Ring // Always points to next insert position.
-	logDir        string
 	file          *os.File
 	writer        *bufio.Writer
-	fileSize      uint64
-	maxFileSize   uint64
-	quota         uint64
-	usage         uint64
+	fileSize      flagutil.Size
+	usage         flagutil.Size
 	writeNotifier chan<- struct{}
 	panicLogfile  *string // Name of last invocation logfile if it has a panic.
+}
+
+type Options struct {
+	AlsoLogToStderr bool
+	Directory       string
+	HttpServeMux    *http.ServeMux
+	IdleMarkTimeout time.Duration
+	MaxBufferLines  uint
+	MaxFileSize     flagutil.Size
+	Quota           flagutil.Size
 }
 
 // UseFlagSet instructs this package to read its command-line flags from the
 // given flag set instead of from the command line. Caller must pass the
 // flag set to this method before calling Parse on it.
 func UseFlagSet(set *flag.FlagSet) {
-	set.BoolVar(alsoLogToStderr, "alsoLogToStderr", false,
+	set.BoolVar(&stdOptions.AlsoLogToStderr, "alsoLogToStderr", false,
 		"If true, also write logs to stderr")
-	set.DurationVar(idleMarkTimeout, "idleMarkTimeout", 0,
+	set.DurationVar(&stdOptions.IdleMarkTimeout, "idleMarkTimeout", 0,
 		"time after last log before a 'MARK' message is written to logfile")
-	set.UintVar(logbufLines, "logbufLines", 1024,
+	set.UintVar(&stdOptions.MaxBufferLines, "logbufLines", 1024,
 		"Number of lines to store in the log buffer")
-	set.StringVar(logDir, "logDir", path.Join("/var/log",
+	set.StringVar(&stdOptions.Directory, "logDir", path.Join("/var/log",
 		path.Base(os.Args[0])),
 		"Directory to write log data to. If empty, no logs are written")
-	set.UintVar(logFileMaxSize, "logFileMaxSize", 10,
-		"Maximum size for a log file in MiB. If exceeded, new file is created")
-	set.UintVar(logQuota, "logQuota", 100,
-		"Log quota in MiB. If exceeded, old logs are deleted")
+	set.Var(&stdOptions.MaxFileSize, "logFileMaxSize",
+		"Maximum size for a log file. If exceeded, new file is created")
+	set.Var(&stdOptions.Quota, "logQuota",
+		"Log quota. If exceeded, old logs are deleted")
 }
 
-// New returns a new *LogBuffer with the specified number of lines of buffer.
-// Only one should be created per application.
-// The behaviour of the LogBuffer is controlled by the following command-line
-// flags (registered with the standard flag pacakge):
+// GetStandardOptions will return the standard options.
+// Only one *LogBuffer should be created per application with these options.
+// The following command-line flags are registered and used:
 //  -alsoLogToStderr: If true, also write logs to stderr
 //  -logbufLines:     Number of lines to store in the log buffer
 //  -logDir:          Directory to write log data to. If empty, no logs are
 //                    written
-//  -logQuota:        Log quota in MiB. If exceeded, old logs are deleted.
-//                    If zero, the quota will be 16 KiB
+//  -logFileMaxSize:  Maximum size for each log file. If exceeded, the logfile
+//                    is closed and a new one opened.
+//                    If zero, the limit will be 16 KiB
+//  -logQuota:        Log quota. If exceeded, old logs are deleted.
+//                    If zero, the quota will be 64 KiB
+func GetStandardOptions() Options { return stdOptions }
+
+// New returns a new *LogBuffer with the standard options.
+// Only one should be created per application.
 func New() *LogBuffer {
-	maxFileSize := uint64(*logFileMaxSize) << 20
-	if maxFileSize < 16384 {
-		maxFileSize = 16384
-	}
-	quota := uint64(*logQuota) << 20
-	if quota < 65536 {
-		quota = 65536
-	}
-	return newLogBuffer(*logbufLines, *logDir, maxFileSize, quota)
+	return newLogBuffer(stdOptions)
+}
+
+// NewWithOptions will create a new *LogBuffer with the specified options.
+// Each *LogBuffer must use a different Directory and HttpServeMux.
+func NewWithOptions(options Options) *LogBuffer {
+	return newLogBuffer(options)
 }
 
 // Get works like New except that successive calls to Get return the same
