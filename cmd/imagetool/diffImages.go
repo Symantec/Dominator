@@ -28,6 +28,10 @@ func diffTypedImages(tool string, lName string, rName string) {
 		fmt.Fprintf(os.Stderr, "Error getting left image: %s\n", err)
 		os.Exit(1)
 	}
+	if lfs, err = applyDeleteFilter(lfs); err != nil {
+		fmt.Fprintf(os.Stderr, "Error filtering left image: %s\n", err)
+		os.Exit(1)
+	}
 	rfs, err := getTypedImage(rName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting right image: %s\n", err)
