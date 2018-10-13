@@ -42,10 +42,9 @@ var (
 		"Name of URL of image to boot with")
 	location = flag.String("location", "",
 		"Location to search for hypervisors")
-	memory       = flag.Uint64("memory", 128, "memory in MiB")
+	memory       = flagutil.Size(128 << 20)
 	milliCPUs    = flag.Uint("milliCPUs", 250, "milli CPUs")
-	minFreeBytes = flag.Uint64("minFreeBytes", 64<<20,
-		"minimum number of free bytes in root volume")
+	minFreeBytes = flagutil.Size(64 << 20)
 	ownerGroups  flagutil.StringList
 	ownerUsers   flagutil.StringList
 	probePortNum = flag.Uint("probePortNum", 0, "Port number on VM to probe")
@@ -72,6 +71,9 @@ var (
 )
 
 func init() {
+	flag.Var(&memory, "memory", "memory")
+	flag.Var(&minFreeBytes, "minFreeBytes",
+		"minimum number of free bytes in root volume")
 	flag.Var(&ownerGroups, "ownerGroups", "Groups who own the VM")
 	flag.Var(&ownerUsers, "ownerUsers", "Extra users who own the VM")
 	flag.Var(&secondaryVolumeSizes, "secondaryVolumeSizes",

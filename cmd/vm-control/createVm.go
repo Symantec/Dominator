@@ -97,14 +97,14 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 		DhcpTimeout: *dhcpTimeout,
 		VmInfo: hyper_proto.VmInfo{
 			Hostname:    *vmHostname,
-			MemoryInMiB: *memory,
+			MemoryInMiB: uint64(memory),
 			MilliCPUs:   *milliCPUs,
 			OwnerGroups: ownerGroups,
 			OwnerUsers:  ownerUsers,
 			Tags:        vmTags,
 			SubnetId:    *subnetId,
 		},
-		MinimumFreeBytes: *minFreeBytes,
+		MinimumFreeBytes: uint64(minFreeBytes),
 		RoundupPower:     *roundupPower,
 	}
 	if sizes, err := parseSizes(secondaryVolumeSizes); err != nil {

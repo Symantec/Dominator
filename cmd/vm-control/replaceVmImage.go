@@ -76,7 +76,7 @@ func replaceVmImageOnHypervisor(hypervisor string, ipAddr net.IP,
 	request := proto.ReplaceVmImageRequest{
 		DhcpTimeout:      *dhcpTimeout,
 		IpAddress:        ipAddr,
-		MinimumFreeBytes: *minFreeBytes,
+		MinimumFreeBytes: uint64(minFreeBytes),
 		RoundupPower:     *roundupPower,
 	}
 	var imageReader io.Reader
