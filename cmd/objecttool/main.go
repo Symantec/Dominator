@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/objectserver"
@@ -12,13 +13,16 @@ import (
 )
 
 var (
-	debug = flag.Bool("debug", false,
+	chunkSize = flag.Uint("chunkSize", 65535, "Chunk size for bandwidth test")
+	debug     = flag.Bool("debug", false,
 		"If true, show debugging output")
 	objectServerHostname = flag.String("objectServerHostname", "localhost",
 		"Hostname of image server")
 	objectServerPortNum = flag.Uint("objectServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
+	testDuration = flag.Duration("testDuration", time.Second*10,
+		"Duration of bandwidth test")
 )
 
 func printUsage() {
@@ -31,6 +35,8 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  check  hash")
 	fmt.Fprintln(os.Stderr, "  get    hash baseOutputFilename")
 	fmt.Fprintln(os.Stderr, "  mget   hashesFile directory")
+	fmt.Fprintln(os.Stderr, "  test-bandwidth-from-server")
+	fmt.Fprintln(os.Stderr, "  test-bandwidth-to-server")
 }
 
 type commandFunc func(objectserver.ObjectServer, []string)
@@ -47,6 +53,8 @@ var subcommands = []subcommand{
 	{"check", 1, 1, checkObjectSubcommand},
 	{"get", 2, 2, getObjectSubcommand},
 	{"mget", 2, 2, getObjectsSubcommand},
+	{"test-bandwidth-from-server", 0, 0, testBandwidthFromServerSubcommand},
+	{"test-bandwidth-to-server", 0, 0, testBandwidthToServerSubcommand},
 }
 
 func main() {
