@@ -16,12 +16,17 @@ func BenchmarkedHandler(handler func(io.Writer,
 
 func HandleFunc(pattern string,
 	handler func(w http.ResponseWriter, req *http.Request)) {
-	handleFunc(pattern, handler)
+	handleFunc(http.DefaultServeMux, pattern, handler)
 }
 
 func RegisterHtmlWriterForPattern(pattern, title string,
 	htmlWriter HtmlWriter) {
 	registerHtmlWriterForPattern(pattern, title, htmlWriter)
+}
+
+func ServeMuxHandleFunc(serveMux *http.ServeMux, pattern string,
+	handler func(w http.ResponseWriter, req *http.Request)) {
+	handleFunc(serveMux, pattern, handler)
 }
 
 func SetSecurityHeaders(w http.ResponseWriter) {

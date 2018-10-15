@@ -1,27 +1,39 @@
 package cmdlogger
 
 import (
-	"flag"
+	"io"
+	"os"
 
 	"github.com/Symantec/Dominator/lib/log/debuglogger"
 )
 
-var (
-	logDatestamps = flag.Bool("logDatestamps", false,
-		"If true, prefix logs with datestamps")
-	logDebugLevel = flag.Int("logDebugLevel", -1, "Debug log level")
-)
+type Options struct {
+	Datestamps bool
+	DebugLevel int // Supported range: -1 to 65535.
+	Writer     io.Writer
+}
 
-// New will create a debuglogger.Logger which writes to the standard error.
-// The following command-line flags are registered:
+var stdOptions = Options{Writer: os.Stderr}
+
+// GetStandardOptions will return the standard options.
+// The following command-line flags are registered and used:
 //   -logDatestamps: if true, prefix logs with datestamps
 //   -logDebugLevel: debug log level
+//  The standard error is used for the output.
+func GetStandardOptions() Options { return stdOptions }
+
+// New will create a debuglogger.Logger with the standard options.
 func New() *debuglogger.Logger {
-	return newLogger()
+	return newLogger(stdOptions)
+}
+
+// NewWithOptions will create a debuglogger.Logger with the specified options.
+func NewWithOptions(options Options) *debuglogger.Logger {
+	return newLogger(options)
 }
 
 // SetDatestampsDefault will change the default for the -logDatestamps command
 // line flag. This should be called before flag.Parse().
 func SetDatestampsDefault(defaultValue bool) {
-	*logDatestamps = defaultValue
+	stdOptions.Datestamps = defaultValue
 }

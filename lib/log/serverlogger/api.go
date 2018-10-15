@@ -29,11 +29,29 @@ type Logger struct {
 // identify the logger for RPC methods such as Logger.SetDebugLevel. The first
 // or primary logger should be created with name "" (the empty string).
 func New(name string) *Logger {
-	return newLogger(name, log.LstdFlags)
+	return newLogger(name, logbuf.GetStandardOptions(), log.LstdFlags)
 }
 
+// NewWithFlags will create a Logger which has an internal log buffer (see the
+// lib/logbuf package). It implements the log.DebugLogger interface.
+// By default, the max debug level is -1, meaning all debug logs are dropped
+// (ignored).
+// The name of the new logger is given by name. This name is used to remotely
+// identify the logger for RPC methods such as Logger.SetDebugLevel. The first
+// or primary logger should be created with name "" (the empty string).
 func NewWithFlags(name string, flags int) *Logger {
-	return newLogger(name, flags)
+	return newLogger(name, logbuf.GetStandardOptions(), flags)
+}
+
+// NewWithOptions will create a Logger which has an internal log buffer (see the
+// lib/logbuf package). It implements the log.DebugLogger interface.
+// By default, the max debug level is -1, meaning all debug logs are dropped
+// (ignored).
+// The name of the new logger is given by name. This name is used to remotely
+// identify the logger for RPC methods such as Logger.SetDebugLevel. The first
+// or primary logger should be created with name "" (the empty string).
+func NewWithOptions(name string, options logbuf.Options, flags int) *Logger {
+	return newLogger(name, options, flags)
 }
 
 func (l *Logger) Fatal(v ...interface{}) {

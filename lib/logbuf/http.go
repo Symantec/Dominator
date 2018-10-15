@@ -36,14 +36,21 @@ func (w *countingWriter) Write(p []byte) (n int, err error) {
 }
 
 func (lb *LogBuffer) addHttpHandlers() {
-	html.HandleFunc("/logs", lb.httpListHandler)
-	html.HandleFunc("/logs/dump", lb.httpDumpHandler)
-	html.HandleFunc("/logs/showLast", lb.httpShowLastHandler)
-	html.HandleFunc("/logs/showPreviousPanic", lb.httpShowPreviousPanicHandler)
+	if lb.options.HttpServeMux == nil {
+		return
+	}
+	html.ServeMuxHandleFunc(lb.options.HttpServeMux, "/logs",
+		lb.httpListHandler)
+	html.ServeMuxHandleFunc(lb.options.HttpServeMux, "/logs/dump",
+		lb.httpDumpHandler)
+	html.ServeMuxHandleFunc(lb.options.HttpServeMux, "/logs/showLast",
+		lb.httpShowLastHandler)
+	html.ServeMuxHandleFunc(lb.options.HttpServeMux, "/logs/showPreviousPanic",
+		lb.httpShowPreviousPanicHandler)
 }
 
 func (lb *LogBuffer) httpListHandler(w http.ResponseWriter, req *http.Request) {
-	if lb.logDir == "" {
+	if lb.options.Directory == "" {
 		return
 	}
 	writer := bufio.NewWriter(w)
@@ -152,7 +159,8 @@ func (lb *LogBuffer) httpDumpHandler(w http.ResponseWriter, req *http.Request) {
 		}
 		name = path.Base(lbFilename)
 	}
-	file, err := os.Open(path.Join(lb.logDir, path.Base(path.Clean(name))))
+	file, err := os.Open(path.Join(lb.options.Directory,
+		path.Base(path.Clean(name))))
 	if err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
@@ -271,7 +279,7 @@ func (lb *LogBuffer) showRecent(w io.Writer, duration time.Duration,
 
 func (lb *LogBuffer) list(recentFirst bool) (
 	[]string, map[string]struct{}, error) {
-	file, err := os.Open(lb.logDir)
+	file, err := os.Open(lb.options.Directory)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -310,7 +318,7 @@ func (lb *LogBuffer) httpShowPreviousPanicHandler(w http.ResponseWriter,
 		fmt.Fprintln(writer, "Logfile for previous invocation has expired")
 		return
 	}
-	file, err := os.Open(path.Join(lb.logDir, *panicLogfile))
+	file, err := os.Open(path.Join(lb.options.Directory, *panicLogfile))
 	if err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
