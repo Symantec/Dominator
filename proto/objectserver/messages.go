@@ -2,6 +2,7 @@ package objectserver
 
 import (
 	"github.com/Symantec/Dominator/lib/hash"
+	"time"
 )
 
 // The AddObjects() RPC requires the client to send a stream of AddObjectRequest
@@ -38,3 +39,15 @@ type GetObjectsResponse struct {
 	ResponseString string
 	ObjectSizes    []uint64
 } // Object datas are streamed afterwards.
+
+type TestBandwidthRequest struct {
+	Duration     time.Duration // Ignored when sending to server.
+	ChunkSize    uint          // Maximum permitted: 65535.
+	SendToServer bool
+} // The transmitter sends chunks of random data with a marker byte after each.
+// If the marker byte is zero, no more chunks are sent and the response
+// message is sent.
+
+type TestBandwidthResponse struct {
+	ServerDuration time.Duration
+}
