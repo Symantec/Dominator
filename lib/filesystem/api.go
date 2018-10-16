@@ -27,10 +27,12 @@ const (
 )
 
 type GenericInode interface {
-	GetUid() uint32
 	GetGid() uint32
+	GetUid() uint32
 	List(w io.Writer, name string, numLinksTable NumLinksTable,
 		numLinks int, listSelector ListSelector, filter *filter.Filter) error
+	SetGid(gid uint32)
+	SetUid(uid uint32)
 	WriteMetadata(name string) error
 }
 
@@ -128,12 +130,12 @@ func (directory *DirectoryInode) BuildEntryMap() {
 	directory.buildEntryMap()
 }
 
-func (inode *DirectoryInode) GetUid() uint32 {
-	return inode.Uid
-}
-
 func (inode *DirectoryInode) GetGid() uint32 {
 	return inode.Gid
+}
+
+func (inode *DirectoryInode) GetUid() uint32 {
+	return inode.Uid
 }
 
 func (inode *DirectoryInode) List(w io.Writer, name string,
@@ -144,6 +146,14 @@ func (inode *DirectoryInode) List(w io.Writer, name string,
 
 func (inode *DirectoryInode) ReplaceStrings(replaceFunc func(string) string) {
 	inode.replaceStrings(replaceFunc)
+}
+
+func (inode *DirectoryInode) SetGid(gid uint32) {
+	inode.Gid = gid
+}
+
+func (inode *DirectoryInode) SetUid(uid uint32) {
+	inode.Uid = uid
 }
 
 func (inode *DirectoryInode) Write(name string) error {
@@ -182,18 +192,26 @@ type RegularInode struct {
 	Hash             hash.Hash
 }
 
-func (inode *RegularInode) GetUid() uint32 {
-	return inode.Uid
-}
-
 func (inode *RegularInode) GetGid() uint32 {
 	return inode.Gid
+}
+
+func (inode *RegularInode) GetUid() uint32 {
+	return inode.Uid
 }
 
 func (inode *RegularInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int,
 	listSelector ListSelector, filter *filter.Filter) error {
 	return inode.list(w, name, numLinksTable, numLinks, listSelector)
+}
+
+func (inode *RegularInode) SetGid(gid uint32) {
+	inode.Gid = gid
+}
+
+func (inode *RegularInode) SetUid(uid uint32) {
+	inode.Uid = uid
 }
 
 func (inode *RegularInode) WriteMetadata(name string) error {
@@ -207,18 +225,26 @@ type ComputedRegularInode struct {
 	Source string
 }
 
-func (inode *ComputedRegularInode) GetUid() uint32 {
-	return inode.Uid
-}
-
 func (inode *ComputedRegularInode) GetGid() uint32 {
 	return inode.Gid
+}
+
+func (inode *ComputedRegularInode) GetUid() uint32 {
+	return inode.Uid
 }
 
 func (inode *ComputedRegularInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int,
 	listSelector ListSelector, filter *filter.Filter) error {
 	return inode.list(w, name, numLinksTable, numLinks, listSelector)
+}
+
+func (inode *ComputedRegularInode) SetGid(gid uint32) {
+	inode.Gid = gid
+}
+
+func (inode *ComputedRegularInode) SetUid(uid uint32) {
+	inode.Uid = uid
 }
 
 func (inode *ComputedRegularInode) WriteMetadata(name string) error {
@@ -231,18 +257,26 @@ type SymlinkInode struct {
 	Symlink string
 }
 
-func (inode *SymlinkInode) GetUid() uint32 {
-	return inode.Uid
-}
-
 func (inode *SymlinkInode) GetGid() uint32 {
 	return inode.Gid
+}
+
+func (inode *SymlinkInode) GetUid() uint32 {
+	return inode.Uid
 }
 
 func (inode *SymlinkInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int,
 	listSelector ListSelector, filter *filter.Filter) error {
 	return inode.list(w, name, numLinksTable, numLinks, listSelector)
+}
+
+func (inode *SymlinkInode) SetGid(gid uint32) {
+	inode.Gid = gid
+}
+
+func (inode *SymlinkInode) SetUid(uid uint32) {
+	inode.Uid = uid
 }
 
 func (inode *SymlinkInode) Write(name string) error {
@@ -262,18 +296,26 @@ type SpecialInode struct {
 	Rdev             uint64
 }
 
-func (inode *SpecialInode) GetUid() uint32 {
-	return inode.Uid
-}
-
 func (inode *SpecialInode) GetGid() uint32 {
 	return inode.Gid
+}
+
+func (inode *SpecialInode) GetUid() uint32 {
+	return inode.Uid
 }
 
 func (inode *SpecialInode) List(w io.Writer, name string,
 	numLinksTable NumLinksTable, numLinks int,
 	listSelector ListSelector, filter *filter.Filter) error {
 	return inode.list(w, name, numLinksTable, numLinks, listSelector)
+}
+
+func (inode *SpecialInode) SetGid(gid uint32) {
+	inode.Gid = gid
+}
+
+func (inode *SpecialInode) SetUid(uid uint32) {
+	inode.Uid = uid
 }
 
 func (inode *SpecialInode) Write(name string) error {

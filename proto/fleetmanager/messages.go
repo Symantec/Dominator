@@ -87,6 +87,7 @@ type ListVMsInLocationResponse struct {
 
 type Machine struct {
 	NetworkEntry            `json:",omitempty"`
+	IPMI                    NetworkEntry   `json:",omitempty"`
 	SecondaryNetworkEntries []NetworkEntry `json:",omitempty"`
 	Tags                    tags.Tags      `json:",omitempty"`
 }

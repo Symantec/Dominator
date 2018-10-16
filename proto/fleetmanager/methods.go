@@ -36,6 +36,9 @@ func parseMAC(text []byte) (HardwareAddr, error) {
 }
 
 func (left *Machine) Equal(right *Machine) bool {
+	if !left.IPMI.Equal(&right.IPMI) {
+		return false
+	}
 	if !left.NetworkEntry.Equal(&right.NetworkEntry) {
 		return false
 	}
