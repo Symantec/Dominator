@@ -53,6 +53,7 @@ type Options struct {
 	MaxBufferLines  uint
 	MaxFileSize     flagutil.Size
 	Quota           flagutil.Size
+	RedirectStderr  bool // Only one LogBuffer should set this.
 }
 
 // UseFlagSet instructs this package to read its command-line flags from the
@@ -88,10 +89,15 @@ func UseFlagSet(set *flag.FlagSet) {
 //                    If zero, the quota will be 64 KiB
 func GetStandardOptions() Options { return stdOptions }
 
-// New returns a new *LogBuffer with the standard options.
+// New returns a new *LogBuffer with the standard options. Note that
+// RedirectStderr will be set to true if AlsoLogToStderr is false.
 // Only one should be created per application.
 func New() *LogBuffer {
-	return newLogBuffer(stdOptions)
+	options := stdOptions
+	if !options.AlsoLogToStderr {
+		options.RedirectStderr = true
+	}
+	return newLogBuffer(options)
 }
 
 // NewWithOptions will create a new *LogBuffer with the specified options.

@@ -35,6 +35,9 @@ func newLogBuffer(options Options) *LogBuffer {
 	if options.Quota < 65536 {
 		options.Quota = 65536
 	}
+	if options.AlsoLogToStderr {
+		options.RedirectStderr = false // Prevent duplicates sent to stderr.
+	}
 	logBuffer := &LogBuffer{
 		options: options,
 		buffer:  ring.New(int(options.MaxBufferLines)),
@@ -186,7 +189,7 @@ func (lb *LogBuffer) openNewFile() error {
 	if err != nil {
 		return err
 	}
-	if !lb.options.AlsoLogToStderr {
+	if lb.options.RedirectStderr {
 		syscall.Dup2(int(file.Fd()), int(os.Stdout.Fd()))
 		syscall.Dup2(int(file.Fd()), int(os.Stderr.Fd()))
 	}
