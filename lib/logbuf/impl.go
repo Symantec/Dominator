@@ -29,6 +29,9 @@ const (
 )
 
 func newLogBuffer(options Options) *LogBuffer {
+	if options.MaxBufferLines < 100 {
+		options.MaxBufferLines = 100
+	}
 	if options.MaxFileSize < 16384 {
 		options.MaxFileSize = 16384
 	}
