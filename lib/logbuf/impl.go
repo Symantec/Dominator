@@ -71,7 +71,6 @@ func (lb *LogBuffer) createLogDirectory() error {
 			return fmt.Errorf("error creating: %s: %s",
 				lb.options.Directory, err)
 		}
-		fi, err = os.Stat(lb.options.Directory)
 	} else if !fi.IsDir() {
 		return errors.New(lb.options.Directory + ": is not a directory")
 	}
