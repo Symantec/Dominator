@@ -50,10 +50,10 @@ type Options struct {
 	Directory       string
 	HttpServeMux    *http.ServeMux
 	IdleMarkTimeout time.Duration
-	MaxBufferLines  uint
-	MaxFileSize     flagutil.Size
-	Quota           flagutil.Size
-	RedirectStderr  bool // Only one LogBuffer should set this.
+	MaxBufferLines  uint          // Minimum: 100.
+	MaxFileSize     flagutil.Size // Minimum: 16 KiB
+	Quota           flagutil.Size // Minimum: 64 KiB.
+	RedirectStderr  bool          // Only one LogBuffer should set this.
 }
 
 // UseFlagSet instructs this package to read its command-line flags from the
