@@ -165,7 +165,7 @@ func netbootHost(hostname string, logger log.DebugLogger) error {
 	logger.Debugf(0, "Selected %s as boot server on subnet: %s\n",
 		hypervisorAddresses[0], leases[0].subnet.Id)
 	hyperCR := srpc.NewClientResource("tcp", hypervisorAddresses[0])
-	defer fmCR.ScheduleClose()
+	defer hyperCR.ScheduleClose()
 	filesMap, err := makeConfigFiles(info, networkEntries)
 	if err != nil {
 		return err
