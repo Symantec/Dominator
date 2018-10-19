@@ -18,6 +18,7 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/cpusharer"
 	"github.com/Symantec/Dominator/lib/errors"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
@@ -69,6 +70,7 @@ func gitCommand(repositoryDirectory string, command ...string) ([]byte, error) {
 }
 
 func rolloutImage(imageName string, logger log.DebugLogger) error {
+	startTime := time.Now()
 	cpuSharer := cpusharer.NewFifoCpuSharer()
 	if *topologyDir != "" {
 		logger.Debugln(0, "updating Git repository")
@@ -175,7 +177,10 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 		var tgs tags.Tags
 		tagsFilename := filepath.Join(*topologyDir, *location, "tags.json")
 		if err := json.ReadFromFile(tagsFilename, &tgs); err != nil {
-			return err
+			if !os.IsNotExist(err) {
+				return err
+			}
+			tgs = make(tags.Tags)
 		}
 		oldImageName := tgs["RequiredImage"]
 		tgs["RequiredImage"] = imageName
@@ -201,6 +206,8 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 			return err
 		}
 	}
+	logger.Printf("rollout completed in %s\n",
+		format.Duration(time.Since(startTime)))
 	return nil
 }
 

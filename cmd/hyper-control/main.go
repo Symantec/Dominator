@@ -30,14 +30,15 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
+	installerImageStream = flag.String("installerImageStream", "",
+		"Name of default image stream for building bootable installer ISO")
 	location = flag.String("location", "",
 		"Location to search for hypervisors")
 	offerTimeout = flag.Duration("offerTimeout", time.Minute+time.Second,
 		"How long to offer DHCP OFFERs and ACKs")
 	netbootFiles        tags.Tags
 	netbootFilesTimeout = flag.Duration("netbootFilesTimeout",
-		time.Minute+time.Second,
-		"How long to provide files via TFTP after last DHCP ACK")
+		time.Minute+time.Second, "How long to provide extra files via TFTP")
 	netbootTimeout = flag.Duration("netbootTimeout", time.Minute,
 		"Time to wait for DHCP ACKs to be sent")
 	numAcknowledgementsToWaitFor = flag.Uint("numAcknowledgementsToWaitFor",
@@ -64,6 +65,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  change-tags")
 	fmt.Fprintln(os.Stderr, "  get-machine-info hostname")
 	fmt.Fprintln(os.Stderr, "  get-updates")
+	fmt.Fprintln(os.Stderr, "  make-installer-iso hostname dirname")
 	fmt.Fprintln(os.Stderr, "  netboot-host hostname")
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
@@ -85,6 +87,7 @@ var subcommands = []subcommand{
 	{"change-tags", 0, 0, changeTagsSubcommand},
 	{"get-machine-info", 1, 1, getMachineInfoSubcommand},
 	{"get-updates", 0, 0, getUpdatesSubcommand},
+	{"make-installer-iso", 2, 2, makeInstallerIsoSubcommand},
 	{"netboot-host", 1, 1, netbootHostSubcommand},
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
