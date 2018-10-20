@@ -24,12 +24,13 @@ func (r *ChecksumReader) getChecksum() []byte {
 }
 
 func (r *ChecksumReader) read(p []byte) (int, error) {
-	nRead, err := r.reader.Read(p)
-	if err != nil {
-		return 0, err
+	if nRead, err := r.reader.Read(p); err != nil && err != io.EOF {
+		return nRead, err
+	} else if _, e := r.checksummer.Write(p[:nRead]); e != nil {
+		return nRead, e
+	} else {
+		return nRead, err
 	}
-	_, err = r.checksummer.Write(p[:nRead])
-	return nRead, err
 }
 
 func (r *ChecksumReader) readByte() (byte, error) {

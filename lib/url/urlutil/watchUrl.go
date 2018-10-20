@@ -31,15 +31,22 @@ func watchUrl(rawurl string, checkInterval time.Duration,
 func watchUrlLoop(rawurl string, checkInterval time.Duration,
 	ch chan<- io.ReadCloser, logger log.Logger) {
 	for ; ; time.Sleep(checkInterval) {
-		resp, err := http.Get(rawurl)
-		if err != nil {
-			logger.Println(err)
-			continue
+		watchUrlOnce(rawurl, ch, logger)
+		if checkInterval <= 0 {
+			return
 		}
-		if resp.StatusCode != http.StatusOK {
-			logger.Println(resp.Status)
-			continue
-		}
-		ch <- resp.Body
 	}
+}
+
+func watchUrlOnce(rawurl string, ch chan<- io.ReadCloser, logger log.Logger) {
+	resp, err := http.Get(rawurl)
+	if err != nil {
+		logger.Println(err)
+		return
+	}
+	if resp.StatusCode != http.StatusOK {
+		logger.Println(resp.Status)
+		return
+	}
+	ch <- resp.Body
 }
