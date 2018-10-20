@@ -22,3 +22,15 @@ func Watch(url string, checkInterval time.Duration,
 	decoder Decoder, logger log.DebugLogger) (<-chan interface{}, error) {
 	return watch(url, checkInterval, decoder, logger)
 }
+
+// WatchWithCache is similar to Watch, except that successfully decoded data are
+// cached.
+// A cached copy of the data is stored in the file named cacheFilename. This
+// file is read at startup if the URL is not available before the
+// initialTimeout.
+func WatchWithCache(url string, checkInterval time.Duration,
+	decoder Decoder, cacheFilename string, initialTimeout time.Duration,
+	logger log.DebugLogger) (<-chan interface{}, error) {
+	return watchWithCache(url, checkInterval, decoder, cacheFilename,
+		initialTimeout, logger)
+}
