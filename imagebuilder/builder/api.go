@@ -36,6 +36,7 @@ type buildResultType struct {
 
 type masterConfigurationType struct {
 	BootstrapStreams          map[string]*bootstrapStream `json:",omitempty"`
+	ImageStreamsCheckInterval uint                        `json:",omitempty"`
 	ImageStreamsToAutoRebuild []string                    `json:",omitempty"`
 	ImageStreamsUrl           string                      `json:",omitempty"`
 	PackagerTypes             map[string]packagerType     `json:",omitempty"`
@@ -104,7 +105,7 @@ type Builder struct {
 }
 
 func Load(confUrl, variablesFile, stateDir, imageServerAddress string,
-	imageRebuildInterval time.Duration, logger log.Logger) (
+	imageRebuildInterval time.Duration, logger log.DebugLogger) (
 	*Builder, error) {
 	return load(confUrl, variablesFile, stateDir, imageServerAddress,
 		imageRebuildInterval, logger)

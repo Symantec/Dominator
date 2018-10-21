@@ -5,26 +5,33 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/Symantec/Dominator/imageserver/client"
+	"github.com/Symantec/Dominator/lib/configwatch"
 	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/url/urlutil"
 )
 
+func imageStreamsDecoder(reader io.Reader) (interface{}, error) {
+	var config imageStreamsConfigurationType
+	decoder := json.NewDecoder(bufio.NewReader(reader))
+	if err := decoder.Decode(&config); err != nil {
+		return nil, fmt.Errorf("error reading image streams: %s", err)
+	}
+	return &config, nil
+}
+
 func load(confUrl, variablesFile, stateDir, imageServerAddress string,
-	imageRebuildInterval time.Duration, logger log.Logger) (
+	imageRebuildInterval time.Duration, logger log.DebugLogger) (
 	*Builder, error) {
 	masterConfiguration, err := masterConfiguration(confUrl)
-	if err != nil {
-		return nil, err
-	}
-	imageStreamsConfiguration, err := loadImageStreams(
-		masterConfiguration.ImageStreamsUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -34,9 +41,7 @@ func load(confUrl, variablesFile, stateDir, imageServerAddress string,
 	}
 	sort.Strings(imageStreamsToAutoRebuild)
 	for _, name := range masterConfiguration.ImageStreamsToAutoRebuild {
-		if _, ok := imageStreamsConfiguration.Streams[name]; ok {
-			imageStreamsToAutoRebuild = append(imageStreamsToAutoRebuild, name)
-		}
+		imageStreamsToAutoRebuild = append(imageStreamsToAutoRebuild, name)
 	}
 	var variables map[string]string
 	if variablesFile != "" {
@@ -53,7 +58,6 @@ func load(confUrl, variablesFile, stateDir, imageServerAddress string,
 		logger:                    logger,
 		imageStreamsUrl:           masterConfiguration.ImageStreamsUrl,
 		bootstrapStreams:          masterConfiguration.BootstrapStreams,
-		imageStreams:              imageStreamsConfiguration.Streams,
 		imageStreamsToAutoRebuild: imageStreamsToAutoRebuild,
 		currentBuildLogs:          make(map[string]*bytes.Buffer),
 		lastBuildResults:          make(map[string]buildResultType),
@@ -64,15 +68,36 @@ func load(confUrl, variablesFile, stateDir, imageServerAddress string,
 		stream.builder = b
 		stream.name = name
 	}
-	for name, stream := range b.imageStreams {
-		stream.builder = b
-		stream.name = name
-	}
-	if err := b.makeRequiredDirectories(); err != nil {
+	imageStreamsConfigChannel, err := configwatch.WatchWithCache(
+		masterConfiguration.ImageStreamsUrl,
+		time.Second*time.Duration(
+			masterConfiguration.ImageStreamsCheckInterval), imageStreamsDecoder,
+		filepath.Join(stateDir, "image-streams.json"),
+		time.Second*5, logger)
+	if err != nil {
 		return nil, err
 	}
+	go b.watchConfigLoop(imageStreamsConfigChannel)
 	go b.rebuildImages(imageRebuildInterval)
 	return b, nil
+}
+
+func loadImageStreams(url string) (*imageStreamsConfigurationType, error) {
+	if url == "" {
+		return &imageStreamsConfigurationType{}, nil
+	}
+	file, err := urlutil.Open(url)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	var configuration imageStreamsConfigurationType
+	decoder := json.NewDecoder(bufio.NewReader(file))
+	if err := decoder.Decode(&configuration); err != nil {
+		return nil, fmt.Errorf("error reading image streams from: %s: %s",
+			url, err)
+	}
+	return &configuration, nil
 }
 
 func masterConfiguration(url string) (*masterConfigurationType, error) {
@@ -97,24 +122,6 @@ func masterConfiguration(url string) (*masterConfigurationType, error) {
 				return nil, err
 			}
 		}
-	}
-	return &configuration, nil
-}
-
-func loadImageStreams(url string) (*imageStreamsConfigurationType, error) {
-	if url == "" {
-		return &imageStreamsConfigurationType{}, nil
-	}
-	file, err := urlutil.Open(url)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	var configuration imageStreamsConfigurationType
-	decoder := json.NewDecoder(bufio.NewReader(file))
-	if err := decoder.Decode(&configuration); err != nil {
-		return nil, fmt.Errorf("error reading image streams from: %s: %s",
-			url, err)
 	}
 	return &configuration, nil
 }
@@ -162,15 +169,29 @@ func (b *Builder) reloadNormalStreamsConfiguration() error {
 		return err
 	}
 	b.logger.Println("Reloaded streams streams configuration")
-	b.streamsLock.Lock()
-	b.imageStreams = imageStreamsConfiguration.Streams
-	for name, stream := range b.imageStreams {
+	return b.updateImageStreams(imageStreamsConfiguration)
+}
+
+func (b *Builder) updateImageStreams(
+	imageStreamsConfiguration *imageStreamsConfigurationType) error {
+	for name, stream := range imageStreamsConfiguration.Streams {
 		stream.builder = b
 		stream.name = name
 	}
+	b.streamsLock.Lock()
+	b.imageStreams = imageStreamsConfiguration.Streams
 	b.streamsLock.Unlock()
-	if err := b.makeRequiredDirectories(); err != nil {
-		return err
+	return b.makeRequiredDirectories()
+}
+
+func (b *Builder) watchConfigLoop(configChannel <-chan interface{}) {
+	for rawConfig := range configChannel {
+		imageStreamsConfig, ok := rawConfig.(*imageStreamsConfigurationType)
+		if !ok {
+			b.logger.Printf("received unknown type over config channel")
+			continue
+		}
+		b.logger.Println("received new image streams configuration")
+		b.updateImageStreams(imageStreamsConfig)
 	}
-	return nil
 }
