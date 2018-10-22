@@ -35,12 +35,18 @@ Some of the sub-commands available are:
 - **get-updates**: get and show a continuous stream of updates from a
                    *Hypervisor* or *Fleet Manager*. This is primarily for
                    debugging
+- **make-installer-iso**: make a bootable installation ISO (CD-ROM) image for a
+                          machine
+- **netboot-host**: temporarily enable PXE-based network booting and installing
+                    for a machine
 - **netboot-machine**: temporarily enable PXE-based network booting for a
                        machine
 - **remove-excess-addresses**: remove free addresses for a specific *Hypervisor*
                                above the specified limit
 - **rollout-image**: safely roll out specified image to all *Hypervisors* in a
                      location
+- **write-netboot-files**: write the configuration files for installing a
+                           machine. This is primarily for debugging
 
 ## Security
 The *Hypervisor* restricts RPC access using TLS client authentication.

@@ -70,6 +70,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
 	fmt.Fprintln(os.Stderr, "  rollout-image name")
+	fmt.Fprintln(os.Stderr, "  write-netboot-files hostname dirname")
 }
 
 type commandFunc func([]string, log.DebugLogger)
@@ -92,6 +93,7 @@ var subcommands = []subcommand{
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
 	{"rollout-image", 1, 1, rolloutImageSubcommand},
+	{"write-netboot-files", 2, 2, writeNetbootFilesSubcommand},
 }
 
 func main() {
