@@ -8,11 +8,15 @@ import (
 	"net"
 	"os"
 
+	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/errors"
+	"github.com/Symantec/Dominator/lib/image"
+	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
+	installer_proto "github.com/Symantec/Dominator/proto/installer"
 )
 
 type hostAddressType struct {
@@ -74,7 +78,18 @@ func getNetworkEntries(
 	return networkEntries
 }
 
-func makeConfigFiles(info fm_proto.GetMachineInfoResponse,
+func getStorageLayout() (installer_proto.StorageLayout, error) {
+	if *storageLayoutFilename == "" {
+		return makeDefaultStorageLayout(), nil
+	}
+	var val installer_proto.StorageLayout
+	if err := libjson.ReadFromFile(*storageLayoutFilename, &val); err != nil {
+		return installer_proto.StorageLayout{}, err
+	}
+	return val, nil
+}
+
+func makeConfigFiles(info fm_proto.GetMachineInfoResponse, img *image.Image,
 	networkEntries []fm_proto.NetworkEntry) (map[string][]byte, error) {
 	filesMap := make(map[string][]byte, len(netbootFiles)+1)
 	for tftpFilename, localFilename := range netbootFiles {
@@ -87,7 +102,7 @@ func makeConfigFiles(info fm_proto.GetMachineInfoResponse,
 	if data, err := json.MarshalIndent(info, "", "    "); err != nil {
 		return nil, err
 	} else {
-		filesMap["config.json"] = data
+		filesMap["config.json"] = append(data, '\n')
 	}
 	ifIndex := 0
 	buffer := new(bytes.Buffer)
@@ -110,6 +125,9 @@ func makeConfigFiles(info fm_proto.GetMachineInfoResponse,
 	}
 	filesMap["network-interfaces"] = buffer.Bytes()
 	buffer = new(bytes.Buffer)
+	fmt.Fprintf(buffer, "%s:%d\n", *imageServerHostname, *imageServerPortNum)
+	filesMap["objectserver"] = buffer.Bytes()
+	buffer = new(bytes.Buffer)
 	if primarySubnet.DomainName != "" {
 		fmt.Fprintf(buffer, "domain %s\n", primarySubnet.DomainName)
 		fmt.Fprintf(buffer, "search %s\n", primarySubnet.DomainName)
@@ -119,7 +137,49 @@ func makeConfigFiles(info fm_proto.GetMachineInfoResponse,
 		fmt.Fprintf(buffer, "nameserver %s\n", nameserver)
 	}
 	filesMap["resolv.conf"] = buffer.Bytes()
+	if layout, err := getStorageLayout(); err != nil {
+		return nil, err
+	} else {
+		var imageSize uint64
+		if img == nil {
+			imageSize = 1 << 29
+		} else {
+			imageSize = img.FileSystem.EstimateUsage(0)
+		}
+		for index := range layout.BootDriveLayout {
+			if layout.BootDriveLayout[index].MountPoint != "/" {
+				continue
+			}
+			layout.BootDriveLayout[index].MinimumFreeBytes += imageSize
+			break
+		}
+		if data, err := json.MarshalIndent(layout, "", "    "); err != nil {
+			return nil, err
+		} else {
+			filesMap["storage-layout.json"] = append(data, '\n')
+		}
+	}
 	return filesMap, nil
+}
+
+func makeDefaultStorageLayout() installer_proto.StorageLayout {
+	return installer_proto.StorageLayout{
+		BootDriveLayout: []installer_proto.Partition{
+			{
+				MountPoint:       "/",
+				MinimumFreeBytes: 256 << 20,
+			},
+			{
+				MountPoint:       "/home",
+				MinimumFreeBytes: 1 << 30,
+			},
+			{
+				MountPoint:       "/var/log",
+				MinimumFreeBytes: 256 << 20,
+			},
+		},
+		ExtraMountPointsBasename: "/data/",
+	}
 }
 
 func netbootHost(hostname string, logger log.DebugLogger) error {
@@ -130,6 +190,7 @@ func netbootHost(hostname string, logger log.DebugLogger) error {
 	if err != nil {
 		return err
 	}
+	imageName := info.Machine.Tags["RequiredImage"]
 	subnets := make([]*hyper_proto.Subnet, 0, len(info.Subnets))
 	for _, subnet := range info.Subnets {
 		if subnet.VlanId == 0 {
@@ -166,7 +227,23 @@ func netbootHost(hostname string, logger log.DebugLogger) error {
 		hypervisorAddresses[0], leases[0].subnet.Id)
 	hyperCR := srpc.NewClientResource("tcp", hypervisorAddresses[0])
 	defer hyperCR.ScheduleClose()
-	filesMap, err := makeConfigFiles(info, networkEntries)
+	var img *image.Image
+	if imageName != "" {
+		imageClient, err := srpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
+			*imageServerHostname, *imageServerPortNum), 0)
+		if err != nil {
+			return err
+		}
+		defer imageClient.Close()
+		img, err = imageclient.GetImage(imageClient, imageName)
+		if err != nil {
+			return err
+		}
+		if img == nil {
+			return fmt.Errorf("image: %s does not exist", imageName)
+		}
+	}
+	filesMap, err := makeConfigFiles(info, img, networkEntries)
 	if err != nil {
 		return err
 	}

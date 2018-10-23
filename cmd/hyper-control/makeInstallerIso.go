@@ -16,6 +16,7 @@ import (
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/nulllogger"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
@@ -45,6 +46,7 @@ func makeInstallerIso(hostname, dirname string, logger log.DebugLogger) error {
 	if err != nil {
 		return err
 	}
+	imageName := info.Machine.Tags["RequiredImage"]
 	subnets := make([]*hyper_proto.Subnet, 0, len(info.Subnets))
 	for _, subnet := range info.Subnets {
 		if subnet.VlanId == 0 {
@@ -59,7 +61,23 @@ func makeInstallerIso(hostname, dirname string, logger log.DebugLogger) error {
 	if len(hostAddresses) < 1 {
 		return errors.New("no IP and MAC addresses known for host")
 	}
-	configFiles, err := makeConfigFiles(info, networkEntries)
+	imageClient, err := srpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
+		*imageServerHostname, *imageServerPortNum), 0)
+	if err != nil {
+		return err
+	}
+	defer imageClient.Close()
+	var img *image.Image
+	if imageName != "" {
+		img, err = imageclient.GetImage(imageClient, imageName)
+		if err != nil {
+			return err
+		}
+		if img == nil {
+			return fmt.Errorf("image: %s does not exist", imageName)
+		}
+	}
+	configFiles, err := makeConfigFiles(info, img, networkEntries)
 	if err != nil {
 		return err
 	}
@@ -68,7 +86,7 @@ func makeInstallerIso(hostname, dirname string, logger log.DebugLogger) error {
 		return err
 	}
 	defer os.RemoveAll(rootDir)
-	if err := unpackImage(rootDir, nulllogger.New()); err != nil {
+	if err := unpackImage(rootDir, imageClient, nulllogger.New()); err != nil {
 		return err
 	}
 	initrdFile := filepath.Join(rootDir, "initrd.img")
@@ -90,6 +108,7 @@ func makeInstallerIso(hostname, dirname string, logger log.DebugLogger) error {
 	cmd := exec.Command("genisoimage", "-o", filename, "-b", "isolinux.bin",
 		"-c", "boot.catalogue", "-no-emul-boot", "-boot-load-size", "4",
 		"-boot-info-table", "-quiet", rootDir)
+	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		return err
 	}
@@ -180,23 +199,17 @@ func unpackInitrd(rootDir, filename string) error {
 	return nil
 }
 
-func unpackImage(rootDir string, logger log.DebugLogger) error {
-	clientName := fmt.Sprintf("%s:%d",
-		*imageServerHostname, *imageServerPortNum)
-	client, err := srpc.DialHTTP("tcp", clientName, 0)
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-	imageName, err := imageclient.FindLatestImage(client, *installerImageStream,
-		false)
+func unpackImage(rootDir string, imageClient *srpc.Client,
+	logger log.DebugLogger) error {
+	imageName, err := imageclient.FindLatestImage(imageClient,
+		*installerImageStream, false)
 	if err != nil {
 		return err
 	}
 	if imageName == "" {
 		return errors.New("no image found")
 	}
-	image, err := imageclient.GetImage(client, imageName)
+	image, err := imageclient.GetImage(imageClient, imageName)
 	if err != nil {
 		return err
 	}
@@ -213,7 +226,7 @@ func unpackImage(rootDir string, logger log.DebugLogger) error {
 		}
 	}
 	image.FileSystem.RebuildInodePointers()
-	objClient := objectclient.AttachObjectClient(client)
+	objClient := objectclient.AttachObjectClient(imageClient)
 	defer objClient.Close()
 	err = util.Unpack(image.FileSystem, objClient, rootDir, logger)
 	if err != nil {

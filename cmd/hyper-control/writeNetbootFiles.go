@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
+	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/errors"
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
@@ -34,7 +36,7 @@ func emptyTree(rootDir string) error {
 		return err
 	}
 	for _, name := range names {
-		if err := os.RemoveAll(filepath.Join(rootDir, name)); err != nil {
+		if err := os.Remove(filepath.Join(rootDir, name)); err != nil {
 			return err
 		}
 	}
@@ -49,6 +51,7 @@ func writeNetbootFiles(hostname, dirname string, logger log.DebugLogger) error {
 	if err != nil {
 		return err
 	}
+	imageName := info.Machine.Tags["RequiredImage"]
 	subnets := make([]*hyper_proto.Subnet, 0, len(info.Subnets))
 	for _, subnet := range info.Subnets {
 		if subnet.VlanId == 0 {
@@ -63,7 +66,23 @@ func writeNetbootFiles(hostname, dirname string, logger log.DebugLogger) error {
 	if len(hostAddresses) < 1 {
 		return errors.New("no IP and MAC addresses known for host")
 	}
-	configFiles, err := makeConfigFiles(info, networkEntries)
+	var img *image.Image
+	if imageName != "" {
+		imageClient, err := srpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
+			*imageServerHostname, *imageServerPortNum), 0)
+		if err != nil {
+			return err
+		}
+		defer imageClient.Close()
+		img, err = imageclient.GetImage(imageClient, imageName)
+		if err != nil {
+			return err
+		}
+		if img == nil {
+			return fmt.Errorf("image: %s does not exist", imageName)
+		}
+	}
+	configFiles, err := makeConfigFiles(info, img, networkEntries)
 	if err != nil {
 		return err
 	}
