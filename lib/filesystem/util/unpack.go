@@ -3,6 +3,7 @@ package util
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"syscall"
@@ -135,45 +136,52 @@ func writeObject(objectsReader objectserver.ObjectsReader, hash hash.Hash,
 	return fsutil.CopyToFile(filename, filePerms, reader, rlength)
 }
 
-func writeInodes(inodeTable filesystem.InodeTable, inodesDir string) error {
-	for inodeNumber, inode := range inodeTable {
-		filename := path.Join(inodesDir, fmt.Sprintf("%d", inodeNumber))
-		switch inode := inode.(type) {
-		case *filesystem.RegularInode:
-			if inode.Size < 1 {
-				if err := createFile(filename); err != nil {
-					return err
-				}
-			}
-			if err := inode.WriteMetadata(filename); err != nil {
-				return err
-			}
-		case *filesystem.ComputedRegularInode:
+func writeInode(inode filesystem.GenericInode, filename string) error {
+	switch inode := inode.(type) {
+	case *filesystem.RegularInode:
+		if inode.Size < 1 {
 			if err := createFile(filename); err != nil {
 				return err
 			}
-			tmpInode := &filesystem.RegularInode{
-				Mode: inode.Mode,
-				Uid:  inode.Uid,
-				Gid:  inode.Gid,
-			}
-			if err := tmpInode.WriteMetadata(filename); err != nil {
-				return err
-			}
-		case *filesystem.SymlinkInode:
-			if err := inode.Write(filename); err != nil {
-				return err
-			}
-		case *filesystem.SpecialInode:
-			if err := inode.Write(filename); err != nil {
-				return err
-			}
-		case *filesystem.DirectoryInode:
-			if err := inode.Write(filename); err != nil {
-				return err
-			}
-		default:
-			return errors.New("unsupported inode type")
+		}
+		if err := inode.WriteMetadata(filename); err != nil {
+			return err
+		}
+	case *filesystem.ComputedRegularInode:
+		if err := createFile(filename); err != nil {
+			return err
+		}
+		tmpInode := &filesystem.RegularInode{
+			Mode: inode.Mode,
+			Uid:  inode.Uid,
+			Gid:  inode.Gid,
+		}
+		if err := tmpInode.WriteMetadata(filename); err != nil {
+			return err
+		}
+	case *filesystem.SymlinkInode:
+		if err := inode.Write(filename); err != nil {
+			return err
+		}
+	case *filesystem.SpecialInode:
+		if err := inode.Write(filename); err != nil {
+			return err
+		}
+	case *filesystem.DirectoryInode:
+		if err := inode.Write(filename); err != nil {
+			return err
+		}
+	default:
+		return errors.New("unsupported inode type")
+	}
+	return nil
+}
+
+func writeInodes(inodeTable filesystem.InodeTable, inodesDir string) error {
+	for inodeNumber, inode := range inodeTable {
+		filename := path.Join(inodesDir, fmt.Sprintf("%d", inodeNumber))
+		if err := writeInode(inode, filename); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -187,21 +195,82 @@ func buildTree(directory *filesystem.DirectoryInode,
 		newFullPath := path.Join(rootDir, newSubPath)
 		if inode := dirent.Inode(); inode == nil {
 			panic("no inode pointer for: " + newSubPath)
-		} else if inode, ok := inode.(*filesystem.DirectoryInode); ok {
-			if err := os.Rename(oldPath, newFullPath); err != nil {
+		} else if dinode, ok := inode.(*filesystem.DirectoryInode); ok {
+			if err := renameDir(oldPath, newFullPath, dinode); err != nil {
 				return err
 			}
-			err := buildTree(inode, rootDir, newSubPath, inodesDir)
+			err := buildTree(dinode, rootDir, newSubPath, inodesDir)
 			if err != nil {
 				return err
 			}
 		} else {
-			if err := os.Link(oldPath, newFullPath); err != nil {
+			if err := link(oldPath, newFullPath, inode); err != nil {
 				if !os.IsNotExist(err) {
 					return err
 				}
 			}
 		}
+	}
+	return nil
+}
+
+func link(oldname, newname string, inode filesystem.GenericInode) error {
+	if err := os.Link(oldname, newname); err == nil {
+		return nil
+	}
+	if finode, ok := inode.(*filesystem.RegularInode); ok {
+		if finode.Size > 0 {
+			reader, err := os.Open(oldname)
+			if err != nil {
+				return err
+			}
+			writer, err := os.Create(newname)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(writer, reader); err != nil {
+				return err
+			}
+		}
+	}
+	if err := writeInode(inode, newname); err != nil {
+		return err
+	}
+	if err := os.Remove(oldname); err != nil {
+		return err
+	}
+	return nil
+}
+
+func renameDir(oldpath, newpath string,
+	inode *filesystem.DirectoryInode) error {
+	if err := os.Rename(oldpath, newpath); err == nil {
+		return nil
+	}
+	if oldFi, err := os.Lstat(oldpath); err != nil {
+		return err
+	} else {
+		if !oldFi.IsDir() {
+			return fmt.Errorf("%s is not a directory", oldpath)
+		}
+	}
+	if newFi, err := os.Lstat(newpath); err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+		if err := inode.Write(newpath); err != nil {
+			return err
+		}
+	} else {
+		if !newFi.IsDir() {
+			return fmt.Errorf("%s is not a directory", newpath)
+		}
+		if err := inode.WriteMetadata(newpath); err != nil {
+			return err
+		}
+	}
+	if err := os.Remove(oldpath); err != nil {
+		return err
 	}
 	return nil
 }
