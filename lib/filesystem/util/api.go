@@ -31,6 +31,11 @@ func LoadComputedFiles(filename string) ([]ComputedFile, error) {
 	return loadComputedFiles(filename)
 }
 
+func MakeBootable(fs *filesystem.FileSystem, deviceName string, rootDir string,
+	doChroot bool, logger log.DebugLogger) error {
+	return makeBootable(fs, deviceName, rootDir, doChroot, logger)
+}
+
 func ReplaceComputedFiles(fs *filesystem.FileSystem,
 	computedFilesData *ComputedFilesData,
 	objectsGetter objectserver.ObjectsGetter) (
@@ -52,7 +57,7 @@ func WriteRaw(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, rawFilename string,
 	perm os.FileMode, tableType mbr.TableType,
 	minFreeSpace uint64, roundupPower uint64, makeBootable, allocateBlocks bool,
-	logger log.Logger) error {
+	logger log.DebugLogger) error {
 	return writeRaw(fs, objectsGetter, rawFilename, perm, tableType,
 		minFreeSpace, roundupPower, makeBootable, allocateBlocks, logger)
 }

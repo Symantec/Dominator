@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -63,6 +63,17 @@ func checkIsBlock(filename string) (bool, error) {
 		return false, err
 	} else {
 		return fi.Mode()&os.ModeDevice == os.ModeDevice, nil
+	}
+}
+
+func findExecutable(rootDir, file string) error {
+	if d, err := os.Stat(filepath.Join(rootDir, file)); err != nil {
+		return err
+	} else {
+		if m := d.Mode(); !m.IsDir() && m&0111 != 0 {
+			return nil
+		}
+		return os.ErrPermission
 	}
 }
 
@@ -200,9 +211,29 @@ func getDeviceSize(device string) (uint64, error) {
 	return blk << 9, nil
 }
 
+func lookPath(rootDir, file string) (string, error) {
+	if strings.Contains(file, "/") {
+		if err := findExecutable(rootDir, file); err != nil {
+			return "", err
+		}
+		return file, nil
+	}
+	path := os.Getenv("PATH")
+	for _, dir := range filepath.SplitList(path) {
+		if dir == "" {
+			dir = "." // Unix shell semantics: path element "" means "."
+		}
+		path := filepath.Join(dir, file)
+		if err := findExecutable(rootDir, path); err == nil {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("(chroot=%s) %s not found in PATH", rootDir, file)
+}
+
 func makeAndWriteRoot(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, bootDevice, rootDevice string,
-	makeBootableFlag bool, logger log.Logger) error {
+	makeBootableFlag bool, logger log.DebugLogger) error {
 	unsupportedOptions, err := getUnsupportedOptions(fs, objectsGetter)
 	if err != nil {
 		return err
@@ -210,7 +241,7 @@ func makeAndWriteRoot(fs *filesystem.FileSystem,
 	var bootInfo *bootInfoType
 	if makeBootableFlag {
 		var err error
-		bootInfo, err = getBootInfo(fs, objectsGetter)
+		bootInfo, err = getBootInfo(fs)
 		if err != nil {
 			return err
 		}
@@ -228,14 +259,23 @@ func makeAndWriteRoot(fs *filesystem.FileSystem,
 		return fmt.Errorf("error mounting: %s", rootDevice)
 	}
 	defer syscall.Unmount(mountPoint, 0)
-	os.RemoveAll(path.Join(mountPoint, "lost+found"))
+	os.RemoveAll(filepath.Join(mountPoint, "lost+found"))
 	if err := Unpack(fs, objectsGetter, mountPoint, logger); err != nil {
 		return err
 	}
 	if !makeBootableFlag {
 		return nil
 	}
-	return bootInfo.makeBootable(bootDevice, mountPoint, logger)
+	return bootInfo.makeBootable(bootDevice, mountPoint, false, logger)
+}
+
+func makeBootable(fs *filesystem.FileSystem, deviceName string, rootDir string,
+	doChroot bool, logger log.DebugLogger) error {
+	if bootInfo, err := getBootInfo(fs); err != nil {
+		return err
+	} else {
+		return bootInfo.makeBootable(deviceName, rootDir, doChroot, logger)
+	}
 }
 
 func makeRootFs(deviceName string, unsupportedOptions []string,
@@ -286,8 +326,7 @@ func sanitiseInput(ch rune) rune {
 	}
 }
 
-func getBootInfo(fs *filesystem.FileSystem,
-	objectsGetter objectserver.ObjectsGetter) (*bootInfoType, error) {
+func getBootInfo(fs *filesystem.FileSystem) (*bootInfoType, error) {
 	bootDirectory, err := getBootDirectory(fs)
 	if err != nil {
 		return nil, err
@@ -317,24 +356,39 @@ func getBootInfo(fs *filesystem.FileSystem,
 }
 
 func (bootInfo *bootInfoType) makeBootable(deviceName string, rootDir string,
-	logger log.Logger) error {
+	doChroot bool, logger log.DebugLogger) error {
 	startTime := time.Now()
-	grubConfigFile := path.Join(rootDir, "boot", "grub", "grub.cfg")
-	grubInstaller, err := exec.LookPath("grub-install")
+	var bootDir, chrootDir string
+	if doChroot {
+		bootDir = "/boot"
+		chrootDir = rootDir
+	} else {
+		bootDir = filepath.Join(rootDir, "boot")
+	}
+	grubConfigFile := filepath.Join(rootDir, "boot", "grub", "grub.cfg")
+	grubInstaller, err := lookPath(chrootDir, "grub-install")
 	if err != nil {
-		grubInstaller, err = exec.LookPath("grub2-install")
+		grubInstaller, err = lookPath(chrootDir, "grub2-install")
 		if err != nil {
 			return fmt.Errorf("cannot find GRUB installer: %s", err)
 		}
-		grubConfigFile = path.Join(rootDir, "boot", "grub2", "grub.cfg")
+		grubConfigFile = filepath.Join(rootDir, "boot", "grub2", "grub.cfg")
 	}
-	cmd := exec.Command(grubInstaller, "--boot-directory="+rootDir+"/boot",
-		deviceName)
+	cmd := exec.Command(grubInstaller, "--boot-directory="+bootDir, deviceName)
+	if doChroot {
+		cmd.Dir = "/"
+		cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: chrootDir}
+		logger.Debugf(0, "running(chroot=%s): %s %s\n",
+			chrootDir, cmd.Path, strings.Join(cmd.Args[1:], " "))
+	} else {
+		logger.Debugf(0, "running: %s %s\n",
+			cmd.Path, strings.Join(cmd.Args[1:], " "))
+	}
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("error installing GRUB on: %s: %s: %s",
 			deviceName, err, output)
 	}
-	logger.Printf("Installed GRUB in %s\n",
+	logger.Printf("installed GRUB in %s\n",
 		format.Duration(time.Since(startTime)))
 	file, err := os.Create(grubConfigFile)
 	if err != nil {
@@ -348,14 +402,15 @@ func (bootInfo *bootInfoType) makeBootable(deviceName string, rootDir string,
 	if err := file.Close(); err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path.Join(rootDir, "etc", "fstab"),
+	return ioutil.WriteFile(filepath.Join(rootDir, "etc", "fstab"),
 		[]byte("LABEL=rootfs / ext4 defaults 0 1\n"),
 		0644)
 }
 
 func writeToBlock(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, bootDevice string,
-	tableType mbr.TableType, makeBootableFlag bool, logger log.Logger) error {
+	tableType mbr.TableType, makeBootableFlag bool,
+	logger log.DebugLogger) error {
 	if err := mbr.WriteDefault(bootDevice, tableType); err != nil {
 		return err
 	}
@@ -371,7 +426,7 @@ func writeToFile(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, rawFilename string,
 	perm os.FileMode, tableType mbr.TableType, minFreeSpace uint64,
 	roundupPower uint64, makeBootableFlag, allocateBlocks bool,
-	logger log.Logger) error {
+	logger log.DebugLogger) error {
 	tmpFilename := rawFilename + "~"
 	if file, err := os.OpenFile(tmpFilename, createFlags, perm); err != nil {
 		return err
@@ -423,7 +478,7 @@ func writeRaw(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, rawFilename string,
 	perm os.FileMode, tableType mbr.TableType, minFreeSpace uint64,
 	roundupPower uint64, makeBootableFlag, allocateBlocks bool,
-	logger log.Logger) error {
+	logger log.DebugLogger) error {
 	if isBlock, err := checkIsBlock(rawFilename); err != nil {
 		if !os.IsNotExist(err) {
 			return err
@@ -453,7 +508,7 @@ menuentry 'Linux' 'Solitary Linux' {
         insmod part_msdos
         insmod ext2
         echo    'Loading Linux {{.KernelImageFile}} ...'
-        linux   {{.KernelImageFile}} root=LABEL=rootfs ro console=ttyS0,115200n8 console=tty0 net.ifnames=0
+        linux   {{.KernelImageFile}} root=LABEL=rootfs ro console=tty0 console=ttyS0,115200n8 net.ifnames=0
         echo    'Loading initial ramdisk ...'
         initrd  {{.InitrdImageFile}}
 }
