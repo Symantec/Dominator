@@ -1,0 +1,29 @@
+#! /bin/bash --posix
+
+set -eu
+
+readonly command="$1"
+shift
+
+readonly bin="$GOPATH/bin/$command"
+readonly target="/tmp/$LOGNAME/$command.tar.gz"
+
+(cd $GOPATH/src; go install github.com/Symantec/Dominator/cmd/$command)
+
+strip -o "$bin~" "$bin"
+if cmp -s "$bin~" "$bin"; then
+    rm "$bin~"
+else
+    touch -r "$bin" "$bin~"
+    mv "$bin~" "$bin"
+fi
+
+readonly tmpdir="$(mktemp -d '/tmp/make-tarball.XXXXXX')" || exit
+trap "rm -rf $tmpdir" EXIT
+
+mkdir -p "$tmpdir/etc/ssl/installer" "$tmpdir/usr/local/sbin"
+cp -p "$ETCDIR/ssl/"*.pem "$tmpdir/etc/ssl"
+cp -p "$ETCDIR/ssl/installer/"* "$tmpdir/etc/ssl/installer"
+cp -p "$bin" "$tmpdir/usr/local/sbin"
+
+tar --owner=0 --group=0 -czf "$target" -C "$tmpdir" .
