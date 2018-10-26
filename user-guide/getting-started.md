@@ -50,7 +50,7 @@ following commands:
 git clone https://github.com/Symantec/tricorder.git
 git clone https://github.com/golang/exp.git
 git clone https://github.com/aws/aws-sdk-go.git
-git clone https://gopkg.in/fsnotify.v0
+git clone https://gopkg.in/fsnotify/fsnotify.v0
 ```
 
 You can update the local copies of these repositories to the latest version of
