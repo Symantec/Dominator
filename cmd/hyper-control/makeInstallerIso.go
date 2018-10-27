@@ -16,7 +16,6 @@ import (
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/nulllogger"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
@@ -67,9 +66,8 @@ func makeInstallerIso(hostname, dirname string, logger log.DebugLogger) error {
 		return err
 	}
 	defer imageClient.Close()
-	var img *image.Image
 	if imageName != "" {
-		img, err = imageclient.GetImage(imageClient, imageName)
+		img, err := imageclient.GetImage(imageClient, imageName)
 		if err != nil {
 			return err
 		}
@@ -77,7 +75,7 @@ func makeInstallerIso(hostname, dirname string, logger log.DebugLogger) error {
 			return fmt.Errorf("image: %s does not exist", imageName)
 		}
 	}
-	configFiles, err := makeConfigFiles(info, img, networkEntries)
+	configFiles, err := makeConfigFiles(info, imageName, networkEntries)
 	if err != nil {
 		return err
 	}

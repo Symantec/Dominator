@@ -10,7 +10,6 @@ import (
 
 	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/image"
 	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -89,7 +88,7 @@ func getStorageLayout() (installer_proto.StorageLayout, error) {
 	return val, nil
 }
 
-func makeConfigFiles(info fm_proto.GetMachineInfoResponse, img *image.Image,
+func makeConfigFiles(info fm_proto.GetMachineInfoResponse, imageName string,
 	networkEntries []fm_proto.NetworkEntry) (map[string][]byte, error) {
 	filesMap := make(map[string][]byte, len(netbootFiles)+1)
 	for tftpFilename, localFilename := range netbootFiles {
@@ -104,29 +103,24 @@ func makeConfigFiles(info fm_proto.GetMachineInfoResponse, img *image.Image,
 	} else {
 		filesMap["config.json"] = append(data, '\n')
 	}
-	ifIndex := 0
+	if imageName != "" {
+		filesMap["imagename"] = []byte(imageName + "\n")
+	}
 	buffer := new(bytes.Buffer)
+	fmt.Fprintf(buffer, "%s:%d\n", *imageServerHostname, *imageServerPortNum)
+	filesMap["imageserver"] = buffer.Bytes()
 	var primarySubnet *hyper_proto.Subnet
 	for _, networkEntry := range networkEntries {
 		subnet := findMatchingSubnet(info.Subnets, networkEntry.HostIpAddress)
 		if subnet == nil {
 			continue
 		}
-		if ifIndex == 0 {
-			primarySubnet = subnet
-		}
-		fmt.Fprintf(buffer, "ip%d=%s\n", ifIndex, networkEntry.HostIpAddress)
-		fmt.Fprintf(buffer, "gateway%d=%s\n", ifIndex, subnet.IpGateway)
-		fmt.Fprintf(buffer, "mask%d=%s\n", ifIndex, subnet.IpMask)
-		ifIndex++
+		primarySubnet = subnet
+		break
 	}
 	if primarySubnet == nil {
 		return nil, errors.New("no primary subnet found")
 	}
-	filesMap["network-interfaces"] = buffer.Bytes()
-	buffer = new(bytes.Buffer)
-	fmt.Fprintf(buffer, "%s:%d\n", *imageServerHostname, *imageServerPortNum)
-	filesMap["objectserver"] = buffer.Bytes()
 	buffer = new(bytes.Buffer)
 	if primarySubnet.DomainName != "" {
 		fmt.Fprintf(buffer, "domain %s\n", primarySubnet.DomainName)
@@ -140,19 +134,6 @@ func makeConfigFiles(info fm_proto.GetMachineInfoResponse, img *image.Image,
 	if layout, err := getStorageLayout(); err != nil {
 		return nil, err
 	} else {
-		var imageSize uint64
-		if img == nil {
-			imageSize = 1 << 29
-		} else {
-			imageSize = img.FileSystem.EstimateUsage(0)
-		}
-		for index := range layout.BootDriveLayout {
-			if layout.BootDriveLayout[index].MountPoint != "/" {
-				continue
-			}
-			layout.BootDriveLayout[index].MinimumFreeBytes += imageSize
-			break
-		}
 		if data, err := json.MarshalIndent(layout, "", "    "); err != nil {
 			return nil, err
 		} else {
@@ -167,7 +148,7 @@ func makeDefaultStorageLayout() installer_proto.StorageLayout {
 		BootDriveLayout: []installer_proto.Partition{
 			{
 				MountPoint:       "/",
-				MinimumFreeBytes: 256 << 20,
+				MinimumFreeBytes: 2 << 30,
 			},
 			{
 				MountPoint:       "/home",
@@ -215,10 +196,16 @@ func netbootHost(hostname string, logger log.DebugLogger) error {
 	if len(leases) < 1 {
 		return errors.New("no IP and MAC addresses matching a subnet")
 	}
-	hypervisorAddresses, err := listGoodHypervisorsInLocation(fmCR,
-		info.Location)
-	if err != nil {
-		return err
+	var hypervisorAddresses []string
+	if *hypervisorHostname != "" {
+		hypervisorAddresses = append(hypervisorAddresses,
+			fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum))
+	} else {
+		hypervisorAddresses, err = listGoodHypervisorsInLocation(fmCR,
+			info.Location)
+		if err != nil {
+			return err
+		}
 	}
 	if len(hypervisorAddresses) < 1 {
 		return errors.New("no nearby Hypervisors available")
@@ -227,7 +214,6 @@ func netbootHost(hostname string, logger log.DebugLogger) error {
 		hypervisorAddresses[0], leases[0].subnet.Id)
 	hyperCR := srpc.NewClientResource("tcp", hypervisorAddresses[0])
 	defer hyperCR.ScheduleClose()
-	var img *image.Image
 	if imageName != "" {
 		imageClient, err := srpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
 			*imageServerHostname, *imageServerPortNum), 0)
@@ -235,15 +221,18 @@ func netbootHost(hostname string, logger log.DebugLogger) error {
 			return err
 		}
 		defer imageClient.Close()
-		img, err = imageclient.GetImage(imageClient, imageName)
+		img, err := imageclient.GetImage(imageClient, imageName)
 		if err != nil {
 			return err
 		}
 		if img == nil {
-			return fmt.Errorf("image: %s does not exist", imageName)
+			logger.Printf("warning: image: %s does not exist", imageName)
+		} else if len(img.FileSystem.InodeTable) < 1000 {
+			return fmt.Errorf("only %d inodes, this is likely not bootable",
+				len(img.FileSystem.InodeTable))
 		}
 	}
-	filesMap, err := makeConfigFiles(info, img, networkEntries)
+	filesMap, err := makeConfigFiles(info, imageName, networkEntries)
 	if err != nil {
 		return err
 	}

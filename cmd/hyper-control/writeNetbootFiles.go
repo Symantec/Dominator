@@ -7,7 +7,6 @@ import (
 
 	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
@@ -66,7 +65,6 @@ func writeNetbootFiles(hostname, dirname string, logger log.DebugLogger) error {
 	if len(hostAddresses) < 1 {
 		return errors.New("no IP and MAC addresses known for host")
 	}
-	var img *image.Image
 	if imageName != "" {
 		imageClient, err := srpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
 			*imageServerHostname, *imageServerPortNum), 0)
@@ -74,7 +72,7 @@ func writeNetbootFiles(hostname, dirname string, logger log.DebugLogger) error {
 			return err
 		}
 		defer imageClient.Close()
-		img, err = imageclient.GetImage(imageClient, imageName)
+		img, err := imageclient.GetImage(imageClient, imageName)
 		if err != nil {
 			return err
 		}
@@ -82,7 +80,7 @@ func writeNetbootFiles(hostname, dirname string, logger log.DebugLogger) error {
 			return fmt.Errorf("image: %s does not exist", imageName)
 		}
 	}
-	configFiles, err := makeConfigFiles(info, img, networkEntries)
+	configFiles, err := makeConfigFiles(info, imageName, networkEntries)
 	if err != nil {
 		return err
 	}
