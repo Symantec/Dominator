@@ -402,9 +402,24 @@ func (bootInfo *bootInfoType) makeBootable(deviceName string, rootDir string,
 	if err := file.Close(); err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filepath.Join(rootDir, "etc", "fstab"),
-		[]byte("LABEL=rootfs / ext4 defaults 0 1\n"),
-		0644)
+	file, err = os.Create(filepath.Join(rootDir, "etc", "fstab"))
+	if err != nil {
+		return err
+	} else {
+		defer file.Close()
+		return writeFstabEntry(file, "LABEL=rootfs", "/", "ext4", "", 0, 1)
+	}
+}
+
+func writeFstabEntry(writer io.Writer,
+	source, mountPoint, fileSystemType, flags string,
+	dumpFrequency, checkOrder uint) error {
+	if flags == "" {
+		flags = "defaults"
+	}
+	_, err := fmt.Fprintf(writer, "%-16s %-10s %-5s %-10s %d %d\n",
+		source, mountPoint, fileSystemType, flags, dumpFrequency, checkOrder)
+	return err
 }
 
 func writeToBlock(fs *filesystem.FileSystem,
@@ -493,15 +508,10 @@ func writeRaw(fs *filesystem.FileSystem,
 
 const grubTemplateString string = `# Generated from simple template.
 set default="0"
-if loadfont unicode ; then
-  set gfxmode=auto
-  insmod all_video
-  insmod gfxterm
-fi
-terminal_output gfxterm
+insmod serial
+serial --unit=0 --speed=115200
+terminal_output serial
 set timeout=0
-set menu_color_normal=cyan/blue
-set menu_color_highlight=white/blue
 
 menuentry 'Linux' 'Solitary Linux' {
         insmod gzio

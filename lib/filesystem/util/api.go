@@ -1,6 +1,7 @@
 package util
 
 import (
+	"io"
 	"os"
 
 	"github.com/Symantec/Dominator/lib/filesystem"
@@ -51,6 +52,13 @@ func SpliceComputedFiles(fs *filesystem.FileSystem,
 func Unpack(fs *filesystem.FileSystem, objectsGetter objectserver.ObjectsGetter,
 	rootDir string, logger log.Logger) error {
 	return unpack(fs, objectsGetter, rootDir, logger)
+}
+
+func WriteFstabEntry(writer io.Writer,
+	source, mountPoint, fileSystemType, flags string,
+	dumpFrequency, checkOrder uint) error {
+	return writeFstabEntry(writer, source, mountPoint, fileSystemType, flags,
+		dumpFrequency, checkOrder)
 }
 
 func WriteRaw(fs *filesystem.FileSystem,
