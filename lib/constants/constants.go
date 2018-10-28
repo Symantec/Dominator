@@ -10,6 +10,7 @@ const (
 	ImaginatorPortNumber         = 6975
 	HypervisorPortNumber         = 6976
 	FleetManagerPortNumber       = 6977
+	InstallerPortNumber          = 6978
 
 	DefaultCpuPercent          = 50
 	DefaultNetworkSpeedPercent = 10
