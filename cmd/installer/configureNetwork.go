@@ -2,48 +2,87 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func configureNetwork(logger log.DebugLogger) (
-	*fm_proto.GetMachineInfoResponse, error) {
-	if err := run("ifconfig", "", logger, "lo", "up"); err != nil {
-		return nil, err
-	}
-	interfaces, err := listInterfaces(logger)
-	if err != nil {
-		return nil, err
-	}
-	machineInfo, err := getConfiguration(interfaces, logger)
-	if err != nil {
-		return nil, err
-	}
-	return machineInfo, nil
+type bondedInterfaceType struct {
+	name   string // Physical interface name.
+	ipAddr net.IP
+	subnet *hyper_proto.Subnet
 }
 
-func findInterfaceToConfigure(interfaces []net.Interface,
-	machineInfo fm_proto.GetMachineInfoResponse,
-	logger log.DebugLogger) (string, net.IP, *hyper_proto.Subnet, error) {
-	networkEntries := getNetworkEntries(machineInfo)
-	interfaceTable := make(map[string]net.Interface, len(interfaces))
-	for _, iface := range interfaces {
-		interfaceTable[iface.HardwareAddr.String()] = iface
+type normalInterfaceType struct {
+	name   string // Physical interface name.
+	ipAddr net.IP
+	subnet *hyper_proto.Subnet
+}
+
+type networkConfig struct {
+	bondedInterfaces []bondedInterfaceType
+	bridges          []uint
+	normalInterfaces []normalInterfaceType
+	bondSlaves       []string // New interface name.
+}
+
+func addMapping(mappings map[string]string, name string) error {
+	filename := fmt.Sprintf("/sys/class/net/%s/device", name)
+	if symlink, err := os.Readlink(filename); err != nil {
+		return err
+	} else {
+		mappings[name] = filepath.Base(symlink)
+		return nil
 	}
+}
+
+func configureNetwork(machineInfo fm_proto.GetMachineInfoResponse,
+	interfaces map[string]net.Interface, logger log.DebugLogger) error {
+	hostname := strings.Split(machineInfo.Machine.Hostname, ".")[0]
+	err := ioutil.WriteFile(filepath.Join(*mountPoint, "etc", "hostname"),
+		[]byte(hostname+"\n"), filePerms)
+	if err != nil {
+		return err
+	}
+	netconf := &networkConfig{}
+	networkEntries := getNetworkEntries(machineInfo)
+	mappings := make(map[string]string)
+	for name := range interfaces {
+		if err := addMapping(mappings, name); err != nil {
+			return err
+		}
+	}
+	connectedInterfaces := getConnectedInterfaces(interfaces, logger)
+	hwAddrToInterface := make(map[string]net.Interface, len(interfaces))
+	for _, iface := range interfaces {
+		hwAddrToInterface[iface.HardwareAddr.String()] = iface
+	}
+	var defaultSubnet *hyper_proto.Subnet
+	preferredSubnet := findMatchingSubnet(machineInfo.Subnets,
+		machineInfo.Machine.HostIpAddress)
+	// First process network entries with normal interfaces.
+	var bondedNetworkEntries []fm_proto.NetworkEntry
+	normalInterfaceIndex := 0
+	usedSubnets := make(map[*hyper_proto.Subnet]struct{})
 	for _, networkEntry := range networkEntries {
 		if len(networkEntry.HostIpAddress) < 1 {
 			continue
 		}
-		iface, ok := interfaceTable[networkEntry.HostMacAddress.String()]
+		if len(networkEntry.HostMacAddress) < 1 {
+			bondedNetworkEntries = append(bondedNetworkEntries, networkEntry)
+			continue
+		}
+		iface, ok := hwAddrToInterface[networkEntry.HostMacAddress.String()]
 		if !ok {
+			logger.Printf("MAC address: %s not found\n",
+				networkEntry.HostMacAddress)
 			continue
 		}
 		subnet := findMatchingSubnet(machineInfo.Subnets,
@@ -53,129 +92,183 @@ func findInterfaceToConfigure(interfaces []net.Interface,
 				networkEntry.HostIpAddress)
 			continue
 		}
-		return iface.Name, networkEntry.HostIpAddress, subnet, nil
-	}
-	if err := raiseInterfaces(interfaces, logger); err != nil {
-		return "", nil, nil, err
-	}
-	//if err := lowerInterfaces(interfaces, name, logger); err != nil {
-	//	return err
-	//}
-	return "", nil, nil,
-		errors.New("no network interfaces match injected configuration")
-}
-
-func findMatchingSubnet(subnets []*hyper_proto.Subnet,
-	ipAddr net.IP) *hyper_proto.Subnet {
-	for _, subnet := range subnets {
-		subnetMask := net.IPMask(subnet.IpMask)
-		subnetAddr := subnet.IpGateway.Mask(subnetMask)
-		if ipAddr.Mask(subnetMask).Equal(subnetAddr) {
-			return subnet
+		usedSubnets[subnet] = struct{}{}
+		normalInterfaceIndex++
+		netconf.addNormalInterface(iface.Name, networkEntry.HostIpAddress,
+			subnet)
+		delete(connectedInterfaces, iface.Name)
+		if subnet == preferredSubnet {
+			defaultSubnet = subnet
+		} else if defaultSubnet == nil {
+			defaultSubnet = subnet
 		}
 	}
-	return nil
-}
-
-func getConfiguration(interfaces []net.Interface,
-	logger log.DebugLogger) (*fm_proto.GetMachineInfoResponse, error) {
-	var machineInfo fm_proto.GetMachineInfoResponse
-	err := json.ReadFromFile(filepath.Join(*tftpDirectory, "config.json"),
-		&machineInfo)
-	if err == nil { // Configuration was injected.
-		if err := setupNetwork(interfaces, machineInfo, logger); err != nil {
-			return nil, err
-		}
-		return &machineInfo, nil
+	for name := range connectedInterfaces {
+		netconf.bondSlaves = append(netconf.bondSlaves, name)
 	}
-	if !os.IsNotExist(err) {
-		return nil, err
-	}
-	return nil, errors.New("DHCP/TFTP not implemented yet")
-}
-
-func getNetworkEntries(
-	info fm_proto.GetMachineInfoResponse) []fm_proto.NetworkEntry {
-	networkEntries := make([]fm_proto.NetworkEntry, 1,
-		len(info.Machine.SecondaryNetworkEntries)+1)
-	networkEntries[0] = info.Machine.NetworkEntry
-	for _, networkEntry := range info.Machine.SecondaryNetworkEntries {
-		networkEntries = append(networkEntries, networkEntry)
-	}
-	return networkEntries
-}
-
-func listInterfaces(logger log.DebugLogger) ([]net.Interface, error) {
-	var interfaces []net.Interface
-	if allInterfaces, err := net.Interfaces(); err != nil {
-		return nil, err
-	} else {
-		for _, iface := range allInterfaces {
-			if iface.Flags&net.FlagBroadcast == 0 {
-				logger.Debugf(2, "skipping non-EtherNet interface: %s\n",
-					iface.Name)
-			} else {
-				logger.Debugf(1, "found EtherNet interface: %s\n", iface.Name)
-				interfaces = append(interfaces, iface)
+	if len(connectedInterfaces) > 0 {
+		for _, networkEntry := range bondedNetworkEntries {
+			subnet := findMatchingSubnet(machineInfo.Subnets,
+				networkEntry.HostIpAddress)
+			if subnet == nil {
+				logger.Printf("no matching subnet for ip=%s\n",
+					networkEntry.HostIpAddress)
+				continue
+			}
+			usedSubnets[subnet] = struct{}{}
+			entryName := fmt.Sprintf("bond0.%d", subnet.VlanId)
+			netconf.addBondedInterface(entryName, networkEntry.HostIpAddress,
+				subnet)
+			if subnet == preferredSubnet {
+				defaultSubnet = subnet
+			} else if defaultSubnet == nil {
+				defaultSubnet = subnet
 			}
 		}
+		for _, subnet := range machineInfo.Subnets {
+			if _, ok := usedSubnets[subnet]; ok {
+				continue
+			}
+			netconf.bridges = append(netconf.bridges, subnet.VlanId)
+		}
 	}
-	return interfaces, nil
+	if err := netconf.write(defaultSubnet.IpGateway); err != nil {
+		return err
+	}
+	if err := writeMappings(mappings); err != nil {
+		return err
+	}
+	err = writeResolvConf(filepath.Join(*mountPoint, "etc", "resolv.conf"),
+		defaultSubnet)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func lowerInterfaces(interfaces []net.Interface, keepUp string,
-	logger log.DebugLogger) error {
-	for _, iface := range interfaces {
-		if iface.Name == keepUp {
+func getConnectedInterfaces(interfaces map[string]net.Interface,
+	logger log.DebugLogger) map[string]net.Interface {
+	connectedInterfaces := make(map[string]net.Interface)
+	for name, iface := range interfaces {
+		if testCarrier(name) {
+			connectedInterfaces[name] = iface
+			logger.Debugf(1, "%s is connected\n", name)
 			continue
 		}
-		if err := run("ifconfig", "", logger, iface.Name, "down"); err != nil {
-			return err
-		}
+		run("ifconfig", "", logger, name, "down")
 	}
-	return nil
+	return connectedInterfaces
 }
 
-func raiseInterfaces(interfaces []net.Interface, logger log.DebugLogger) error {
-	for _, iface := range interfaces {
-		if err := run("ifconfig", "", logger, iface.Name, "up"); err != nil {
-			return err
+func testCarrier(name string) bool {
+	filename := fmt.Sprintf("/sys/class/net/%s/carrier", name)
+	if data, err := ioutil.ReadFile(filename); err == nil {
+		if len(data) > 0 && data[0] == '1' {
+			return true
 		}
 	}
-	return nil
+	return false
 }
 
-func setupNetwork(interfaces []net.Interface,
-	machineInfo fm_proto.GetMachineInfoResponse, logger log.DebugLogger) error {
-	name, ipAddr, subnet, err := findInterfaceToConfigure(interfaces,
-		machineInfo, logger)
-	if err != nil {
-		return err
-	}
-	err = run("ifconfig", "", logger, name, ipAddr.String(), "netmask",
-		subnet.IpMask.String(), "up")
-	if err != nil {
-		return err
-	}
-	err = run("route", "", logger, "add", "default", "gw",
-		subnet.IpGateway.String())
-	if err != nil {
-		return err
-	}
-	if file, err := create("/etc/resolv.conf"); err != nil {
+func (netconf *networkConfig) addBondedInterface(name string, ipAddr net.IP,
+	subnet *hyper_proto.Subnet) {
+	netconf.bondedInterfaces = append(netconf.bondedInterfaces,
+		bondedInterfaceType{
+			name:   name,
+			ipAddr: ipAddr,
+			subnet: subnet,
+		})
+}
+
+func (netconf *networkConfig) addNormalInterface(name string, ipAddr net.IP,
+	subnet *hyper_proto.Subnet) {
+	netconf.normalInterfaces = append(netconf.normalInterfaces,
+		normalInterfaceType{
+			name:   name,
+			ipAddr: ipAddr,
+			subnet: subnet,
+		})
+}
+
+func (netconf *networkConfig) write(ipGateway net.IP) error {
+	return netconf.writeDebian(ipGateway)
+}
+
+func (netconf *networkConfig) writeDebian(ipGateway net.IP) error {
+	filename := filepath.Join(*mountPoint, "etc", "network", "interfaces")
+	if file, err := create(filename); err != nil {
 		return err
 	} else {
 		defer file.Close()
 		writer := bufio.NewWriter(file)
 		defer writer.Flush()
-		if subnet.DomainName != "" {
-			fmt.Fprintf(writer, "domain %s\n", subnet.DomainName)
-			fmt.Fprintf(writer, "search %s\n", subnet.DomainName)
+		fmt.Fprintln(writer,
+			"# /etc/network/interfaces -- created by SmallStack installer\n")
+		fmt.Fprintln(writer, "auto lo")
+		fmt.Fprintln(writer, "iface lo inet loopback")
+		for _, iface := range netconf.normalInterfaces {
+			fmt.Fprintln(writer)
+			fmt.Fprintf(writer, "auto %s\n", iface.name)
+			fmt.Fprintf(writer, "iface %s inet static\n", iface.name)
+			fmt.Fprintf(writer, "\taddress %s\n", iface.ipAddr)
+			fmt.Fprintf(writer, "\tnetmask %s\n", iface.subnet.IpMask)
+			if iface.subnet.IpGateway.Equal(ipGateway) {
+				fmt.Fprintf(writer, "\tgateway %s\n", iface.subnet.IpGateway)
+			}
+		}
+		if len(netconf.bondSlaves) > 0 {
+			fmt.Fprintln(writer)
+			fmt.Fprintln(writer, "auto bond0")
+			fmt.Fprintln(writer, "iface bond0 inet manual")
+			fmt.Fprintln(writer, "\tup ip link set bond0 mtu 9000")
+			fmt.Fprintln(writer, "\tbond-mode 802.3ad")
+			fmt.Fprintln(writer, "\tbond-xmit_hash_policy 1")
+			fmt.Fprint(writer, "\tslaves")
+			for _, name := range netconf.bondSlaves {
+				fmt.Fprint(writer, " ", name)
+			}
 			fmt.Fprintln(writer)
 		}
-		for _, nameserver := range subnet.DomainNameServers {
-			fmt.Fprintf(writer, "nameserver %s\n", nameserver)
+		for _, iface := range netconf.bondedInterfaces {
+			fmt.Fprintln(writer)
+			fmt.Fprintf(writer, "auto %s\n", iface.name)
+			fmt.Fprintf(writer, "iface %s inet static\n", iface.name)
+			fmt.Fprintln(writer, "\tvlan-raw-device bond0")
+			fmt.Fprintf(writer, "\taddress %s\n", iface.ipAddr)
+			fmt.Fprintf(writer, "\tnetmask %s\n", iface.subnet.IpMask)
+			if iface.subnet.IpGateway.Equal(ipGateway) {
+				fmt.Fprintf(writer, "\tgateway %s\n", iface.subnet.IpGateway)
+			}
 		}
+		for _, vlanId := range netconf.bridges {
+			fmt.Fprintln(writer)
+			fmt.Fprintf(writer, "auto bond0.%d\n", vlanId)
+			fmt.Fprintf(writer, "iface bond0.%d inet manual\n", vlanId)
+			fmt.Fprintln(writer, "\tvlan-raw-device bond0")
+			fmt.Fprintln(writer)
+			fmt.Fprintf(writer, "auto br%d\n", vlanId)
+			fmt.Fprintf(writer, "iface br%d inet manual\n", vlanId)
+			fmt.Fprintf(writer, "\tbridge_ports bond0.%d\n", vlanId)
+		}
+		return nil
 	}
-	return nil
+}
+
+func writeMappings(mappings map[string]string) error {
+	filename := filepath.Join(*mountPoint,
+		"etc", "udev", "rules.d", "70-persistent-net.rules")
+	if file, err := create(filename); err != nil {
+		return err
+	} else {
+		defer file.Close()
+		writer := bufio.NewWriter(file)
+		defer writer.Flush()
+		for name, kernelId := range mappings {
+			fmt.Fprintf(writer,
+				`SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{type}=="1", KERNEL=="eth*", KERNELS=="%s", NAME="%s"`,
+				kernelId, name)
+			fmt.Fprintln(writer)
+		}
+		return writer.Flush()
+	}
 }

@@ -1,39 +1,64 @@
 package main
 
 import (
-	"crypto/tls"
 	"flag"
 	"fmt"
+	stdlog "log"
 	"os"
+	"path/filepath"
+	"syscall"
+	"time"
 
+	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/flags/loadflags"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/log/cmdlogger"
-	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/log/debuglogger"
+	"github.com/Symantec/Dominator/lib/logbuf"
+	"github.com/Symantec/Dominator/lib/srpc/setupserver"
+	"github.com/Symantec/tricorder/go/tricorder"
 )
 
+const logfile = "/var/log/installer/latest"
+
 var (
-	certFile = flag.String("certFile", "/etc/ssl/subd/cert.pem",
-		"Name of file containing the SSL certificate")
 	dryRun = flag.Bool("dryRun", ifUnprivileged(),
 		"If true, do not make changes")
-	keyFile = flag.String("keyFile", "/etc/ssl/subd/key.pem",
-		"Name of file containing the SSL key")
 	mountPoint = flag.String("mountPoint", "/mnt",
 		"Mount point for new root file-system")
 	objectsDirectory = flag.String("objectsDirectory", "/objects",
 		"Directory where cached objects will be written")
+	logDebugLevel = flag.Int("logDebugLevel", -1, "Debug log level")
+	portNum       = flag.Uint("portNum", constants.InstallerPortNumber,
+		"Port number to allocate and listen on for HTTP/RPC")
 	procDirectory = flag.String("procDirectory", "/proc",
 		"Directory where procfs is mounted")
+	skipNetwork = flag.Bool("skipNetwork", false,
+		"If true, do not update target network configuration")
+	skipStorage = flag.Bool("skipStorage", false,
+		"If true, do not update storage")
 	sysfsDirectory = flag.String("sysfsDirectory", "/sys",
 		"Directory where sysfs is mounted")
 	tftpDirectory = flag.String("tftpDirectory", "/tftpdata",
 		"Directory containing (possibly injected) TFTP data")
 	tmpRoot = flag.String("tmpRoot", "/tmproot",
 		"Mount point for temporary (tmpfs) root file-system")
-
-	logger log.DebugLogger
 )
+
+func copyLogs() error {
+	logdir := filepath.Join(*mountPoint, "var", "log", "installer")
+	return fsutil.CopyFile(filepath.Join(logdir, "log"), logfile, filePerms)
+}
+
+func createLogger() (*logbuf.LogBuffer, log.DebugLogger) {
+	os.MkdirAll("/var/log/installer", dirPerms)
+	options := logbuf.GetStandardOptions()
+	options.AlsoLogToStderr = true
+	logBuffer := logbuf.NewWithOptions(options)
+	logger := debuglogger.New(stdlog.New(logBuffer, "", 0))
+	logger.SetLevel(int16(*logDebugLevel))
+	return logBuffer, logger
+}
 
 func ifUnprivileged() bool {
 	if os.Geteuid() != 0 {
@@ -43,34 +68,59 @@ func ifUnprivileged() bool {
 }
 
 func install(logger log.DebugLogger) error {
-	machineInfo, err := configureNetwork(logger)
+	machineInfo, interfaces, err := configureLocalNetwork(logger)
 	if err != nil {
 		return err
 	}
-	if err := configureStorage(logger); err != nil {
-		return err
+	if !*skipStorage {
+		if err := configureStorage(*machineInfo, logger); err != nil {
+			return err
+		}
 	}
-	_ = machineInfo
+	if !*skipNetwork {
+		err := configureNetwork(*machineInfo, interfaces, logger)
+		if err != nil {
+			return err
+		}
+	}
+	if err := copyLogs(); err != nil {
+		return fmt.Errorf("error copying logs: %s", err)
+	}
+	syscall.Sync()
+	time.Sleep(time.Second)
+	if err := unmountStorage(logger); err != nil {
+		return fmt.Errorf("error unmounting: %s", err)
+	}
 	return nil
 }
 
 func main() {
-	if err := loadflags.LoadForCli("installer"); err != nil {
+	if err := loadflags.LoadForDaemon("installer"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	flag.Parse()
-	logger = cmdlogger.New()
-	if cert, err := tls.LoadX509KeyPair(*certFile, *keyFile); err != nil {
-		logger.Printf("unable to load keypair: %s", err)
-	} else {
-		srpc.RegisterClientTlsConfig(&tls.Config{
-			InsecureSkipVerify: true,
-			MinVersion:         tls.VersionTLS12,
-			Certificates:       []tls.Certificate{cert},
-		})
+	tricorder.RegisterFlags()
+	logBuffer, logger := createLogger()
+	defer logBuffer.Flush()
+	go runShellOnConsole(logger)
+	AddHtmlWriter(logBuffer)
+	if err := setupserver.SetupTls(); err != nil {
+		logger.Println(err)
+	}
+	if err := startServer(*portNum, logger); err != nil {
+		logger.Printf("cannot start server: %s\n", err)
 	}
 	if err := install(logger); err != nil {
-		logger.Fatalln(err)
+		logger.Println(err)
+		logger.Println("waiting 15m before rebooting")
+		time.Sleep(time.Minute * 15)
+	} else {
+		logger.Println("waiting 1s before rebooting")
+		time.Sleep(time.Second)
+	}
+	syscall.Sync()
+	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART); err != nil {
+		logger.Fatalf("error rebooting: %s\n", err)
 	}
 }
