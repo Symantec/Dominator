@@ -32,6 +32,8 @@ var (
 		"Port number of image server")
 	installerImageStream = flag.String("installerImageStream", "",
 		"Name of default image stream for building bootable installer ISO")
+	installerPortNum = flag.Uint("installerPortNum",
+		constants.InstallerPortNumber, "Port number of installer")
 	location = flag.String("location", "",
 		"Location to search for hypervisors")
 	offerTimeout = flag.Duration("offerTimeout", time.Minute+time.Second,
@@ -66,6 +68,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  change-tags")
 	fmt.Fprintln(os.Stderr, "  get-machine-info hostname")
 	fmt.Fprintln(os.Stderr, "  get-updates")
+	fmt.Fprintln(os.Stderr, "  installer-shell hostname")
 	fmt.Fprintln(os.Stderr, "  make-installer-iso hostname dirname")
 	fmt.Fprintln(os.Stderr, "  netboot-host hostname")
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
@@ -89,6 +92,7 @@ var subcommands = []subcommand{
 	{"change-tags", 0, 0, changeTagsSubcommand},
 	{"get-machine-info", 1, 1, getMachineInfoSubcommand},
 	{"get-updates", 0, 0, getUpdatesSubcommand},
+	{"installer-shell", 1, 1, installerShellSubcommand},
 	{"make-installer-iso", 2, 2, makeInstallerIsoSubcommand},
 	{"netboot-host", 1, 1, netbootHostSubcommand},
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},

@@ -35,6 +35,8 @@ Some of the sub-commands available are:
 - **get-updates**: get and show a continuous stream of updates from a
                    *Hypervisor* or *Fleet Manager*. This is primarily for
                    debugging
+- **installer-shell**: start a remote shell (via SRPC) to the installer running
+                       on a machine
 - **make-installer-iso**: make a bootable installation ISO (CD-ROM) image for a
                           machine
 - **netboot-host**: temporarily enable PXE-based network booting and installing
