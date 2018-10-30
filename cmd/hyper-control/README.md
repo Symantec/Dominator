@@ -43,6 +43,7 @@ Some of the sub-commands available are:
                     for a machine
 - **netboot-machine**: temporarily enable PXE-based network booting for a
                        machine
+- **reinstall**: reinstall the local machine. This erases all data
 - **remove-excess-addresses**: remove free addresses for a specific *Hypervisor*
                                above the specified limit
 - **rollout-image**: safely roll out specified image to all *Hypervisors* in a

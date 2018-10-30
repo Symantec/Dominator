@@ -74,6 +74,10 @@ func makeInstallerIso(hostname, dirname string, logger log.DebugLogger) error {
 		if img == nil {
 			return fmt.Errorf("image: %s does not exist", imageName)
 		}
+		if len(img.FileSystem.InodeTable) < 1000 {
+			return fmt.Errorf("only %d inodes, this is likely not bootable",
+				len(img.FileSystem.InodeTable))
+		}
 	}
 	configFiles, err := makeConfigFiles(info, imageName, networkEntries)
 	if err != nil {

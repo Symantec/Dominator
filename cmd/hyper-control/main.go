@@ -72,6 +72,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  make-installer-iso hostname dirname")
 	fmt.Fprintln(os.Stderr, "  netboot-host hostname")
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
+	fmt.Fprintln(os.Stderr, "  reinstall")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
 	fmt.Fprintln(os.Stderr, "  rollout-image name")
 	fmt.Fprintln(os.Stderr, "  write-netboot-files hostname dirname")
@@ -96,6 +97,7 @@ var subcommands = []subcommand{
 	{"make-installer-iso", 2, 2, makeInstallerIsoSubcommand},
 	{"netboot-host", 1, 1, netbootHostSubcommand},
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},
+	{"reinstall", 0, 0, reinstallSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
 	{"rollout-image", 1, 1, rolloutImageSubcommand},
 	{"write-netboot-files", 2, 2, writeNetbootFilesSubcommand},
