@@ -66,6 +66,61 @@ func getHostAddress(networkEntries []fm_proto.NetworkEntry) []hostAddressType {
 	return hostAddresses
 }
 
+func getInstallConfig(fmCR *srpc.ClientResource, imageClient *srpc.Client,
+	hostname string,
+	logger log.DebugLogger) (*fm_proto.GetMachineInfoResponse, []leaseType,
+	map[string][]byte, error) {
+	info, err := getInfoForMachine(fmCR, hostname)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	imageName := info.Machine.Tags["RequiredImage"]
+	subnets := make([]*hyper_proto.Subnet, 0, len(info.Subnets))
+	for _, subnet := range info.Subnets {
+		if subnet.VlanId == 0 {
+			subnets = append(subnets, subnet)
+		}
+	}
+	if len(subnets) < 1 {
+		return nil, nil, nil, errors.New("no non-VLAN subnets known")
+	}
+	networkEntries := getNetworkEntries(info)
+	hostAddresses := getHostAddress(networkEntries)
+	if len(hostAddresses) < 1 {
+		return nil, nil, nil,
+			errors.New("no IP and MAC addresses known for host")
+	}
+	leases := make([]leaseType, 0, len(hostAddresses))
+	for _, address := range hostAddresses {
+		subnet := findMatchingSubnet(subnets, address.address.IpAddress)
+		if subnet != nil {
+			leases = append(leases, leaseType{address: address, subnet: subnet})
+		}
+	}
+	if len(leases) < 1 {
+		return nil, nil, nil,
+			errors.New("no IP and MAC addresses matching a subnet")
+	}
+	if imageName != "" {
+		img, err := imageclient.GetImage(imageClient, imageName)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if img == nil {
+			logger.Printf("warning: image: %s does not exist", imageName)
+		} else if len(img.FileSystem.InodeTable) < 1000 {
+			return nil, nil, nil, fmt.Errorf(
+				"only %d inodes, this is likely not bootable",
+				len(img.FileSystem.InodeTable))
+		}
+	}
+	configFiles, err := makeConfigFiles(info, imageName, networkEntries)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return &info, leases, configFiles, nil
+}
+
 func getNetworkEntries(
 	info fm_proto.GetMachineInfoResponse) []fm_proto.NetworkEntry {
 	networkEntries := make([]fm_proto.NetworkEntry, 1,
@@ -167,34 +222,16 @@ func netbootHost(hostname string, logger log.DebugLogger) error {
 	fmCR := srpc.NewClientResource("tcp",
 		fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum))
 	defer fmCR.ScheduleClose()
-	info, err := getInfoForMachine(fmCR, hostname)
+	imageClient, err := srpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
+		*imageServerHostname, *imageServerPortNum), 0)
 	if err != nil {
 		return err
 	}
-	imageName := info.Machine.Tags["RequiredImage"]
-	subnets := make([]*hyper_proto.Subnet, 0, len(info.Subnets))
-	for _, subnet := range info.Subnets {
-		if subnet.VlanId == 0 {
-			subnets = append(subnets, subnet)
-		}
-	}
-	if len(subnets) < 1 {
-		return errors.New("no non-VLAN subnets known")
-	}
-	networkEntries := getNetworkEntries(info)
-	hostAddresses := getHostAddress(networkEntries)
-	if len(hostAddresses) < 1 {
-		return errors.New("no IP and MAC addresses known for host")
-	}
-	leases := make([]leaseType, 0, len(hostAddresses))
-	for _, address := range hostAddresses {
-		subnet := findMatchingSubnet(subnets, address.address.IpAddress)
-		if subnet != nil {
-			leases = append(leases, leaseType{address: address, subnet: subnet})
-		}
-	}
-	if len(leases) < 1 {
-		return errors.New("no IP and MAC addresses matching a subnet")
+	defer imageClient.Close()
+	info, leases, configFiles, err := getInstallConfig(fmCR, imageClient,
+		hostname, logger)
+	if err != nil {
+		return err
 	}
 	var hypervisorAddresses []string
 	if *hypervisorHostname != "" {
@@ -214,31 +251,9 @@ func netbootHost(hostname string, logger log.DebugLogger) error {
 		hypervisorAddresses[0], leases[0].subnet.Id)
 	hyperCR := srpc.NewClientResource("tcp", hypervisorAddresses[0])
 	defer hyperCR.ScheduleClose()
-	if imageName != "" {
-		imageClient, err := srpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
-			*imageServerHostname, *imageServerPortNum), 0)
-		if err != nil {
-			return err
-		}
-		defer imageClient.Close()
-		img, err := imageclient.GetImage(imageClient, imageName)
-		if err != nil {
-			return err
-		}
-		if img == nil {
-			logger.Printf("warning: image: %s does not exist", imageName)
-		} else if len(img.FileSystem.InodeTable) < 1000 {
-			return fmt.Errorf("only %d inodes, this is likely not bootable",
-				len(img.FileSystem.InodeTable))
-		}
-	}
-	filesMap, err := makeConfigFiles(info, imageName, networkEntries)
-	if err != nil {
-		return err
-	}
 	request := hyper_proto.NetbootMachineRequest{
 		Address:                      leases[0].address.address,
-		Files:                        filesMap,
+		Files:                        configFiles,
 		FilesExpiration:              *netbootFilesTimeout,
 		Hostname:                     hostname,
 		NumAcknowledgementsToWaitFor: *numAcknowledgementsToWaitFor,
