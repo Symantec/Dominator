@@ -108,16 +108,18 @@ func main() {
 	if err := setupserver.SetupTls(); err != nil {
 		logger.Println(err)
 	}
-	if err := startServer(*portNum, logger); err != nil {
+	if newLogger, err := startServer(*portNum, logger); err != nil {
 		logger.Printf("cannot start server: %s\n", err)
+	} else {
+		logger = newLogger
 	}
 	if err := install(logger); err != nil {
 		logger.Println(err)
-		logger.Println("waiting 15m before rebooting")
-		time.Sleep(time.Minute * 15)
+		logger.Println("waiting 5m before rebooting")
+		time.Sleep(time.Minute * 5)
 	} else {
-		logger.Println("waiting 1s before rebooting")
-		time.Sleep(time.Second)
+		logger.Println("waiting 5s before rebooting")
+		time.Sleep(time.Second * 5)
 	}
 	syscall.Sync()
 	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART); err != nil {
