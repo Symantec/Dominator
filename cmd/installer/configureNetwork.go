@@ -265,7 +265,7 @@ func writeMappings(mappings map[string]string) error {
 		defer writer.Flush()
 		for name, kernelId := range mappings {
 			fmt.Fprintf(writer,
-				`SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{type}=="1", KERNEL=="eth*", KERNELS=="%s", NAME="%s"`,
+				`SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{type}=="1", KERNELS=="%s", NAME="%s"`,
 				kernelId, name)
 			fmt.Fprintln(writer)
 		}
