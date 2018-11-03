@@ -53,7 +53,7 @@ func reinstall(logger log.DebugLogger) error {
 		args = []string{kexec}
 	}
 	args = append(args, "-l", filepath.Join(rootDir, "vmlinuz"),
-		"--append=console=tty0 console=ttyS0,115200n8 net.ifnames=0",
+		"--append=console=tty0 console=ttyS0,115200n8",
 		"--console-serial", "--serial-baud=115200",
 		"--initrd="+initrdFile, "-f")
 	cmd = exec.Command(command, args...)
