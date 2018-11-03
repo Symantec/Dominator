@@ -39,6 +39,7 @@ var (
 type bootInfoType struct {
 	InitrdImageFile string
 	KernelImageFile string
+	KernelOptions   string
 	grubTemplate    *template.Template
 }
 
@@ -266,6 +267,7 @@ func makeAndWriteRoot(fs *filesystem.FileSystem,
 	if !makeBootableFlag {
 		return nil
 	}
+	bootInfo.KernelOptions = "net.ifnames=0"
 	return bootInfo.makeBootable(bootDevice, mountPoint, false, logger)
 }
 
@@ -518,7 +520,7 @@ menuentry 'Linux' 'Solitary Linux' {
         insmod part_msdos
         insmod ext2
         echo    'Loading Linux {{.KernelImageFile}} ...'
-        linux   {{.KernelImageFile}} root=LABEL=rootfs ro console=tty0 console=ttyS0,115200n8 net.ifnames=0
+        linux   {{.KernelImageFile}} root=LABEL=rootfs ro console=tty0 console=ttyS0,115200n8 {{.KernelOptions}}
         echo    'Loading initial ramdisk ...'
         initrd  {{.InitrdImageFile}}
 }
