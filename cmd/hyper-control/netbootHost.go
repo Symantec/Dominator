@@ -225,7 +225,7 @@ func netbootHost(hostname string, logger log.DebugLogger) error {
 	imageClient, err := srpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum), 0)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %s", *imageServerHostname, err)
 	}
 	defer imageClient.Close()
 	info, leases, configFiles, err := getInstallConfig(fmCR, imageClient,

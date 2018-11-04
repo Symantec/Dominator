@@ -311,7 +311,7 @@ func markUnusedHypervisors(hypervisors []*hypervisorType,
 			var reply hyper_proto.ListVMsResponse
 			err = client.RequestReply("Hypervisor.ListVMs", request, &reply)
 			if err != nil {
-				h.logger.Println(err)
+				h.logger.Printf("error listing VMS: %s", err)
 				return
 			}
 			if len(reply.IpAddresses) < 1 {
@@ -408,7 +408,7 @@ func (h *hypervisorType) getLastImageName(cpuSharer *cpusharer.FifoCpuSharer) (
 		if err := subclient.CallPoll(client, request, &reply); err != nil {
 			client.Close()
 			if err != io.EOF {
-				h.logger.Debugln(0, err)
+				h.logger.Debugf(0, "error polling sub: %s\n", err)
 			}
 			continue
 		}
