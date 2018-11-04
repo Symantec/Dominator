@@ -1,4 +1,4 @@
-# hypervisor
+# fleet-manager
 SmallStack Fleet Manager.
 
 The *fleet-manager* daemon manages a fleet of
