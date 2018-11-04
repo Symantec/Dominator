@@ -15,7 +15,6 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectserver"
-	_ "github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/wsyscall"
 )
 
