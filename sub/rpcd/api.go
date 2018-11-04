@@ -7,22 +7,24 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/rateio"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/srpc/serverutil"
 	"github.com/Symantec/Dominator/sub/scanner"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 )
 
 type rpcType struct {
-	scannerConfiguration         *scanner.Configuration
-	fileSystemHistory            *scanner.FileSystemHistory
-	objectsDir                   string
-	rootDir                      string
-	networkReaderContext         *rateio.ReaderContext
-	netbenchFilename             string
-	oldTriggersFilename          string
-	rescanObjectCacheFunction    func()
-	disableScannerFunc           func(disableScanner bool)
-	logger                       log.Logger
+	scannerConfiguration      *scanner.Configuration
+	fileSystemHistory         *scanner.FileSystemHistory
+	objectsDir                string
+	rootDir                   string
+	networkReaderContext      *rateio.ReaderContext
+	netbenchFilename          string
+	oldTriggersFilename       string
+	rescanObjectCacheFunction func()
+	disableScannerFunc        func(disableScanner bool)
+	logger                    log.Logger
+	*serverutil.PerUserMethodLimiter
 	rwLock                       sync.RWMutex
 	getFilesLock                 sync.Mutex
 	fetchInProgress              bool // Fetch() & Update() mutually exclusive.
@@ -61,8 +63,17 @@ func Setup(configuration *scanner.Configuration, fsh *scanner.FileSystemHistory,
 		oldTriggersFilename:       oldTriggersFname,
 		rescanObjectCacheFunction: rescanObjectCacheFunction,
 		disableScannerFunc:        disableScannerFunction,
-		logger:                    logger}
-	srpc.RegisterName("Subd", rpcObj)
+		logger:                    logger,
+		PerUserMethodLimiter: serverutil.NewPerUserMethodLimiter(
+			map[string]uint{
+				"Poll": 1,
+			}),
+	}
+	srpc.RegisterNameWithOptions("Subd", rpcObj,
+		srpc.ReceiverOptions{
+			PublicMethods: []string{
+				"Poll",
+			}})
 	addObjectsHandler := &addObjectsHandlerType{
 		objectsDir:           objectsDirname,
 		scannerConfiguration: configuration,

@@ -20,7 +20,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log/nulllogger"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
-	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
+	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
 
 const (
@@ -37,50 +37,50 @@ func makeInstallerIsoSubcommand(args []string, logger log.DebugLogger) {
 	os.Exit(0)
 }
 
-func makeInstallerIso(hostname, dirname string, logger log.DebugLogger) error {
+func makeInstallerDirectory(hostname, rootDir string, logger log.DebugLogger) (
+	*fm_proto.GetMachineInfoResponse, string, error) {
 	fmCR := srpc.NewClientResource("tcp",
 		fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum))
 	defer fmCR.ScheduleClose()
-	info, err := getInfoForMachine(fmCR, hostname)
+	imageClient, err := srpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
+		*imageServerHostname, *imageServerPortNum), 0)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
-	subnets := make([]*hyper_proto.Subnet, 0, len(info.Subnets))
-	for _, subnet := range info.Subnets {
-		if subnet.VlanId == 0 {
-			subnets = append(subnets, subnet)
-		}
-	}
-	if len(subnets) < 1 {
-		return errors.New("no non-VLAN subnets known")
-	}
-	networkEntries := getNetworkEntries(info)
-	hostAddresses := getHostAddress(networkEntries)
-	if len(hostAddresses) < 1 {
-		return errors.New("no IP and MAC addresses known for host")
-	}
-	configFiles, err := makeConfigFiles(info, networkEntries)
+	defer imageClient.Close()
+	info, _, configFiles, err := getInstallConfig(fmCR, imageClient, hostname,
+		logger)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
+	err = unpackInstallerImage(rootDir, imageClient, nulllogger.New())
+	if err != nil {
+		return nil, "", err
+	}
+	initrdFile := filepath.Join(rootDir, "initrd.img")
+	initrdRoot := filepath.Join(rootDir, "initrd.root")
+	if err := unpackInitrd(initrdRoot, initrdFile); err != nil {
+		return nil, "", err
+	}
+	configRoot := filepath.Join(initrdRoot, "tftpdata")
+	if err := writeConfigFiles(configRoot, configFiles); err != nil {
+		return nil, "", err
+	}
+	logger.Debugln(0, "building custom initrd with machine configuration")
+	if err := packInitrd(initrdFile, initrdRoot); err != nil {
+		return nil, "", err
+	}
+	return info, initrdFile, nil
+}
+
+func makeInstallerIso(hostname, dirname string, logger log.DebugLogger) error {
 	rootDir, err := ioutil.TempDir("", "iso")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(rootDir)
-	if err := unpackImage(rootDir, nulllogger.New()); err != nil {
-		return err
-	}
-	initrdFile := filepath.Join(rootDir, "initrd.img")
-	initrdRoot := filepath.Join(rootDir, "initrd.root")
-	if err := unpackInitrd(initrdRoot, initrdFile); err != nil {
-		return err
-	}
-	configRoot := filepath.Join(initrdRoot, "tftpdata")
-	if err := writeConfigFiles(configRoot, configFiles); err != nil {
-		return err
-	}
-	if err := packInitrd(initrdFile, initrdRoot); err != nil {
+	info, _, err := makeInstallerDirectory(hostname, rootDir, logger)
+	if err != nil {
 		return err
 	}
 	if info.Machine.IPMI.Hostname != "" {
@@ -90,6 +90,7 @@ func makeInstallerIso(hostname, dirname string, logger log.DebugLogger) error {
 	cmd := exec.Command("genisoimage", "-o", filename, "-b", "isolinux.bin",
 		"-c", "boot.catalogue", "-no-emul-boot", "-boot-load-size", "4",
 		"-boot-info-table", "-quiet", rootDir)
+	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		return err
 	}
@@ -180,23 +181,17 @@ func unpackInitrd(rootDir, filename string) error {
 	return nil
 }
 
-func unpackImage(rootDir string, logger log.DebugLogger) error {
-	clientName := fmt.Sprintf("%s:%d",
-		*imageServerHostname, *imageServerPortNum)
-	client, err := srpc.DialHTTP("tcp", clientName, 0)
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-	imageName, err := imageclient.FindLatestImage(client, *installerImageStream,
-		false)
+func unpackInstallerImage(rootDir string, imageClient *srpc.Client,
+	logger log.DebugLogger) error {
+	imageName, err := imageclient.FindLatestImage(imageClient,
+		*installerImageStream, false)
 	if err != nil {
 		return err
 	}
 	if imageName == "" {
 		return errors.New("no image found")
 	}
-	image, err := imageclient.GetImage(client, imageName)
+	image, err := imageclient.GetImage(imageClient, imageName)
 	if err != nil {
 		return err
 	}
@@ -213,7 +208,7 @@ func unpackImage(rootDir string, logger log.DebugLogger) error {
 		}
 	}
 	image.FileSystem.RebuildInodePointers()
-	objClient := objectclient.AttachObjectClient(client)
+	objClient := objectclient.AttachObjectClient(imageClient)
 	defer objClient.Close()
 	err = util.Unpack(image.FileSystem, objClient, rootDir, logger)
 	if err != nil {

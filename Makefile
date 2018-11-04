@@ -20,6 +20,9 @@ image-unpacker.tarball:
 		scripts/image-pusher/make-bootable \
 		scripts/image-pusher/export-image -C $(ETCDIR) ssl
 
+installer.tarball:
+	@cmd/installer/make-tarball installer -C $(ETCDIR) ssl
+
 imageserver.tarball:
 	@./scripts/make-tarball imageserver -C $(ETCDIR) ssl
 

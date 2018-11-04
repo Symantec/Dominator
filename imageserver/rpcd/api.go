@@ -61,6 +61,7 @@ func Setup(imdb *scanner.ImageDataBase, replicationMaster string,
 			"CheckDirectory",
 			"CheckImage",
 			"FindLatestImage",
+			"GetImage",
 			"ListDirectories",
 			"ListImages",
 		}})

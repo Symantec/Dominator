@@ -8,11 +8,14 @@ import (
 	"net"
 	"os"
 
+	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/errors"
+	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
+	installer_proto "github.com/Symantec/Dominator/proto/installer"
 )
 
 type hostAddressType struct {
@@ -63,6 +66,61 @@ func getHostAddress(networkEntries []fm_proto.NetworkEntry) []hostAddressType {
 	return hostAddresses
 }
 
+func getInstallConfig(fmCR *srpc.ClientResource, imageClient *srpc.Client,
+	hostname string,
+	logger log.DebugLogger) (*fm_proto.GetMachineInfoResponse, []leaseType,
+	map[string][]byte, error) {
+	info, err := getInfoForMachine(fmCR, hostname)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	imageName := info.Machine.Tags["RequiredImage"]
+	subnets := make([]*hyper_proto.Subnet, 0, len(info.Subnets))
+	for _, subnet := range info.Subnets {
+		if subnet.VlanId == 0 {
+			subnets = append(subnets, subnet)
+		}
+	}
+	if len(subnets) < 1 {
+		return nil, nil, nil, errors.New("no non-VLAN subnets known")
+	}
+	networkEntries := getNetworkEntries(info)
+	hostAddresses := getHostAddress(networkEntries)
+	if len(hostAddresses) < 1 {
+		return nil, nil, nil,
+			errors.New("no IP and MAC addresses known for host")
+	}
+	leases := make([]leaseType, 0, len(hostAddresses))
+	for _, address := range hostAddresses {
+		subnet := findMatchingSubnet(subnets, address.address.IpAddress)
+		if subnet != nil {
+			leases = append(leases, leaseType{address: address, subnet: subnet})
+		}
+	}
+	if len(leases) < 1 {
+		return nil, nil, nil,
+			errors.New("no IP and MAC addresses matching a subnet")
+	}
+	if imageName != "" {
+		img, err := imageclient.GetImage(imageClient, imageName)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if img == nil {
+			logger.Printf("warning: image: %s does not exist", imageName)
+		} else if len(img.FileSystem.InodeTable) < 1000 {
+			return nil, nil, nil, fmt.Errorf(
+				"only %d inodes, this is likely not bootable",
+				len(img.FileSystem.InodeTable))
+		}
+	}
+	configFiles, err := makeConfigFiles(info, imageName, networkEntries)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return &info, leases, configFiles, nil
+}
+
 func getNetworkEntries(
 	info fm_proto.GetMachineInfoResponse) []fm_proto.NetworkEntry {
 	networkEntries := make([]fm_proto.NetworkEntry, 1,
@@ -74,7 +132,18 @@ func getNetworkEntries(
 	return networkEntries
 }
 
-func makeConfigFiles(info fm_proto.GetMachineInfoResponse,
+func getStorageLayout() (installer_proto.StorageLayout, error) {
+	if *storageLayoutFilename == "" {
+		return makeDefaultStorageLayout(), nil
+	}
+	var val installer_proto.StorageLayout
+	if err := libjson.ReadFromFile(*storageLayoutFilename, &val); err != nil {
+		return installer_proto.StorageLayout{}, err
+	}
+	return val, nil
+}
+
+func makeConfigFiles(info fm_proto.GetMachineInfoResponse, imageName string,
 	networkEntries []fm_proto.NetworkEntry) (map[string][]byte, error) {
 	filesMap := make(map[string][]byte, len(netbootFiles)+1)
 	for tftpFilename, localFilename := range netbootFiles {
@@ -87,28 +156,26 @@ func makeConfigFiles(info fm_proto.GetMachineInfoResponse,
 	if data, err := json.MarshalIndent(info, "", "    "); err != nil {
 		return nil, err
 	} else {
-		filesMap["config.json"] = data
+		filesMap["config.json"] = append(data, '\n')
 	}
-	ifIndex := 0
+	if imageName != "" {
+		filesMap["imagename"] = []byte(imageName + "\n")
+	}
 	buffer := new(bytes.Buffer)
+	fmt.Fprintf(buffer, "%s:%d\n", *imageServerHostname, *imageServerPortNum)
+	filesMap["imageserver"] = buffer.Bytes()
 	var primarySubnet *hyper_proto.Subnet
 	for _, networkEntry := range networkEntries {
 		subnet := findMatchingSubnet(info.Subnets, networkEntry.HostIpAddress)
 		if subnet == nil {
 			continue
 		}
-		if ifIndex == 0 {
-			primarySubnet = subnet
-		}
-		fmt.Fprintf(buffer, "ip%d=%s\n", ifIndex, networkEntry.HostIpAddress)
-		fmt.Fprintf(buffer, "gateway%d=%s\n", ifIndex, subnet.IpGateway)
-		fmt.Fprintf(buffer, "mask%d=%s\n", ifIndex, subnet.IpMask)
-		ifIndex++
+		primarySubnet = subnet
+		break
 	}
 	if primarySubnet == nil {
 		return nil, errors.New("no primary subnet found")
 	}
-	filesMap["network-interfaces"] = buffer.Bytes()
 	buffer = new(bytes.Buffer)
 	if primarySubnet.DomainName != "" {
 		fmt.Fprintf(buffer, "domain %s\n", primarySubnet.DomainName)
@@ -119,45 +186,63 @@ func makeConfigFiles(info fm_proto.GetMachineInfoResponse,
 		fmt.Fprintf(buffer, "nameserver %s\n", nameserver)
 	}
 	filesMap["resolv.conf"] = buffer.Bytes()
+	if layout, err := getStorageLayout(); err != nil {
+		return nil, err
+	} else {
+		if data, err := json.MarshalIndent(layout, "", "    "); err != nil {
+			return nil, err
+		} else {
+			filesMap["storage-layout.json"] = append(data, '\n')
+		}
+	}
 	return filesMap, nil
+}
+
+func makeDefaultStorageLayout() installer_proto.StorageLayout {
+	return installer_proto.StorageLayout{
+		BootDriveLayout: []installer_proto.Partition{
+			{
+				MountPoint:       "/",
+				MinimumFreeBytes: 2 << 30,
+			},
+			{
+				MountPoint:       "/home",
+				MinimumFreeBytes: 1 << 30,
+			},
+			{
+				MountPoint:       "/var/log",
+				MinimumFreeBytes: 256 << 20,
+			},
+		},
+		ExtraMountPointsBasename: "/data/",
+	}
 }
 
 func netbootHost(hostname string, logger log.DebugLogger) error {
 	fmCR := srpc.NewClientResource("tcp",
 		fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum))
 	defer fmCR.ScheduleClose()
-	info, err := getInfoForMachine(fmCR, hostname)
+	imageClient, err := srpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
+		*imageServerHostname, *imageServerPortNum), 0)
+	if err != nil {
+		return fmt.Errorf("%s: %s", *imageServerHostname, err)
+	}
+	defer imageClient.Close()
+	info, leases, configFiles, err := getInstallConfig(fmCR, imageClient,
+		hostname, logger)
 	if err != nil {
 		return err
 	}
-	subnets := make([]*hyper_proto.Subnet, 0, len(info.Subnets))
-	for _, subnet := range info.Subnets {
-		if subnet.VlanId == 0 {
-			subnets = append(subnets, subnet)
+	var hypervisorAddresses []string
+	if *hypervisorHostname != "" {
+		hypervisorAddresses = append(hypervisorAddresses,
+			fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum))
+	} else {
+		hypervisorAddresses, err = listGoodHypervisorsInLocation(fmCR,
+			info.Location)
+		if err != nil {
+			return err
 		}
-	}
-	if len(subnets) < 1 {
-		return errors.New("no non-VLAN subnets known")
-	}
-	networkEntries := getNetworkEntries(info)
-	hostAddresses := getHostAddress(networkEntries)
-	if len(hostAddresses) < 1 {
-		return errors.New("no IP and MAC addresses known for host")
-	}
-	leases := make([]leaseType, 0, len(hostAddresses))
-	for _, address := range hostAddresses {
-		subnet := findMatchingSubnet(subnets, address.address.IpAddress)
-		if subnet != nil {
-			leases = append(leases, leaseType{address: address, subnet: subnet})
-		}
-	}
-	if len(leases) < 1 {
-		return errors.New("no IP and MAC addresses matching a subnet")
-	}
-	hypervisorAddresses, err := listGoodHypervisorsInLocation(fmCR,
-		info.Location)
-	if err != nil {
-		return err
 	}
 	if len(hypervisorAddresses) < 1 {
 		return errors.New("no nearby Hypervisors available")
@@ -166,13 +251,9 @@ func netbootHost(hostname string, logger log.DebugLogger) error {
 		hypervisorAddresses[0], leases[0].subnet.Id)
 	hyperCR := srpc.NewClientResource("tcp", hypervisorAddresses[0])
 	defer hyperCR.ScheduleClose()
-	filesMap, err := makeConfigFiles(info, networkEntries)
-	if err != nil {
-		return err
-	}
 	request := hyper_proto.NetbootMachineRequest{
 		Address:                      leases[0].address.address,
-		Files:                        filesMap,
+		Files:                        configFiles,
 		FilesExpiration:              *netbootFilesTimeout,
 		Hostname:                     hostname,
 		NumAcknowledgementsToWaitFor: *numAcknowledgementsToWaitFor,

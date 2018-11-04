@@ -32,21 +32,24 @@ var (
 		"Port number of image server")
 	installerImageStream = flag.String("installerImageStream", "",
 		"Name of default image stream for building bootable installer ISO")
+	installerPortNum = flag.Uint("installerPortNum",
+		constants.InstallerPortNumber, "Port number of installer")
 	location = flag.String("location", "",
 		"Location to search for hypervisors")
 	offerTimeout = flag.Duration("offerTimeout", time.Minute+time.Second,
 		"How long to offer DHCP OFFERs and ACKs")
 	netbootFiles        tags.Tags
 	netbootFilesTimeout = flag.Duration("netbootFilesTimeout",
-		time.Minute+time.Second, "How long to provide extra files via TFTP")
+		time.Minute+time.Second,
+		"How long to provide files via TFTP after last DHCP ACK")
 	netbootTimeout = flag.Duration("netbootTimeout", time.Minute,
 		"Time to wait for DHCP ACKs to be sent")
 	numAcknowledgementsToWaitFor = flag.Uint("numAcknowledgementsToWaitFor",
 		2, "Number of DHCP ACKs to wait for")
+	storageLayoutFilename = flag.String("storageLayoutFilename", "",
+		"Name of file containing storage layout for installing machine")
 	topologyDir = flag.String("topologyDir", "",
 		"Name of local topology directory in Git repository")
-
-	logger log.DebugLogger
 )
 
 func init() {
@@ -65,11 +68,14 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  change-tags")
 	fmt.Fprintln(os.Stderr, "  get-machine-info hostname")
 	fmt.Fprintln(os.Stderr, "  get-updates")
+	fmt.Fprintln(os.Stderr, "  installer-shell hostname")
 	fmt.Fprintln(os.Stderr, "  make-installer-iso hostname dirname")
 	fmt.Fprintln(os.Stderr, "  netboot-host hostname")
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
+	fmt.Fprintln(os.Stderr, "  reinstall")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
 	fmt.Fprintln(os.Stderr, "  rollout-image name")
+	fmt.Fprintln(os.Stderr, "  write-netboot-files hostname dirname")
 }
 
 type commandFunc func([]string, log.DebugLogger)
@@ -87,11 +93,14 @@ var subcommands = []subcommand{
 	{"change-tags", 0, 0, changeTagsSubcommand},
 	{"get-machine-info", 1, 1, getMachineInfoSubcommand},
 	{"get-updates", 0, 0, getUpdatesSubcommand},
+	{"installer-shell", 1, 1, installerShellSubcommand},
 	{"make-installer-iso", 2, 2, makeInstallerIsoSubcommand},
 	{"netboot-host", 1, 1, netbootHostSubcommand},
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},
+	{"reinstall", 0, 0, reinstallSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
 	{"rollout-image", 1, 1, rolloutImageSubcommand},
+	{"write-netboot-files", 2, 2, writeNetbootFilesSubcommand},
 }
 
 func main() {
@@ -105,7 +114,7 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
-	logger = cmdlogger.New()
+	logger := cmdlogger.New()
 	if err := setupclient.SetupTls(false); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

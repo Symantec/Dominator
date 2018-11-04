@@ -22,6 +22,9 @@ func (t *rpcType) Poll(conn *srpc.Conn, decoder srpc.Decoder,
 	if _, err := conn.WriteString("\n"); err != nil {
 		return err
 	}
+	if !request.ShortPollOnly && !conn.GetAuthInformation().HaveMethodAccess {
+		return srpc.ErrorAccessToMethodDenied
+	}
 	response.NetworkSpeed = t.networkReaderContext.MaximumSpeed()
 	response.CurrentConfiguration = t.getConfiguration()
 	t.rwLock.RLock()
