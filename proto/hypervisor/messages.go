@@ -96,6 +96,16 @@ type CreateVmResponse struct { // Multiple responses are sent.
 	Error           string
 }
 
+type DeleteVmVolumeRequest struct {
+	AccessToken []byte
+	IpAddress   net.IP
+	VolumeIndex uint
+}
+
+type DeleteVmVolumeResponse struct {
+	Error string
+}
+
 type DestroyVmRequest struct {
 	AccessToken []byte
 	IpAddress   net.IP
