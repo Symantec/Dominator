@@ -6,6 +6,11 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 )
 
+func DeleteVmVolume(client *srpc.Client, ipAddr net.IP, accessToken []byte,
+	volumeIndex uint) error {
+	return deleteVmVolume(client, ipAddr, accessToken, volumeIndex)
+}
+
 func DestroyVm(client *srpc.Client, ipAddr net.IP, accessToken []byte) error {
 	return destroyVm(client, ipAddr, accessToken)
 }

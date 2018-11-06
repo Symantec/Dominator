@@ -483,6 +483,40 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 	return nil
 }
 
+func (m *Manager) deleteVmVolume(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	accessToken []byte, volumeIndex uint) error {
+	if volumeIndex < 1 {
+		return errors.New("cannot delete root volume")
+	}
+	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, accessToken)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if volumeIndex >= uint(len(vm.VolumeLocations)) {
+		return errors.New("volume index too large")
+	}
+	if vm.State != proto.StateStopped {
+		return errors.New("VM is not stopped")
+	}
+	if err := os.Remove(vm.VolumeLocations[volumeIndex].Filename); err != nil {
+		return err
+	}
+	os.Remove(vm.VolumeLocations[volumeIndex].DirectoryToCleanup)
+	volumeLocations := make([]volumeType, 0, len(vm.VolumeLocations)-1)
+	volumes := make([]proto.Volume, 0, len(vm.VolumeLocations)-1)
+	for index, volume := range vm.VolumeLocations {
+		if uint(index) != volumeIndex {
+			volumeLocations = append(volumeLocations, volume)
+			volumes = append(volumes, vm.Volumes[index])
+		}
+	}
+	vm.VolumeLocations = volumeLocations
+	vm.Volumes = volumes
+	vm.writeAndSendInfo()
+	return nil
+}
+
 func (m *Manager) destroyVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	accessToken []byte) error {
 	vm, err := m.getVmLockAndAuth(ipAddr, authInfo, accessToken)

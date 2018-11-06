@@ -8,6 +8,21 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
+func deleteVmVolume(client *srpc.Client, ipAddr net.IP, accessToken []byte,
+	volumeIndex uint) error {
+	request := proto.DeleteVmVolumeRequest{
+		AccessToken: accessToken,
+		IpAddress:   ipAddr,
+		VolumeIndex: volumeIndex,
+	}
+	var reply proto.DeleteVmVolumeResponse
+	err := client.RequestReply("Hypervisor.DeleteVmVolume", request, &reply)
+	if err != nil {
+		return err
+	}
+	return errors.New(reply.Error)
+}
+
 func destroyVm(client *srpc.Client, ipAddr net.IP, accessToken []byte) error {
 	request := proto.DestroyVmRequest{
 		AccessToken: accessToken,
