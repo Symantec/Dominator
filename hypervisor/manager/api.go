@@ -123,6 +123,11 @@ func (m *Manager) CreateVm(conn *srpc.Conn, decoder srpc.Decoder,
 	return m.createVm(conn, decoder, encoder)
 }
 
+func (m *Manager) DeleteVmVolume(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	accessToken []byte, volumeIndex uint) error {
+	return m.deleteVmVolume(ipAddr, authInfo, accessToken, volumeIndex)
+}
+
 func (m *Manager) DestroyVm(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, accessToken []byte) error {
 	return m.destroyVm(ipAddr, authInfo, accessToken)
