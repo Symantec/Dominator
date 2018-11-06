@@ -65,7 +65,8 @@ var (
 	vmTags         tags.Tags
 	volumeFilename = flag.String("volumeFilename", "",
 		"Name of file to write volume data to")
-	volumeIndex = flag.Uint("volumeIndex", 0, "Index of volume to get")
+	volumeIndex = flag.Uint("volumeIndex", 0,
+		"Index of volume to get or delete")
 
 	logger log.DebugLogger
 )
@@ -91,6 +92,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  change-vm-owner-users IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-tags IPaddr")
 	fmt.Fprintln(os.Stderr, "  create-vm")
+	fmt.Fprintln(os.Stderr, "  delete-vm-volume IPaddr")
 	fmt.Fprintln(os.Stderr, "  destroy-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  discard-vm-old-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  discard-vm-old-user-data IPaddr")
@@ -132,6 +134,7 @@ var subcommands = []subcommand{
 	{"change-vm-owner-users", 1, 1, changeVmOwnerUsersSubcommand},
 	{"change-vm-tags", 1, 1, changeVmTagsSubcommand},
 	{"create-vm", 0, 0, createVmSubcommand},
+	{"delete-vm-volume", 1, 1, deleteVmVolumeSubcommand},
 	{"destroy-vm", 1, 1, destroyVmSubcommand},
 	{"discard-vm-old-image", 1, 1, discardVmOldImageSubcommand},
 	{"discard-vm-old-user-data", 1, 1, discardVmOldUserDataSubcommand},
