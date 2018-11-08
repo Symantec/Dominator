@@ -1,6 +1,7 @@
 package awsutil
 
 import (
+	"fmt"
 	"os"
 	"sort"
 
@@ -113,13 +114,19 @@ func createSession(
 		},
 	})
 	if err != nil {
-		return sessionResult{err: err, accountName: accountName}
+		return sessionResult{
+			err:         fmt.Errorf("session.NewSessionWithOptions: %s", err),
+			accountName: accountName,
+		}
 	}
 	stsService := sts.New(awsSession)
 	inp := &sts.GetCallerIdentityInput{}
 	var accountId string
 	if out, err := stsService.GetCallerIdentity(inp); err != nil {
-		return sessionResult{err: err, accountName: accountName}
+		return sessionResult{
+			err:         fmt.Errorf("sts.GetCallerIdentity: %s", err),
+			accountName: accountName,
+		}
 	} else {
 		if arnV, err := arn.Parse(aws.StringValue(out.Arn)); err != nil {
 			return sessionResult{err: err, accountName: accountName}
@@ -129,7 +136,6 @@ func createSession(
 	}
 	regions, err := listRegions(CreateService(awsSession, "us-east-1"))
 	if err != nil {
-
 		// Try the ec2::DescribeRegions call in other regions before giving
 		// up and reporting the error. We may need to add to this list.
 		otherRegions := []string{"cn-north-1"}
