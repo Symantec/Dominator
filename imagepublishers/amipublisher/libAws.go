@@ -368,7 +368,7 @@ func describeInstances(awsService *ec2.EC2, input *ec2.DescribeInstancesInput) (
 	for {
 		out, err := awsService.DescribeInstances(&inp)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("DescribeInstances: %s", err)
 		}
 		for _, reservation := range out.Reservations {
 			for _, instance := range reservation.Instances {

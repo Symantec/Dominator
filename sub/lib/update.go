@@ -10,11 +10,13 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filesystem/scanner"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/triggers"
+	"github.com/Symantec/Dominator/lib/wsyscall"
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
@@ -278,7 +280,9 @@ func (t *uType) changeInodes(inodesToChange []sub.Inode,
 	triggers *triggers.Triggers, takeAction bool) {
 	for _, inode := range inodesToChange {
 		fullPathname := path.Join(t.rootDirectoryName, inode.Name)
-		triggers.Match(inode.Name)
+		if checkNonMtimeChange(fullPathname, inode.GenericInode) {
+			triggers.Match(inode.Name)
+		}
 		if takeAction {
 			if err := filesystem.ForceWriteMetadata(inode,
 				fullPathname); err != nil {
@@ -289,6 +293,40 @@ func (t *uType) changeInodes(inodesToChange []sub.Inode,
 			t.logger.Printf("Changed inode: %s\n", fullPathname)
 		}
 	}
+}
+
+func checkNonMtimeChange(filename string, inode filesystem.GenericInode) bool {
+	switch inode := inode.(type) {
+	case *filesystem.RegularInode:
+		var stat wsyscall.Stat_t
+		if err := wsyscall.Lstat(filename, &stat); err != nil {
+			return true
+		}
+		if stat.Mode&syscall.S_IFMT == syscall.S_IFREG {
+			oldInode := scanner.MakeRegularInode(&stat)
+			oldInode.Hash = inode.Hash
+			oldInode.MtimeNanoSeconds = inode.MtimeNanoSeconds
+			oldInode.MtimeSeconds = inode.MtimeSeconds
+			if *oldInode == *inode {
+				return false
+			}
+		}
+	case *filesystem.SpecialInode:
+		var stat wsyscall.Stat_t
+		if err := wsyscall.Lstat(filename, &stat); err != nil {
+			return true
+		}
+		if stat.Mode&syscall.S_IFMT == syscall.S_IFBLK ||
+			stat.Mode&syscall.S_IFMT == syscall.S_IFCHR {
+			oldInode := scanner.MakeSpecialInode(&stat)
+			oldInode.MtimeNanoSeconds = inode.MtimeNanoSeconds
+			oldInode.MtimeSeconds = inode.MtimeSeconds
+			if *oldInode == *inode {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (t *uType) skipPath(pathname string) bool {

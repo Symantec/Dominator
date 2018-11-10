@@ -3,6 +3,7 @@ package awsutil
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"sort"
@@ -56,7 +57,7 @@ func getLocalRegion() (string, error) {
 func listRegions(awsService *ec2.EC2) ([]string, error) {
 	out, err := awsService.DescribeRegions(&ec2.DescribeRegionsInput{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ec2.DescribeRegions: %s", err)
 	}
 	regionNames := make([]string, 0, len(out.Regions))
 	for _, region := range out.Regions {

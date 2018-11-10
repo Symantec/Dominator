@@ -53,7 +53,7 @@ type StartOptions struct {
 }
 
 type vmInfoType struct {
-	mutex                      sync.Mutex
+	mutex                      sync.RWMutex
 	accessToken                []byte
 	accessTokenCleanupNotifier chan<- struct{}
 	proto.VmInfo

@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/connpool"
 	libnet "github.com/Symantec/Dominator/lib/net"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
@@ -48,7 +47,7 @@ func registerClientMetrics() {
 	}
 }
 
-func dial(network, address string, dialer connpool.Dialer) (net.Conn, error) {
+func dial(network, address string, dialer Dialer) (net.Conn, error) {
 	hostPort := strings.SplitN(address, ":", 2)
 	address = strings.SplitN(hostPort[0], "*", 2)[0] + ":" + hostPort[1]
 	conn, err := dialer.Dial(network, address)
@@ -75,7 +74,7 @@ func dial(network, address string, dialer connpool.Dialer) (net.Conn, error) {
 }
 
 func dialHTTP(network, address string, tlsConfig *tls.Config,
-	dialer connpool.Dialer) (*Client, error) {
+	dialer Dialer) (*Client, error) {
 	unsecuredConn, err := dial(network, address, dialer)
 	if err != nil {
 		return nil, err

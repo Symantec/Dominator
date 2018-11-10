@@ -8,6 +8,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/fsrateio"
 	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/wsyscall"
 )
 
 type Hasher interface {
@@ -30,6 +31,18 @@ type FileSystem struct {
 	dev                     uint64
 	inodeNumber             uint64
 	filesystem.FileSystem
+}
+
+func MakeRegularInode(stat *wsyscall.Stat_t) *filesystem.RegularInode {
+	return makeRegularInode(stat)
+}
+
+func MakeSymlinkInode(stat *wsyscall.Stat_t) *filesystem.SymlinkInode {
+	return makeSymlinkInode(stat)
+}
+
+func MakeSpecialInode(stat *wsyscall.Stat_t) *filesystem.SpecialInode {
+	return makeSpecialInode(stat)
 }
 
 func ScanFileSystem(rootDirectoryName string,

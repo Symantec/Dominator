@@ -16,11 +16,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"flag"
 	"net"
 	"sync"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/connpool"
+	"github.com/Symantec/Dominator/lib/net/proxy"
 	"github.com/Symantec/Dominator/lib/resourcepool"
 )
 
@@ -38,6 +39,9 @@ var (
 	fullAuthCaCertPool *x509.CertPool
 	serverTlsConfig    *tls.Config
 	tlsRequired        bool
+
+	srpcProxy = flag.String("srpcProxy", "",
+		"Proxy to use (only works for some operations)")
 )
 
 // CheckTlsRequired returns true if the server requires TLS connections with
@@ -60,6 +64,11 @@ type AuthInformation struct {
 	GroupList        map[string]struct{}
 	HaveMethodAccess bool
 	Username         string
+}
+
+// Dialer implements a dialer that can be use to create connections.
+type Dialer interface {
+	Dial(network, address string) (net.Conn, error)
 }
 
 type Decoder interface {
@@ -127,7 +136,7 @@ func RegisterFullAuthCA(certPool *x509.CertPool) {
 type privateClientResource struct {
 	clientResource *ClientResource
 	tlsConfig      *tls.Config
-	dialer         connpool.Dialer
+	dialer         Dialer
 }
 
 type ClientResource struct {
@@ -178,7 +187,7 @@ func (cr *ClientResource) GetHTTP(cancelChannel <-chan struct{},
 // GetHTTPWithDialer is similar to GetHTTP except that the dialer is used to
 // create the underlying connection.
 func (cr *ClientResource) GetHTTPWithDialer(cancelChannel <-chan struct{},
-	dialer connpool.Dialer) (*Client, error) {
+	dialer Dialer) (*Client, error) {
 	return cr.getHTTP(clientTlsConfig, cancelChannel, dialer)
 }
 
@@ -193,7 +202,7 @@ func (cr *ClientResource) GetTlsHTTP(tlsConfig *tls.Config,
 // GetTlsHTTPWithDialer is similar to GetTlsHTTP except that the dialer is used
 // to create the underlying connection.
 func (cr *ClientResource) GetTlsHTTPWithDialer(tlsConfig *tls.Config,
-	cancelChannel <-chan struct{}, dialer connpool.Dialer) (*Client, error) {
+	cancelChannel <-chan struct{}, dialer Dialer) (*Client, error) {
 	if tlsConfig == nil {
 		tlsConfig = clientTlsConfig
 	}
@@ -216,13 +225,20 @@ type Client struct {
 // listening on the HTTP SRPC path. If timeout is zero or less, the underlying
 // OS timeout is used (typically 3 minutes for TCP).
 func DialHTTP(network, address string, timeout time.Duration) (*Client, error) {
+	if *srpcProxy != "" && timeout <= 0 {
+		dialer, err := proxy.NewDialer(*srpcProxy)
+		if err != nil {
+			return nil, err
+		}
+		return dialHTTP(network, address, clientTlsConfig, dialer)
+	}
 	return dialHTTP(network, address, clientTlsConfig,
 		&net.Dialer{Timeout: timeout})
 }
 
 // DialHTTPWithDialer is similar to DialHTTP except that the dialer is used to
 // create the underlying connection.
-func DialHTTPWithDialer(network, address string, dialer connpool.Dialer) (
+func DialHTTPWithDialer(network, address string, dialer Dialer) (
 	*Client, error) {
 	return dialHTTP(network, address, clientTlsConfig, dialer)
 }
@@ -240,7 +256,7 @@ func DialTlsHTTP(network, address string, tlsConfig *tls.Config,
 // DialTlsHTTPWithDialer is similar to DialTlsHTTP except that the dialer is
 // used to create the underlying connection.
 func DialTlsHTTPWithDialer(network, address string, tlsConfig *tls.Config,
-	dialer connpool.Dialer) (
+	dialer Dialer) (
 	*Client, error) {
 	if tlsConfig == nil {
 		tlsConfig = clientTlsConfig
