@@ -78,6 +78,7 @@ func (m *Manager) showHypervisorHandler(w http.ResponseWriter,
 		}
 		fmt.Fprintln(writer, "</table>")
 	}
+	fmt.Fprintf(writer, "Status: %s<br>\n", h.getHealthStatus())
 	fmt.Fprintf(writer,
 		"Number of VMs known: <a href=\"http://%s:%d/listVMs\">%d</a>\n",
 		hostname, constants.HypervisorPortNumber, len(h.vms))
