@@ -153,6 +153,10 @@ func (m *Manager) DiscardVmSnapshot(ipAddr net.IP,
 	return m.discardVmSnapshot(ipAddr, authInfo)
 }
 
+func (m *Manager) GetHealthStatus() string {
+	return m.getHealthStatus()
+}
+
 func (m *Manager) GetImageServerAddress() string {
 	return m.ImageServerAddress
 }

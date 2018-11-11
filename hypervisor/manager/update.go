@@ -10,6 +10,12 @@ func (m *Manager) closeUpdateChannel(channel <-chan proto.Update) {
 	delete(m.notifiers, channel)
 }
 
+func (m *Manager) getHealthStatus() string {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	return m.healthStatus
+}
+
 func (m *Manager) makeUpdateChannel() <-chan proto.Update {
 	channel := make(chan proto.Update, 16)
 	m.mutex.Lock()
