@@ -149,7 +149,7 @@ func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 
 func (m *Manager) listHypervisorsInLocation(
 	request proto.ListHypervisorsInLocationRequest) ([]string, error) {
-	hypervisors, err := m.listHypervisors(request.Location, showConnected,
+	hypervisors, err := m.listHypervisors(request.Location, showOK,
 		request.SubnetId)
 	if err != nil {
 		return nil, err

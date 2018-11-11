@@ -19,27 +19,44 @@ import (
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
+type addressPoolOptionsType struct {
+	desiredSize uint
+	maximumSize uint
+	minimumSize uint
+}
+
 var (
-	desiredAddressPoolSize = flag.Uint("desiredAddressPoolSize", 16,
-		"Desired number of free addresses to maintain in Hypervisor")
-	manageHypervisors = flag.Bool("manageHypervisors", false,
+	defaultAddressPoolOptions addressPoolOptionsType
+	manageHypervisors         = flag.Bool("manageHypervisors", false,
 		"If true, manage hypervisors")
-	maximumAddressPoolSize = flag.Uint("maximumAddressPoolSize", 24,
-		"Maximum number of free addresses to maintain in Hypervisor")
-	minimumAddressPoolSize = flag.Uint("minimumAddressPoolSize", 8,
-		"Minimum number of free addresses to maintain in Hypervisor")
 )
 
+func init() {
+	flag.UintVar(&defaultAddressPoolOptions.desiredSize,
+		"desiredAddressPoolSize", 16,
+		"Desired number of free addresses to maintain in Hypervisor")
+	flag.UintVar(&defaultAddressPoolOptions.maximumSize,
+		"maximumAddressPoolSize", 24,
+		"Maximum number of free addresses to maintain in Hypervisor")
+	flag.UintVar(&defaultAddressPoolOptions.minimumSize,
+		"minimumAddressPoolSize", 8,
+		"Minimum number of free addresses to maintain in Hypervisor")
+}
+
 func checkPoolLimits() error {
-	if *desiredAddressPoolSize < *minimumAddressPoolSize {
+	if defaultAddressPoolOptions.desiredSize <
+		defaultAddressPoolOptions.minimumSize {
 		return fmt.Errorf(
 			"desiredAddressPoolSize: %d is less than minimumAddressPoolSize: %d",
-			*desiredAddressPoolSize, *minimumAddressPoolSize)
+			defaultAddressPoolOptions.desiredSize,
+			defaultAddressPoolOptions.minimumSize)
 	}
-	if *desiredAddressPoolSize > *maximumAddressPoolSize {
+	if defaultAddressPoolOptions.desiredSize >
+		defaultAddressPoolOptions.maximumSize {
 		return fmt.Errorf(
 			"desiredAddressPoolSize: %d is greater than maximumAddressPoolSize: %d",
-			*desiredAddressPoolSize, *maximumAddressPoolSize)
+			defaultAddressPoolOptions.desiredSize,
+			defaultAddressPoolOptions.maximumSize)
 	}
 	return nil
 }
@@ -400,6 +417,12 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 		h.logger.Println(err)
 		return
 	}
+	addressPoolOptions := defaultAddressPoolOptions
+	if h.healthStatus == "marginal" || h.healthStatus == "at risk" {
+		addressPoolOptions.desiredSize = 1
+		addressPoolOptions.maximumSize = 1
+		addressPoolOptions.minimumSize = 1
+	}
 	var numAddressesToRemove uint
 	for subnetId, numFreeAddresses := range update.NumFreeAddresses {
 		tSubnet := tSubnets[subnetId]
@@ -410,10 +433,10 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 		if !tSubnet.Manage {
 			continue
 		}
-		if numFreeAddresses < *minimumAddressPoolSize {
+		if numFreeAddresses < addressPoolOptions.minimumSize {
 			m.mutex.Lock()
 			freeIPs, err := m.findFreeIPs(tSubnet,
-				*desiredAddressPoolSize-numFreeAddresses)
+				addressPoolOptions.desiredSize-numFreeAddresses)
 			m.mutex.Unlock()
 			if err != nil {
 				h.logger.Println(err)
@@ -432,11 +455,12 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 			}
 			h.logger.Debugf(0, "Adding %d addresses to subnet: %s\n",
 				len(freeIPs), subnetId)
-		} else if numFreeAddresses > *maximumAddressPoolSize {
-			maxFreeAddresses[subnetId] = *desiredAddressPoolSize
-			numAddressesToRemove += numFreeAddresses - *desiredAddressPoolSize
+		} else if numFreeAddresses > addressPoolOptions.maximumSize {
+			maxFreeAddresses[subnetId] = addressPoolOptions.desiredSize
+			numAddressesToRemove += numFreeAddresses -
+				addressPoolOptions.desiredSize
 			h.logger.Debugf(0, "Removing %d excess addresses from subnet: %s\n",
-				numFreeAddresses-*maximumAddressPoolSize, subnetId)
+				numFreeAddresses-addressPoolOptions.maximumSize, subnetId)
 		}
 	}
 	if len(addressesToAdd) < 1 && len(maxFreeAddresses) < 1 {
