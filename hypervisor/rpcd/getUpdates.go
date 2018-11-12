@@ -2,16 +2,18 @@ package rpcd
 
 import (
 	"errors"
+	"io"
 	"time"
 
 	"github.com/Symantec/Dominator/lib/srpc"
+	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 const flushDelay = time.Millisecond * 10
 
 func (t *srpcType) GetUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 	encoder srpc.Encoder) error {
-	closeChannel := conn.GetCloseNotifier()
+	closeChannel, responseChannel := t.getUpdatesReader(decoder)
 	updateChannel := t.manager.MakeUpdateChannel()
 	defer t.manager.CloseUpdateChannel(updateChannel)
 	flushTimer := time.NewTimer(flushDelay)
@@ -26,6 +28,18 @@ func (t *srpcType) GetUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 			}
 			if err := encoder.Encode(update); err != nil {
 				t.logger.Printf("error sending update: %s\n", err)
+				return err
+			}
+			numToFlush++
+			flushTimer.Reset(flushDelay)
+		case update, ok := <-responseChannel:
+			if !ok {
+				err := errors.New("receiver not keeping up with reponses")
+				t.logger.Printf("error sending response: %s\n", err)
+				return err
+			}
+			if err := encoder.Encode(update); err != nil {
+				t.logger.Printf("error sending response: %s\n", err)
 				return err
 			}
 			numToFlush++
@@ -49,4 +63,30 @@ func (t *srpcType) GetUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 			return err
 		}
 	}
+}
+
+func (t *srpcType) getUpdatesReader(decoder srpc.Decoder) (
+	<-chan error, <-chan proto.Update) {
+	closeChannel := make(chan error)
+	responseChannel := make(chan proto.Update, 16)
+	go func() {
+		for {
+			var request proto.GetUpdateRequest
+			if err := decoder.Decode(&request); err != nil {
+				if err == io.EOF {
+					err = nil
+				}
+				closeChannel <- err
+				return
+			}
+			update := proto.Update{HealthStatus: t.manager.GetHealthStatus()}
+			select {
+			case responseChannel <- update:
+			default:
+				close(responseChannel)
+				return
+			}
+		}
+	}()
+	return closeChannel, responseChannel
 }
