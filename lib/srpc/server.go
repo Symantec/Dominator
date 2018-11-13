@@ -52,9 +52,14 @@ type receiverType struct {
 	methods     map[string]*methodWrapper
 	blockMethod func(methodName string,
 		authInfo *AuthInformation) (func(), error)
+	grantMethod func(serviceMethod string, authInfo *AuthInformation) bool
 }
 
 var (
+	defaultGrantMethod = func(serviceMethod string,
+		authInfo *AuthInformation) bool {
+		return false
+	}
 	receivers                    map[string]receiverType = make(map[string]receiverType)
 	serverMetricsDir             *tricorder.DirectorySpec
 	bucketer                     *tricorder.Bucketer
@@ -108,6 +113,11 @@ func defaultMethodBlocker(methodName string,
 	return nil, nil
 }
 
+func defaultMethodGranter(serviceMethod string,
+	authInfo *AuthInformation) bool {
+	return defaultGrantMethod(serviceMethod, authInfo)
+}
+
 func registerName(name string, rcvr interface{},
 	options ReceiverOptions) error {
 	receiver := receiverType{methods: make(map[string]*methodWrapper)}
@@ -147,6 +157,11 @@ func registerName(name string, rcvr interface{},
 		receiver.blockMethod = blocker.BlockMethod
 	} else {
 		receiver.blockMethod = defaultMethodBlocker
+	}
+	if granter, ok := rcvr.(MethodGranter); ok {
+		receiver.grantMethod = granter.GrantMethod
+	} else {
+		receiver.grantMethod = defaultMethodGranter
 	}
 	receivers[name] = receiver
 	return nil
@@ -476,6 +491,8 @@ func (conn *Conn) findMethod(serviceMethod string) (*methodWrapper, error) {
 		return nil, errors.New(serviceName + ": unknown method: " + methodName)
 	}
 	if conn.checkMethodAccess(serviceMethod) {
+		conn.haveMethodAccess = true
+	} else if receiver.grantMethod(serviceName, conn.GetAuthInformation()) {
 		conn.haveMethodAccess = true
 	} else {
 		conn.haveMethodAccess = false
