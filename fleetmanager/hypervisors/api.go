@@ -23,6 +23,7 @@ const (
 
 type hypervisorType struct {
 	logger          log.DebugLogger
+	receiveChannel  chan struct{}
 	mutex           sync.RWMutex
 	conn            *srpc.Conn
 	deleteScheduled bool
