@@ -3,6 +3,7 @@ package manager
 import (
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/Symantec/Dominator/lib/format"
@@ -22,6 +23,14 @@ func (m *Manager) writeHtml(writer io.Writer) {
 	memUnallocated := m.getUnallocatedMemoryInMiBWithLock()
 	numSubnets := len(m.subnets)
 	numAddresses := len(m.addressPool.Free)
+	ownerGroups := make([]string, 0, len(m.ownerGroups))
+	for group := range m.ownerGroups {
+		ownerGroups = append(ownerGroups, group)
+	}
+	ownerUsers := make([]string, 0, len(m.ownerUsers))
+	for user := range m.ownerUsers {
+		ownerUsers = append(ownerUsers, user)
+	}
 	m.mutex.RUnlock()
 	fmt.Fprintf(writer,
 		"Available addresses: <a href=\"listAvailableAddresses\">%d</a><br>\n",
@@ -34,6 +43,16 @@ func (m *Manager) writeHtml(writer io.Writer) {
 		fmt.Fprintf(writer, "Available RAM: real: %s, unallocated: %s<br>\n",
 			format.FormatBytes(memInfo.Available),
 			format.FormatBytes(memUnallocated<<20))
+	}
+	sort.Strings(ownerGroups)
+	sort.Strings(ownerUsers)
+	if len(ownerGroups) > 0 {
+		fmt.Fprintf(writer, "Owner groups: %s<br>\n",
+			strings.Join(ownerGroups, " "))
+	}
+	if len(ownerUsers) > 0 {
+		fmt.Fprintf(writer, "Owner users: %s<br>\n",
+			strings.Join(ownerUsers, " "))
 	}
 	fmt.Fprintf(writer,
 		"Number of subnets: <a href=\"listSubnets\">%d</a><br>\n", numSubnets)
