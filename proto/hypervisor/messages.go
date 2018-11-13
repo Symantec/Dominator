@@ -149,8 +149,10 @@ type DiscardVmSnapshotResponse struct {
 }
 
 // The GetUpdates() RPC is fully streamed.
-// The client sends no information to the server.
+// The client may or may not send GetUpdateRequest messages to the server.
 // The server sends a stream of Update messages.
+
+type GetUpdateRequest struct{}
 
 type Update struct {
 	HaveAddressPool  bool               `json:",omitempty"`

@@ -336,7 +336,7 @@ func (m *Manager) manageHypervisor(h *hypervisorType,
 	}()
 	client, err := srpc.DialHTTP("tcp",
 		fmt.Sprintf("%s:%d", hostname, constants.HypervisorPortNumber),
-		time.Minute)
+		time.Second*15)
 	if err != nil {
 		h.logger.Debugln(1, err)
 		if err == srpc.ErrorNoSrpcEndpoint {
@@ -364,18 +364,24 @@ func (m *Manager) manageHypervisor(h *hypervisorType,
 		return 0
 	}
 	h.conn = conn
+	h.receiveChannel = make(chan struct{}, 1)
 	h.mutex.Unlock()
 	decoder := gob.NewDecoder(conn)
+	go h.monitorLoop(client, conn)
+	defer close(h.receiveChannel)
 	h.logger.Debugln(0, "waiting for Update messages")
 	firstUpdate := true
 	for {
 		var update hyper_proto.Update
 		if err := decoder.Decode(&update); err != nil {
-			if err != io.EOF {
+			if err == io.EOF {
+				h.logger.Debugln(0, err)
+			} else {
 				h.logger.Println(err)
 			}
 			return time.Second
 		}
+		h.receiveChannel <- struct{}{}
 		m.processHypervisorUpdate(h, update, firstUpdate)
 		firstUpdate = false
 	}
