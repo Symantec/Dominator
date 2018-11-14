@@ -50,6 +50,15 @@ type ChangeAddressPoolResponse struct {
 	Error string
 }
 
+type ChangeOwnersRequest struct {
+	OwnerGroups []string `json:",omitempty"`
+	OwnerUsers  []string `json:",omitempty"`
+}
+
+type ChangeOwnersResponse struct {
+	Error string
+}
+
 type ChangeVmOwnerUsersRequest struct {
 	IpAddress  net.IP
 	OwnerUsers []string
