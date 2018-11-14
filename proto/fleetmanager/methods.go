@@ -6,6 +6,18 @@ import (
 	"net"
 )
 
+func listsEqual(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index, leftString := range left {
+		if leftString != right[index] {
+			return false
+		}
+	}
+	return true
+}
+
 func parseMAC(text []byte) (HardwareAddr, error) {
 	text = bytes.ToLower(text)
 	buf := make([]byte, 20)
@@ -40,6 +52,12 @@ func (left *Machine) Equal(right *Machine) bool {
 		return false
 	}
 	if !left.NetworkEntry.Equal(&right.NetworkEntry) {
+		return false
+	}
+	if !listsEqual(left.OwnerGroups, right.OwnerGroups) {
+		return false
+	}
+	if !listsEqual(left.OwnerUsers, right.OwnerUsers) {
 		return false
 	}
 	if len(left.SecondaryNetworkEntries) != len(right.SecondaryNetworkEntries) {
