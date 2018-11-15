@@ -27,6 +27,7 @@ type addressPoolOptionsType struct {
 
 var (
 	defaultAddressPoolOptions addressPoolOptionsType
+	errorNoAccessToResource   = errors.New("no access to resource")
 	manageHypervisors         = flag.Bool("manageHypervisors", false,
 		"If true, manage hypervisors")
 )
@@ -61,6 +62,14 @@ func checkPoolLimits() error {
 	return nil
 }
 
+func stringSliceToSet(strings []string) map[string]struct{} {
+	set := make(map[string]struct{}, len(strings))
+	for _, entry := range strings {
+		set[entry] = struct{}{}
+	}
+	return set
+}
+
 func testInLocation(location, enclosingLocation string) bool {
 	if enclosingLocation != "" && location != enclosingLocation {
 		if len(enclosingLocation) >= len(location) {
@@ -76,11 +85,68 @@ func testInLocation(location, enclosingLocation string) bool {
 	return true
 }
 
-func (m *Manager) changeMachineTags(hostname string, tgs tags.Tags) error {
+func (h *hypervisorType) changeOwners(client *srpc.Client) error {
+	if !*manageHypervisors {
+		return nil
+	}
+	if client == nil {
+		var err error
+		client, err = srpc.DialHTTP("tcp",
+			fmt.Sprintf("%s:%d",
+				h.machine.Hostname, constants.HypervisorPortNumber),
+			time.Second*15)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+	}
+	request := hyper_proto.ChangeOwnersRequest{
+		OwnerGroups: h.machine.OwnerGroups,
+		OwnerUsers:  h.machine.OwnerUsers,
+	}
+	var reply hyper_proto.ChangeOwnersResponse
+	err := client.RequestReply("Hypervisor.ChangeOwners", request, &reply)
+	if err != nil {
+		return err
+	}
+	return errors.New(reply.Error)
+}
+
+func (h *hypervisorType) checkAuth(authInfo *srpc.AuthInformation) error {
+	if authInfo.HaveMethodAccess {
+		return nil
+	}
+	if _, ok := h.ownerUsers[authInfo.Username]; ok {
+		return nil
+	}
+	for _, ownerGroup := range h.machine.OwnerGroups {
+		if _, ok := authInfo.GroupList[ownerGroup]; ok {
+			return nil
+		}
+	}
+	return errorNoAccessToResource
+}
+
+func (h *hypervisorType) getMachineLocked() *fm_proto.Machine {
+	if len(h.localTags) < 1 {
+		return h.machine
+	}
+	var machine fm_proto.Machine
+	machine = *h.machine
+	machine.Tags = h.machine.Tags.Copy()
+	machine.Tags.Merge(h.localTags)
+	return &machine
+}
+
+func (m *Manager) changeMachineTags(hostname string,
+	authInfo *srpc.AuthInformation, tgs tags.Tags) error {
 	if !*manageHypervisors {
 		return errors.New("this is a read-only Fleet Manager")
 	}
 	if h, err := m.getLockedHypervisor(hostname, true); err != nil {
+		return err
+	} else if err := h.checkAuth(authInfo); err != nil {
+		h.mutex.Unlock()
 		return err
 	} else {
 		for key, localVal := range tgs { // Delete duplicates.
@@ -112,17 +178,6 @@ func (h *hypervisorType) getMachine() *fm_proto.Machine {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	return h.getMachineLocked()
-}
-
-func (h *hypervisorType) getMachineLocked() *fm_proto.Machine {
-	if len(h.localTags) < 1 {
-		return h.machine
-	}
-	var machine fm_proto.Machine
-	machine = *h.machine
-	machine.Tags = h.machine.Tags.Copy()
-	machine.Tags.Merge(h.localTags)
-	return &machine
 }
 
 func (m *Manager) closeUpdateChannel(channel <-chan fm_proto.Update) {
@@ -180,6 +235,7 @@ func (m *Manager) updateHypervisor(h *hypervisorType,
 	h.mutex.Lock()
 	h.location = location
 	h.machine = machine
+	h.ownerUsers = stringSliceToSet(machine.OwnerUsers)
 	subnets := h.subnets
 	for key, localVal := range h.localTags {
 		if machineVal, ok := h.machine.Tags[key]; ok && localVal == machineVal {
@@ -198,6 +254,7 @@ func (m *Manager) updateHypervisor(h *hypervisorType,
 	}
 	h.mutex.Unlock()
 	if *manageHypervisors && h.probeStatus == probeStatusConnected {
+		go h.changeOwners(nil)
 		go m.processSubnetsUpdates(h, subnets)
 	}
 }
@@ -239,6 +296,7 @@ func (m *Manager) updateTopologyLocked(t *topology.Topology,
 				location:     location,
 				machine:      machine,
 				migratingVms: make(map[string]*vmInfoType),
+				ownerUsers:   stringSliceToSet(machine.OwnerUsers),
 				vms:          make(map[string]*vmInfoType),
 			}
 			m.hypervisors[machine.Hostname] = hypervisor
@@ -345,6 +403,13 @@ func (m *Manager) manageHypervisor(h *hypervisorType,
 		return time.Second
 	}
 	defer client.Close()
+	if err := h.changeOwners(client); err != nil {
+		if strings.HasPrefix(err.Error(), "unknown service") {
+			h.logger.Debugln(1, err)
+		} else {
+			h.logger.Println(err)
+		}
+	}
 	conn, err := client.Call("Hypervisor.GetUpdates")
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "unknown service") {
@@ -375,7 +440,7 @@ func (m *Manager) manageHypervisor(h *hypervisorType,
 		var update hyper_proto.Update
 		if err := decoder.Decode(&update); err != nil {
 			if err == io.EOF {
-				h.logger.Debugln(0, err)
+				h.logger.Debugln(0, "remote closed connection")
 			} else {
 				h.logger.Println(err)
 			}

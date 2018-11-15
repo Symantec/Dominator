@@ -11,6 +11,6 @@ func (t *srpcType) ChangeMachineTags(conn *srpc.Conn,
 	reply *fleetmanager.ChangeMachineTagsResponse) error {
 	*reply = fleetmanager.ChangeMachineTagsResponse{
 		errors.ErrorToString(t.hypervisorsManager.ChangeMachineTags(
-			request.Hostname, request.Tags))}
+			request.Hostname, conn.GetAuthInformation(), request.Tags))}
 	return nil
 }
