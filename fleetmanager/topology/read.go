@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/json"
@@ -13,6 +14,7 @@ import (
 )
 
 type inheritingState struct {
+	owners    *ownersType
 	subnetIds map[string]struct{}
 	tags      tags.Tags
 }
@@ -65,6 +67,17 @@ func loadMachines(filename string) ([]*proto.Machine, error) {
 	return machines, nil
 }
 
+func loadOwners(filename string) (*ownersType, error) {
+	var owners ownersType
+	if err := json.ReadFromFile(filename, &owners); err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("error reading: %s: %s", filename, err)
+	}
+	return &owners, nil
+}
+
 func loadSubnets(filename string) ([]*Subnet, error) {
 	var subnets []*Subnet
 	if err := json.ReadFromFile(filename, &subnets); err != nil {
@@ -103,6 +116,7 @@ func loadTags(filename string) (tags.Tags, error) {
 
 func newInheritingState() *inheritingState {
 	return &inheritingState{
+		owners:    &ownersType{},
 		subnetIds: cloneSet(nil),
 		tags:      make(tags.Tags),
 	}
@@ -110,6 +124,7 @@ func newInheritingState() *inheritingState {
 
 func (state *inheritingState) copy() *inheritingState {
 	return &inheritingState{
+		owners:    state.owners.copy(),
 		subnetIds: cloneSet(state.subnetIds),
 		tags:      state.tags.Copy(),
 	}
@@ -136,6 +151,9 @@ func (t *Topology) readDirectory(topDir, dirname string,
 		subnetIdToSubnet: make(map[string]*Subnet),
 	}
 	dirpath := filepath.Join(topDir, dirname)
+	if err := directory.loadOwners(dirpath, state.owners); err != nil {
+		return nil, err
+	}
 	if err := t.loadSubnets(directory, dirpath, state.subnetIds); err != nil {
 		return nil, err
 	}
@@ -182,6 +200,13 @@ func (directory *Directory) loadMachines(dirname string) error {
 		return err
 	}
 	for _, machine := range directory.Machines {
+		mergedOwners := ownersType{
+			OwnerGroups: machine.OwnerGroups,
+			OwnerUsers:  machine.OwnerUsers,
+		}
+		mergedOwners.merge(directory.owners)
+		machine.OwnerGroups = mergedOwners.OwnerGroups
+		machine.OwnerUsers = mergedOwners.OwnerUsers
 		if machine.Tags == nil {
 			machine.Tags = directory.Tags
 		} else if directory.Tags != nil {
@@ -190,6 +215,17 @@ func (directory *Directory) loadMachines(dirname string) error {
 			machine.Tags = mergedTags
 		}
 	}
+	return nil
+}
+
+func (directory *Directory) loadOwners(dirname string,
+	parentOwners *ownersType) error {
+	owners, err := loadOwners(filepath.Join(dirname, "owners.json"))
+	if err != nil {
+		return err
+	}
+	parentOwners.merge(owners)
+	directory.owners = parentOwners
 	return nil
 }
 
@@ -222,6 +258,54 @@ func (directory *Directory) loadTags(dirname string,
 		directory.Tags = parentTags
 	}
 	return nil
+}
+
+func (owners *ownersType) copy() *ownersType {
+	newOwners := ownersType{
+		OwnerGroups: make([]string, 0, len(owners.OwnerGroups)),
+		OwnerUsers:  make([]string, 0, len(owners.OwnerUsers)),
+	}
+	for _, group := range owners.OwnerGroups {
+		newOwners.OwnerGroups = append(newOwners.OwnerGroups, group)
+	}
+	for _, user := range owners.OwnerUsers {
+		newOwners.OwnerUsers = append(newOwners.OwnerUsers, user)
+	}
+	return &newOwners
+}
+
+func (to *ownersType) merge(from *ownersType) {
+	if from == nil {
+		return
+	}
+	ownerGroups := make(map[string]struct{}, len(to.OwnerGroups))
+	for _, group := range to.OwnerGroups {
+		ownerGroups[group] = struct{}{}
+	}
+	changedOwnerGroups := false
+	for _, group := range from.OwnerGroups {
+		if _, ok := ownerGroups[group]; !ok {
+			to.OwnerGroups = append(to.OwnerGroups, group)
+			changedOwnerGroups = true
+		}
+	}
+	if changedOwnerGroups {
+		sort.Strings(to.OwnerGroups)
+	}
+	ownerUsers := make(map[string]struct{}, len(to.OwnerUsers))
+	for _, group := range to.OwnerUsers {
+		ownerUsers[group] = struct{}{}
+	}
+	changedOwnerUsers := false
+	for _, group := range from.OwnerUsers {
+		if _, ok := ownerUsers[group]; !ok {
+			to.OwnerUsers = append(to.OwnerUsers, group)
+			changedOwnerUsers = true
+		}
+	}
+	if changedOwnerUsers {
+		sort.Strings(to.OwnerUsers)
+	}
 }
 
 func (t *Topology) loadMachines(directory *Directory, dirname string) error {

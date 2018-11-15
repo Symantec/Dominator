@@ -17,6 +17,7 @@ type Directory struct {
 	Subnets          []*Subnet             `json:",omitempty"`
 	Tags             tags.Tags             `json:",omitempty"`
 	nameToDirectory  map[string]*Directory // Key: directory name.
+	owners           *ownersType
 	parent           *Directory
 	path             string
 	subnetIdToSubnet map[string]*Subnet // Key: subnet ID.
@@ -28,6 +29,11 @@ func (directory *Directory) GetPath() string {
 
 func (directory *Directory) Walk(fn func(*Directory) error) error {
 	return directory.walk(fn)
+}
+
+type ownersType struct {
+	OwnerGroups []string `json:",omitempty"`
+	OwnerUsers  []string `json:",omitempty"`
 }
 
 type Subnet struct {
