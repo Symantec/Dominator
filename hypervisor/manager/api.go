@@ -36,6 +36,8 @@ type Manager struct {
 	addressPool       addressPoolType
 	healthStatus      string
 	notifiers         map[<-chan proto.Update]chan<- proto.Update
+	ownerGroups       map[string]struct{}
+	ownerUsers        map[string]struct{}
 	subnets           map[string]proto.Subnet // Key: Subnet ID.
 	subnetChannels    []chan<- proto.Subnet
 	vms               map[string]*vmInfoType // Key: IP address.
@@ -95,6 +97,10 @@ func (m *Manager) BecomePrimaryVmOwner(ipAddr net.IP,
 	return m.becomePrimaryVmOwner(ipAddr, authInfo)
 }
 
+func (m *Manager) ChangeOwners(ownerGroups, ownerUsers []string) error {
+	return m.changeOwners(ownerGroups, ownerUsers)
+}
+
 func (m *Manager) ChangeVmOwnerUsers(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, extraUsers []string) error {
 	return m.changeVmOwnerUsers(ipAddr, authInfo, extraUsers)
@@ -103,6 +109,10 @@ func (m *Manager) ChangeVmOwnerUsers(ipAddr net.IP,
 func (m *Manager) ChangeVmTags(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	tgs tags.Tags) error {
 	return m.changeVmTags(ipAddr, authInfo, tgs)
+}
+
+func (m *Manager) CheckOwnership(authInfo *srpc.AuthInformation) bool {
+	return m.checkOwnership(authInfo)
 }
 
 func (m *Manager) CheckVmHasHealthAgent(ipAddr net.IP) (bool, error) {

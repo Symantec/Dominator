@@ -44,6 +44,10 @@ func Setup(manager *manager.Manager, dhcpServer DhcpServer,
 		manager:        manager,
 		tftpbootServer: tftpbootServer,
 	}
+	srpc.SetDefaultGrantMethod(
+		func(_ string, authInfo *srpc.AuthInformation) bool {
+			return manager.CheckOwnership(authInfo)
+		})
 	srpc.RegisterNameWithOptions("Hypervisor", srpcObj, srpc.ReceiverOptions{
 		PublicMethods: []string{
 			"AcknowledgeVm",

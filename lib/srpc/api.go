@@ -80,7 +80,7 @@ type Encoder interface {
 }
 
 // MethodBlocker defines an interface to block method calls (after possible
-// authentication) for a receiver (passed to RegisterName). This may be used to
+// authorisation) for a receiver (passed to RegisterName). This may be used to
 // attach rate limiting polcies for method calls.
 type MethodBlocker interface {
 	// BlockMethod is called after method access is granted, prior to calling
@@ -89,6 +89,15 @@ type MethodBlocker interface {
 	// returned then the method call is blocked and the remote caller will
 	// receive the error.
 	BlockMethod(methodName string, authInfo *AuthInformation) (func(), error)
+}
+
+// MethodGranter defines an interface to grant method calls (if access is not
+// granted by the built-in authorisation mechanism) for a receiver (passed to
+// RegisterName).
+type MethodGranter interface {
+	// GrantMethod is called to check if method access should be granted. If
+	// access should be granted, the method should return true.
+	GrantMethod(serviceMethod string, authInfo *AuthInformation) bool
 }
 
 // RegisterName publishes in the server the set of methods of the receiver
@@ -147,6 +156,17 @@ type ClientResource struct {
 	client                *Client
 	inUse                 bool
 	closeError            error
+}
+
+// SetDefaultGrantMethod registers the grantMethod function which will be
+// called to grant access to methods (if access is not granted by the built-in
+// authorisation mechanism) for all receivers. This is overridden by receivers
+// which implement the MethodGranter interface.
+// The default is to not grant access to methods (if the built-in authorisation
+// mechanism does not grant access).
+func SetDefaultGrantMethod(grantMethod func(serviceMethod string,
+	authInfo *AuthInformation) bool) {
+	defaultGrantMethod = grantMethod
 }
 
 // NewClientResource returns a ClientResource which may be later used to Get*

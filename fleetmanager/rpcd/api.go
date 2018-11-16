@@ -35,6 +35,7 @@ func Setup(hypervisorsManager *hypervisors.Manager, logger log.DebugLogger) (
 	srpc.RegisterNameWithOptions("FleetManager", srpcObj,
 		srpc.ReceiverOptions{
 			PublicMethods: []string{
+				"ChangeMachineTags",
 				"GetHypervisorForVM",
 				"GetMachineInfo",
 				"GetUpdates",

@@ -32,6 +32,7 @@ type hypervisorType struct {
 	location        string
 	machine         *fm_proto.Machine
 	migratingVms    map[string]*vmInfoType // Key: VM IP address.
+	ownerUsers      map[string]struct{}
 	probeStatus     probeStatus
 	subnets         []hyper_proto.Subnet
 	vms             map[string]*vmInfoType // Key: VM IP address.
@@ -99,8 +100,9 @@ func New(storer Storer, logger log.DebugLogger) (*Manager, error) {
 	return newManager(storer, logger)
 }
 
-func (m *Manager) ChangeMachineTags(hostname string, tgs tags.Tags) error {
-	return m.changeMachineTags(hostname, tgs)
+func (m *Manager) ChangeMachineTags(hostname string,
+	authInfo *srpc.AuthInformation, tgs tags.Tags) error {
+	return m.changeMachineTags(hostname, authInfo, tgs)
 }
 
 func (m *Manager) CloseUpdateChannel(channel <-chan fm_proto.Update) {
