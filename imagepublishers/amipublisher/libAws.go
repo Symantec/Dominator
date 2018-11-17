@@ -36,7 +36,7 @@ func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 		VolumeId:   aws.String(volumeId),
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("ec2.AttachVolume: %s", err)
 	}
 	blockDevMappings := make([]*ec2.InstanceBlockDeviceMappingSpecification, 1)
 	blockDevMappings[0] = &ec2.InstanceBlockDeviceMappingSpecification{
@@ -52,7 +52,7 @@ func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 			InstanceId:          instance.InstanceId,
 		})
 	if err != nil {
-		return err
+		return fmt.Errorf("ec2.ModifyInstanceAttribute: %s", err)
 	}
 	logger.Printf("requested attach(%s): %s on %s, waiting...\n",
 		aws.StringValue(instance.InstanceId), volumeId, blockDeviceName)
@@ -60,12 +60,12 @@ func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 		VolumeIds: aws.StringSlice([]string{volumeId}),
 	}
 	if err := awsService.WaitUntilVolumeInUse(dvi); err != nil {
-		return err
+		return fmt.Errorf("ec2.WaitUntilVolumeInUse: %s", err)
 	}
 	for ; true; time.Sleep(time.Second) {
 		desc, err := awsService.DescribeVolumes(dvi)
 		if err != nil {
-			return err
+			return fmt.Errorf("ec2.DescribeVolumes: %s", err)
 		}
 		if len(desc.Volumes[0].Attachments) < 1 {
 			logger.Printf("attachments: %d\n",
@@ -106,7 +106,7 @@ func createSnapshot(awsService *ec2.EC2, volumeId string, description string,
 		Description: aws.String(description),
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("ec2.CreateSnapshot: %s", err)
 	}
 	snapshotIds := make([]string, 1)
 	snapshotIds[0] = *snapshot.SnapshotId
@@ -121,7 +121,7 @@ func createSnapshot(awsService *ec2.EC2, volumeId string, description string,
 		SnapshotIds: aws.StringSlice(snapshotIds),
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("ec2.WaitUntilSnapshotCompleted: %s", err)
 	}
 	return *snapshot.SnapshotId, nil
 }
@@ -139,7 +139,10 @@ func createTags(awsService *ec2.EC2, resourceId string,
 		Resources: aws.StringSlice(resourceIds),
 		Tags:      awsTags,
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("ec2.CreateTags: %s", err)
+	}
+	return nil
 }
 
 func createTagSpecification(resourceType string,
@@ -177,7 +180,7 @@ func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
 		VolumeType: aws.String("gp2"),
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("ec2.CreateVolume: %s", err)
 	}
 	volumeIds := make([]string, 1)
 	volumeIds[0] = *volume.VolumeId
@@ -186,7 +189,7 @@ func createVolume(awsService *ec2.EC2, availabilityZone *string, size uint64,
 		VolumeIds: aws.StringSlice(volumeIds),
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("ec2.WaitUntilVolumeAvailable: %s", err)
 	}
 	return *volume.VolumeId, nil
 }
@@ -236,7 +239,7 @@ func deleteS3Directory(awsService *s3.S3, bucket, dir string) error {
 	})
 	if err != nil {
 		fmt.Printf("error listing: %s: %s\n", dir, err)
-		return err
+		return fmt.Errorf("s3.ListObjects: %s", err)
 	}
 	if len(out.Contents) < 1 {
 		return nil
@@ -299,14 +302,20 @@ func deleteTagsFromResources(awsService *ec2.EC2, tagKeys []string,
 		Resources: aws.StringSlice(resourceIds),
 		Tags:      tags,
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("ec2.DeleteTags: %s", err)
+	}
+	return nil
 }
 
 func deleteVolume(awsService *ec2.EC2, volumeId string) error {
 	_, err := awsService.DeleteVolume(&ec2.DeleteVolumeInput{
 		VolumeId: aws.String(volumeId),
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("ec2.DeleteVolume: %s", err)
+	}
+	return nil
 }
 
 func detachVolume(awsService *ec2.EC2, instanceId, volumeId string) error {
@@ -315,12 +324,15 @@ func detachVolume(awsService *ec2.EC2, instanceId, volumeId string) error {
 		VolumeId:   aws.String(volumeId),
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("ec2.DetachVolume: %s", err)
 	}
 	err = awsService.WaitUntilVolumeAvailable(&ec2.DescribeVolumesInput{
 		VolumeIds: aws.StringSlice([]string{volumeId}),
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("ec2.WaitUntilVolumeAvailable: %s", err)
+	}
+	return nil
 }
 
 func deregisterAmi(awsService *ec2.EC2, amiId string) error {
@@ -347,7 +359,7 @@ func deregisterAmi(awsService *ec2.EC2, amiId string) error {
 			ImageIds: imageIds,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("ec2.DescribeImages: %s", err)
 		}
 		if len(out.Images) < 1 {
 			return nil
@@ -368,7 +380,7 @@ func describeInstances(awsService *ec2.EC2, input *ec2.DescribeInstancesInput) (
 	for {
 		out, err := awsService.DescribeInstances(&inp)
 		if err != nil {
-			return nil, fmt.Errorf("DescribeInstances: %s", err)
+			return nil, fmt.Errorf("ec2.DescribeInstances: %s", err)
 		}
 		for _, reservation := range out.Reservations {
 			for _, instance := range reservation.Instances {
@@ -407,7 +419,7 @@ func findMarketplaceImage(awsService *ec2.EC2, productCode string) (
 			},
 		})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ec2.DescribeImages: %s", err)
 	}
 	return findLatestImage(out.Images)
 }
@@ -436,7 +448,7 @@ func getAccountId(awsService *ec2.EC2) (string, error) {
 		MaxResults: aws.Int64(5),
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("ec2.DescribeInstances: %s", err)
 	}
 	if len(out.Reservations) < 1 {
 		return "", errors.New("no instances found")
@@ -489,7 +501,7 @@ func getImages(awsService *ec2.EC2, accountId string, tags libtags.Tags) (
 	out, err := awsService.DescribeImages(
 		&ec2.DescribeImagesInput{Filters: filters})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ec2.DescribeImages: %s", err)
 	}
 	return out.Images, nil
 }
@@ -562,7 +574,7 @@ func getRunningInstance(awsService *ec2.EC2, instances []*ec2.Instance,
 			InstanceIds: instanceIds,
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("ec2.StartInstances: %s", err)
 		}
 		stoppedInstance.LaunchTime = aws.Time(time.Now())
 	}
@@ -572,7 +584,7 @@ func getRunningInstance(awsService *ec2.EC2, instances []*ec2.Instance,
 		InstanceIds: instanceIds,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ec2.WaitUntilInstanceRunning: %s", err)
 	}
 	return stoppedInstance, nil
 }
@@ -587,7 +599,7 @@ func getSecurityGroup(awsService *ec2.EC2, vpcId string, tags libtags.Tags) (
 	out, err := awsService.DescribeSecurityGroups(
 		&ec2.DescribeSecurityGroupsInput{Filters: filters})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ec2.DescribeSecurityGroups: %s", err)
 	}
 	if len(out.SecurityGroups) < 1 {
 		return nil, errors.New("no security group found")
@@ -608,7 +620,7 @@ func getSubnet(awsService *ec2.EC2, vpcId string, tags libtags.Tags) (
 	out, err := awsService.DescribeSubnets(
 		&ec2.DescribeSubnetsInput{Filters: filters})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ec2.DescribeSubnets: %s", err)
 	}
 	if len(out.Subnets) < 1 {
 		return nil, errors.New("no subnets found")
@@ -625,7 +637,7 @@ func getVpc(awsService *ec2.EC2, tags libtags.Tags) (*ec2.Vpc, error) {
 	out, err := awsService.DescribeVpcs(
 		&ec2.DescribeVpcsInput{Filters: awsutil.MakeFiltersFromTags(tags)})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ec2.DescribeVpcs: %s", err)
 	}
 	if len(out.Vpcs) < 1 {
 		return nil, errors.New("no VPC found")
@@ -679,14 +691,14 @@ func launchInstance(awsService *ec2.EC2, image *ec2.Image, rootVolumeSize uint,
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ec2.RunInstances: %s", err)
 	}
 	instance := reservation.Instances[0]
 	err = awsService.WaitUntilInstanceExists(&ec2.DescribeInstancesInput{
 		InstanceIds: []*string{instance.InstanceId},
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ec2.WaitUntilInstanceExists: %s", err)
 	}
 	return instance, nil
 }
@@ -731,7 +743,7 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 	}
 	ami, err := awsService.RegisterImage(params)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("ec2.RegisterImage: %s", err)
 	}
 	logger.Printf("Created: %s\n", *ami.ImageId)
 	imageIds := []string{*ami.ImageId}
@@ -739,7 +751,7 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 		ImageIds: aws.StringSlice(imageIds),
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("ec2.WaitUntilImageExists: %s", err)
 	}
 	tags = tags.Copy()
 	tags["Name"] = path.Dir(imageName)
@@ -751,7 +763,7 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 		ImageIds: aws.StringSlice(imageIds),
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("ec2.WaitUntilImageAvailable: %s", err)
 	}
 	logger.Printf("AMI: %s available\n", *ami.ImageId)
 	return *ami.ImageId, nil
@@ -762,24 +774,33 @@ func libStartInstances(awsService *ec2.EC2, instanceIds ...string) error {
 		InstanceIds: aws.StringSlice(instanceIds),
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("ec2.StartInstances: %s", err)
 	}
 	err = awsService.WaitUntilInstanceRunning(&ec2.DescribeInstancesInput{
 		InstanceIds: aws.StringSlice(instanceIds),
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("ec2.WaitUntilInstanceRunning: %s", err)
+	}
+	return nil
 }
 
 func stopInstances(awsService *ec2.EC2, instanceIds ...string) error {
 	_, err := awsService.StopInstances(&ec2.StopInstancesInput{
 		InstanceIds: aws.StringSlice(instanceIds),
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("ec2.StopInstances: %s", err)
+	}
+	return nil
 }
 
 func libTerminateInstances(awsService *ec2.EC2, instanceIds ...string) error {
 	_, err := awsService.TerminateInstances(&ec2.TerminateInstancesInput{
 		InstanceIds: aws.StringSlice(instanceIds),
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("ec2.TerminateInstances: %s", err)
+	}
+	return nil
 }
