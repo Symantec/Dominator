@@ -99,6 +99,11 @@ type UnusedImagesResult struct {
 	OldInstances []Instance
 }
 
+type UsedImagesResult struct {
+	UsedImages     []Image
+	UsingInstances []Instance
+}
+
 func (v TargetResult) MarshalJSON() ([]byte, error) {
 	return v.marshalJSON()
 }
@@ -194,6 +199,13 @@ func ListUnusedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
 	logger log.DebugLogger) (UnusedImagesResult, error) {
 	return listUnusedImages(targets, skipList, searchTags, excludeSearchTags,
 		minImageAge, logger)
+}
+
+func ListUsedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
+	searchTags, excludeSearchTags libtags.Tags,
+	logger log.DebugLogger) (UsedImagesResult, error) {
+	return listUsedImages(targets, skipList, searchTags, excludeSearchTags,
+		logger)
 }
 
 func PrepareUnpackers(streamName string, targets awsutil.TargetList,

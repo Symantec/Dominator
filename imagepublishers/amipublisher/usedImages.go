@@ -1,10 +1,7 @@
 package amipublisher
 
 import (
-	"time"
-
 	"github.com/Symantec/Dominator/lib/awsutil"
-	"github.com/Symantec/Dominator/lib/concurrent"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/log"
 	libtags "github.com/Symantec/Dominator/lib/tags"
@@ -12,65 +9,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-type imageUsage struct {
-	allInstances      []*ec2.Instance
-	allUsingInstances []*ec2.Instance
-	images            map[string]*ec2.Image // Key: AMI ID.
-	used              usedImages
-	oldInstances      []*ec2.Instance
-}
-
-type targetImageUsage struct {
-	accountName string
-	region      string
-	err         error
-	imageUsage
-}
-
-type usedImages map[string]struct{} // Key: AMI ID.
-
-func deleteUnusedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
-	searchTags, excludeSearchTags libtags.Tags, minImageAge time.Duration,
-	logger log.DebugLogger) (UnusedImagesResult, error) {
-	logger.Debugln(0, "loading credentials")
-	cs, err := awsutil.LoadCredentials()
-	if err != nil {
-		return UnusedImagesResult{}, err
-	}
-	rawResults, err := listUnusedImagesCS(targets, skipList, searchTags,
-		excludeSearchTags, minImageAge, cs, false, logger)
-	if err != nil {
-		return UnusedImagesResult{}, err
-	}
-	concurrentState := concurrent.NewState(0)
-	for _, result := range rawResults {
-		for amiId, image := range result.images {
-			accountName := result.accountName
-			region := result.region
-			image := image
-			err := concurrentState.GoRun(func() error {
-				return deleteImage(cs, accountName, region, image)
-			})
-			if err != nil {
-				return UnusedImagesResult{}, err
-			}
-			logger.Printf("%s: %s: deleted: %s\n",
-				result.accountName, result.region, amiId)
-		}
-	}
-	if err := concurrentState.Reap(); err != nil {
-		return UnusedImagesResult{}, err
-	}
-	return generateResults(rawResults, logger), nil
-}
-
-func generateResults(rawResults []targetImageUsage,
-	logger log.DebugLogger) UnusedImagesResult {
+func generateUsedResults(rawResults []targetImageUsage,
+	logger log.DebugLogger) UsedImagesResult {
 	logger.Debugln(0, "generating results")
-	results := UnusedImagesResult{}
+	results := UsedImagesResult{}
 	for _, result := range rawResults {
 		for amiId, image := range result.images {
-			results.UnusedImages = append(results.UnusedImages, Image{
+			results.UsedImages = append(results.UsedImages, Image{
 				Target: awsutil.Target{
 					AccountName: result.accountName,
 					Region:      result.region,
@@ -83,8 +28,8 @@ func generateResults(rawResults []targetImageUsage,
 				Tags:         awsutil.CreateTagsFromList(image.Tags),
 			})
 		}
-		for _, instance := range result.oldInstances {
-			results.OldInstances = append(results.OldInstances, Instance{
+		for _, instance := range result.allUsingInstances {
+			results.UsingInstances = append(results.UsingInstances, Instance{
 				Target: awsutil.Target{
 					AccountName: result.accountName,
 					Region:      result.region,
@@ -100,34 +45,31 @@ func generateResults(rawResults []targetImageUsage,
 	return results
 }
 
-func listUnusedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
-	searchTags, excludeSearchTags libtags.Tags, minImageAge time.Duration,
-	logger log.DebugLogger) (UnusedImagesResult, error) {
+func listUsedImages(targets awsutil.TargetList, skipList awsutil.TargetList,
+	searchTags, excludeSearchTags libtags.Tags,
+	logger log.DebugLogger) (UsedImagesResult, error) {
 	logger.Debugln(0, "loading credentials")
 	cs, err := awsutil.LoadCredentials()
 	if err != nil {
-		return UnusedImagesResult{}, err
+		return UsedImagesResult{}, err
 	}
-	rawResults, err := listUnusedImagesCS(targets, skipList, searchTags,
-		excludeSearchTags, minImageAge, cs, false, logger)
+	rawResults, err := listUsedImagesCS(targets, skipList, searchTags,
+		excludeSearchTags, cs, logger)
 	if err != nil {
-		return UnusedImagesResult{}, err
+		return UsedImagesResult{}, err
 	}
-	return generateResults(rawResults, logger), nil
+	return generateUsedResults(rawResults, logger), nil
 }
 
-func listUnusedImagesCS(targets awsutil.TargetList, skipList awsutil.TargetList,
-	searchTags, excludeSearchTags libtags.Tags, minImageAge time.Duration,
-	cs *awsutil.CredentialsStore, ignoreInstances bool,
-	logger log.DebugLogger) (
-	[]targetImageUsage, error) {
+func listUsedImagesCS(targets awsutil.TargetList, skipList awsutil.TargetList,
+	searchTags, excludeSearchTags libtags.Tags, cs *awsutil.CredentialsStore,
+	logger log.DebugLogger) ([]targetImageUsage, error) {
 	resultsChannel := make(chan targetImageUsage, 1)
 	logger.Debugln(0, "collecting raw data")
 	numTargets, err := cs.ForEachEC2Target(targets, skipList,
 		func(awsService *ec2.EC2, account, region string, logger log.Logger) {
-			usage, err := listTargetUnusedImages(awsService, searchTags,
-				excludeSearchTags, cs.AccountNameToId(account), minImageAge,
-				ignoreInstances, logger)
+			usage, err := listTargetUsedImages(awsService, searchTags,
+				excludeSearchTags, cs.AccountNameToId(account), logger)
 			if err != nil {
 				logger.Println(err)
 			}
@@ -164,6 +106,8 @@ func listUnusedImagesCS(targets awsutil.TargetList, skipList awsutil.TargetList,
 	imagesUsedPerRegion := make(map[string]usedImages) // Key: region.
 	totalImages := 0
 	var totalGiBytes int64
+	totalInstances := 0
+	totalUsingInstances := 0
 	for _, result := range rawResults {
 		usedMap := imagesUsedPerRegion[result.region]
 		if usedMap == nil {
@@ -177,39 +121,19 @@ func listUnusedImagesCS(targets awsutil.TargetList, skipList awsutil.TargetList,
 			totalGiBytes += computeImageConsumption(image)
 		}
 		totalImages += len(result.images)
+		totalInstances += len(result.allInstances)
+		totalUsingInstances += len(result.allUsingInstances)
 	}
 	logger.Printf("total images found: %d consuming %s\n",
 		totalImages, format.FormatBytes(uint64(totalGiBytes)<<30))
-	if !ignoreInstances {
-		// Delete used images from images table.
-		logger.Debugln(0, "ignoring used images")
-		for _, result := range rawResults {
-			usedMap := imagesUsedPerRegion[result.region]
-			for amiId := range result.images {
-				if _, ok := usedMap[amiId]; ok {
-					delete(result.images, amiId)
-				}
-			}
-		}
-		// Compute space consumed by unused AMIs.
-		numUnusedImages := 0
-		var unusedGiBytes int64
-		for _, result := range rawResults {
-			numUnusedImages += len(result.images)
-			for _, image := range result.images {
-				unusedGiBytes += computeImageConsumption(image)
-			}
-		}
-		logger.Printf("number of unused images: %d consuming: %s\n",
-			numUnusedImages, format.FormatBytes(uint64(unusedGiBytes)<<30))
-	}
+	logger.Printf("instances using images: %d/%d\n",
+		totalUsingInstances, totalInstances)
 	return rawResults, nil
 }
 
-func listTargetUnusedImages(awsService *ec2.EC2, searchTags libtags.Tags,
+func listTargetUsedImages(awsService *ec2.EC2, searchTags libtags.Tags,
 	excludeSearchTags libtags.Tags, accountId string,
-	minImageAge time.Duration, ignoreInstances bool, logger log.Logger) (
-	imageUsage, error) {
+	logger log.Logger) (imageUsage, error) {
 	results := imageUsage{
 		images: make(map[string]*ec2.Image),
 		used:   make(usedImages),
@@ -219,14 +143,6 @@ func listTargetUnusedImages(awsService *ec2.EC2, searchTags libtags.Tags,
 		return imageUsage{}, err
 	} else {
 		for _, image := range images {
-			creationTime, err := time.Parse(creationTimeFormat,
-				aws.StringValue(image.CreationDate))
-			if err != nil {
-				return imageUsage{}, err
-			}
-			if time.Since(creationTime) < minImageAge {
-				continue
-			}
 			amiId := aws.StringValue(image.ImageId)
 			visibleImages[amiId] = struct{}{}
 			if aws.StringValue(image.OwnerId) == accountId {
@@ -246,18 +162,17 @@ func listTargetUnusedImages(awsService *ec2.EC2, searchTags libtags.Tags,
 			}
 		}
 	}
-	if ignoreInstances {
-		return results, nil
-	}
 	instances, err := describeInstances(awsService, nil)
 	if err != nil {
 		return imageUsage{}, err
 	}
+	results.allInstances = instances
 	for _, instance := range instances {
 		amiId := aws.StringValue(instance.ImageId)
 		results.used[amiId] = struct{}{}
 		if _, ok := visibleImages[amiId]; ok {
-			results.oldInstances = append(results.oldInstances, instance)
+			results.allUsingInstances = append(results.allUsingInstances,
+				instance)
 		}
 	}
 	return results, nil

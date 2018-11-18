@@ -106,6 +106,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  list-streams")
 	fmt.Fprintln(os.Stderr, "  list-unpackers")
 	fmt.Fprintln(os.Stderr, "  list-unused-images")
+	fmt.Fprintln(os.Stderr, "  list-used-images")
 	fmt.Fprintln(os.Stderr, "  prepare-unpackers [stream-name]")
 	fmt.Fprintln(os.Stderr, "  publish stream-name image-leaf-name")
 	fmt.Fprintln(os.Stderr, "  remove-unused-volumes")
@@ -140,6 +141,7 @@ var subcommands = []subcommand{
 	{"list-streams", 0, 0, listStreamsSubcommand},
 	{"list-unpackers", 0, 0, listUnpackersSubcommand},
 	{"list-unused-images", 0, 0, listUnusedImagesSubcommand},
+	{"list-used-images", 0, 0, listUsedImagesSubcommand},
 	{"prepare-unpackers", 0, 1, prepareUnpackersSubcommand},
 	{"publish", 2, 2, publishSubcommand},
 	{"remove-unused-volumes", 0, 0, removeUnusedVolumesSubcommand},
