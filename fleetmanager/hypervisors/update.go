@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"flag"
 	"fmt"
+
 	"io"
 	"net"
 	"strings"
@@ -572,8 +573,13 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 func (m *Manager) processHypervisorUpdate(h *hypervisorType,
 	update hyper_proto.Update, firstUpdate bool) {
 	h.mutex.Lock()
+	oldHealthStatus := h.healthStatus
 	h.healthStatus = update.HealthStatus
 	h.mutex.Unlock()
+	if !firstUpdate && update.HealthStatus != oldHealthStatus {
+		h.logger.Printf("health status changed from: \"%s\" to: \"%s\"\n",
+			oldHealthStatus, update.HealthStatus)
+	}
 	if *manageHypervisors {
 		if update.HaveSubnets { // Must do subnets first.
 			h.mutex.Lock()
