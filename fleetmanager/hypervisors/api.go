@@ -34,6 +34,7 @@ type hypervisorType struct {
 	migratingVms    map[string]*vmInfoType // Key: VM IP address.
 	ownerUsers      map[string]struct{}
 	probeStatus     probeStatus
+	serialNumber    string
 	subnets         []hyper_proto.Subnet
 	vms             map[string]*vmInfoType // Key: VM IP address.
 }

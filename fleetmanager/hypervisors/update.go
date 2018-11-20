@@ -575,6 +575,9 @@ func (m *Manager) processHypervisorUpdate(h *hypervisorType,
 	h.mutex.Lock()
 	oldHealthStatus := h.healthStatus
 	h.healthStatus = update.HealthStatus
+	if update.HaveSerialNumber {
+		h.serialNumber = update.SerialNumber
+	}
 	h.mutex.Unlock()
 	if !firstUpdate && update.HealthStatus != oldHealthStatus {
 		h.logger.Printf("health status changed from: \"%s\" to: \"%s\"\n",
