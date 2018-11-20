@@ -54,6 +54,9 @@ func (m *Manager) writeHtml(writer io.Writer) {
 		fmt.Fprintf(writer, "Owner users: %s<br>\n",
 			strings.Join(ownerUsers, " "))
 	}
+	if m.serialNumber != "" {
+		fmt.Fprintf(writer, "Serial number: \"%s\"<br>\n", m.serialNumber)
+	}
 	fmt.Fprintf(writer,
 		"Number of subnets: <a href=\"listSubnets\">%d</a><br>\n", numSubnets)
 	fmt.Fprintf(writer, "Volume directories: %s<br>\n",

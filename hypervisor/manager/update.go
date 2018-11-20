@@ -35,11 +35,14 @@ func (m *Manager) makeUpdateChannel() <-chan proto.Update {
 	if err != nil {
 		m.Logger.Println(err)
 	}
+	// Initial update: give everything.
 	channel <- proto.Update{
 		HaveAddressPool:  true,
 		AddressPool:      m.addressPool.Registered,
 		NumFreeAddresses: numFreeAddresses,
 		HealthStatus:     m.healthStatus,
+		HaveSerialNumber: true,
+		SerialNumber:     m.serialNumber,
 		HaveSubnets:      true,
 		Subnets:          subnets,
 		HaveVMs:          true,

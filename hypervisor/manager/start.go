@@ -24,8 +24,9 @@ import (
 const (
 	dirPerms = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP |
 		syscall.S_IROTH | syscall.S_IXOTH
-	privateFilePerms = syscall.S_IRUSR | syscall.S_IWUSR
-	publicFilePerms  = privateFilePerms | syscall.S_IRGRP | syscall.S_IROTH
+	privateFilePerms  = syscall.S_IRUSR | syscall.S_IWUSR
+	publicFilePerms   = privateFilePerms | syscall.S_IRGRP | syscall.S_IROTH
+	productSerialFile = "/sys/class/dmi/id/product_serial"
 )
 
 func newManager(startOptions StartOptions) (*Manager, error) {
@@ -48,6 +49,7 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 		memTotalInMiB:     memInfo.Total >> 20,
 		notifiers:         make(map[<-chan proto.Update]chan<- proto.Update),
 		numCPU:            runtime.NumCPU(),
+		serialNumber:      readProductSerial(),
 		vms:               make(map[string]*vmInfoType),
 		volumeDirectories: startOptions.VolumeDirectories,
 	}
@@ -134,6 +136,26 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 	}
 	go manager.loopCheckHealthStatus()
 	return manager, nil
+}
+
+func readProductSerial() string {
+	if file, err := os.Open(productSerialFile); err != nil {
+		return ""
+	} else {
+		defer file.Close()
+		buffer := make([]byte, 256)
+		if nRead, err := file.Read(buffer); err != nil {
+			return ""
+		} else if nRead < 1 {
+			return ""
+		} else {
+			serial := strings.TrimSpace(string(buffer[:nRead]))
+			if serial == "System Serial Number" {
+				serial = ""
+			}
+			return serial
+		}
+	}
 }
 
 func (m *Manager) loopCheckHealthStatus() {
