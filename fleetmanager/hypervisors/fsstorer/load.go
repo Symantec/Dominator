@@ -85,6 +85,29 @@ func (s *Storer) readDirectory(partialIP []byte, dirname string) error {
 	return nil
 }
 
+func (s *Storer) readMachineSerialNumber(hypervisor net.IP) (string, error) {
+	hypervisorIP, err := netIpToIp(hypervisor)
+	if err != nil {
+		return "", err
+	}
+	dirname := s.getHypervisorDirectory(hypervisorIP)
+	filename := filepath.Join(dirname, "serial-number")
+	if file, err := os.Open(filename); err != nil {
+		if !os.IsNotExist(err) {
+			return "", err
+		}
+		return "", nil
+	} else {
+		defer file.Close()
+		reader := bufio.NewReader(file)
+		if line, err := reader.ReadString('\n'); err != nil {
+			return "", err
+		} else {
+			return line[:len(line)-1], nil
+		}
+	}
+}
+
 func (s *Storer) readMachineTags(hypervisor net.IP) (tags.Tags, error) {
 	hypervisorIP, err := netIpToIp(hypervisor)
 	if err != nil {

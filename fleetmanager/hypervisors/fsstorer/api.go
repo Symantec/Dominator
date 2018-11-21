@@ -53,6 +53,10 @@ func (s *Storer) ListVMs(hypervisor net.IP) ([]string, error) {
 	return s.listVMs(hypervisor)
 }
 
+func (s *Storer) ReadMachineSerialNumber(hypervisor net.IP) (string, error) {
+	return s.readMachineSerialNumber(hypervisor)
+}
+
 func (s *Storer) ReadMachineTags(hypervisor net.IP) (tags.Tags, error) {
 	return s.readMachineTags(hypervisor)
 }
@@ -69,6 +73,11 @@ func (s *Storer) SetIPsForHypervisor(hypervisor net.IP,
 
 func (s *Storer) UnregisterHypervisor(hypervisor net.IP) error {
 	return s.unregisterHypervisor(hypervisor)
+}
+
+func (s *Storer) WriteMachineSerialNumber(hypervisor net.IP,
+	serialNumber string) error {
+	return s.writeMachineSerialNumber(hypervisor, serialNumber)
 }
 
 func (s *Storer) WriteMachineTags(hypervisor net.IP, tgs tags.Tags) error {
