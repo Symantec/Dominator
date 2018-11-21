@@ -149,6 +149,34 @@ func (s *Storer) writeIPsForHypervisor(hypervisor IP, ipList []IP,
 	return writeIpList(filepath.Join(dirname, "ip-list.raw"), ipList, flags)
 }
 
+func (s *Storer) writeMachineSerialNumber(hypervisor net.IP,
+	serialNumber string) error {
+	hypervisorIP, err := netIpToIp(hypervisor)
+	if err != nil {
+		return err
+	}
+	dirname := s.getHypervisorDirectory(hypervisorIP)
+	filename := filepath.Join(dirname, "serial-number")
+	if len(serialNumber) < 1 {
+		if err := os.Remove(filename); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+		return nil
+	}
+	file, err := fsutil.CreateRenamingWriter(filename, filePerms)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+		return nil
+	}
+	defer file.Close()
+	if _, err := fmt.Fprintln(file, serialNumber); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Storer) writeMachineTags(hypervisor net.IP, tgs tags.Tags) error {
 	hypervisorIP, err := netIpToIp(hypervisor)
 	if err != nil {

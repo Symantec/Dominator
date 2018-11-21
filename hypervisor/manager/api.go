@@ -31,6 +31,7 @@ type Manager struct {
 	importCookie      []byte
 	memTotalInMiB     uint64
 	numCPU            int
+	serialNumber      string
 	volumeDirectories []string
 	mutex             sync.RWMutex // Lock everthing below (those can change).
 	addressPool       addressPoolType

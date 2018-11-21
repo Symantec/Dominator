@@ -113,7 +113,7 @@ func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 	fmt.Fprintln(writer, "    <th>Name</th>")
 	fmt.Fprintln(writer, "    <th>Status</th>")
 	fmt.Fprintln(writer, "    <th>IP Addr</th>")
-	fmt.Fprintln(writer, "    <th>MAC Addr</th>")
+	fmt.Fprintln(writer, "    <th>Serial Number</th>")
 	fmt.Fprintln(writer, "    <th>Location</th>")
 	fmt.Fprintln(writer, "    <th>NumVMs</th>")
 	fmt.Fprintln(writer, "  </tr>")
@@ -135,7 +135,7 @@ func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 			machine.Hostname, constants.HypervisorPortNumber,
 			hypervisor.getHealthStatus())
 		fmt.Fprintf(writer, "    <td>%s</td>\n", machine.HostIpAddress)
-		fmt.Fprintf(writer, "    <td>%s</td>\n", machine.HostMacAddress)
+		fmt.Fprintf(writer, "    <td>%s</td>\n", hypervisor.serialNumber)
 		fmt.Fprintf(writer, "    <td>%s</td>\n", hypervisor.location)
 		fmt.Fprintf(writer,
 			"    <td><a href=\"http://%s:%d/listVMs\">%d</a></td>\n",

@@ -22,20 +22,22 @@ const (
 )
 
 type hypervisorType struct {
-	logger          log.DebugLogger
-	receiveChannel  chan struct{}
-	mutex           sync.RWMutex
-	conn            *srpc.Conn
-	deleteScheduled bool
-	healthStatus    string
-	localTags       tags.Tags
-	location        string
-	machine         *fm_proto.Machine
-	migratingVms    map[string]*vmInfoType // Key: VM IP address.
-	ownerUsers      map[string]struct{}
-	probeStatus     probeStatus
-	subnets         []hyper_proto.Subnet
-	vms             map[string]*vmInfoType // Key: VM IP address.
+	logger             log.DebugLogger
+	receiveChannel     chan struct{}
+	mutex              sync.RWMutex
+	cachedSerialNumber string
+	conn               *srpc.Conn
+	deleteScheduled    bool
+	healthStatus       string
+	localTags          tags.Tags
+	location           string
+	machine            *fm_proto.Machine
+	migratingVms       map[string]*vmInfoType // Key: VM IP address.
+	ownerUsers         map[string]struct{}
+	probeStatus        probeStatus
+	serialNumber       string
+	subnets            []hyper_proto.Subnet
+	vms                map[string]*vmInfoType // Key: VM IP address.
 }
 
 type ipStorer interface {
@@ -67,8 +69,14 @@ type probeStatus uint
 
 type Storer interface {
 	ipStorer
+	serialStorer
 	tagsStorer
 	vmStorer
+}
+
+type serialStorer interface {
+	ReadMachineSerialNumber(hypervisor net.IP) (string, error)
+	WriteMachineSerialNumber(hypervisor net.IP, serialNumber string) error
 }
 
 type subnetType struct {
