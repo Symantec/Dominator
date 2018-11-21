@@ -358,6 +358,14 @@ func (m *Manager) manageHypervisorLoop(h *hypervisorType, hostname string) {
 		h.logger.Printf("error reading VMs, not managing hypervisor: %s", err)
 		return
 	}
+	h.cachedSerialNumber, err = m.storer.ReadMachineSerialNumber(
+		h.machine.HostIpAddress)
+	if err != nil {
+		h.logger.Printf(
+			"error reading serial number, not managing hypervisor: %s", err)
+		return
+	}
+	h.serialNumber = h.cachedSerialNumber
 	h.localTags, err = m.storer.ReadMachineTags(h.machine.HostIpAddress)
 	if err != nil {
 		h.logger.Printf("error reading tags, not managing hypervisor: %s", err)
@@ -575,7 +583,8 @@ func (m *Manager) processHypervisorUpdate(h *hypervisorType,
 	h.mutex.Lock()
 	oldHealthStatus := h.healthStatus
 	h.healthStatus = update.HealthStatus
-	if update.HaveSerialNumber {
+	oldSerialNumber := h.serialNumber
+	if update.HaveSerialNumber && update.SerialNumber != "" {
 		h.serialNumber = update.SerialNumber
 	}
 	h.mutex.Unlock()
@@ -591,6 +600,18 @@ func (m *Manager) processHypervisorUpdate(h *hypervisorType,
 			m.processSubnetsUpdates(h, update.Subnets)
 		}
 		m.processAddressPoolUpdates(h, update)
+	}
+	if update.HaveSerialNumber && update.SerialNumber != "" &&
+		update.SerialNumber != oldSerialNumber {
+		err := m.storer.WriteMachineSerialNumber(h.machine.HostIpAddress,
+			update.SerialNumber)
+		if err != nil {
+			h.logger.Println(err)
+		} else {
+			h.mutex.Lock()
+			h.cachedSerialNumber = update.SerialNumber
+			h.mutex.Unlock()
+		}
 	}
 	if update.HaveVMs {
 		if firstUpdate {
