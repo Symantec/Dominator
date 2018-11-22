@@ -48,7 +48,8 @@ func (size *Size) String() string {
 func (size *Size) Set(value string) error {
 	for _, unit := range units {
 		if strings.HasSuffix(value, unit.suffix) {
-			val, err := strconv.ParseUint(value[:len(unit.suffix)], 10, 64)
+			val, err := strconv.ParseUint(value[:len(value)-len(unit.suffix)],
+				10, 64)
 			if err != nil {
 				return err
 			} else {
