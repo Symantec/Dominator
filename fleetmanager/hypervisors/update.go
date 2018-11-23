@@ -4,7 +4,6 @@ import (
 	"encoding/gob"
 	"flag"
 	"fmt"
-
 	"io"
 	"net"
 	"strings"
