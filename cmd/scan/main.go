@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/fsrateio"
@@ -40,6 +41,10 @@ var (
 )
 
 func main() {
+	if err := loadflags.LoadForCli("scan"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	flag.Parse()
 	var err error
 	var configuration scanner.Configuration
