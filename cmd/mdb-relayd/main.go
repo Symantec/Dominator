@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/mdb/mdbd"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
@@ -34,6 +35,10 @@ func showMdb(mdb *mdb.Mdb) {
 }
 
 func main() {
+	if err := loadflags.LoadForDaemon("mdb-relayd"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() != 0 {

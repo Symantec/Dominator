@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
@@ -66,6 +67,10 @@ var subcommands = []subcommand{
 }
 
 func main() {
+	if err := loadflags.LoadForCli("domtool"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {

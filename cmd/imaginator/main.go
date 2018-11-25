@@ -13,6 +13,7 @@ import (
 	"github.com/Symantec/Dominator/imagebuilder/httpd"
 	"github.com/Symantec/Dominator/imagebuilder/rpcd"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/tricorder/go/tricorder"
@@ -42,6 +43,10 @@ var (
 )
 
 func main() {
+	if err := loadflags.LoadForDaemon("imaginator"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	flag.Parse()
 	tricorder.RegisterFlags()
 	if os.Geteuid() != 0 {

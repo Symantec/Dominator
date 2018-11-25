@@ -9,6 +9,7 @@ import (
 	imageserverRpcd "github.com/Symantec/Dominator/imageserver/rpcd"
 	"github.com/Symantec/Dominator/imageserver/scanner"
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/objectserver/filesystem"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
@@ -42,6 +43,10 @@ type imageObjectServersType struct {
 func main() {
 	if os.Geteuid() == 0 {
 		fmt.Fprintln(os.Stderr, "Do not run the Image Server as root")
+		os.Exit(1)
+	}
+	if err := loadflags.LoadForDaemon("imageserver"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	flag.Parse()

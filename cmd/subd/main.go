@@ -15,6 +15,7 @@ import (
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/cpulimiter"
 	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/fsbench"
 	"github.com/Symantec/Dominator/lib/fsrateio"
@@ -253,6 +254,10 @@ func writePidfile() {
 }
 
 func main() {
+	if err := loadflags.LoadForDaemon("subd"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	flag.Parse()
 	tricorder.RegisterFlags()
 	subdDirPathname := path.Join(*rootDir, *subdDir)

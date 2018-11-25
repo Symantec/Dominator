@@ -10,6 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filegen"
 	"github.com/Symantec/Dominator/lib/filegen/httpd"
 	"github.com/Symantec/Dominator/lib/filegen/util"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/log/serverlogger"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
@@ -35,6 +36,10 @@ func printUsage() {
 func main() {
 	if os.Geteuid() == 0 {
 		fmt.Fprintln(os.Stderr, "Do not run the filegen server as root")
+		os.Exit(1)
+	}
+	if err := loadflags.LoadForDaemon("filegen-server"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	flag.Usage = printUsage

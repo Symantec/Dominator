@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/filegen/client"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/log/cmdlogger"
 	"github.com/Symantec/Dominator/lib/mdb"
 	"github.com/Symantec/Dominator/lib/mdb/mdbd"
@@ -82,6 +83,10 @@ func handleUpdates(hostname string, updateChannel <-chan []proto.FileInfo,
 }
 
 func main() {
+	if err := loadflags.LoadForCli("filegen-client"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() != 2 {

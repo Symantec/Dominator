@@ -19,10 +19,12 @@ func open(rawurl string) (io.ReadCloser, error) {
 	if u.Scheme == "http" || u.Scheme == "https" {
 		resp, err := http.Get(rawurl)
 		if err != nil {
-			return nil, err
+			return nil,
+				errors.New("error getting: " + rawurl + ": " + err.Error())
 		}
 		if resp.StatusCode != http.StatusOK {
-			return nil, errors.New(resp.Status)
+			return nil,
+				errors.New("error getting: " + rawurl + ": " + resp.Status)
 		}
 		return resp.Body, nil
 	}

@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/serverlogger"
@@ -151,6 +152,10 @@ func showErrorAndDie(err error) {
 func main() {
 	if os.Geteuid() == 0 {
 		fmt.Fprintln(os.Stderr, "Do not run the MDB daemon as root")
+		os.Exit(1)
+	}
+	if err := loadflags.LoadForDaemon("mdbd"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	flag.Usage = printUsage

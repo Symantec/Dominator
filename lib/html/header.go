@@ -37,6 +37,7 @@ func setSecurityHeaders(w http.ResponseWriter) {
 	w.Header().Set("X-XSS-Protection", "1")
 	w.Header().Set("Content-Security-Policy",
 		"default-src 'self' ;style-src 'self' 'unsafe-inline'")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 }
 
 func writeCpuStats(writer io.Writer, prefix string, start, current *cpuStats) {

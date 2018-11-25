@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/cmdlogger"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -45,6 +46,10 @@ var subcommands = []subcommand{
 }
 
 func main() {
+	if err := loadflags.LoadForCli("logtool"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {

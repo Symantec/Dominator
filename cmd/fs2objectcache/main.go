@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path"
+
+	"github.com/Symantec/Dominator/lib/flags/loadflags"
 )
 
 var (
@@ -29,6 +31,10 @@ func init() {
 }
 
 func main() {
+	if err := loadflags.LoadForCli("fs2objectcache"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	flag.Parse()
 	if *rootDir == "" {
 		fmt.Fprintln(os.Stderr, "rootDir unspecified")
