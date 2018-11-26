@@ -44,15 +44,15 @@ func addImage(client *srpc.Client, streamName, dirname string,
 	buildLog *bytes.Buffer) (string, error) {
 	packages, err := listPackages(dirname)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error listing packages: %s", err)
 	}
 	buildStartTime := time.Now()
 	fs, err := buildFileSystem(client, dirname, scanFilter)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error building file-system: %s", err)
 	}
 	if err := util.SpliceComputedFiles(fs, computedFilesList); err != nil {
-		return "", err
+		return "", fmt.Errorf("error splicing computed files: %s", err)
 	}
 	fs.ComputeTotalDataBytes()
 	duration := time.Since(buildStartTime)
@@ -62,7 +62,7 @@ func addImage(client *srpc.Client, streamName, dirname string,
 		len(fs.InodeTable), format.FormatBytes(fs.TotalDataBytes),
 		format.Duration(duration), format.FormatBytes(speed))
 	if _, img, err := getLatestImage(client, streamName, buildLog); err != nil {
-		return "", err
+		return "", fmt.Errorf("error getting latest image: %s", err)
 	} else if img != nil {
 		util.CopyMtimes(img.FileSystem, fs)
 	}
@@ -102,13 +102,14 @@ func listPackages(rootDir string) ([]image.Package, error) {
 	err := runInTarget(nil, output, rootDir, packagerPathname,
 		"show-size-multiplier")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting size multiplier: %s", err)
 	}
 	sizeMultiplier := uint64(1)
 	nScanned, err := fmt.Fscanf(output, "%d", &sizeMultiplier)
 	if err != nil {
 		if err != io.EOF {
-			return nil, err
+			return nil, fmt.Errorf(
+				"error decoding size multiplier: %s", err)
 		}
 	} else if nScanned != 1 {
 		return nil, errors.New("malformed size multiplier")
