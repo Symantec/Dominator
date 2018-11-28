@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/Symantec/Dominator/lib/format"
@@ -16,11 +15,6 @@ import (
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/verstr"
-)
-
-const (
-	dirPerms = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP |
-		syscall.S_IROTH | syscall.S_IXOTH
 )
 
 func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
@@ -60,13 +54,24 @@ func processManifest(manifestDir, rootDir string, buildLog io.Writer) error {
 	err = runInTarget(file, buildLog, rootDir, packagerPathname, "copy-in",
 		"/etc/resolv.conf")
 	if err != nil {
-		return err
+		return fmt.Errorf("error copying in /etc/resolv.conf: %s", err)
+	}
+	packageList, err := fsutil.LoadLines(path.Join(manifestDir, "package-list"))
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+	}
+	if len(packageList) > 0 {
+		if err := updatePackageDatabase(rootDir, buildLog); err != nil {
+			return err
+		}
 	}
 	err = runScripts(manifestDir, "pre-install-scripts", rootDir, buildLog)
 	if err != nil {
 		return err
 	}
-	if err := installPackages(manifestDir, rootDir, buildLog); err != nil {
+	if err := installPackages(packageList, rootDir, buildLog); err != nil {
 		return errors.New("error installing packages: " + err.Error())
 	}
 	err = copyFiles(manifestDir, "post-install-files", rootDir, buildLog)
@@ -116,39 +121,26 @@ func copyFile(destFilename, sourceFilename string, mode os.FileMode,
 	return fsutil.CopyFile(destFilename, sourceFilename, mode)
 }
 
-func installPackages(manifestDir, rootDir string, buildLog io.Writer) error {
-	lines, err := fsutil.LoadLines(path.Join(manifestDir, "package-list"))
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-	}
-	if len(lines) < 1 { // Nothing to do.
+func installPackages(packageList []string, rootDir string,
+	buildLog io.Writer) error {
+	if len(packageList) < 1 { // Nothing to do.
 		fmt.Fprintln(buildLog, "\nNo packages to install")
 		return nil
 	}
-	fmt.Fprintln(buildLog, "\nUpdating packages:")
-	startTime := time.Now()
-	err = runInTarget(nil, buildLog, rootDir, packagerPathname, "update")
-	if err != nil {
-		return errors.New("error updating: " + err.Error())
-	}
-	fmt.Fprintf(buildLog, "Package update took: %s\n",
-		format.Duration(time.Since(startTime)))
-
 	fmt.Fprintln(buildLog, "\nUpgrading packages:")
-	startTime = time.Now()
-	err = runInTarget(nil, buildLog, rootDir, packagerPathname, "upgrade")
+	startTime := time.Now()
+	err := runInTarget(nil, buildLog, rootDir, packagerPathname, "upgrade")
 	if err != nil {
 		return errors.New("error upgrading: " + err.Error())
 	}
 	fmt.Fprintf(buildLog, "Package upgrade took: %s\n",
 		format.Duration(time.Since(startTime)))
 
-	fmt.Fprintln(buildLog, "\nInstalling packages:", strings.Join(lines, " "))
+	fmt.Fprintln(buildLog, "\nInstalling packages:",
+		strings.Join(packageList, " "))
 	startTime = time.Now()
 	args := []string{"install"}
-	args = append(args, lines...)
+	args = append(args, packageList...)
 	err = runInTarget(nil, buildLog, rootDir, packagerPathname, args...)
 	if err != nil {
 		return errors.New("error installing: " + err.Error())
@@ -179,7 +171,7 @@ func runScripts(manifestDir, dirname, rootDir string,
 		return nil
 	}
 	verstr.Sort(names)
-	fmt.Fprintln(buildLog, "\nRunning scripts:")
+	fmt.Fprintf(buildLog, "\nRunning scripts in: %s\n", dirname)
 	scriptsStartTime := time.Now()
 	tmpDir := path.Join(rootDir, ".scripts")
 	if err := os.Mkdir(tmpDir, dirPerms); err != nil {
@@ -214,5 +206,17 @@ func runScripts(manifestDir, dirname, rootDir string,
 	}
 	timeTaken := time.Since(scriptsStartTime)
 	fmt.Fprintf(buildLog, "Ran scripts in %s\n", format.Duration(timeTaken))
+	return nil
+}
+
+func updatePackageDatabase(rootDir string, buildLog io.Writer) error {
+	fmt.Fprintln(buildLog, "\nUpdating package database:")
+	startTime := time.Now()
+	err := runInTarget(nil, buildLog, rootDir, packagerPathname, "update")
+	if err != nil {
+		return errors.New("error updating: " + err.Error())
+	}
+	fmt.Fprintf(buildLog, "Package databse update took: %s\n",
+		format.Duration(time.Since(startTime)))
 	return nil
 }
