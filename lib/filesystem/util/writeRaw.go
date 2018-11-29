@@ -41,6 +41,7 @@ type bootInfoType struct {
 	KernelImageFile string
 	KernelOptions   string
 	grubTemplate    *template.Template
+	RootLabel       string
 }
 
 func checkIfPartition(device string) (bool, error) {
@@ -201,13 +202,20 @@ func getRootPartition(bootDevice string) (string, error) {
 func getDeviceSize(device string) (uint64, error) {
 	fd, err := syscall.Open(device, os.O_RDONLY|syscall.O_CLOEXEC, 0666)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error opening: %s: %s", device, err)
 	}
 	defer syscall.Close(fd)
+	var statbuf syscall.Stat_t
+	if err := syscall.Fstat(fd, &statbuf); err != nil {
+		return 0, fmt.Errorf("error stating: %s: %s\n", device, err)
+	} else if statbuf.Mode&syscall.S_IFMT != syscall.S_IFBLK {
+		return 0, fmt.Errorf("%s is not a block device, mode: %0o",
+			device, statbuf.Mode)
+	}
 	var blk uint64
 	err = wsyscall.Ioctl(fd, BLKGETSIZE, uintptr(unsafe.Pointer(&blk)))
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error geting device size: %s: %s", device, err)
 	}
 	return blk << 9, nil
 }
@@ -240,14 +248,17 @@ func makeAndWriteRoot(fs *filesystem.FileSystem,
 		return err
 	}
 	var bootInfo *bootInfoType
+	label := fmt.Sprintf("rootfs@%x", time.Now().Unix())
 	if makeBootableFlag {
 		var err error
 		bootInfo, err = getBootInfo(fs)
 		if err != nil {
 			return err
 		}
+		bootInfo.RootLabel = label
 	}
-	if err := makeRootFs(rootDevice, unsupportedOptions, logger); err != nil {
+	err = makeExt4fs(rootDevice, label, unsupportedOptions, 8192, logger)
+	if err != nil {
 		return err
 	}
 	mountPoint, err := ioutil.TempDir("", "write-raw-image")
@@ -271,20 +282,23 @@ func makeAndWriteRoot(fs *filesystem.FileSystem,
 	return bootInfo.makeBootable(bootDevice, mountPoint, false, logger)
 }
 
-func makeBootable(fs *filesystem.FileSystem, deviceName string, rootDir string,
+func makeBootable(fs *filesystem.FileSystem,
+	deviceName, rootLabel, rootDir, kernelOptions string,
 	doChroot bool, logger log.DebugLogger) error {
 	if bootInfo, err := getBootInfo(fs); err != nil {
 		return err
 	} else {
+		bootInfo.KernelOptions = kernelOptions
+		bootInfo.RootLabel = rootLabel
 		return bootInfo.makeBootable(deviceName, rootDir, doChroot, logger)
 	}
 }
 
-func makeRootFs(deviceName string, unsupportedOptions []string,
-	logger log.Logger) error {
+func makeExt4fs(deviceName, label string, unsupportedOptions []string,
+	bytesPerInode uint64, logger log.Logger) error {
 	size, err := getDeviceSize(deviceName)
 	if err != nil {
-		return fmt.Errorf("error geting device size: %s: %s", deviceName, err)
+		return err
 	}
 	sizeString := strconv.FormatUint(size>>10, 10)
 	var options []string
@@ -300,18 +314,24 @@ func makeRootFs(deviceName string, unsupportedOptions []string,
 			}
 		}
 	}
-	cmd := exec.Command("mkfs.ext4", "-L", "rootfs", "-i", "8192")
+	cmd := exec.Command("mkfs.ext4")
+	if bytesPerInode != 0 {
+		cmd.Args = append(cmd.Args, "-i", strconv.FormatUint(bytesPerInode, 10))
+	}
+	if label != "" {
+		cmd.Args = append(cmd.Args, "-L", label)
+	}
 	if len(options) > 0 {
 		cmd.Args = append(cmd.Args, "-O", strings.Join(options, ","))
 	}
 	cmd.Args = append(cmd.Args, deviceName, sizeString)
-	logger.Printf("Making %s file-system\n", format.FormatBytes(size))
 	startTime := time.Now()
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("error making file-system on: %s: %s: %s",
 			deviceName, err, output)
 	}
-	logger.Printf("Made file-system in %s\n",
+	logger.Printf("Made %s file-system on: %s in %s\n",
+		format.FormatBytes(size), deviceName,
 		format.Duration(time.Since(startTime)))
 	return nil
 }
@@ -409,7 +429,8 @@ func (bootInfo *bootInfoType) makeBootable(deviceName string, rootDir string,
 		return err
 	} else {
 		defer file.Close()
-		return writeFstabEntry(file, "LABEL=rootfs", "/", "ext4", "", 0, 1)
+		return writeFstabEntry(file, "LABEL="+bootInfo.RootLabel, "/", "ext4",
+			"", 0, 1)
 	}
 }
 
@@ -419,7 +440,7 @@ func writeFstabEntry(writer io.Writer,
 	if flags == "" {
 		flags = "defaults"
 	}
-	_, err := fmt.Fprintf(writer, "%-16s %-10s %-5s %-10s %d %d\n",
+	_, err := fmt.Fprintf(writer, "%-22s %-10s %-5s %-10s %d %d\n",
 		source, mountPoint, fileSystemType, flags, dumpFrequency, checkOrder)
 	return err
 }
@@ -509,7 +530,6 @@ func writeRaw(fs *filesystem.FileSystem,
 }
 
 const grubTemplateString string = `# Generated from simple template.
-set default="0"
 insmod serial
 serial --unit=0 --speed=115200
 terminal_output serial
@@ -520,7 +540,7 @@ menuentry 'Linux' 'Solitary Linux' {
         insmod part_msdos
         insmod ext2
         echo    'Loading Linux {{.KernelImageFile}} ...'
-        linux   {{.KernelImageFile}} root=LABEL=rootfs ro console=tty0 console=ttyS0,115200n8 {{.KernelOptions}}
+        linux   {{.KernelImageFile}} root=LABEL={{.RootLabel}} ro console=tty0 console=ttyS0,115200n8 {{.KernelOptions}}
         echo    'Loading initial ramdisk ...'
         initrd  {{.InitrdImageFile}}
 }
