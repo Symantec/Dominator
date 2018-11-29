@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/Symantec/Dominator/imageserver/client"
@@ -31,9 +32,13 @@ func imageStreamsDecoder(reader io.Reader) (interface{}, error) {
 func load(confUrl, variablesFile, stateDir, imageServerAddress string,
 	imageRebuildInterval time.Duration, logger log.DebugLogger) (
 	*Builder, error) {
+	err := syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, "")
+	if err != nil {
+		return nil, fmt.Errorf("error making mounts private: %s", err)
+	}
 	masterConfiguration, err := masterConfiguration(confUrl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting master configuration: %s", err)
 	}
 	imageStreamsToAutoRebuild := make([]string, 0)
 	for name := range masterConfiguration.BootstrapStreams {
@@ -94,7 +99,7 @@ func loadImageStreams(url string) (*imageStreamsConfigurationType, error) {
 	var configuration imageStreamsConfigurationType
 	decoder := json.NewDecoder(bufio.NewReader(file))
 	if err := decoder.Decode(&configuration); err != nil {
-		return nil, fmt.Errorf("error reading image streams from: %s: %s",
+		return nil, fmt.Errorf("error decoding image streams from: %s: %s",
 			url, err)
 	}
 	return &configuration, nil

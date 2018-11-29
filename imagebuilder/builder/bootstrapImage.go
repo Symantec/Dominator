@@ -23,6 +23,8 @@ import (
 const (
 	cmdPerms = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP |
 		syscall.S_IROTH | syscall.S_IXOTH
+	dirPerms = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP |
+		syscall.S_IROTH | syscall.S_IXOTH
 	packagerPathname = "/bin/generic-packager"
 )
 
@@ -50,12 +52,24 @@ func clean(rootDir string, buildLog io.Writer) error {
 	return nil
 }
 
+func makeTempDirectory(dir, prefix string) (string, error) {
+	tmpDir, err := ioutil.TempDir(dir, prefix)
+	if err != nil {
+		return "", err
+	}
+	if err := os.Chmod(tmpDir, dirPerms); err != nil {
+		os.RemoveAll(tmpDir)
+		return "", err
+	}
+	return tmpDir, nil
+}
+
 func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
 	streamName string, expiresIn time.Duration, _ string, _ time.Duration,
 	buildLog *bytes.Buffer) (string, error) {
 	startTime := time.Now()
 	args := make([]string, 0, len(stream.BootstrapCommand))
-	rootDir, err := ioutil.TempDir("",
+	rootDir, err := makeTempDirectory("",
 		strings.Replace(streamName, "/", "_", -1))
 	if err != nil {
 		return "", err
@@ -91,7 +105,7 @@ func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
 		name, err := addImage(client, streamName, rootDir, stream.Filter,
 			nil, &filter.Filter{}, nil, expiresIn, buildLog)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("error adding image: %s", err)
 		}
 		uploadDuration := time.Since(startTime)
 		fmt.Fprintf(buildLog, "Built: %s in %s, uploaded in %s\n",
