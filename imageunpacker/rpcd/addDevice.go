@@ -23,6 +23,7 @@ func (t *srpcType) AddDevice(conn *srpc.Conn) error {
 	}
 	deviceId = deviceId[:len(deviceId)-1]
 	if err := t.unpacker.AddDevice(deviceId); err != nil {
+		t.logger.Println(err)
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
 	}
