@@ -63,6 +63,9 @@ func (u *Unpacker) streamManager(streamName string,
 				panic("unknown request: " + strconv.Itoa(request.request))
 			}
 			request.errorChannel <- err
+			if err != nil {
+				u.logger.Println(err)
+			}
 		}
 	}
 }
