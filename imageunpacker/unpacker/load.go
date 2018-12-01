@@ -3,6 +3,7 @@ package unpacker
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path"
 	"syscall"
@@ -16,8 +17,12 @@ const (
 		syscall.S_IROTH | syscall.S_IXOTH
 )
 
-func load(baseDir string, imageServerAddress string, logger log.Logger) (
+func load(baseDir string, imageServerAddress string, logger log.DebugLogger) (
 	*Unpacker, error) {
+	err := syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, "")
+	if err != nil {
+		return nil, fmt.Errorf("error making mounts private: %s", err)
+	}
 	if err := os.MkdirAll(path.Join(baseDir, "mnt"), dirPerms); err != nil {
 		return nil, err
 	}

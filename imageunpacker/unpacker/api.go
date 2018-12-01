@@ -64,14 +64,14 @@ type streamManagerState struct {
 type Unpacker struct {
 	baseDir            string
 	imageServerAddress string
-	logger             log.Logger
+	logger             log.DebugLogger
 	rwMutex            sync.RWMutex // Protect below.
 	pState             persistentState
 	scannedDevices     map[string]struct{}
 	lastUsedTime       time.Time
 }
 
-func Load(baseDir string, imageServerAddress string, logger log.Logger) (
+func Load(baseDir string, imageServerAddress string, logger log.DebugLogger) (
 	*Unpacker, error) {
 	return load(baseDir, imageServerAddress, logger)
 }
