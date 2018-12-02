@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
-	"path"
+	"path/filepath"
+	"time"
 
+	"github.com/Symantec/Dominator/lib/filesystem/util"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mbr"
 )
 
@@ -38,22 +40,69 @@ func (u *Unpacker) addDevice(deviceId string) error {
 	if err := updateDeviceSize(&device); err != nil {
 		return err
 	}
-	if err := partitionAndMkFs(deviceName); err != nil {
+	if err := partitionAndMkFs(deviceName, u.logger); err != nil {
 		return err
 	}
 	u.pState.Devices[deviceId] = device
 	return u.writeStateWithLock()
 }
 
-func partitionAndMkFs(deviceName string) error {
+func checkIfBlockDevice(path string) error {
+	if fi, err := os.Lstat(path); err != nil {
+		return err
+	} else if fi.Mode()&os.ModeType != os.ModeDevice {
+		return fmt.Errorf("%s is not a device, mode: %s", path, fi.Mode())
+	}
+	return nil
+}
+
+func getPartition(devicePath string) (string, error) {
+	partitionPaths := []string{devicePath + "1", devicePath + "p1"}
+	for _, partitionPath := range partitionPaths {
+		if err := checkIfBlockDevice(partitionPath); err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return "", err
+		}
+		if file, err := os.Open(partitionPath); err == nil {
+			file.Close()
+			return partitionPath, nil
+		}
+	}
+	return "", fmt.Errorf("no partitions found for: %s", devicePath)
+}
+
+func partitionAndMkFs(deviceName string, logger log.DebugLogger) error {
 	devicePath := "/dev/" + deviceName
+	// Create a single partition. This is needed so that GRUB has a place to
+	// live (between the MBR and first/only partition).
+	logger.Printf("partitioning: %s\n", devicePath)
 	if err := mbr.WriteDefault(devicePath, mbr.TABLE_TYPE_MSDOS); err != nil {
 		return err
 	}
-	cmd := exec.Command("mkfs.ext4", "-L", "rootfs", "-i", "8192",
-		devicePath+"1")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("error making file-system: %s: %s", err, output)
+	// udev has a bug where the partition device node is created and sometimes
+	// is removed and then created again. Based on experiments the device node
+	// is gone for ~15 milliseconds. Wait long enough to hopefully never
+	// encounter this race again.
+	logger.Println("sleeping 1s to work around udev race")
+	time.Sleep(time.Second)
+	partitionPath, err := getPartition(devicePath)
+	if err != nil {
+		return err
+	}
+	err = util.MakeExt4fs(partitionPath,
+		fmt.Sprintf("rootfs@%x", time.Now().Unix()),
+		[]string{"64bit", "metadata_csum"}, // TODO(rgooch): make this generic.
+		8192, logger)
+	if err != nil {
+		return err
+	}
+	// Make sure it's still a block device. If not it means udev still had not
+	// settled down after waiting, so remove the inode and return an error.
+	if err := checkIfBlockDevice(partitionPath); err != nil {
+		os.Remove(partitionPath)
+		return err
 	}
 	return nil
 }
@@ -88,7 +137,7 @@ func scanDevices() (map[string]struct{}, error) {
 
 func updateDeviceSize(device *deviceInfo) error {
 	deviceBlocks, err := readSysfsUint64(
-		path.Join(sysfsDirectory, device.DeviceName, "size"))
+		filepath.Join(sysfsDirectory, device.DeviceName, "size"))
 	if err != nil {
 		return err
 	}

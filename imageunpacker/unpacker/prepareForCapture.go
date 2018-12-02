@@ -2,23 +2,44 @@ package unpacker
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/fsutil"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
 )
 
-var (
-	makeBootableTool = flag.String("makeBootableTool",
-		"/usr/local/etc/make-bootable", "Name of tool to make device bootable")
-)
+func scanBootDirectory(rootDir string) (*filesystem.FileSystem, error) {
+	file, err := os.Open(filepath.Join(rootDir, "boot"))
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	names, err := file.Readdirnames(-1)
+	if err != nil {
+		return nil, err
+	}
+	bootInode := &filesystem.DirectoryInode{}
+	for _, name := range names {
+		bootInode.EntryList = append(bootInode.EntryList,
+			&filesystem.DirectoryEntry{Name: name})
+	}
+	bootEntry := &filesystem.DirectoryEntry{Name: "boot"}
+	bootEntry.SetInode(bootInode)
+	fs := &filesystem.FileSystem{
+		DirectoryInode: filesystem.DirectoryInode{
+			EntryList: []*filesystem.DirectoryEntry{bootEntry},
+		},
+	}
+	return fs, nil
+}
 
 func (u *Unpacker) prepareForCapture(streamName string) error {
 	u.updateUsageTime()
@@ -40,7 +61,7 @@ func (stream *streamManagerState) prepareForCapture() error {
 	if err := stream.getDevice(); err != nil {
 		return err
 	}
-	mountPoint := path.Join(stream.unpacker.baseDir, "mnt")
+	mountPoint := filepath.Join(stream.unpacker.baseDir, "mnt")
 	if err := stream.mount(mountPoint); err != nil {
 		return err
 	}
@@ -82,42 +103,40 @@ func (stream *streamManagerState) capture() error {
 	stream.unpacker.rwMutex.RLock()
 	device := stream.unpacker.pState.Devices[stream.streamInfo.DeviceId]
 	stream.unpacker.rwMutex.RUnlock()
-	deviceNode := path.Join("/dev", device.DeviceName)
-	stream.unpacker.logger.Printf("Preparing for capture(%s) on %s\n",
-		stream.streamName, deviceNode)
+	deviceNode := filepath.Join("/dev", device.DeviceName)
+	rootDevice, err := getPartition(deviceNode)
+	if err != nil {
+		return err
+	}
+	// Get label.
+	cmd := exec.Command("e2label", rootDevice)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		stream.unpacker.logger.Println("Error getting label: ", string(output))
+		return fmt.Errorf("error getting label: %s: %s", err, output)
+	}
+	rootLabel := strings.TrimSpace(string(output))
+	stream.unpacker.logger.Printf(
+		"Preparing for capture(%s) on %s with label: %s\n",
+		stream.streamName, deviceNode, rootLabel)
 	// First clean out debris.
-	mountPoint := path.Join(stream.unpacker.baseDir, "mnt")
-	subdDir := path.Join(mountPoint, ".subd")
+	mountPoint := filepath.Join(stream.unpacker.baseDir, "mnt")
+	subdDir := filepath.Join(mountPoint, ".subd")
 	if err := os.RemoveAll(subdDir); err != nil {
 		return err
 	}
-	// Ensure tool is available.
-	tool := path.Join(stream.unpacker.baseDir, "mnt", "make-bootable")
-	if _, err := os.Stat(tool); err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-		file, err := os.Open(*makeBootableTool)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		fi, err := file.Stat()
-		if err != nil {
-			return err
-		}
-		err = fsutil.CopyToFile(tool, dirPerms, file, uint64(fi.Size()))
-		if err != nil {
-			return err
-		}
-	}
-	cmd := exec.Command("chroot", mountPoint, "/make-bootable", deviceNode)
-	output, err := cmd.CombinedOutput()
+	fs, err := scanBootDirectory(mountPoint)
 	if err != nil {
-		stream.unpacker.logger.Println("Error preparing: ", string(output))
-		return fmt.Errorf("error preparing: %s: %s", err, output)
+		stream.unpacker.logger.Printf("Error scanning boot directory: %s\n",
+			err)
+		return fmt.Errorf("error getting scanning boot directory: %s", err)
 	}
-	os.Remove(tool)
+	err = util.MakeBootable(fs, deviceNode, rootLabel, mountPoint,
+		"net.ifnames=0", false, stream.unpacker.logger)
+	if err != nil {
+		stream.unpacker.logger.Printf("Error preparing: %s", err)
+		return fmt.Errorf("error preparing: %s", err)
+	}
 	if err := syscall.Unmount(mountPoint, 0); err != nil {
 		return err
 	}
