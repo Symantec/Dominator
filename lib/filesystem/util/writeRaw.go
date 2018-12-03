@@ -412,19 +412,14 @@ func (bootInfo *bootInfoType) makeBootable(deviceName string, rootDir string,
 	}
 	logger.Printf("installed GRUB in %s\n",
 		format.Duration(time.Since(startTime)))
-	file, err := os.Create(grubConfigFile)
-	if err != nil {
-		return fmt.Errorf("error creating GRUB config file: %s", err)
-	}
-	err = bootInfo.grubTemplate.Execute(file, bootInfo)
-	if err != nil {
-		file.Close()
+	if err := bootInfo.writeGrubConfig(grubConfigFile); err != nil {
 		return err
 	}
-	if err := file.Close(); err != nil {
+	err = bootInfo.writeGrubTemplate(grubConfigFile + ".template")
+	if err != nil {
 		return err
 	}
-	file, err = os.Create(filepath.Join(rootDir, "etc", "fstab"))
+	file, err := os.Create(filepath.Join(rootDir, "etc", "fstab"))
 	if err != nil {
 		return err
 	} else {
@@ -432,6 +427,30 @@ func (bootInfo *bootInfoType) makeBootable(deviceName string, rootDir string,
 		return writeFstabEntry(file, "LABEL="+bootInfo.RootLabel, "/", "ext4",
 			"", 0, 1)
 	}
+}
+
+func (bootInfo *bootInfoType) writeGrubConfig(filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("error creating GRUB config file: %s", err)
+	}
+	defer file.Close()
+	if err := bootInfo.grubTemplate.Execute(file, bootInfo); err != nil {
+		return err
+	}
+	return file.Close()
+}
+
+func (bootInfo *bootInfoType) writeGrubTemplate(filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("error creating GRUB config file template: %s", err)
+	}
+	defer file.Close()
+	if _, err := file.Write([]byte(grubTemplateString)); err != nil {
+		return err
+	}
+	return file.Close()
 }
 
 func writeFstabEntry(writer io.Writer,
