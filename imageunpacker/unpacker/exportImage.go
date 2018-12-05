@@ -79,6 +79,10 @@ func (stream *streamManagerState) export(exportType string,
 		return errors.New("update in progress")
 	case proto.StatusStreamPreparing:
 		return errors.New("preparing to capture")
+	case proto.StatusStreamExporting:
+		return errors.New("export in progress")
+	case proto.StatusStreamNoFileSystem:
+		return errors.New("no file-system")
 	default:
 		panic("invalid status")
 	}
@@ -89,6 +93,10 @@ func (stream *streamManagerState) export(exportType string,
 		}
 		stream.streamInfo.status = proto.StatusStreamNotMounted
 	}
+	stream.streamInfo.status = proto.StatusStreamExporting
+	defer func() {
+		stream.streamInfo.status = proto.StatusStreamNotMounted
+	}()
 	deviceFile, err := os.Open(path.Join("/dev", device.DeviceName))
 	if err != nil {
 		stream.unpacker.logger.Println("Error exporting: %s", err)

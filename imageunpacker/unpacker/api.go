@@ -25,9 +25,10 @@ var (
 )
 
 type deviceInfo struct {
-	DeviceName string
-	size       uint64
-	StreamName string
+	DeviceName         string
+	partitionTimestamp time.Time
+	size               uint64
+	StreamName         string
 }
 
 type requestType struct {
@@ -59,6 +60,7 @@ type streamManagerState struct {
 	streamInfo  *imageStreamInfo
 	fileSystem  *filesystem.FileSystem
 	objectCache objectcache.ObjectCache
+	rootLabel   string
 }
 
 type Unpacker struct {

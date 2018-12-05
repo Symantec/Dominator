@@ -4,9 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
@@ -104,21 +102,9 @@ func (stream *streamManagerState) capture() error {
 	device := stream.unpacker.pState.Devices[stream.streamInfo.DeviceId]
 	stream.unpacker.rwMutex.RUnlock()
 	deviceNode := filepath.Join("/dev", device.DeviceName)
-	rootDevice, err := getPartition(deviceNode)
-	if err != nil {
-		return err
-	}
-	// Get label.
-	cmd := exec.Command("e2label", rootDevice)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		stream.unpacker.logger.Println("Error getting label: ", string(output))
-		return fmt.Errorf("error getting label: %s: %s", err, output)
-	}
-	rootLabel := strings.TrimSpace(string(output))
 	stream.unpacker.logger.Printf(
 		"Preparing for capture(%s) on %s with label: %s\n",
-		stream.streamName, deviceNode, rootLabel)
+		stream.streamName, deviceNode, stream.rootLabel)
 	// First clean out debris.
 	mountPoint := filepath.Join(stream.unpacker.baseDir, "mnt")
 	subdDir := filepath.Join(mountPoint, ".subd")
@@ -131,7 +117,7 @@ func (stream *streamManagerState) capture() error {
 			err)
 		return fmt.Errorf("error getting scanning boot directory: %s", err)
 	}
-	err = util.MakeBootable(fs, deviceNode, rootLabel, mountPoint,
+	err = util.MakeBootable(fs, deviceNode, stream.rootLabel, mountPoint,
 		"net.ifnames=0", false, stream.unpacker.logger)
 	if err != nil {
 		stream.unpacker.logger.Printf("Error preparing: %s", err)

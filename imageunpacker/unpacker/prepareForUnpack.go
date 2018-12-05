@@ -45,11 +45,14 @@ func (stream *streamManagerState) scan(skipIfPrepared bool) error {
 	if err := stream.getDevice(); err != nil {
 		return err
 	}
+	streamInfo := stream.streamInfo
+	if streamInfo.status == proto.StatusStreamNoFileSystem {
+		return nil // Nothing to scan.
+	}
 	mountPoint := filepath.Join(stream.unpacker.baseDir, "mnt")
 	if err := stream.mount(mountPoint); err != nil {
 		return err
 	}
-	streamInfo := stream.streamInfo
 	switch streamInfo.status {
 	case proto.StatusStreamNoDevice:
 		return errors.New("no device")
@@ -126,7 +129,8 @@ func (stream *streamManagerState) getDeviceWithLock() error {
 			deviceInfo.StreamName = stream.streamName
 			u.pState.Devices[deviceId] = deviceInfo
 			streamInfo.DeviceId = deviceId
-			streamInfo.status = proto.StatusStreamNotMounted
+			streamInfo.status = proto.StatusStreamNoFileSystem
+			stream.rootLabel = ""
 			if err := u.writeStateWithLock(); err != nil {
 				return err
 			}
@@ -146,6 +150,8 @@ func (stream *streamManagerState) mount(mountPoint string) error {
 		panic("no device")
 	case proto.StatusStreamNotMounted:
 		// Not mounted: go ahead and mount.
+	case proto.StatusStreamNoFileSystem:
+		panic("no file-system")
 	default:
 		// Already mounted.
 		return nil

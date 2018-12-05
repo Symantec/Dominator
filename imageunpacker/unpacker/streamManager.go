@@ -1,7 +1,11 @@
 package unpacker
 
 import (
+	"fmt"
+	"os/exec"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/Symantec/Dominator/lib/wsyscall"
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
@@ -18,18 +22,37 @@ func (u *Unpacker) setupStream(streamName string) (*imageStreamInfo, error) {
 		}
 	}
 	if streamInfo.requestChannel == nil {
+		var rootLabel string
+		var err error
 		if streamInfo.DeviceId != "" {
-			streamInfo.status = proto.StatusStreamNotMounted
+			rootLabel, err = u.getExt2fsLabel(streamInfo)
+			if err == nil && strings.HasPrefix(rootLabel, "rootfs@") {
+				streamInfo.status = proto.StatusStreamNotMounted
+			} else {
+				streamInfo.status = proto.StatusStreamNoFileSystem
+				rootLabel = ""
+			}
 		}
 		requestChannel := make(chan requestType)
 		streamInfo.requestChannel = requestChannel
-		go u.streamManager(streamName, streamInfo, requestChannel)
+		go u.streamManager(streamName, streamInfo, rootLabel, requestChannel)
 	}
 	return streamInfo, nil
 }
 
+// This must be called with the lock held.
+func (u *Unpacker) getExt2fsLabel(streamInfo *imageStreamInfo) (string, error) {
+	device := u.pState.Devices[streamInfo.DeviceId]
+	deviceNode := filepath.Join("/dev", device.DeviceName)
+	rootDevice, err := getPartition(deviceNode)
+	if err != nil {
+		return "", err
+	}
+	return getExt2fsLabel(rootDevice)
+}
+
 func (u *Unpacker) streamManager(streamName string,
-	streamInfo *imageStreamInfo,
+	streamInfo *imageStreamInfo, rootLabel string,
 	requestChannel <-chan requestType) {
 	if err := wsyscall.UnshareMountNamespace(); err != nil {
 		panic("Unable to unshare mount namesace: " + err.Error())
@@ -37,7 +60,9 @@ func (u *Unpacker) streamManager(streamName string,
 	stream := streamManagerState{
 		unpacker:   u,
 		streamName: streamName,
-		streamInfo: streamInfo}
+		streamInfo: streamInfo,
+		rootLabel:  rootLabel,
+	}
 	for {
 		u.rwMutex.Lock()
 		streamInfo.scannedFS = stream.fileSystem
@@ -74,4 +99,13 @@ func (u *Unpacker) getStream(streamName string) *imageStreamInfo {
 	u.rwMutex.RLock()
 	defer u.rwMutex.RUnlock()
 	return u.pState.ImageStreams[streamName]
+}
+
+func getExt2fsLabel(device string) (string, error) {
+	cmd := exec.Command("e2label", device)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("error getting label: %s: %s", err, output)
+	} else {
+		return strings.TrimSpace(string(output)), nil
+	}
 }
