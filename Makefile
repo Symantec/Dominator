@@ -17,7 +17,6 @@ hypervisor.tarball:
 
 image-unpacker.tarball:
 	@./scripts/make-tarball image-unpacker \
-		scripts/image-pusher/make-bootable \
 		scripts/image-pusher/export-image -C $(ETCDIR) ssl
 
 installer.tarball:
