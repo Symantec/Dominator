@@ -2,7 +2,8 @@ package unpacker
 
 import (
 	"errors"
-	"path"
+	"os"
+	"path/filepath"
 	"syscall"
 
 	proto "github.com/Symantec/Dominator/proto/imageunpacker"
@@ -47,6 +48,8 @@ func (stream *streamManagerState) associateWithDevice(deviceId string) error {
 		return errors.New("update in progress")
 	case proto.StatusStreamPreparing:
 		return errors.New("preparing to capture")
+	case proto.StatusStreamNoFileSystem:
+		// OK to (re)associate.
 	default:
 		panic("invalid status")
 	}
@@ -66,9 +69,11 @@ func (stream *streamManagerState) selectDevice(deviceId string) error {
 		// Nothing to unmount.
 	case proto.StatusStreamNotMounted:
 		// Not mounted.
+	case proto.StatusStreamNoFileSystem:
+		// Nothing to unmount.
 	default:
 		// Mounted: unmount it.
-		mountPoint := path.Join(stream.unpacker.baseDir, "mnt")
+		mountPoint := filepath.Join(stream.unpacker.baseDir, "mnt")
 		if err := syscall.Unmount(mountPoint, 0); err != nil {
 			return err
 		}
@@ -86,6 +91,7 @@ func (stream *streamManagerState) selectDevice(deviceId string) error {
 		}
 		if streamInfo.DeviceId != "" { // Disassociate with existing device.
 			if device, ok := u.pState.Devices[streamInfo.DeviceId]; ok {
+				device.eraseFileSystem()
 				device.StreamName = ""
 				u.pState.Devices[streamInfo.DeviceId] = device
 			}
@@ -93,7 +99,21 @@ func (stream *streamManagerState) selectDevice(deviceId string) error {
 		device.StreamName = stream.streamName
 		u.pState.Devices[deviceId] = device
 		streamInfo.DeviceId = deviceId
-		streamInfo.status = proto.StatusStreamNotMounted
+		streamInfo.status = proto.StatusStreamNoFileSystem
+		stream.rootLabel = ""
 		return u.writeStateWithLock()
+	}
+}
+
+func (device deviceInfo) eraseFileSystem() {
+	rootDevice, err := getPartition(filepath.Join("/dev", device.DeviceName))
+	if err != nil {
+		return
+	}
+	if file, err := os.OpenFile(rootDevice, os.O_WRONLY, 0); err != nil {
+		return
+	} else {
+		defer file.Close()
+		file.Write(make([]byte, 65536))
 	}
 }

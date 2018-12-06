@@ -46,6 +46,8 @@ func (stream *streamManagerState) prepareForCopy() error {
 		return errors.New("update in progress")
 	case proto.StatusStreamPreparing:
 		return errors.New("preparing to capture")
+	case proto.StatusStreamNoFileSystem:
+		return errors.New("no file-system")
 	default:
 		panic("invalid status")
 	}

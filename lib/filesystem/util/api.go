@@ -28,13 +28,26 @@ func CopyMtimes(source, dest *filesystem.FileSystem) {
 	copyMtimes(source, dest)
 }
 
+func GetUnsupportedExt4fsOptions(fs *filesystem.FileSystem,
+	objectsGetter objectserver.ObjectsGetter) ([]string, error) {
+	return getUnsupportedOptions(fs, objectsGetter)
+}
+
 func LoadComputedFiles(filename string) ([]ComputedFile, error) {
 	return loadComputedFiles(filename)
 }
 
-func MakeBootable(fs *filesystem.FileSystem, deviceName string, rootDir string,
+func MakeBootable(fs *filesystem.FileSystem,
+	deviceName, rootLabel, rootDir, kernelOptions string,
 	doChroot bool, logger log.DebugLogger) error {
-	return makeBootable(fs, deviceName, rootDir, doChroot, logger)
+	return makeBootable(fs, deviceName, rootLabel, rootDir, kernelOptions,
+		doChroot, logger)
+}
+
+func MakeExt4fs(deviceName, label string, unsupportedOptions []string,
+	bytesPerInode uint64, logger log.Logger) error {
+	return makeExt4fs(deviceName, label, unsupportedOptions, bytesPerInode,
+		logger)
 }
 
 func ReplaceComputedFiles(fs *filesystem.FileSystem,

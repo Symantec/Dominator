@@ -54,7 +54,7 @@ func (stream *imageStreamType) getManifest(b *Builder, streamName string,
 	})
 	fmt.Fprintf(buildLog, "Cloning repository: %s branch: %s\n",
 		stream.ManifestUrl, gitBranch)
-	manifestRoot, err := ioutil.TempDir("",
+	manifestRoot, err := makeTempDirectory("",
 		strings.Replace(streamName, "/", "_", -1)+".manifest")
 	if err != nil {
 		return "", err
@@ -215,7 +215,7 @@ func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
 	if err != nil {
 		return "", err
 	}
-	rootDir, err := ioutil.TempDir("",
+	rootDir, err := makeTempDirectory("",
 		strings.Replace(streamName, "/", "_", -1)+".root")
 	if err != nil {
 		return "", err
@@ -252,7 +252,7 @@ func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
 
 func buildTreeFromManifest(client *srpc.Client, manifestDir string,
 	buildLog *bytes.Buffer) (string, error) {
-	rootDir, err := ioutil.TempDir("", "tree")
+	rootDir, err := makeTempDirectory("", "tree")
 	if err != nil {
 		return "", err
 	}

@@ -3,15 +3,16 @@ package imageunpacker
 import "time"
 
 const (
-	StatusStreamNoDevice   = 0
-	StatusStreamNotMounted = 1
-	StatusStreamMounted    = 2
-	StatusStreamScanning   = 3
-	StatusStreamScanned    = 4
-	StatusStreamFetching   = 5
-	StatusStreamUpdating   = 6
-	StatusStreamPreparing  = 7
-	StatusStreamExporting  = 8
+	StatusStreamNoDevice     = 0
+	StatusStreamNotMounted   = 1
+	StatusStreamMounted      = 2
+	StatusStreamScanning     = 3
+	StatusStreamScanned      = 4
+	StatusStreamFetching     = 5
+	StatusStreamUpdating     = 6
+	StatusStreamPreparing    = 7
+	StatusStreamExporting    = 8
+	StatusStreamNoFileSystem = 9
 )
 
 type DeviceInfo struct {

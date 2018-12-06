@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/Symantec/Dominator/lib/filesystem"
@@ -45,11 +45,14 @@ func (stream *streamManagerState) scan(skipIfPrepared bool) error {
 	if err := stream.getDevice(); err != nil {
 		return err
 	}
-	mountPoint := path.Join(stream.unpacker.baseDir, "mnt")
+	streamInfo := stream.streamInfo
+	if streamInfo.status == proto.StatusStreamNoFileSystem {
+		return nil // Nothing to scan.
+	}
+	mountPoint := filepath.Join(stream.unpacker.baseDir, "mnt")
 	if err := stream.mount(mountPoint); err != nil {
 		return err
 	}
-	streamInfo := stream.streamInfo
 	switch streamInfo.status {
 	case proto.StatusStreamNoDevice:
 		return errors.New("no device")
@@ -82,7 +85,7 @@ func (stream *streamManagerState) scan(skipIfPrepared bool) error {
 		return err
 	}
 	stream.objectCache, err = objectcache.ScanObjectCache(
-		path.Join(stream.unpacker.baseDir, "mnt", ".subd", "objects"))
+		filepath.Join(stream.unpacker.baseDir, "mnt", ".subd", "objects"))
 	if err != nil {
 		return err
 	}
@@ -126,7 +129,8 @@ func (stream *streamManagerState) getDeviceWithLock() error {
 			deviceInfo.StreamName = stream.streamName
 			u.pState.Devices[deviceId] = deviceInfo
 			streamInfo.DeviceId = deviceId
-			streamInfo.status = proto.StatusStreamNotMounted
+			streamInfo.status = proto.StatusStreamNoFileSystem
+			stream.rootLabel = ""
 			if err := u.writeStateWithLock(); err != nil {
 				return err
 			}
@@ -146,6 +150,8 @@ func (stream *streamManagerState) mount(mountPoint string) error {
 		panic("no device")
 	case proto.StatusStreamNotMounted:
 		// Not mounted: go ahead and mount.
+	case proto.StatusStreamNoFileSystem:
+		panic("no file-system")
 	default:
 		// Already mounted.
 		return nil
@@ -153,18 +159,21 @@ func (stream *streamManagerState) mount(mountPoint string) error {
 	stream.unpacker.rwMutex.RLock()
 	device := stream.unpacker.pState.Devices[stream.streamInfo.DeviceId]
 	stream.unpacker.rwMutex.RUnlock()
-	deviceNode := path.Join("/dev", device.DeviceName+"1")
-	err := wsyscall.Mount(deviceNode, mountPoint, "ext4", 0, "")
+	rootDevice, err := getPartition(filepath.Join("/dev", device.DeviceName))
 	if err != nil {
-		return fmt.Errorf("error mounting: %s onto: %s: %s", deviceNode,
+		return err
+	}
+	err = wsyscall.Mount(rootDevice, mountPoint, "ext4", 0, "")
+	if err != nil {
+		return fmt.Errorf("error mounting: %s onto: %s: %s", rootDevice,
 			mountPoint, err)
 	}
-	err = os.MkdirAll(path.Join(mountPoint, ".subd", "objects"), dirPerms)
+	err = os.MkdirAll(filepath.Join(mountPoint, ".subd", "objects"), dirPerms)
 	if err != nil {
 		return err
 	}
 	streamInfo.status = proto.StatusStreamMounted
 	stream.unpacker.logger.Printf("Mounted(%s) %s\n",
-		stream.streamName, deviceNode)
+		stream.streamName, rootDevice)
 	return nil
 }

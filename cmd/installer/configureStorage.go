@@ -296,7 +296,8 @@ func installRoot(device string, fileSystem *filesystem.FileSystem,
 	if err != nil {
 		return err
 	}
-	err = util.MakeBootable(fileSystem, device, *mountPoint, true, logger)
+	err = util.MakeBootable(fileSystem, device, "rootfs", *mountPoint, "", true,
+		logger)
 	return nil
 }
 

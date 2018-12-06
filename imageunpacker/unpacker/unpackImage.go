@@ -2,20 +2,24 @@ package unpacker
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	domlib "github.com/Symantec/Dominator/dom/lib"
 	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectcache"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	unpackproto "github.com/Symantec/Dominator/proto/imageunpacker"
@@ -30,7 +34,7 @@ func (u *Unpacker) unpackImage(streamName string, imageLeafName string) error {
 	if streamInfo == nil {
 		return errors.New("unknown stream")
 	}
-	fs := u.getImage(path.Join(streamName, imageLeafName)).FileSystem
+	fs := u.getImage(filepath.Join(streamName, imageLeafName)).FileSystem
 	if err := fs.RebuildInodePointers(); err != nil {
 		return err
 	}
@@ -43,7 +47,7 @@ func (u *Unpacker) unpackImage(streamName string, imageLeafName string) error {
 	request := requestType{
 		request:      requestUnpack,
 		desiredFS:    fs,
-		imageName:    path.Join(streamName, imageLeafName),
+		imageName:    filepath.Join(streamName, imageLeafName),
 		errorChannel: errorChannel,
 	}
 	streamInfo.requestChannel <- request
@@ -80,12 +84,31 @@ func (u *Unpacker) getImage(imageName string) *image.Image {
 
 func (stream *streamManagerState) unpack(imageName string,
 	desiredFS *filesystem.FileSystem) error {
-	mountPoint := path.Join(stream.unpacker.baseDir, "mnt")
+	srpcClient, err := srpc.DialHTTP("tcp", stream.unpacker.imageServerAddress,
+		time.Second*15)
+	if err != nil {
+		return err
+	}
+	defer srpcClient.Close()
+	objectServer := objectclient.AttachObjectClient(srpcClient)
+	defer objectServer.Close()
+	mountPoint := filepath.Join(stream.unpacker.baseDir, "mnt")
 	streamInfo := stream.streamInfo
-	if streamInfo.status != unpackproto.StatusStreamScanned {
+	switch streamInfo.status {
+	case unpackproto.StatusStreamScanned:
+		// Everything is set up. Ready to unpack.
+	case unpackproto.StatusStreamNoFileSystem:
+		err := stream.mkfs(desiredFS, objectServer, stream.unpacker.logger)
+		if err != nil {
+			return err
+		}
+		if err := stream.scan(false); err != nil {
+			return err
+		}
+	default:
 		return errors.New("not yet scanned")
 	}
-	err := stream.deleteUnneededFiles(imageName, stream.fileSystem, desiredFS,
+	err = stream.deleteUnneededFiles(imageName, stream.fileSystem, desiredFS,
 		mountPoint)
 	if err != nil {
 		return err
@@ -100,8 +123,9 @@ func (stream *streamManagerState) unpack(imageName string,
 	fetchMap, _ := domlib.BuildMissingLists(subObj, desiredImage, false,
 		true, stream.unpacker.logger)
 	objectsToFetch := objectcache.ObjectMapToCache(fetchMap)
-	objectsDir := path.Join(mountPoint, ".subd", "objects")
-	if err := stream.fetch(imageName, objectsToFetch, objectsDir); err != nil {
+	objectsDir := filepath.Join(mountPoint, ".subd", "objects")
+	err = stream.fetch(imageName, objectsToFetch, objectsDir, objectServer)
+	if err != nil {
 		streamInfo.status = unpackproto.StatusStreamMounted
 		return err
 	}
@@ -145,24 +169,17 @@ func (stream *streamManagerState) deleteUnneededFiles(imageName string,
 		imageName, len(pathsToDelete))
 	for _, pathname := range pathsToDelete {
 		stream.unpacker.logger.Printf("Delete(%s): %s\n", imageName, pathname)
-		os.Remove(path.Join(mountPoint, pathname))
+		os.Remove(filepath.Join(mountPoint, pathname))
 	}
 	return nil
 }
 
 func (stream *streamManagerState) fetch(imageName string,
-	objectsToFetch []hash.Hash, destDirname string) error {
+	objectsToFetch []hash.Hash, destDirname string,
+	objectsGetter objectserver.ObjectsGetter) error {
 	startTime := time.Now()
 	stream.streamInfo.status = unpackproto.StatusStreamFetching
-	srpcClient, err := srpc.DialHTTP("tcp", stream.unpacker.imageServerAddress,
-		time.Second*15)
-	if err != nil {
-		return err
-	}
-	defer srpcClient.Close()
-	objectServer := objectclient.AttachObjectClient(srpcClient)
-	defer objectServer.Close()
-	objectsReader, err := objectServer.GetObjects(objectsToFetch)
+	objectsReader, err := objectsGetter.GetObjects(objectsToFetch)
 	if err != nil {
 		stream.streamInfo.status = unpackproto.StatusStreamMounted
 		return err
@@ -190,10 +207,80 @@ func (stream *streamManagerState) fetch(imageName string,
 	return nil
 }
 
+func (stream *streamManagerState) mkfs(fs *filesystem.FileSystem,
+	objectsGetter objectserver.ObjectsGetter, logger log.Logger) error {
+	unsupportedOptions, err := util.GetUnsupportedExt4fsOptions(fs,
+		objectsGetter)
+	if err != nil {
+		return err
+	}
+	stream.unpacker.rwMutex.RLock()
+	device := stream.unpacker.pState.Devices[stream.streamInfo.DeviceId]
+	stream.unpacker.rwMutex.RUnlock()
+	// udev has a bug where the partition device node is created and sometimes
+	// is removed and then created again. Based on experiments the device node
+	// is gone for ~15 milliseconds. Wait long enough since the partition was
+	// created to hopefully never encounter this race again.
+	if !device.partitionTimestamp.IsZero() {
+		timeSincePartition := time.Since(device.partitionTimestamp)
+		if timeSincePartition < time.Second {
+			sleepTime := time.Second - timeSincePartition
+			logger.Printf("sleeping %s to work around udev race\n",
+				format.Duration(sleepTime))
+			time.Sleep(sleepTime)
+		}
+	}
+	partitionPath, err := getPartition(filepath.Join("/dev", device.DeviceName))
+	if err != nil {
+		return err
+	}
+	rootLabel := fmt.Sprintf("rootfs@%x", time.Now().Unix())
+	err = util.MakeExt4fs(partitionPath, rootLabel, unsupportedOptions, 8192,
+		logger)
+	if err != nil {
+		return err
+	}
+	// Make sure it's still a block device. If not it means udev still had not
+	// settled down after waiting, so remove the inode and return an error.
+	if err := checkIfBlockDevice(partitionPath); err != nil {
+		os.Remove(partitionPath)
+		return err
+	}
+	stream.streamInfo.status = unpackproto.StatusStreamNotMounted
+	stream.rootLabel = rootLabel
+	return nil
+}
+
+func checkIfBlockDevice(path string) error {
+	if fi, err := os.Lstat(path); err != nil {
+		return err
+	} else if fi.Mode()&os.ModeType != os.ModeDevice {
+		return fmt.Errorf("%s is not a device, mode: %s", path, fi.Mode())
+	}
+	return nil
+}
+
+func getPartition(devicePath string) (string, error) {
+	partitionPaths := []string{devicePath + "1", devicePath + "p1"}
+	for _, partitionPath := range partitionPaths {
+		if err := checkIfBlockDevice(partitionPath); err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return "", err
+		}
+		if file, err := os.Open(partitionPath); err == nil {
+			file.Close()
+			return partitionPath, nil
+		}
+	}
+	return "", fmt.Errorf("no partitions found for: %s", devicePath)
+}
+
 func readOne(objectsDir string, hashVal hash.Hash, length uint64,
 	reader io.Reader) error {
-	filename := path.Join(objectsDir, objectcache.HashToFilename(hashVal))
-	dirname := path.Dir(filename)
+	filename := filepath.Join(objectsDir, objectcache.HashToFilename(hashVal))
+	dirname := filepath.Dir(filename)
 	if err := os.MkdirAll(dirname, dirPerms); err != nil {
 		return err
 	}

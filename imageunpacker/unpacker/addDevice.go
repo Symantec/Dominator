@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
-	"path"
+	"path/filepath"
+	"time"
 
 	"github.com/Symantec/Dominator/lib/mbr"
 )
@@ -38,24 +38,16 @@ func (u *Unpacker) addDevice(deviceId string) error {
 	if err := updateDeviceSize(&device); err != nil {
 		return err
 	}
-	if err := partitionAndMkFs(deviceName); err != nil {
-		return err
-	}
-	u.pState.Devices[deviceId] = device
-	return u.writeStateWithLock()
-}
-
-func partitionAndMkFs(deviceName string) error {
-	devicePath := "/dev/" + deviceName
+	// Create a single partition. This is needed so that GRUB has a place to
+	// live (between the MBR and first/only partition).
+	devicePath := filepath.Join("/dev", deviceName)
+	u.logger.Printf("partitioning: %s\n", devicePath)
 	if err := mbr.WriteDefault(devicePath, mbr.TABLE_TYPE_MSDOS); err != nil {
 		return err
 	}
-	cmd := exec.Command("mkfs.ext4", "-L", "rootfs", "-i", "8192",
-		devicePath+"1")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("error making file-system: %s: %s", err, output)
-	}
-	return nil
+	device.partitionTimestamp = time.Now()
+	u.pState.Devices[deviceId] = device
+	return u.writeStateWithLock()
 }
 
 func (u *Unpacker) prepareForAddDevice() error {
@@ -88,7 +80,7 @@ func scanDevices() (map[string]struct{}, error) {
 
 func updateDeviceSize(device *deviceInfo) error {
 	deviceBlocks, err := readSysfsUint64(
-		path.Join(sysfsDirectory, device.DeviceName, "size"))
+		filepath.Join(sysfsDirectory, device.DeviceName, "size"))
 	if err != nil {
 		return err
 	}
