@@ -1,4 +1,5 @@
 # Dominator
+[![Build Status](https://travis-ci.org/Symantec/Dominator.svg?branch=master)](https://travis-ci.org/Symantec/Dominator)
 The Dominator Config Management and Image Deployment System. This system can
 push image updates to a large fleet of machines and keep them in sync.
 
