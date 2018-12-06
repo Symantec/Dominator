@@ -440,7 +440,7 @@ func readInt(filename string) (uint64, error) {
 		if nVal, err := fmt.Fscanf(file, "%d\n", &value); err != nil {
 			return 0, err
 		} else if nVal != 1 {
-			return 0, fmt.Errorf("read %2 values, expected 1", nVal)
+			return 0, fmt.Errorf("read %d values, expected 1", nVal)
 		} else {
 			return value, nil
 		}

@@ -97,7 +97,7 @@ func writeRegularFile(tarWriter *tar.Writer, fileSystem *filesystem.FileSystem,
 		}
 		defer reader.Close()
 		if size != inode.Size {
-			return fmt.Errorf("%s inode size: %u, object size: %d",
+			return fmt.Errorf("%s inode size: %d, object size: %d",
 				name, inode.Size, size)
 		}
 		nCopied, err := io.Copy(tarWriter, reader)
