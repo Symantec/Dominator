@@ -2,16 +2,20 @@ language: go
 
 # go1.11beta1 breaks the tests for lib/net/reverseconnection
 go:
-  - "1.10"
+    - "1.10"
 
 before_install:
-- REPO_NAME=$(basename $PWD)
-- GITHUB_PATH=$(dirname $(dirname $PWD))
-- SYMANTEC_PROJECT_DIR=${GITHUB_PATH}/Symantec/${REPO_NAME}
-- mkdir -p ${SYMANTEC_PROJECT_DIR}
-- rsync -az ${TRAVIS_BUILD_DIR}/ ${SYMANTEC_PROJECT_DIR}/
-- export TRAVIS_BUILD_DIR=${SYMANTEC_PROJECT_DIR}
-- cd ${SYMANTEC_PROJECT_DIR}
-- go get ./...
+    - go get github.com/mattn/goveralls
+    - REPO_NAME=$(basename $PWD)
+    - GITHUB_PATH=$(dirname $(dirname $PWD))
+    - SYMANTEC_PROJECT_DIR=${GITHUB_PATH}/Symantec/${REPO_NAME}
+    - mkdir -p ${SYMANTEC_PROJECT_DIR}
+    - rsync -az ${TRAVIS_BUILD_DIR}/ ${SYMANTEC_PROJECT_DIR}/
+    - export TRAVIS_BUILD_DIR=${SYMANTEC_PROJECT_DIR}
+    - cd ${SYMANTEC_PROJECT_DIR}
+    - go get ./...
 
-script: make all test
+script:
+    - go test -covermode=count -coverprofile=coverage.out ./...
+    - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci
+    - make all test

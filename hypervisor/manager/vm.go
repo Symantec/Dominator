@@ -300,7 +300,7 @@ func (m *Manager) commitImportedVm(ipAddr net.IP,
 	}
 	defer vm.mutex.Unlock()
 	if !vm.Uncommitted {
-		return fmt.Errorf("%s is already committed")
+		return fmt.Errorf("%s is already committed", ipAddr)
 	}
 	if err := m.registerAddress(vm.Address); err != nil {
 		return err

@@ -124,7 +124,7 @@ func requestCommit(conn *srpc.Conn, encoder srpc.Encoder) error {
 	case "commit":
 		response.Commit = true
 	default:
-		return fmt.Errorf("invalid response: %s", response)
+		return fmt.Errorf("invalid response: %s", userResponse)
 	}
 	if err := encoder.Encode(response); err != nil {
 		return err

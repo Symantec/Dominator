@@ -20,12 +20,14 @@ func sendEmail(user string, vms []*vmInfoType) error {
 	buffer := &bytes.Buffer{}
 	fmt.Fprintf(buffer, "From: %s\n", fromAddress)
 	fmt.Fprintf(buffer, "To: %s\n", toAddress)
-	fmt.Fprintln(buffer, "Subject: Please migrate your VMs\n")
+	fmt.Fprintln(buffer, "Subject: Please migrate your VMs")
+	fmt.Fprintln(buffer)
 	fmt.Fprintln(buffer,
 		"You own the following VMs which are on unhealthy Hypervisors.")
 	fmt.Fprintln(buffer,
 		"Please migrate your VMs to healthy Hypervisors ASAP.")
-	fmt.Fprintln(buffer, "Below is the list of your VMs which are affected:\n")
+	fmt.Fprintln(buffer, "Below is the list of your VMs which are affected:")
+	fmt.Fprintln(buffer)
 	for _, vm := range vms {
 		fmt.Fprintf(buffer, "IP: %s  name: %s  Hypervisor: %s  status: %s\n",
 			vm.Address.IpAddress, vm.Tags["Name"],

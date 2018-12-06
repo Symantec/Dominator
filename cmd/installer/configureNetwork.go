@@ -203,7 +203,8 @@ func (netconf *networkConfig) writeDebian(ipGateway net.IP) error {
 		writer := bufio.NewWriter(file)
 		defer writer.Flush()
 		fmt.Fprintln(writer,
-			"# /etc/network/interfaces -- created by SmallStack installer\n")
+			"# /etc/network/interfaces -- created by SmallStack installer")
+		fmt.Fprintln(writer)
 		fmt.Fprintln(writer, "auto lo")
 		fmt.Fprintln(writer, "iface lo inet loopback")
 		for _, iface := range netconf.normalInterfaces {
