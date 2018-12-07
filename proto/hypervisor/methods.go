@@ -190,6 +190,17 @@ func (left *VmInfo) Equal(right *VmInfo) bool {
 	if !left.Tags.Equal(right.Tags) {
 		return false
 	}
+	if len(left.SecondaryAddresses) != len(right.SecondaryAddresses) {
+		return false
+	}
+	for index, leftAddress := range left.SecondaryAddresses {
+		if !leftAddress.Equal(&right.SecondaryAddresses[index]) {
+			return false
+		}
+	}
+	if !stringSlicesEqual(left.SecondarySubnetIDs, right.SecondarySubnetIDs) {
+		return false
+	}
 	if left.SubnetId != right.SubnetId {
 		return false
 	}
