@@ -1,5 +1,7 @@
 # Dominator
 [![Build Status](https://travis-ci.org/Symantec/Dominator.svg?branch=master)](https://travis-ci.org/Symantec/Dominator)
+[![Coverage Status](https://coveralls.io/repos/github/Symantec/Dominator/badge.svg?branch=master)](https://coveralls.io/github/Symantec/Dominator?branch=master)
+
 The Dominator Config Management and Image Deployment System. This system can
 push image updates to a large fleet of machines and keep them in sync.
 
