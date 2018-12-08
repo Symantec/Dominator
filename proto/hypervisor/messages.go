@@ -411,20 +411,22 @@ type UpdateSubnetsResponse struct {
 }
 
 type VmInfo struct {
-	Address       Address
-	Hostname      string `json:",omitempty"`
-	ImageName     string `json:",omitempty"`
-	ImageURL      string `json:",omitempty"`
-	MemoryInMiB   uint64
-	MilliCPUs     uint
-	OwnerGroups   []string `json:",omitempty"`
-	OwnerUsers    []string `json:",omitempty"`
-	SpreadVolumes bool     `json:",omitempty"`
-	State         State
-	Tags          tags.Tags `json:",omitempty"`
-	SubnetId      string    `json:",omitempty"`
-	Uncommitted   bool      `json:",omitempty"`
-	Volumes       []Volume  `json:",omitempty"`
+	Address            Address
+	Hostname           string `json:",omitempty"`
+	ImageName          string `json:",omitempty"`
+	ImageURL           string `json:",omitempty"`
+	MemoryInMiB        uint64
+	MilliCPUs          uint
+	OwnerGroups        []string `json:",omitempty"`
+	OwnerUsers         []string `json:",omitempty"`
+	SpreadVolumes      bool     `json:",omitempty"`
+	State              State
+	Tags               tags.Tags `json:",omitempty"`
+	SecondaryAddresses []Address `json:",omitempty"`
+	SecondarySubnetIDs []string  `json:",omitempty"`
+	SubnetId           string    `json:",omitempty"`
+	Uncommitted        bool      `json:",omitempty"`
+	Volumes            []Volume  `json:",omitempty"`
 }
 
 type Volume struct {

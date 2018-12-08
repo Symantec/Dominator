@@ -50,6 +50,7 @@ var (
 	probePortNum = flag.Uint("probePortNum", 0, "Port number on VM to probe")
 	probeTimeout = flag.Duration("probeTimeout", time.Minute*5,
 		"Time to wait before timing out on probing VM port")
+	secondarySubnetIDs   flagutil.StringList
 	secondaryVolumeSizes flagutil.StringList
 	subnetId             = flag.String("subnetId", "",
 		"Subnet ID to launch VM in")
@@ -77,6 +78,7 @@ func init() {
 		"minimum number of free bytes in root volume")
 	flag.Var(&ownerGroups, "ownerGroups", "Groups who own the VM")
 	flag.Var(&ownerUsers, "ownerUsers", "Extra users who own the VM")
+	flag.Var(&secondarySubnetIDs, "secondarySubnetIDs", "Secondary Subnet IDs")
 	flag.Var(&secondaryVolumeSizes, "secondaryVolumeSizes",
 		"Sizes for secondary volumes")
 	flag.Var(&vmTags, "vmTags", "Tags to apply to VM")

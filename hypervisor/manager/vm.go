@@ -169,19 +169,40 @@ func (m *Manager) acknowledgeVm(ipAddr net.IP,
 
 func (m *Manager) allocateVm(req proto.CreateVmRequest,
 	authInfo *srpc.AuthInformation) (*vmInfoType, error) {
+	subnetIDs := map[string]struct{}{req.SubnetId: struct{}{}}
+	for _, subnetId := range req.SecondarySubnetIDs {
+		if subnetId == "" {
+			return nil,
+				errors.New("cannot give unspecified secondary subnet ID")
+		}
+		if _, ok := subnetIDs[subnetId]; ok {
+			return nil,
+				fmt.Errorf("subnet: %s specified multiple times", subnetId)
+		}
+		subnetIDs[subnetId] = struct{}{}
+	}
 	address, subnetId, err := m.getFreeAddress(req.SubnetId, authInfo)
 	if err != nil {
 		return nil, err
 	}
-	freeAddress := true
+	addressesToFree := []proto.Address{address}
 	defer func() {
-		if freeAddress {
+		for _, address := range addressesToFree {
 			err := m.releaseAddressInPool(address)
 			if err != nil {
 				m.Logger.Println(err)
 			}
 		}
 	}()
+	var secondaryAddresses []proto.Address
+	for _, subnetId := range req.SecondarySubnetIDs {
+		secondaryAddress, _, err := m.getFreeAddress(subnetId, authInfo)
+		if err != nil {
+			return nil, err
+		}
+		secondaryAddresses = append(secondaryAddresses, secondaryAddress)
+		addressesToFree = append(addressesToFree, secondaryAddress)
+	}
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	if err := m.checkSufficientCPUWithLock(req.MilliCPUs); err != nil {
@@ -198,17 +219,19 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest,
 	}
 	vm := &vmInfoType{
 		VmInfo: proto.VmInfo{
-			Address:       address,
-			Hostname:      req.Hostname,
-			ImageName:     req.ImageName,
-			ImageURL:      req.ImageURL,
-			MemoryInMiB:   req.MemoryInMiB,
-			MilliCPUs:     req.MilliCPUs,
-			OwnerGroups:   req.OwnerGroups,
-			SpreadVolumes: req.SpreadVolumes,
-			State:         proto.StateStarting,
-			Tags:          req.Tags,
-			SubnetId:      subnetId,
+			Address:            address,
+			Hostname:           req.Hostname,
+			ImageName:          req.ImageName,
+			ImageURL:           req.ImageURL,
+			MemoryInMiB:        req.MemoryInMiB,
+			MilliCPUs:          req.MilliCPUs,
+			OwnerGroups:        req.OwnerGroups,
+			SpreadVolumes:      req.SpreadVolumes,
+			SecondaryAddresses: secondaryAddresses,
+			SecondarySubnetIDs: req.SecondarySubnetIDs,
+			State:              proto.StateStarting,
+			SubnetId:           subnetId,
+			Tags:               req.Tags,
 		},
 		manager:          m,
 		dirname:          path.Join(m.StateDir, "VMs", ipAddress),
@@ -217,7 +240,7 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest,
 		metadataChannels: make(map[chan<- string]struct{}),
 	}
 	m.vms[ipAddress] = vm
-	freeAddress = false
+	addressesToFree = nil
 	return vm, nil
 }
 
@@ -1060,6 +1083,9 @@ func (m *Manager) migrateVmChecks(vmInfo proto.VmInfo) error {
 	default:
 		return fmt.Errorf("VM state: %s is not stopped/running", vmInfo.State)
 	}
+	if len(vmInfo.SecondaryAddresses) > 0 {
+		return errors.New("cannot migrate VM with multiple interfaces")
+	}
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 	if err := m.checkSufficientCPUWithLock(vmInfo.MilliCPUs); err != nil {
@@ -1681,6 +1707,11 @@ func (vm *vmInfoType) cleanup() {
 		if err := m.releaseAddressInPoolWithLock(vm.Address); err != nil {
 			m.Logger.Println(err)
 		}
+		for _, address := range vm.SecondaryAddresses {
+			if err := m.releaseAddressInPoolWithLock(address); err != nil {
+				m.Logger.Println(err)
+			}
+		}
 	}
 	os.RemoveAll(vm.dirname)
 	for _, volume := range vm.VolumeLocations {
@@ -1714,12 +1745,21 @@ func (vm *vmInfoType) delete() {
 		close(ch)
 	}
 	vm.manager.DhcpServer.RemoveLease(vm.Address.IpAddress)
+	for _, address := range vm.SecondaryAddresses {
+		vm.manager.DhcpServer.RemoveLease(address.IpAddress)
+	}
 	vm.manager.mutex.Lock()
 	delete(vm.manager.vms, vm.ipAddress)
 	vm.manager.sendVmInfo(vm.ipAddress, nil)
 	var err error
 	if !vm.Uncommitted {
 		err = vm.manager.releaseAddressInPoolWithLock(vm.Address)
+		for _, address := range vm.SecondaryAddresses {
+			err := vm.manager.releaseAddressInPoolWithLock(address)
+			if err != nil {
+				vm.manager.Logger.Println(err)
+			}
+		}
 	}
 	vm.manager.mutex.Unlock()
 	if err != nil {
@@ -1899,6 +1939,9 @@ func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration,
 		return false, nil
 	}
 	vm.manager.DhcpServer.AddLease(vm.Address, vm.Hostname)
+	for _, address := range vm.SecondaryAddresses {
+		vm.manager.DhcpServer.AddLease(address, vm.Hostname)
+	}
 	monitorSock, err := net.Dial("unix", vm.monitorSockname)
 	if err != nil {
 		vm.logger.Debugf(0, "error connecting to: %s: %s\n",
@@ -1949,6 +1992,47 @@ func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration,
 	return false, nil
 }
 
+func (vm *vmInfoType) getBridgesAndOptions(haveManagerLock bool) (
+	[]string, []string, error) {
+	if !haveManagerLock {
+		vm.manager.mutex.RLock()
+		defer vm.manager.mutex.RUnlock()
+	}
+	addresses := make([]proto.Address, 1, len(vm.SecondarySubnetIDs)+1)
+	addresses[0] = vm.Address
+	subnetIDs := make([]string, 1, len(vm.SecondarySubnetIDs)+1)
+	subnetIDs[0] = vm.SubnetId
+	for index, subnetId := range vm.SecondarySubnetIDs {
+		addresses = append(addresses, vm.SecondaryAddresses[index])
+		subnetIDs = append(subnetIDs, subnetId)
+	}
+	var bridges, options []string
+	for index, address := range addresses {
+		subnet, ok := vm.manager.subnets[subnetIDs[index]]
+		if !ok {
+			return nil, nil,
+				fmt.Errorf("subnet: %s not found", subnetIDs[index])
+		}
+		var vlanOption string
+		if bridge, ok := vm.manager.VlanIdToBridge[subnet.VlanId]; !ok {
+			if bridge, ok = vm.manager.VlanIdToBridge[0]; !ok {
+				return nil, nil, fmt.Errorf("no usable bridge")
+			} else {
+				bridges = append(bridges, bridge)
+				vlanOption = fmt.Sprintf(",vlan=%d", subnet.VlanId)
+			}
+		} else {
+			bridges = append(bridges, bridge)
+		}
+		options = append(options,
+			"-netdev", fmt.Sprintf("tap,id=net%d,fd=%d%s",
+				index, index+3, vlanOption),
+			"-device", fmt.Sprintf("virtio-net-pci,netdev=net%d,mac=%s",
+				index, address.MacAddress))
+	}
+	return bridges, options, nil
+}
+
 func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 	if err := checkAvailableMemory(vm.MemoryInMiB); err != nil {
 		return err
@@ -1961,43 +2045,31 @@ func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 		nCpus++
 	}
 	bootlogFilename := path.Join(vm.dirname, "bootlog")
-	if !haveManagerLock {
-		vm.manager.mutex.RLock()
-	}
-	subnet, ok := vm.manager.subnets[vm.SubnetId]
-	if !haveManagerLock {
-		vm.manager.mutex.RUnlock()
-	}
-	if !ok {
-		return fmt.Errorf("subnet: %s not found", vm.SubnetId)
-	}
-	var bridge string
-	var vlanOption string
-	if bridge, ok = vm.manager.VlanIdToBridge[subnet.VlanId]; !ok {
-		if bridge, ok = vm.manager.VlanIdToBridge[0]; !ok {
-			return fmt.Errorf("no usable bridge")
-		} else {
-			vlanOption = fmt.Sprintf(",vlan=%d", subnet.VlanId)
-		}
-	}
-	tapFile, err := createTapDevice(bridge)
+	bridges, netOptions, err := vm.getBridgesAndOptions(haveManagerLock)
 	if err != nil {
-		return fmt.Errorf("error creating tap device: %s", err)
+		return err
 	}
-	defer tapFile.Close()
+	var tapFiles []*os.File
+	for _, bridge := range bridges {
+		tapFile, err := createTapDevice(bridge)
+		if err != nil {
+			return fmt.Errorf("error creating tap device: %s", err)
+		}
+		defer tapFile.Close()
+		tapFiles = append(tapFiles, tapFile)
+	}
 	cmd := exec.Command("qemu-system-x86_64", "-machine", "pc,accel=kvm",
 		"-cpu", "host", // Allow the VM to take full advantage of host CPU.
 		"-nodefaults",
 		"-name", vm.ipAddress,
 		"-m", fmt.Sprintf("%dM", vm.MemoryInMiB),
 		"-smp", fmt.Sprintf("cpus=%d", nCpus),
-		"-net", "nic,model=virtio,macaddr="+vm.Address.MacAddress,
-		"-net", "tap,fd=3"+vlanOption,
 		"-serial", "file:"+bootlogFilename,
 		"-chroot", "/tmp",
 		"-runas", vm.manager.Username,
 		"-qmp", "unix:"+vm.monitorSockname+",server,nowait",
 		"-daemonize")
+	cmd.Args = append(cmd.Args, netOptions...)
 	if vm.manager.ShowVgaConsole {
 		cmd.Args = append(cmd.Args, "-vga", "std")
 	} else {
@@ -2013,7 +2085,7 @@ func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 				",if=virtio")
 	}
 	os.Remove(bootlogFilename)
-	cmd.ExtraFiles = []*os.File{tapFile} // fd=3 for QEMU.
+	cmd.ExtraFiles = tapFiles // Start at fd=3 for QEMU.
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("error starting QEMU: %s: %s", err, output)
 	} else if len(output) > 0 {
