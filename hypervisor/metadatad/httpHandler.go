@@ -32,14 +32,14 @@ func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	ipAddr := net.ParseIP(hostname)
 	s.manager.NotifyVmMetadataRequest(ipAddr, req.URL.Path)
-	if rawHandler, ok := s.rawHandlers[req.URL.Path]; ok {
-		rawHandler(w, ipAddr)
-		return
-	}
 	vmInfo, err := s.manager.GetVmInfo(ipAddr)
 	if err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if rawHandler, ok := s.rawHandlers[req.URL.Path]; ok {
+		rawHandler(w, ipAddr)
 		return
 	}
 	writer := bufio.NewWriter(w)
