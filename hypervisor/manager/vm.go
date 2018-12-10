@@ -1056,6 +1056,11 @@ func (m *Manager) migrateVm(conn *srpc.Conn, decoder srpc.Decoder,
 	if err := m.registerAddress(vm.Address); err != nil {
 		return err
 	}
+	for _, address := range vm.SecondaryAddresses {
+		if err := m.registerAddress(address); err != nil {
+			return err
+		}
+	}
 	vm.doNotWriteOrSend = false
 	vm.Uncommitted = false
 	vm.writeAndSendInfo()
@@ -1083,11 +1088,18 @@ func (m *Manager) migrateVmChecks(vmInfo proto.VmInfo) error {
 	default:
 		return fmt.Errorf("VM state: %s is not stopped/running", vmInfo.State)
 	}
-	if len(vmInfo.SecondaryAddresses) > 0 {
-		return errors.New("cannot migrate VM with multiple interfaces")
-	}
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
+	for index, address := range vmInfo.SecondaryAddresses {
+		subnetId := m.getMatchingSubnet(address.IpAddress)
+		if subnetId == "" {
+			return fmt.Errorf("no matching subnet for: %s\n", address.IpAddress)
+		}
+		if subnetId != vmInfo.SecondarySubnetIDs[index] {
+			return fmt.Errorf("subnet ID changing from: %s to: %s",
+				vmInfo.SecondarySubnetIDs[index], subnetId)
+		}
+	}
 	if err := m.checkSufficientCPUWithLock(vmInfo.MilliCPUs); err != nil {
 		return err
 	}
@@ -1247,8 +1259,8 @@ func (m *Manager) prepareVmForMigration(ipAddr net.IP,
 		if vm.State != proto.StateStopped {
 			return errors.New("VM is not stopped")
 		}
-		// Block reallocation of address until VM is destroyed, then release
-		// claim on address.
+		// Block reallocation of addresses until VM is destroyed, then release
+		// claims on addresses.
 		vm.Uncommitted = true
 		vm.setState(proto.StateMigrating)
 		if err := m.unregisterAddress(vm.Address); err != nil {
@@ -1256,14 +1268,32 @@ func (m *Manager) prepareVmForMigration(ipAddr net.IP,
 			vm.setState(proto.StateStopped)
 			return err
 		}
+		for _, address := range vm.SecondaryAddresses {
+			if err := m.unregisterAddress(address); err != nil {
+				vm.logger.Printf("error unregistering address: %s\n",
+					address.IpAddress)
+				vm.Uncommitted = false
+				vm.setState(proto.StateStopped)
+				return err
+			}
+		}
 	} else {
 		if vm.State != proto.StateMigrating {
 			return errors.New("VM is not migrating")
 		}
-		// Reclaim address and then allow reallocation if VM is later destroyed.
+		// Reclaim addresses and then allow reallocation if VM is later
+		// destroyed.
 		if err := m.registerAddress(vm.Address); err != nil {
 			vm.setState(proto.StateStopped)
 			return err
+		}
+		for _, address := range vm.SecondaryAddresses {
+			if err := m.registerAddress(address); err != nil {
+				vm.logger.Printf("error registering address: %s\n",
+					address.IpAddress)
+				vm.setState(proto.StateStopped)
+				return err
+			}
 		}
 		vm.Uncommitted = false
 		vm.setState(proto.StateStopped)
