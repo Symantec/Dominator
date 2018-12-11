@@ -181,7 +181,8 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest,
 		}
 		subnetIDs[subnetId] = struct{}{}
 	}
-	address, subnetId, err := m.getFreeAddress(req.SubnetId, authInfo)
+	address, subnetId, err := m.getFreeAddress(req.Address.IpAddress,
+		req.SubnetId, authInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -195,8 +196,13 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest,
 		}
 	}()
 	var secondaryAddresses []proto.Address
-	for _, subnetId := range req.SecondarySubnetIDs {
-		secondaryAddress, _, err := m.getFreeAddress(subnetId, authInfo)
+	for index, subnetId := range req.SecondarySubnetIDs {
+		var reqIpAddr net.IP
+		if index < len(req.SecondaryAddresses) {
+			reqIpAddr = req.SecondaryAddresses[index].IpAddress
+		}
+		secondaryAddress, _, err := m.getFreeAddress(reqIpAddr, subnetId,
+			authInfo)
 		if err != nil {
 			return nil, err
 		}

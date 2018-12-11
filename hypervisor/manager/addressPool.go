@@ -12,6 +12,13 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
+func ipIsUnspecified(ipAddr net.IP) bool {
+	if len(ipAddr) < 1 {
+		return true
+	}
+	return ipAddr.IsUnspecified()
+}
+
 func (m *Manager) addAddressesToPool(addresses []proto.Address) error {
 	for index := range addresses {
 		addresses[index].Shrink()
@@ -90,7 +97,7 @@ func (m *Manager) loadAddressPool() error {
 	return nil
 }
 
-func (m *Manager) getFreeAddress(subnetId string,
+func (m *Manager) getFreeAddress(ipAddr net.IP, subnetId string,
 	authInfo *srpc.AuthInformation) (proto.Address, string, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -104,14 +111,22 @@ func (m *Manager) getFreeAddress(subnetId string,
 		subnetAddr := subnet.IpGateway.Mask(subnetMask)
 		foundPos := -1
 		for index, address := range m.addressPool.Free {
+			if !ipIsUnspecified(ipAddr) && !ipAddr.Equal(address.IpAddress) {
+				continue
+			}
 			if address.IpAddress.Mask(subnetMask).Equal(subnetAddr) {
 				foundPos = index
 				break
 			}
 		}
 		if foundPos < 0 {
-			return proto.Address{}, "",
-				fmt.Errorf("no free address in subnet: %s", subnetId)
+			if ipIsUnspecified(ipAddr) {
+				return proto.Address{}, "",
+					fmt.Errorf("no free address in subnet: %s", subnetId)
+			} else {
+				return proto.Address{}, "",
+					fmt.Errorf("address: %s not found in free pool", ipAddr)
+			}
 		}
 		addressPool := addressPoolType{
 			Free:       make([]proto.Address, 0, len(m.addressPool.Free)-1),
