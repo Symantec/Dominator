@@ -108,6 +108,28 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 		MinimumFreeBytes: uint64(minFreeBytes),
 		RoundupPower:     *roundupPower,
 	}
+	if len(requestIPs) > 0 && requestIPs[0] != "" {
+		ipAddr := net.ParseIP(requestIPs[0])
+		if ipAddr == nil {
+			return fmt.Errorf("invalid IP address: %s", requestIPs[0])
+		}
+		request.Address.IpAddress = ipAddr
+	}
+	if len(requestIPs) > 1 && len(secondarySubnetIDs) > 0 {
+		request.SecondaryAddresses = make([]hyper_proto.Address,
+			len(secondarySubnetIDs))
+		for index, addr := range requestIPs[1:] {
+			if addr == "" {
+				continue
+			}
+			ipAddr := net.ParseIP(addr)
+			if ipAddr == nil {
+				return fmt.Errorf("invalid IP address: %s", requestIPs[0])
+			}
+			request.SecondaryAddresses[index] = hyper_proto.Address{
+				IpAddress: ipAddr}
+		}
+	}
 	if sizes, err := parseSizes(secondaryVolumeSizes); err != nil {
 		return err
 	} else {
