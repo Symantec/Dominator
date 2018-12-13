@@ -42,7 +42,8 @@ type BecomePrimaryVmOwnerResponse struct {
 }
 
 type ChangeAddressPoolRequest struct {
-	AddressesToAdd       []Address
+	AddressesToAdd       []Address       // Will be added to free pool.
+	AddressesToRemove    []Address       // Will be removed from free pool.
 	MaximumFreeAddresses map[string]uint // Key: subnet ID.
 }
 
