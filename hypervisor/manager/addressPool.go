@@ -19,6 +19,37 @@ func ipIsUnspecified(ipAddr net.IP) bool {
 	return ipAddr.IsUnspecified()
 }
 
+func removeAddresses(addresses []proto.Address,
+	ipsToRemove, macsToRemove map[string]struct{}, message string) (
+	[]proto.Address, error) {
+	newAddresses := make([]proto.Address, 0)
+	for _, address := range addresses {
+		keep := true
+		if len(address.IpAddress) > 0 {
+			ipAddr := address.IpAddress.String()
+			if _, ok := ipsToRemove[ipAddr]; ok {
+				delete(ipsToRemove, ipAddr)
+				delete(macsToRemove, address.MacAddress)
+				keep = false
+			}
+		}
+		if _, ok := macsToRemove[address.MacAddress]; ok {
+			delete(macsToRemove, address.MacAddress)
+			keep = false
+		}
+		if keep {
+			newAddresses = append(newAddresses, address)
+		}
+	}
+	if len(ipsToRemove) > 0 {
+		return nil, fmt.Errorf("IPs: %v %s", ipsToRemove, message)
+	}
+	if len(macsToRemove) > 0 {
+		return nil, fmt.Errorf("MACs: %v %s", macsToRemove, message)
+	}
+	return newAddresses, nil
+}
+
 func (m *Manager) addAddressesToPool(addresses []proto.Address) error {
 	for index := range addresses {
 		addresses[index].Shrink()
@@ -175,6 +206,41 @@ func (m *Manager) releaseAddressInPool(address proto.Address) error {
 
 func (m *Manager) releaseAddressInPoolWithLock(address proto.Address) error {
 	m.addressPool.Free = append(m.addressPool.Free, address)
+	return m.writeAddressPoolWithLock(m.addressPool, false)
+}
+
+func (m *Manager) removeAddressesFromPool(addresses []proto.Address) error {
+	ipsToRemoveFree := make(map[string]struct{}, len(addresses))
+	ipsToRemoveRegistered := make(map[string]struct{}, len(addresses))
+	macsToRemoveFree := make(map[string]struct{}, len(addresses))
+	macsToRemoveRegistered := make(map[string]struct{}, len(addresses))
+	for _, address := range addresses {
+		if len(address.IpAddress) > 0 {
+			ipsToRemoveFree[address.IpAddress.String()] = struct{}{}
+			ipsToRemoveRegistered[address.IpAddress.String()] = struct{}{}
+		}
+		if address.MacAddress != "" {
+			macsToRemoveFree[address.MacAddress] = struct{}{}
+			macsToRemoveRegistered[address.MacAddress] = struct{}{}
+		}
+	}
+	if len(ipsToRemoveFree) < 1 && len(macsToRemoveFree) < 1 {
+		return nil
+	}
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	freeAddresses, err := removeAddresses(m.addressPool.Free, ipsToRemoveFree,
+		macsToRemoveFree, "not in free pool")
+	if err != nil {
+		return err
+	}
+	registeredAddresses, err := removeAddresses(m.addressPool.Registered,
+		ipsToRemoveRegistered, macsToRemoveRegistered, "not registered")
+	if err != nil {
+		return err
+	}
+	m.addressPool.Free = freeAddresses
+	m.addressPool.Registered = registeredAddresses
 	return m.writeAddressPoolWithLock(m.addressPool, false)
 }
 
