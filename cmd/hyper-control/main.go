@@ -74,6 +74,8 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
 	fmt.Fprintln(os.Stderr, "  reinstall")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
+	fmt.Fprintln(os.Stderr, "  remove-ip-address IPaddr")
+	fmt.Fprintln(os.Stderr, "  remove-mac-address MACaddr")
 	fmt.Fprintln(os.Stderr, "  rollout-image name")
 	fmt.Fprintln(os.Stderr, "  write-netboot-files hostname dirname")
 }
@@ -99,6 +101,8 @@ var subcommands = []subcommand{
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},
 	{"reinstall", 0, 0, reinstallSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
+	{"remove-ip-address", 1, 1, removeIpAddressSubcommand},
+	{"remove-mac-address", 1, 1, removeMacAddressSubcommand},
 	{"rollout-image", 1, 1, rolloutImageSubcommand},
 	{"write-netboot-files", 2, 2, writeNetbootFilesSubcommand},
 }
