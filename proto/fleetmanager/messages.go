@@ -94,6 +94,15 @@ type Machine struct {
 	Tags                    tags.Tags      `json:",omitempty"`
 }
 
+type MoveIpAddressesRequest struct {
+	HypervisorHostname string
+	IpAddresses        []net.IP
+}
+
+type MoveIpAddressesResponse struct {
+	Error string
+}
+
 type NetworkEntry struct {
 	Hostname       string       `json:",omitempty"`
 	HostIpAddress  net.IP       `json:",omitempty"`
