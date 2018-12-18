@@ -241,7 +241,7 @@ func (m *Manager) removeAddressesFromPool(addresses []proto.Address) error {
 	}
 	m.addressPool.Free = freeAddresses
 	m.addressPool.Registered = registeredAddresses
-	return m.writeAddressPoolWithLock(m.addressPool, false)
+	return m.writeAddressPoolWithLock(m.addressPool, true)
 }
 
 func (m *Manager) removeExcessAddressesFromPool(maxFree map[string]uint) error {
