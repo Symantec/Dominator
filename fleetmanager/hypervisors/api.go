@@ -43,6 +43,7 @@ type hypervisorType struct {
 type ipStorer interface {
 	AddIPsForHypervisor(hypervisor net.IP, addrs []net.IP) error
 	CheckIpIsRegistered(addr net.IP) (bool, error)
+	GetHypervisorForIp(addr net.IP) (net.IP, error)
 	SetIPsForHypervisor(hypervisor net.IP, addrs []net.IP) error
 	UnregisterHypervisor(hypervisor net.IP) error
 }
@@ -144,6 +145,10 @@ func (m *Manager) ListVMsInLocation(dirname string) ([]net.IP, error) {
 
 func (m *Manager) MakeUpdateChannel(location string) <-chan fm_proto.Update {
 	return m.makeUpdateChannel(location)
+}
+
+func (m *Manager) MoveIpAddresses(hostname string, ipAddresses []net.IP) error {
+	return m.moveIpAddresses(hostname, ipAddresses)
 }
 
 func (m *Manager) WriteHtml(writer io.Writer) {
