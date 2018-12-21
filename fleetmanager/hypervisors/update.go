@@ -478,6 +478,8 @@ func (m *Manager) getSubnetsForMachine(h *hypervisorType) (
 func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 	update hyper_proto.Update) {
 	if update.HaveAddressPool {
+		h.logger.Debugf(1, "registered address pool size: %d\n",
+			len(update.AddressPool))
 		addresses := make([]net.IP, 0, len(update.AddressPool))
 		for _, address := range update.AddressPool {
 			addresses = append(addresses, address.IpAddress)

@@ -250,6 +250,10 @@ func (m *Manager) PrepareVmForMigration(ipAddr net.IP,
 	return m.prepareVmForMigration(ipAddr, authInfo, accessToken, enable)
 }
 
+func (m *Manager) RemoveAddressesFromPool(addresses []proto.Address) error {
+	return m.removeAddressesFromPool(addresses)
+}
+
 func (m *Manager) RemoveExcessAddressesFromPool(maxFree map[string]uint) error {
 	return m.removeExcessAddressesFromPool(maxFree)
 }

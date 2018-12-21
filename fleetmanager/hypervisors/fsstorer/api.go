@@ -49,6 +49,10 @@ func (s *Storer) DeleteVm(hypervisor net.IP, ipAddr string) error {
 	return s.deleteVm(hypervisor, ipAddr)
 }
 
+func (s *Storer) GetHypervisorForIp(addr net.IP) (net.IP, error) {
+	return s.getHypervisorForIp(addr)
+}
+
 func (s *Storer) ListVMs(hypervisor net.IP) ([]string, error) {
 	return s.listVMs(hypervisor)
 }

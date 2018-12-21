@@ -54,6 +54,7 @@ var (
 	secondaryVolumeSizes flagutil.StringList
 	subnetId             = flag.String("subnetId", "",
 		"Subnet ID to launch VM in")
+	requestIPs   flagutil.StringList
 	roundupPower = flag.Uint64("roundupPower", 24,
 		"power of 2 to round up root volume size")
 	snapshotRootOnly = flag.Bool("snapshotRootOnly", false,
@@ -78,6 +79,7 @@ func init() {
 		"minimum number of free bytes in root volume")
 	flag.Var(&ownerGroups, "ownerGroups", "Groups who own the VM")
 	flag.Var(&ownerUsers, "ownerUsers", "Extra users who own the VM")
+	flag.Var(&requestIPs, "requestIPs", "Request specific IPs, if available")
 	flag.Var(&secondarySubnetIDs, "secondarySubnetIDs", "Secondary Subnet IDs")
 	flag.Var(&secondaryVolumeSizes, "secondaryVolumeSizes",
 		"Sizes for secondary volumes")

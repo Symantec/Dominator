@@ -6,11 +6,11 @@ import (
 )
 
 func (s *Storer) checkIpIsRegistered(addr net.IP) (bool, error) {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
 	if ip, err := netIpToIp(addr); err != nil {
 		return false, err
 	} else {
+		s.mutex.RLock()
+		defer s.mutex.RUnlock()
 		_, ok := s.ipToHypervisor[ip]
 		return ok, nil
 	}

@@ -22,6 +22,12 @@ func (t *srpcType) changeAddressPool(conn *srpc.Conn,
 			return err
 		}
 	}
+	if len(request.AddressesToRemove) > 0 {
+		err := t.manager.RemoveAddressesFromPool(request.AddressesToRemove)
+		if err != nil {
+			return err
+		}
+	}
 	if len(request.MaximumFreeAddresses) > 0 {
 		err := t.manager.RemoveExcessAddressesFromPool(
 			request.MaximumFreeAddresses)

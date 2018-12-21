@@ -43,6 +43,7 @@ Some of the sub-commands available are:
                        on a machine
 - **make-installer-iso**: make a bootable installation ISO (CD-ROM) image for a
                           machine
+- **move-ip-address**: move a (free) IP address to a specific *Hypervisor*
 - **netboot-host**: temporarily enable PXE-based network booting and installing
                     for a machine
 - **netboot-machine**: temporarily enable PXE-based network booting for a
@@ -50,6 +51,9 @@ Some of the sub-commands available are:
 - **reinstall**: reinstall the local machine. This erases all data
 - **remove-excess-addresses**: remove free addresses for a specific *Hypervisor*
                                above the specified limit
+- **remove-ip-address**: remove a (free) IP address from a specific *Hypervisor*
+- **remove-mac-address**: remove a (free) MAC address from a specific
+                          *Hypervisor*
 - **rollout-image**: safely roll out specified image to all *Hypervisors* in a
                      location
 - **write-netboot-files**: write the configuration files for installing a
