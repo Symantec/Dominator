@@ -70,6 +70,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  get-updates")
 	fmt.Fprintln(os.Stderr, "  installer-shell hostname")
 	fmt.Fprintln(os.Stderr, "  make-installer-iso hostname dirname")
+	fmt.Fprintln(os.Stderr, "  move-ip-address IPaddr")
 	fmt.Fprintln(os.Stderr, "  netboot-host hostname")
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
 	fmt.Fprintln(os.Stderr, "  reinstall")
@@ -97,6 +98,7 @@ var subcommands = []subcommand{
 	{"get-updates", 0, 0, getUpdatesSubcommand},
 	{"installer-shell", 1, 1, installerShellSubcommand},
 	{"make-installer-iso", 2, 2, makeInstallerIsoSubcommand},
+	{"move-ip-address", 1, 1, moveIpAddressSubcommand},
 	{"netboot-host", 1, 1, netbootHostSubcommand},
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},
 	{"reinstall", 0, 0, reinstallSubcommand},
