@@ -50,6 +50,9 @@ func changeVmTagsOnHypervisor(hypervisor string, ipAddr net.IP,
 	if err := errors.New(reply.Error); err != nil {
 		return err
 	}
+	if len(reply.VmInfo.Tags) < 1 {
+		return setVmTagsOnHypervisor(client, ipAddr, vmTags, logger)
+	}
 	reply.VmInfo.Tags.Merge(vmTags)
 	for key, value := range reply.VmInfo.Tags {
 		if value == "" {
