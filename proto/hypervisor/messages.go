@@ -60,6 +60,15 @@ type ChangeOwnersResponse struct {
 	Error string
 }
 
+type ChangeVmDestroyProtectionRequest struct {
+	DestroyProtection bool
+	IpAddress         net.IP
+}
+
+type ChangeVmDestroyProtectionResponse struct {
+	Error string
+}
+
 type ChangeVmOwnerUsersRequest struct {
 	IpAddress  net.IP
 	OwnerUsers []string
@@ -413,6 +422,7 @@ type UpdateSubnetsResponse struct {
 
 type VmInfo struct {
 	Address            Address
+	DestroyProtection  bool   `json:",omitempty"`
 	Hostname           string `json:",omitempty"`
 	ImageName          string `json:",omitempty"`
 	ImageURL           string `json:",omitempty"`
