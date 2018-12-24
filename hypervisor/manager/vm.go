@@ -226,6 +226,7 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest,
 	vm := &vmInfoType{
 		VmInfo: proto.VmInfo{
 			Address:            address,
+			DestroyProtection:  req.DestroyProtection,
 			Hostname:           req.Hostname,
 			ImageName:          req.ImageName,
 			ImageURL:           req.ImageURL,
@@ -272,6 +273,18 @@ func (m *Manager) becomePrimaryVmOwner(ipAddr net.IP,
 	for _, user := range ownerUsers {
 		vm.ownerUsers[user] = struct{}{}
 	}
+	vm.writeAndSendInfo()
+	return nil
+}
+
+func (m *Manager) changeVmDestroyProtection(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, destroyProtection bool) error {
+	vm, err := m.getVmLockAndAuth(ipAddr, true, authInfo, nil)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	vm.DestroyProtection = destroyProtection
 	vm.writeAndSendInfo()
 	return nil
 }
@@ -557,6 +570,9 @@ func (m *Manager) destroyVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	case proto.StateStarting:
 		return errors.New("VM is starting")
 	case proto.StateRunning:
+		if vm.DestroyProtection {
+			return errors.New("cannot destroy running VM when protected")
+		}
 		vm.setState(proto.StateDestroying)
 		vm.commandChannel <- "quit"
 	case proto.StateStopping:

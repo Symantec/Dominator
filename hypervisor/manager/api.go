@@ -102,6 +102,11 @@ func (m *Manager) ChangeOwners(ownerGroups, ownerUsers []string) error {
 	return m.changeOwners(ownerGroups, ownerUsers)
 }
 
+func (m *Manager) ChangeVmDestroyProtection(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, destroyProtection bool) error {
+	return m.changeVmDestroyProtection(ipAddr, authInfo, destroyProtection)
+}
+
 func (m *Manager) ChangeVmOwnerUsers(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, extraUsers []string) error {
 	return m.changeVmOwnerUsers(ipAddr, authInfo, extraUsers)
