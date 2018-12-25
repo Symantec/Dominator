@@ -52,6 +52,7 @@ func Setup(manager *manager.Manager, dhcpServer DhcpServer,
 		PublicMethods: []string{
 			"AcknowledgeVm",
 			"BecomePrimaryVmOwner",
+			"ChangeVmDestroyProtection",
 			"ChangeVmOwnerUsers",
 			"ChangeVmTags",
 			"CommitImportedVm",
