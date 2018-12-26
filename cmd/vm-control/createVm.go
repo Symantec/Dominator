@@ -96,6 +96,7 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 	request := hyper_proto.CreateVmRequest{
 		DhcpTimeout: *dhcpTimeout,
 		VmInfo: hyper_proto.VmInfo{
+			DestroyProtection:  *destroyProtection,
 			Hostname:           *vmHostname,
 			MemoryInMiB:        uint64(memory >> 20),
 			MilliCPUs:          *milliCPUs,

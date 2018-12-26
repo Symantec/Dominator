@@ -18,6 +18,8 @@ import (
 var (
 	adjacentVM = flag.String("adjacentVM", "",
 		"IP address of VM adjacent (same Hypervisor) to VM being created")
+	destroyProtection = flag.Bool("destroyProtection", false,
+		"If true, do not destroy running VM")
 	dhcpTimeout = flag.Duration("dhcpTimeout", time.Minute,
 		"Time to wait before timing out on DHCP request from VM")
 	fleetManagerHostname = flag.String("fleetManagerHostname", "",
@@ -93,6 +95,7 @@ func printUsage() {
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  become-primary-vm-owner IPaddr")
+	fmt.Fprintln(os.Stderr, "  change-vm-destroy-protection IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-owner-users IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-tags IPaddr")
 	fmt.Fprintln(os.Stderr, "  create-vm")
@@ -135,6 +138,7 @@ type subcommand struct {
 
 var subcommands = []subcommand{
 	{"become-primary-vm-owner", 1, 1, becomePrimaryVmOwnerSubcommand},
+	{"change-vm-destroy-protection", 1, 1, changeVmDestroyProtectionSubcommand},
 	{"change-vm-owner-users", 1, 1, changeVmOwnerUsersSubcommand},
 	{"change-vm-tags", 1, 1, changeVmTagsSubcommand},
 	{"create-vm", 0, 0, createVmSubcommand},
