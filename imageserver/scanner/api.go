@@ -42,6 +42,7 @@ type ImageDataBase struct {
 	deduperLock      sync.Mutex
 	deduper          *stringutil.StringDeduplicator
 	pendingImageLock sync.Mutex
+	objectFetchLock  sync.Mutex
 	// Unprotected by any lock.
 	objectServer      objectserver.FullObjectServer
 	replicationMaster string
