@@ -21,6 +21,7 @@ var (
 
 type srpcType struct {
 	imageDataBase             *scanner.ImageDataBase
+	finishedReplication       <-chan struct{} // Closed when finished.
 	replicationMaster         string
 	imageserverResource       *srpc.ClientResource
 	objSrv                    objectserver.FullObjectServer
@@ -47,8 +48,10 @@ func Setup(imdb *scanner.ImageDataBase, replicationMaster string,
 	if *archiveMode && replicationMaster == "" {
 		return nil, errors.New("replication master required in archive mode")
 	}
+	finishedReplication := make(chan struct{})
 	srpcObj := &srpcType{
 		imageDataBase:       imdb,
+		finishedReplication: finishedReplication,
 		replicationMaster:   replicationMaster,
 		imageserverResource: srpc.NewClientResource("tcp", replicationMaster),
 		objSrv:              objSrv,
@@ -66,8 +69,9 @@ func Setup(imdb *scanner.ImageDataBase, replicationMaster string,
 			"ListImages",
 		}})
 	if replicationMaster != "" {
-		go srpcObj.replicator()
+		go srpcObj.replicator(finishedReplication)
+	} else {
+		close(finishedReplication)
 	}
-
 	return (*htmlWriter)(srpcObj), nil
 }

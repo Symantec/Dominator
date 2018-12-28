@@ -11,6 +11,16 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 	defer conn.Flush()
 	t.logger.Printf("New image replication client connected from: %s\n",
 		conn.RemoteAddr())
+	select {
+	case <-t.finishedReplication:
+	default:
+		t.logger.Println(
+			"Blocking replication client until I've finished replicating")
+		<-t.finishedReplication
+		t.logger.Printf(
+			"Replication finished, unblocking replication client: %s\n",
+			conn.RemoteAddr())
+	}
 	t.incrementNumReplicationClients(true)
 	defer t.incrementNumReplicationClients(false)
 	addChannel := t.imageDataBase.RegisterAddNotifier()

@@ -17,7 +17,7 @@ import (
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
 
-func (t *srpcType) replicator() {
+func (t *srpcType) replicator(finishedReplication chan<- struct{}) {
 	initialTimeout := time.Second * 15
 	timeout := initialTimeout
 	var nextSleepStopTime time.Time
@@ -31,7 +31,7 @@ func (t *srpcType) replicator() {
 				"ImageServer.GetImageUpdates"); err != nil {
 				t.logger.Println(err)
 			} else {
-				if err := t.getUpdates(conn); err != nil {
+				if err := t.getUpdates(conn, &finishedReplication); err != nil {
 					if err == io.EOF {
 						t.logger.Println(
 							"Connection to image replicator closed")
@@ -53,7 +53,8 @@ func (t *srpcType) replicator() {
 	}
 }
 
-func (t *srpcType) getUpdates(conn *srpc.Conn) error {
+func (t *srpcType) getUpdates(conn *srpc.Conn,
+	finishedReplication *chan<- struct{}) error {
 	t.logger.Printf("Image replicator: connected to: %s\n", t.replicationMaster)
 	replicationStartTime := time.Now()
 	decoder := gob.NewDecoder(conn)
@@ -75,6 +76,10 @@ func (t *srpcType) getUpdates(conn *srpc.Conn) error {
 				if initialImages != nil {
 					t.deleteMissingImages(initialImages)
 					initialImages = nil
+				}
+				if *finishedReplication != nil {
+					close(*finishedReplication)
+					*finishedReplication = nil
 				}
 				t.logger.Printf("Replicated all current images in %s\n",
 					format.Duration(time.Since(replicationStartTime)))
