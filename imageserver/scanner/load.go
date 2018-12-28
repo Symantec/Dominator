@@ -162,8 +162,8 @@ func (imdb *ImageDataBase) loadFile(filename string,
 	defer file.Close()
 	reader := fsutil.NewChecksumReader(file)
 	decoder := gob.NewDecoder(reader)
-	var image image.Image
-	if err := decoder.Decode(&image); err != nil {
+	var img image.Image
+	if err := decoder.Decode(&img); err != nil {
 		return err
 	}
 	if err := reader.VerifyChecksum(); err != nil {
@@ -175,38 +175,45 @@ func (imdb *ImageDataBase) loadFile(filename string,
 			return err
 		}
 	}
-	if imageIsExpired(&image) {
+	if imageIsExpired(&img) {
 		imdb.logger.Printf("Deleting already expired image: %s\n", filename)
 		return os.Remove(pathname)
 	}
-	if err := image.VerifyObjects(imdb.objectServer); err != nil {
+	if err := img.VerifyObjects(imdb.objectServer); err != nil {
 		if imdb.replicationMaster == "" ||
 			!strings.Contains(err.Error(), "not available") {
 			return fmt.Errorf("error verifying: %s: %s", filename, err)
 		}
-		client, err := srpc.DialHTTP("tcp", imdb.replicationMaster, time.Minute)
-		if err != nil {
-			return err
-		}
-		defer client.Close()
-		objClient := objectclient.AttachObjectClient(client)
-		defer objClient.Close()
-		err = image.GetMissingObjects(imdb.objectServer, objClient,
+		err = imdb.fetchMissingObjects(&img,
 			prefixlogger.New(filename+": ", logger))
 		if err != nil {
 			return err
 		}
 	}
-	image.FileSystem.RebuildInodePointers()
+	img.FileSystem.RebuildInodePointers()
 	imdb.deduperLock.Lock()
-	image.ReplaceStrings(imdb.deduper.DeDuplicate)
+	img.ReplaceStrings(imdb.deduper.DeDuplicate)
 	imdb.deduperLock.Unlock()
-	if err := image.Verify(); err != nil {
+	if err := img.Verify(); err != nil {
 		return err
 	}
-	imdb.scheduleExpiration(&image, filename)
+	imdb.scheduleExpiration(&img, filename)
 	imdb.Lock()
 	defer imdb.Unlock()
-	imdb.imageMap[filename] = &image
+	imdb.imageMap[filename] = &img
 	return nil
+}
+
+func (imdb *ImageDataBase) fetchMissingObjects(img *image.Image,
+	logger log.DebugLogger) error {
+	imdb.objectFetchLock.Lock()
+	defer imdb.objectFetchLock.Unlock()
+	client, err := srpc.DialHTTP("tcp", imdb.replicationMaster, time.Minute)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	objClient := objectclient.AttachObjectClient(client)
+	defer objClient.Close()
+	return img.GetMissingObjects(imdb.objectServer, objClient, logger)
 }
