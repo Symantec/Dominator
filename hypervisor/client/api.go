@@ -4,6 +4,7 @@ import (
 	"net"
 
 	"github.com/Symantec/Dominator/lib/srpc"
+	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 func DeleteVmVolume(client *srpc.Client, ipAddr net.IP, accessToken []byte,
@@ -13,6 +14,10 @@ func DeleteVmVolume(client *srpc.Client, ipAddr net.IP, accessToken []byte,
 
 func DestroyVm(client *srpc.Client, ipAddr net.IP, accessToken []byte) error {
 	return destroyVm(client, ipAddr, accessToken)
+}
+
+func GetVmInfo(client *srpc.Client, ipAddr net.IP) (proto.VmInfo, error) {
+	return getVmInfo(client, ipAddr)
 }
 
 func PrepareVmForMigration(client *srpc.Client, ipAddr net.IP,
