@@ -14,6 +14,7 @@ import (
 	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/tags"
 	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
@@ -84,6 +85,20 @@ func callCreateVm(client *srpc.Client, request hyper_proto.CreateVmRequest,
 }
 
 func createVm(logger log.DebugLogger) error {
+	if *vmHostname == "" {
+		if name := vmTags["Name"]; name == "" {
+			return errors.New("no hostname specified")
+		} else {
+			*vmHostname = name
+		}
+	} else {
+		if name := vmTags["Name"]; name == "" {
+			if vmTags == nil {
+				vmTags = make(tags.Tags)
+			}
+			vmTags["Name"] = *vmHostname
+		}
+	}
 	if hypervisor, err := getHypervisorAddress(); err != nil {
 		return err
 	} else {
