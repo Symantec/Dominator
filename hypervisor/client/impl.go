@@ -36,6 +36,19 @@ func destroyVm(client *srpc.Client, ipAddr net.IP, accessToken []byte) error {
 	return errors.New(reply.Error)
 }
 
+func getVmInfo(client *srpc.Client, ipAddr net.IP) (proto.VmInfo, error) {
+	request := proto.GetVmInfoRequest{IpAddress: ipAddr}
+	var reply proto.GetVmInfoResponse
+	err := client.RequestReply("Hypervisor.GetVmInfo", request, &reply)
+	if err != nil {
+		return proto.VmInfo{}, err
+	}
+	if err := errors.New(reply.Error); err != nil {
+		return proto.VmInfo{}, err
+	}
+	return reply.VmInfo, nil
+}
+
 func prepareVmForMigration(client *srpc.Client, ipAddr net.IP,
 	accessToken []byte, enable bool) error {
 	request := proto.PrepareVmForMigrationRequest{

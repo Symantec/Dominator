@@ -32,5 +32,6 @@ func destroyVmOnHypervisor(hypervisor string, ipAddr net.IP,
 		return err
 	}
 	defer client.Close()
+	logVmName(client, ipAddr, "destroying", logger)
 	return hyperclient.DestroyVm(client, ipAddr, nil)
 }
