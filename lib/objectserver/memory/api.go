@@ -54,6 +54,7 @@ type ObjectsReader struct {
 	objectServer *ObjectServer
 	hashes       []hash.Hash
 	nextIndex    int64
+	sizes        []uint64
 }
 
 func (or *ObjectsReader) Close() error {
@@ -62,4 +63,8 @@ func (or *ObjectsReader) Close() error {
 
 func (or *ObjectsReader) NextObject() (uint64, io.ReadCloser, error) {
 	return or.nextObject()
+}
+
+func (or *ObjectsReader) ObjectSizes() []uint64 {
+	return or.sizes
 }
