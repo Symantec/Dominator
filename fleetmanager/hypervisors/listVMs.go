@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/Symantec/Dominator/lib/constants"
@@ -83,6 +84,7 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 	if parsedQuery.OutputType() == url.OutputTypeJson {
 		json.WriteWithIndent(writer, "   ", vms)
 	}
+	primaryOwnerFilter := parsedQuery.Table["primaryOwner"]
 	if parsedQuery.OutputType() == url.OutputTypeHtml {
 		fmt.Fprintf(writer, "<title>List of VMs</title>\n")
 		writer.WriteString(commonStyleSheet)
@@ -102,7 +104,16 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 		fmt.Fprintln(writer, "  </tr>")
 	}
 	lastRowHighlighted := true
+	primaryOwnersMap := make(map[string]struct{})
 	for _, vm := range vms {
+		if primaryOwnerFilter != "" {
+			if vm.OwnerUsers[0] != primaryOwnerFilter {
+				primaryOwnersMap[vm.OwnerUsers[0]] = struct{}{}
+				continue
+			}
+		} else {
+			primaryOwnersMap[vm.OwnerUsers[0]] = struct{}{}
+		}
 		switch parsedQuery.OutputType() {
 		case url.OutputTypeText:
 			fmt.Fprintln(writer, vm.ipAddr)
@@ -164,6 +175,17 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 	case url.OutputTypeHtml:
 		fmt.Fprintln(writer, "</table>")
 		fmt.Fprintln(writer, "</body>")
+		primaryOwners := make([]string, 0, len(primaryOwnersMap))
+		for primaryOwner := range primaryOwnersMap {
+			primaryOwners = append(primaryOwners, primaryOwner)
+		}
+		sort.Strings(primaryOwners)
+		fmt.Fprintln(writer, "Filter by primary owner:<br>")
+		for _, primaryOwner := range primaryOwners {
+			fmt.Fprintf(writer,
+				"<a href=\"listVMs?primaryOwner=%s\">%s</a><br>\n",
+				primaryOwner, primaryOwner)
+		}
 	}
 }
 
