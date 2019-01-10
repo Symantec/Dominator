@@ -41,6 +41,11 @@ type ObjectsGetter interface {
 	GetObjects(hashes []hash.Hash) (ObjectsReader, error)
 }
 
+type FullObjectsReader interface {
+	ObjectsReader
+	ObjectSizes() []uint64
+}
+
 type ObjectsReader interface {
 	Close() error
 	NextObject() (uint64, io.ReadCloser, error)
