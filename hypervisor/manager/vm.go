@@ -25,6 +25,7 @@ import (
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/Symantec/Dominator/lib/mbr"
 	libnet "github.com/Symantec/Dominator/lib/net"
+	"github.com/Symantec/Dominator/lib/objectserver"
 	objclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/rsync"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -91,36 +92,6 @@ func createTapDevice(bridge string) (*os.File, error) {
 	}
 	doAutoClose = false
 	return tapFile, nil
-}
-
-func getImage(client *srpc.Client, searchName string,
-	imageTimeout time.Duration) (*filesystem.FileSystem, string, error) {
-	if isDir, err := imclient.CheckDirectory(client, searchName); err != nil {
-		return nil, "", err
-	} else if isDir {
-		imageName, err := imclient.FindLatestImage(client, searchName, false)
-		if err != nil {
-			return nil, "", err
-		}
-		if imageName == "" {
-			return nil, "", errors.New("no images in directory: " + searchName)
-		}
-		img, err := imclient.GetImage(client, imageName)
-		if err != nil {
-			return nil, "", err
-		}
-		img.FileSystem.RebuildInodePointers()
-		return img.FileSystem, imageName, nil
-	}
-	img, err := imclient.GetImageWithTimeout(client, searchName, imageTimeout)
-	if err != nil {
-		return nil, "", err
-	}
-	if img == nil {
-		return nil, "", errors.New("timeout getting image")
-	}
-	img.FileSystem.RebuildInodePointers()
-	return img.FileSystem, searchName, nil
 }
 
 func maybeDrainAll(conn *srpc.Conn, request proto.CreateVmRequest) error {
@@ -407,32 +378,24 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		if err := sendUpdate(conn, encoder, "getting image"); err != nil {
 			return err
 		}
-		client, err := srpc.DialHTTP("tcp", m.ImageServerAddress, 0)
-		if err != nil {
-			return sendError(conn, encoder,
-				fmt.Errorf("error connecting to image server: %s: %s",
-					m.ImageServerAddress, err))
-		}
-		defer client.Close()
-		fs, imageName, err := getImage(client, request.ImageName,
+		client, fs, imageName, err := m.getImage(request.ImageName,
 			request.ImageTimeout)
 		if err != nil {
 			return sendError(conn, encoder, err)
 		}
+		defer client.Close()
 		vm.ImageName = imageName
-		objectClient := objclient.AttachObjectClient(client)
-		defer objectClient.Close()
 		size := computeSize(request.MinimumFreeBytes, request.RoundupPower,
 			fs.EstimateUsage(0))
 		if err := vm.setupVolumes(size, request); err != nil {
 			return sendError(conn, encoder, err)
 		}
-		if err := sendUpdate(conn, encoder, "unpacking image"); err != nil {
+		err = sendUpdate(conn, encoder, "unpacking image: "+imageName)
+		if err != nil {
 			return err
 		}
-		err = util.WriteRaw(fs, objectClient, vm.VolumeLocations[0].Filename,
-			privateFilePerms, mbr.TABLE_TYPE_MSDOS, request.MinimumFreeBytes,
-			request.RoundupPower, true, true, m.Logger)
+		err = m.writeRaw(vm.VolumeLocations[0].Filename, client, fs,
+			request.MinimumFreeBytes, request.RoundupPower)
 		if err != nil {
 			return sendError(conn, encoder, err)
 		}
@@ -629,6 +592,51 @@ func (m *Manager) discardVmSnapshot(ipAddr net.IP,
 	}
 	defer vm.mutex.Unlock()
 	return vm.discardSnapshot()
+}
+
+func (m *Manager) getImage(searchName string, imageTimeout time.Duration) (
+	*srpc.Client, *filesystem.FileSystem, string, error) {
+	client, err := srpc.DialHTTP("tcp", m.ImageServerAddress, 0)
+	if err != nil {
+		return nil, nil, "",
+			fmt.Errorf("error connecting to image server: %s: %s",
+				m.ImageServerAddress, err)
+	}
+	doClose := true
+	defer func() {
+		if doClose {
+			client.Close()
+		}
+	}()
+	if isDir, err := imclient.CheckDirectory(client, searchName); err != nil {
+		return nil, nil, "", err
+	} else if isDir {
+		imageName, err := imclient.FindLatestImage(client, searchName, false)
+		if err != nil {
+			return nil, nil, "", err
+		}
+		if imageName == "" {
+			return nil, nil, "",
+				errors.New("no images in directory: " + searchName)
+		}
+		img, err := imclient.GetImage(client, imageName)
+		if err != nil {
+			return nil, nil, "", err
+		}
+		img.FileSystem.RebuildInodePointers()
+		doClose = false
+		return client, img.FileSystem, imageName, nil
+	}
+	img, err := imclient.GetImageWithTimeout(client, searchName, imageTimeout)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	if img == nil {
+		return nil, nil, "", errors.New("timeout getting image")
+	}
+	img.FileSystem.RebuildInodePointers()
+	doClose = false
+	return client, img.FileSystem, searchName, nil
 }
 
 func (m *Manager) getNumVMs() (uint, uint) {
@@ -1375,27 +1383,19 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 		if err := sendUpdate(conn, encoder, "getting image"); err != nil {
 			return err
 		}
-		client, err := srpc.DialHTTP("tcp", m.ImageServerAddress, 0)
-		if err != nil {
-			return sendError(conn, encoder,
-				fmt.Errorf("error connecting to image server: %s: %s",
-					m.ImageServerAddress, err))
-		}
-		defer client.Close()
-		fs, imageName, err := getImage(client, request.ImageName,
+		client, fs, imageName, err := m.getImage(request.ImageName,
 			request.ImageTimeout)
 		if err != nil {
 			return sendError(conn, encoder, err)
 		}
+		defer client.Close()
 		request.ImageName = imageName
-		objectClient := objclient.AttachObjectClient(client)
-		defer objectClient.Close()
-		if err := sendUpdate(conn, encoder, "unpacking image"); err != nil {
+		err = sendUpdate(conn, encoder, "unpacking image: "+imageName)
+		if err != nil {
 			return err
 		}
-		err = util.WriteRaw(fs, objectClient, tmpRootFilename, privateFilePerms,
-			mbr.TABLE_TYPE_MSDOS, request.MinimumFreeBytes,
-			request.RoundupPower, true, true, m.Logger)
+		err = m.writeRaw(tmpRootFilename, client, fs, request.MinimumFreeBytes,
+			request.RoundupPower)
 		if err != nil {
 			return sendError(conn, encoder, err)
 		}
@@ -1679,6 +1679,21 @@ func (m *Manager) unregisterVmMetadataNotifier(ipAddr net.IP,
 	defer vm.mutex.Unlock()
 	delete(vm.metadataChannels, pathChannel)
 	return nil
+}
+
+func (m *Manager) writeRaw(filename string, client *srpc.Client,
+	fs *filesystem.FileSystem, minimumFreeBytes, roundupPower uint64) error {
+	var objectsGetter objectserver.ObjectsGetter
+	if m.objectCache == nil {
+		objectClient := objclient.AttachObjectClient(client)
+		defer objectClient.Close()
+		objectsGetter = objectClient
+	} else {
+		objectsGetter = m.objectCache
+	}
+	return util.WriteRaw(fs, objectsGetter, filename, privateFilePerms,
+		mbr.TABLE_TYPE_MSDOS, minimumFreeBytes,
+		roundupPower, true, true, m.Logger)
 }
 
 func (vm *vmInfoType) autoDestroy() {

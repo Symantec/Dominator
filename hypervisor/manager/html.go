@@ -61,6 +61,11 @@ func (m *Manager) writeHtml(writer io.Writer) {
 		"Number of subnets: <a href=\"listSubnets\">%d</a><br>\n", numSubnets)
 	fmt.Fprintf(writer, "Volume directories: %s<br>\n",
 		strings.Join(m.volumeDirectories, " "))
+	if m.objectCache == nil {
+		fmt.Fprintln(writer, "No object cache<br>")
+	} else {
+		m.objectCache.WriteHtml(writer)
+	}
 }
 
 func writeCountLinks(writer io.Writer, text, path string, count uint) {

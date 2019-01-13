@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
@@ -15,6 +15,7 @@ import (
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/Symantec/Dominator/lib/meminfo"
+	"github.com/Symantec/Dominator/lib/objectserver/cachingreader"
 	"github.com/Symantec/Dominator/lib/rpcclientpool"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 	"github.com/Symantec/tricorder/go/tricorder/messages"
@@ -38,8 +39,8 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 	if _, err := rand.Read(importCookie); err != nil {
 		return nil, err
 	}
-	err = fsutil.CopyToFile(path.Join(startOptions.StateDir, "import-cookie"),
-		privateFilePerms, bytes.NewReader(importCookie), 0)
+	err = fsutil.CopyToFile(filepath.Join(startOptions.StateDir,
+		"import-cookie"), privateFilePerms, bytes.NewReader(importCookie), 0)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +60,7 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 	if err := manager.loadAddressPool(); err != nil {
 		return nil, err
 	}
-	dirname := path.Join(manager.StateDir, "VMs")
+	dirname := filepath.Join(manager.StateDir, "VMs")
 	dir, err := os.Open(dirname)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -80,8 +81,8 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 			"error reading directory: " + dirname + ": " + err.Error())
 	}
 	for _, ipAddr := range names {
-		vmDirname := path.Join(dirname, ipAddr)
-		filename := path.Join(vmDirname, "info.json")
+		vmDirname := filepath.Join(dirname, ipAddr)
+		filename := filepath.Join(vmDirname, "info.json")
 		var vmInfo vmInfoType
 		if err := json.ReadFromFile(filename, &vmInfo); err != nil {
 			return nil, err
@@ -133,6 +134,20 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 		if err := os.MkdirAll(volumeDirectory, dirPerms); err != nil {
 			return nil, err
 		}
+	}
+	if startOptions.ObjectCacheBytes >= 1<<20 {
+		dirname := filepath.Join(filepath.Dir(manager.volumeDirectories[0]),
+			"objectcache")
+		if err := os.MkdirAll(dirname, dirPerms); err != nil {
+			return nil, err
+		}
+		objSrv, err := cachingreader.NewObjectServer(dirname,
+			startOptions.ObjectCacheBytes, startOptions.ImageServerAddress,
+			startOptions.Logger)
+		if err != nil {
+			return nil, err
+		}
+		manager.objectCache = objSrv
 	}
 	go manager.loopCheckHealthStatus()
 	return manager, nil
