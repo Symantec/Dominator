@@ -36,7 +36,8 @@ var (
 		"Port number of image server")
 	networkBootImage = flag.String("networkBootImage", "pxelinux.0",
 		"Name of boot image passed via DHCP option")
-	portNum = flag.Uint("portNum", constants.HypervisorPortNumber,
+	objectCacheSize = flagutil.Size(10 << 30)
+	portNum         = flag.Uint("portNum", constants.HypervisorPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
 	showVGA  = flag.Bool("showVGA", false, "If true, show VGA console")
 	stateDir = flag.String("stateDir", "/var/lib/hypervisor",
@@ -51,6 +52,8 @@ var (
 )
 
 func init() {
+	flag.Var(&objectCacheSize, "objectCacheSize",
+		"maximum size of object cache")
 	flag.Var(&volumeDirectories, "volumeDirectories",
 		"Comma separated list of volume directories. If empty, scan for space")
 }
@@ -120,6 +123,7 @@ func main() {
 		ImageServerAddress: imageServerAddress,
 		DhcpServer:         dhcpServer,
 		Logger:             logger,
+		ObjectCacheBytes:   uint64(objectCacheSize),
 		ShowVgaConsole:     *showVGA,
 		StateDir:           *stateDir,
 		Username:           *username,
