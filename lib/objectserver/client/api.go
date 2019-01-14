@@ -66,6 +66,10 @@ func (or *ObjectsReader) NextObject() (uint64, io.ReadCloser, error) {
 	return or.nextObject()
 }
 
+func (or *ObjectsReader) ObjectSizes() []uint64 {
+	return or.sizes
+}
+
 type ObjectAdderQueue struct {
 	conn            *srpc.Conn
 	encoder         *gob.Encoder

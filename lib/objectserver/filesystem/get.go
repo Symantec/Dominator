@@ -12,10 +12,24 @@ import (
 
 func (objSrv *ObjectServer) getObjects(hashes []hash.Hash) (
 	*ObjectsReader, error) {
-	var objectsReader ObjectsReader
-	objectsReader.objectServer = objSrv
-	objectsReader.hashes = hashes
-	objectsReader.nextIndex = -1
+	objectsReader := ObjectsReader{
+		objectServer: objSrv,
+		hashes:       hashes,
+		nextIndex:    -1,
+		sizes:        make([]uint64, 0, len(hashes)),
+	}
+	for _, hashVal := range hashes {
+		size, err := objSrv.checkObject(hashVal)
+		if err != nil {
+			return nil, err
+		}
+		if size < 1 {
+			hashStr, _ := hashVal.MarshalText()
+			return nil, errors.New("missing object: " + string(hashStr))
+		}
+		objectsReader.sizes = append(objectsReader.sizes, size)
+	}
+
 	return &objectsReader, nil
 }
 

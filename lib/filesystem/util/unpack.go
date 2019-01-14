@@ -11,7 +11,6 @@ import (
 
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
@@ -101,14 +100,14 @@ func writeObjects(objectsGetter objectserver.ObjectsGetter, hashes []hash.Hash,
 	startTime := time.Now()
 	objectsReader, err := objectsGetter.GetObjects(hashes)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error getting object reader: %s\n",
-			err.Error()))
+		return fmt.Errorf("error getting object reader: %s\n", err)
 	}
 	defer objectsReader.Close()
 	var totalLength uint64
-	for index, hash := range hashes {
-		err = writeObject(objectsReader, hash, inums[index], lengths[index],
-			inodesDir)
+	buffer := make([]byte, 32<<10)
+	for index := range hashes {
+		err = writeObject(objectsReader, inums[index], lengths[index],
+			inodesDir, buffer)
 		if err != nil {
 			return err
 		}
@@ -122,8 +121,8 @@ func writeObjects(objectsGetter objectserver.ObjectsGetter, hashes []hash.Hash,
 	return nil
 }
 
-func writeObject(objectsReader objectserver.ObjectsReader, hash hash.Hash,
-	inodeNumber uint64, length uint64, inodesDir string) error {
+func writeObject(objectsReader objectserver.ObjectsReader, inodeNumber uint64,
+	length uint64, inodesDir string, buffer []byte) error {
 	rlength, reader, err := objectsReader.NextObject()
 	if err != nil {
 		return err
@@ -133,7 +132,29 @@ func writeObject(objectsReader objectserver.ObjectsReader, hash hash.Hash,
 		return errors.New("mismatched lengths")
 	}
 	filename := path.Join(inodesDir, fmt.Sprintf("%d", inodeNumber))
-	return fsutil.CopyToFile(filename, filePerms, reader, rlength)
+	destFile, err := os.OpenFile(filename,
+		os.O_CREATE|os.O_TRUNC|os.O_WRONLY, filePerms)
+	if err != nil {
+		return err
+	}
+	doClose := true
+	defer func() {
+		if doClose {
+			destFile.Close()
+		}
+	}()
+	iLength := int64(length)
+	nCopied, err := io.CopyBuffer(destFile, io.LimitReader(reader, iLength),
+		buffer)
+	if err != nil {
+		return fmt.Errorf("error copying: %s", err)
+	}
+	if nCopied != iLength {
+		return fmt.Errorf("expected length: %d, got: %d for: %s\n",
+			length, nCopied, filename)
+	}
+	doClose = false
+	return destFile.Close()
 }
 
 func writeInode(inode filesystem.GenericInode, filename string) error {

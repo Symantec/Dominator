@@ -67,13 +67,14 @@ func (objSrv *srpcType) GetObjects(conn *srpc.Conn, decoder srpc.Decoder,
 		return err
 	}
 	conn.Flush()
+	buffer := make([]byte, 32<<10)
 	for _, hashVal := range request.Hashes {
 		length, reader, err := objectsReader.NextObject()
 		if err != nil {
 			objSrv.logger.Println(err)
 			return err
 		}
-		nCopied, err := io.Copy(conn.Writer, reader)
+		nCopied, err := io.CopyBuffer(conn, reader, buffer)
 		reader.Close()
 		if err != nil {
 			objSrv.logger.Printf("Error copying: %s\n", err)

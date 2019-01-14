@@ -96,21 +96,22 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "           i: name of an image on the imageserver")
 	fmt.Fprintln(os.Stderr, "           l: name of file containing an Image")
 	fmt.Fprintln(os.Stderr, "           s: name of sub to poll")
-	fmt.Fprintln(os.Stderr, "  estimate-usage    name")
-	fmt.Fprintln(os.Stderr, "  find-latest-image directory")
-	fmt.Fprintln(os.Stderr, "  get               name directory")
+	fmt.Fprintln(os.Stderr, "  estimate-usage      name")
+	fmt.Fprintln(os.Stderr, "  find-latest-image   directory")
+	fmt.Fprintln(os.Stderr, "  get                 name directory")
 	fmt.Fprintln(os.Stderr, "  list")
 	fmt.Fprintln(os.Stderr, "  listdirs")
 	fmt.Fprintln(os.Stderr, "  listunrefobj")
-	fmt.Fprintln(os.Stderr, "  list-latest-image directory")
-	fmt.Fprintln(os.Stderr, "  make-raw-image    name rawfile")
-	fmt.Fprintln(os.Stderr, "  match-triggers    name triggers-file")
-	fmt.Fprintln(os.Stderr, "  merge-filters     filter-file...")
-	fmt.Fprintln(os.Stderr, "  merge-triggers    triggers-file...")
-	fmt.Fprintln(os.Stderr, "  mkdir             name")
-	fmt.Fprintln(os.Stderr, "  show              name")
+	fmt.Fprintln(os.Stderr, "  list-latest-image   directory")
+	fmt.Fprintln(os.Stderr, "  make-raw-image      name rawfile")
+	fmt.Fprintln(os.Stderr, "  match-triggers      name triggers-file")
+	fmt.Fprintln(os.Stderr, "  merge-filters       filter-file...")
+	fmt.Fprintln(os.Stderr, "  merge-triggers      triggers-file...")
+	fmt.Fprintln(os.Stderr, "  mkdir               name")
+	fmt.Fprintln(os.Stderr, "  show                name")
 	fmt.Fprintln(os.Stderr, "  showunrefobj")
-	fmt.Fprintln(os.Stderr, "  tar               name [file]")
+	fmt.Fprintln(os.Stderr, "  tar                 name [file]")
+	fmt.Fprintln(os.Stderr, "  test-download-speed name")
 	fmt.Fprintln(os.Stderr, "Fields:")
 	fmt.Fprintln(os.Stderr, "  m: mode")
 	fmt.Fprintln(os.Stderr, "  l: number of hardlinks")
@@ -159,6 +160,7 @@ var subcommands = []subcommand{
 	{"show", 1, 1, showImageSubcommand},
 	{"showunrefobj", 0, 0, showUnreferencedObjectsSubcommand},
 	{"tar", 1, 2, tarImageSubcommand},
+	{"test-download-speed", 1, 1, testDownloadSpeedSubcommand},
 }
 
 var imageSrpcClient *srpc.Client

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/objectserver/cachingreader"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/tags"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
@@ -37,6 +38,7 @@ type Manager struct {
 	addressPool       addressPoolType
 	healthStatus      string
 	notifiers         map[<-chan proto.Update]chan<- proto.Update
+	objectCache       *cachingreader.ObjectServer
 	ownerGroups       map[string]struct{}
 	ownerUsers        map[string]struct{}
 	subnets           map[string]proto.Subnet // Key: Subnet ID.
@@ -48,6 +50,7 @@ type StartOptions struct {
 	DhcpServer         DhcpServer
 	ImageServerAddress string
 	Logger             log.DebugLogger
+	ObjectCacheBytes   uint64
 	ShowVgaConsole     bool
 	StateDir           string
 	Username           string
