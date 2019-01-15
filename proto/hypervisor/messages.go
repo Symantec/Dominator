@@ -102,6 +102,7 @@ type CreateVmRequest struct {
 	MinimumFreeBytes uint64
 	RoundupPower     uint64
 	SecondaryVolumes []Volume
+	SkipBootloader   bool
 	UserDataSize     uint64
 	VmInfo
 } // RAW image data (length=ImageDataSize) and user data (length=UserDataSize)
@@ -315,6 +316,7 @@ type ReplaceVmImageRequest struct {
 	IpAddress        net.IP
 	MinimumFreeBytes uint64
 	RoundupPower     uint64
+	SkipBootloader   bool
 } // RAW image data (length=ImageDataSize) is streamed afterwards.
 
 type ReplaceVmImageResponse struct { // Multiple responses are sent.
