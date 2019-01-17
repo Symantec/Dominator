@@ -29,6 +29,10 @@ type GarbageCollectorSetter interface {
 	SetGarbageCollector(gc GarbageCollector)
 }
 
+type ObjectLinker interface {
+	LinkObject(filename string, hashVal hash.Hash) (bool, error)
+}
+
 type ObjectGetter interface {
 	GetObject(hashVal hash.Hash) (uint64, io.ReadCloser, error)
 }
@@ -67,7 +71,17 @@ type StashingObjectServer interface {
 		hash.Hash, []byte, error)
 }
 
-func GetObject(objSrv ObjectServer, hashVal hash.Hash) (
+func CopyObject(filename string, objectsGetter ObjectsGetter,
+	hashVal hash.Hash) error {
+	return copyObject(filename, objectsGetter, hashVal)
+}
+
+func GetObject(objSrv ObjectsGetter, hashVal hash.Hash) (
 	uint64, io.ReadCloser, error) {
 	return getObject(objSrv, hashVal)
+}
+
+func LinkObject(filename string, objectsGetter ObjectsGetter,
+	hashVal hash.Hash) (bool, error) {
+	return linkObject(filename, objectsGetter, hashVal)
 }
