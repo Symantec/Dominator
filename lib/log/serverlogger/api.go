@@ -14,6 +14,8 @@ import (
 var (
 	initialLogDebugLevel = flag.Int("initialLogDebugLevel", -1,
 		"initial debug log level")
+	logSubseconds = flag.Bool("logSubseconds", false,
+		"if true, datestamps will have subsecond resolution")
 )
 
 type Logger struct {
@@ -29,7 +31,11 @@ type Logger struct {
 // identify the logger for RPC methods such as Logger.SetDebugLevel. The first
 // or primary logger should be created with name "" (the empty string).
 func New(name string) *Logger {
-	return newLogger(name, logbuf.GetStandardOptions(), log.LstdFlags)
+	flags := log.LstdFlags
+	if *logSubseconds {
+		flags |= log.Lmicroseconds
+	}
+	return newLogger(name, logbuf.GetStandardOptions(), flags)
 }
 
 // NewWithFlags will create a Logger which has an internal log buffer (see the
