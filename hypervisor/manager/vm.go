@@ -339,6 +339,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		return conn.Flush()
 	}
 
+	m.Logger.Debugln(1, "CreateVm() starting")
 	var request proto.CreateVmRequest
 	if err := decoder.Decode(&request); err != nil {
 		return err
@@ -394,11 +395,17 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		if err != nil {
 			return err
 		}
-		err = m.writeRaw(vm.VolumeLocations[0].Filename, client, fs,
-			request.MinimumFreeBytes, request.RoundupPower)
+		writeRawOptions := util.WriteRawOptions{
+			MinimumFreeBytes: request.MinimumFreeBytes,
+			RootLabel:        vm.rootLabel(),
+			RoundupPower:     request.RoundupPower,
+		}
+		err = m.writeRaw(vm.VolumeLocations[0], "", client, fs, writeRawOptions,
+			request.SkipBootloader)
 		if err != nil {
 			return sendError(conn, encoder, err)
 		}
+		m.Logger.Debugln(1, "finished writing volume")
 		if fi, err := os.Stat(vm.VolumeLocations[0].Filename); err != nil {
 			return sendError(conn, encoder, err)
 		} else {
@@ -485,6 +492,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		return err
 	}
 	vm = nil // Cancel cleanup.
+	m.Logger.Debugln(1, "CreateVm() finished")
 	return nil
 }
 
@@ -775,6 +783,10 @@ func (m *Manager) getVmVolume(conn *srpc.Conn, decoder srpc.Decoder,
 		return encoder.Encode(proto.GetVmVolumeResponse{Error: err.Error()})
 	}
 	defer vm.mutex.RUnlock()
+	if request.VolumeIndex == 0 && vm.getActiveKernelPath() != "" {
+		return encoder.Encode(proto.GetVmVolumeResponse{
+			Error: "cannot get root volume with separate kernel"})
+	}
 	if request.VolumeIndex >= uint(len(vm.VolumeLocations)) {
 		return encoder.Encode(proto.GetVmVolumeResponse{
 			Error: "index too large"})
@@ -1373,6 +1385,12 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 		}
 		return sendError(conn, encoder, errors.New("VM is not stopped"))
 	}
+	initrdFilename := vm.getInitrdPath()
+	tmpInitrdFilename := initrdFilename + ".new"
+	defer os.Remove(tmpInitrdFilename)
+	kernelFilename := vm.getKernelPath()
+	tmpKernelFilename := kernelFilename + ".new"
+	defer os.Remove(tmpKernelFilename)
 	tmpRootFilename := vm.VolumeLocations[0].Filename + ".new"
 	defer os.Remove(tmpRootFilename)
 	var newSize uint64
@@ -1394,8 +1412,13 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 		if err != nil {
 			return err
 		}
-		err = m.writeRaw(tmpRootFilename, client, fs, request.MinimumFreeBytes,
-			request.RoundupPower)
+		writeRawOptions := util.WriteRawOptions{
+			MinimumFreeBytes: request.MinimumFreeBytes,
+			RootLabel:        vm.rootLabel(),
+			RoundupPower:     request.RoundupPower,
+		}
+		err = m.writeRaw(vm.VolumeLocations[0], ".new", client, fs,
+			writeRawOptions, request.SkipBootloader)
 		if err != nil {
 			return sendError(conn, encoder, err)
 		}
@@ -1453,6 +1476,10 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
 		os.Rename(oldRootFilename, rootFilename)
 		return sendError(conn, encoder, err)
 	}
+	os.Rename(initrdFilename, initrdFilename+".old")
+	os.Rename(tmpInitrdFilename, initrdFilename)
+	os.Rename(kernelFilename, kernelFilename+".old")
+	os.Rename(tmpKernelFilename, kernelFilename)
 	if request.ImageName != "" {
 		vm.ImageName = request.ImageName
 	}
@@ -1534,6 +1561,10 @@ func (m *Manager) restoreVmImage(ipAddr net.IP,
 	if err := os.Rename(oldRootFilename, rootFilename); err != nil {
 		return err
 	}
+	initrdFilename := vm.getInitrdPath()
+	os.Rename(initrdFilename+".old", initrdFilename)
+	kernelFilename := vm.getKernelPath()
+	os.Rename(kernelFilename+".old", kernelFilename)
 	vm.Volumes[0].Size = uint64(fi.Size())
 	vm.writeAndSendInfo()
 	return nil
@@ -1681,8 +1712,9 @@ func (m *Manager) unregisterVmMetadataNotifier(ipAddr net.IP,
 	return nil
 }
 
-func (m *Manager) writeRaw(filename string, client *srpc.Client,
-	fs *filesystem.FileSystem, minimumFreeBytes, roundupPower uint64) error {
+func (m *Manager) writeRaw(volume volumeType, extension string,
+	client *srpc.Client, fs *filesystem.FileSystem,
+	writeRawOptions util.WriteRawOptions, skipBootloader bool) error {
 	var objectsGetter objectserver.ObjectsGetter
 	if m.objectCache == nil {
 		objectClient := objclient.AttachObjectClient(client)
@@ -1691,9 +1723,47 @@ func (m *Manager) writeRaw(filename string, client *srpc.Client,
 	} else {
 		objectsGetter = m.objectCache
 	}
-	return util.WriteRaw(fs, objectsGetter, filename, privateFilePerms,
-		mbr.TABLE_TYPE_MSDOS, minimumFreeBytes,
-		roundupPower, true, true, m.Logger)
+	writeRawOptions.AllocateBlocks = true
+	if skipBootloader {
+		bootInfo, err := util.GetBootInfo(fs, writeRawOptions.RootLabel, "")
+		if err != nil {
+			return err
+		}
+		dirent := bootInfo.KernelImageDirent
+		if dirent == nil {
+			return errors.New("no kernel image found")
+		}
+		inode, ok := dirent.Inode().(*filesystem.RegularInode)
+		if !ok {
+			return errors.New("kernel image is not a regular file")
+		}
+		inode.Size = 0
+		filename := path.Join(volume.DirectoryToCleanup, "kernel"+extension)
+		_, err = objectserver.LinkObject(filename, objectsGetter, inode.Hash)
+		if err != nil {
+			return err
+		}
+		dirent = bootInfo.InitrdImageDirent
+		if dirent != nil {
+			inode, ok := dirent.Inode().(*filesystem.RegularInode)
+			if !ok {
+				return errors.New("initrd image is not a regular file")
+			}
+			inode.Size = 0
+			filename := path.Join(volume.DirectoryToCleanup, "initrd"+extension)
+			_, err = objectserver.LinkObject(filename, objectsGetter,
+				inode.Hash)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		writeRawOptions.InstallBootloader = true
+	}
+	writeRawOptions.WriteFstab = true
+	return util.WriteRawWithOptions(fs, objectsGetter,
+		volume.Filename+extension, privateFilePerms, mbr.TABLE_TYPE_MSDOS,
+		writeRawOptions, m.Logger)
 }
 
 func (vm *vmInfoType) autoDestroy() {
@@ -1860,6 +1930,30 @@ func (vm *vmInfoType) discardSnapshot() error {
 	return nil
 }
 
+func (vm *vmInfoType) getActiveInitrdPath() string {
+	initrdPath := vm.getInitrdPath()
+	if _, err := os.Stat(initrdPath); err == nil {
+		return initrdPath
+	}
+	return ""
+}
+
+func (vm *vmInfoType) getActiveKernelPath() string {
+	kernelPath := vm.getKernelPath()
+	if _, err := os.Stat(kernelPath); err == nil {
+		return kernelPath
+	}
+	return ""
+}
+
+func (vm *vmInfoType) getInitrdPath() string {
+	return path.Join(vm.VolumeLocations[0].DirectoryToCleanup, "initrd")
+}
+
+func (vm *vmInfoType) getKernelPath() string {
+	return path.Join(vm.VolumeLocations[0].DirectoryToCleanup, "kernel")
+}
+
 func (vm *vmInfoType) kill() {
 	vm.mutex.Lock()
 	defer vm.mutex.Unlock()
@@ -1941,6 +2035,12 @@ func (vm *vmInfoType) processMonitorResponses(monitorSock net.Conn) {
 	close(vm.commandChannel)
 }
 
+func (vm *vmInfoType) rootLabel() string {
+	ipAddr := vm.Address.IpAddress
+	return fmt.Sprintf("rootfs@%02x%02x%02x%02x",
+		ipAddr[0], ipAddr[1], ipAddr[2], ipAddr[3])
+}
+
 func (vm *vmInfoType) setState(state proto.State) {
 	vm.State = state
 	if !vm.doNotWriteOrSend {
@@ -1980,6 +2080,7 @@ func (vm *vmInfoType) setupVolumes(rootSize uint64,
 func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration,
 	haveManagerLock bool) (bool, error) {
 	vm.monitorSockname = path.Join(vm.dirname, "monitor.sock")
+	vm.logger.Debugln(1, "startManaging() starting")
 	switch vm.State {
 	case proto.StateStarting:
 	case proto.StateRunning:
@@ -2011,7 +2112,7 @@ func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration,
 	}
 	monitorSock, err := net.Dial("unix", vm.monitorSockname)
 	if err != nil {
-		vm.logger.Debugf(0, "error connecting to: %s: %s\n",
+		vm.logger.Debugf(1, "error connecting to: %s: %s\n",
 			vm.monitorSockname, err)
 		if err := vm.startVm(haveManagerLock); err != nil {
 			vm.logger.Println(err)
@@ -2136,6 +2237,20 @@ func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 		"-runas", vm.manager.Username,
 		"-qmp", "unix:"+vm.monitorSockname+",server,nowait",
 		"-daemonize")
+	if kernelPath := vm.getActiveKernelPath(); kernelPath != "" {
+		cmd.Args = append(cmd.Args, "-kernel", kernelPath)
+		if initrdPath := vm.getActiveInitrdPath(); initrdPath != "" {
+			cmd.Args = append(cmd.Args,
+				"-initrd", initrdPath,
+				"-append", util.MakeKernelOptions("LABEL="+vm.rootLabel(),
+					"net.ifnames=0"),
+			)
+		} else {
+			cmd.Args = append(cmd.Args,
+				"-append", util.MakeKernelOptions("/dev/vda1", "net.ifnames=0"),
+			)
+		}
+	}
 	cmd.Args = append(cmd.Args, netOptions...)
 	if vm.manager.ShowVgaConsole {
 		cmd.Args = append(cmd.Args, "-vga", "std")

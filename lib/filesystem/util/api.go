@@ -1,14 +1,26 @@
 package util
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"text/template"
 
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mbr"
 	"github.com/Symantec/Dominator/lib/objectserver"
 )
+
+type BootInfoType struct {
+	BootDirectory     *filesystem.DirectoryInode
+	InitrdImageDirent *filesystem.DirectoryEntry
+	InitrdImageFile   string
+	KernelImageDirent *filesystem.DirectoryEntry
+	KernelImageFile   string
+	KernelOptions     string
+	grubTemplate      *template.Template
+}
 
 type ComputedFile struct {
 	Filename string
@@ -26,6 +38,11 @@ type ComputedFilesData struct {
 // should be followed by a call to dest.RebuildInodePointers().
 func CopyMtimes(source, dest *filesystem.FileSystem) {
 	copyMtimes(source, dest)
+}
+
+func GetBootInfo(fs *filesystem.FileSystem, rootLabel string,
+	extraKernelOptions string) (*BootInfoType, error) {
+	return getBootInfo(fs, rootLabel, extraKernelOptions)
 }
 
 func GetUnsupportedExt4fsOptions(fs *filesystem.FileSystem,
@@ -48,6 +65,11 @@ func MakeExt4fs(deviceName, label string, unsupportedOptions []string,
 	bytesPerInode uint64, logger log.Logger) error {
 	return makeExt4fs(deviceName, label, unsupportedOptions, bytesPerInode,
 		logger)
+}
+
+func MakeKernelOptions(rootDevice, extraOptions string) string {
+	return fmt.Sprintf("root=%s ro console=tty0 console=ttyS0,115200n8 %s",
+		rootDevice, extraOptions)
 }
 
 func ReplaceComputedFiles(fs *filesystem.FileSystem,
@@ -74,11 +96,36 @@ func WriteFstabEntry(writer io.Writer,
 		dumpFrequency, checkOrder)
 }
 
+type WriteRawOptions struct {
+	AllocateBlocks    bool
+	DoChroot          bool
+	InstallBootloader bool
+	MinimumFreeBytes  uint64
+	RootLabel         string
+	RoundupPower      uint64
+	WriteFstab        bool
+}
+
 func WriteRaw(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, rawFilename string,
 	perm os.FileMode, tableType mbr.TableType,
 	minFreeSpace uint64, roundupPower uint64, makeBootable, allocateBlocks bool,
 	logger log.DebugLogger) error {
 	return writeRaw(fs, objectsGetter, rawFilename, perm, tableType,
-		minFreeSpace, roundupPower, makeBootable, allocateBlocks, logger)
+		WriteRawOptions{
+			AllocateBlocks:    allocateBlocks,
+			InstallBootloader: makeBootable,
+			MinimumFreeBytes:  minFreeSpace,
+			WriteFstab:        makeBootable,
+			RoundupPower:      roundupPower,
+		},
+		logger)
+}
+
+func WriteRawWithOptions(fs *filesystem.FileSystem,
+	objectsGetter objectserver.ObjectsGetter, rawFilename string,
+	perm os.FileMode, tableType mbr.TableType, options WriteRawOptions,
+	logger log.DebugLogger) error {
+	return writeRaw(fs, objectsGetter, rawFilename, perm, tableType, options,
+		logger)
 }

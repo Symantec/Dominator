@@ -36,14 +36,6 @@ var (
 	defaultMkfsFeatures map[string]struct{} // Key: feature name.
 )
 
-type bootInfoType struct {
-	InitrdImageFile string
-	KernelImageFile string
-	KernelOptions   string
-	grubTemplate    *template.Template
-	RootLabel       string
-}
-
 func checkIfPartition(device string) (bool, error) {
 	if isBlock, err := checkIsBlock(device); err != nil {
 		if !os.IsNotExist(err) {
@@ -242,22 +234,24 @@ func lookPath(rootDir, file string) (string, error) {
 
 func makeAndWriteRoot(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, bootDevice, rootDevice string,
-	makeBootableFlag bool, logger log.DebugLogger) error {
+	options WriteRawOptions, logger log.DebugLogger) error {
 	unsupportedOptions, err := getUnsupportedOptions(fs, objectsGetter)
 	if err != nil {
 		return err
 	}
-	var bootInfo *bootInfoType
-	label := fmt.Sprintf("rootfs@%x", time.Now().Unix())
-	if makeBootableFlag {
+	var bootInfo *BootInfoType
+	if options.RootLabel == "" {
+		options.RootLabel = fmt.Sprintf("rootfs@%x", time.Now().Unix())
+	}
+	if options.InstallBootloader {
 		var err error
-		bootInfo, err = getBootInfo(fs)
+		bootInfo, err = getBootInfo(fs, options.RootLabel, "net.ifnames=0")
 		if err != nil {
 			return err
 		}
-		bootInfo.RootLabel = label
 	}
-	err = makeExt4fs(rootDevice, label, unsupportedOptions, 8192, logger)
+	err = makeExt4fs(rootDevice, options.RootLabel, unsupportedOptions, 8192,
+		logger)
 	if err != nil {
 		return err
 	}
@@ -275,22 +269,34 @@ func makeAndWriteRoot(fs *filesystem.FileSystem,
 	if err := Unpack(fs, objectsGetter, mountPoint, logger); err != nil {
 		return err
 	}
-	if !makeBootableFlag {
-		return nil
+	if options.WriteFstab {
+		err := writeRootFstabEntry(mountPoint, options.RootLabel)
+		if err != nil {
+			return err
+		}
 	}
-	bootInfo.KernelOptions = "net.ifnames=0"
-	return bootInfo.makeBootable(bootDevice, mountPoint, false, logger)
+	if options.InstallBootloader {
+		err := bootInfo.installBootloader(bootDevice, mountPoint,
+			options.RootLabel, options.DoChroot, logger)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func makeBootable(fs *filesystem.FileSystem,
 	deviceName, rootLabel, rootDir, kernelOptions string,
 	doChroot bool, logger log.DebugLogger) error {
-	if bootInfo, err := getBootInfo(fs); err != nil {
+	if err := writeRootFstabEntry(rootDir, rootLabel); err != nil {
+		return err
+	}
+	if bootInfo, err := getBootInfo(fs, rootLabel, kernelOptions); err != nil {
 		return err
 	} else {
 		bootInfo.KernelOptions = kernelOptions
-		bootInfo.RootLabel = rootLabel
-		return bootInfo.makeBootable(deviceName, rootDir, doChroot, logger)
+		return bootInfo.installBootloader(deviceName, rootDir, rootLabel,
+			doChroot, logger)
 	}
 }
 
@@ -348,24 +354,31 @@ func sanitiseInput(ch rune) rune {
 	}
 }
 
-func getBootInfo(fs *filesystem.FileSystem) (*bootInfoType, error) {
+func getBootInfo(fs *filesystem.FileSystem, rootLabel string,
+	extraKernelOptions string) (*BootInfoType, error) {
 	bootDirectory, err := getBootDirectory(fs)
 	if err != nil {
 		return nil, err
 	}
-	bootInfo := &bootInfoType{}
+	bootInfo := &BootInfoType{
+		BootDirectory: bootDirectory,
+		KernelOptions: MakeKernelOptions("LABEL="+rootLabel,
+			extraKernelOptions),
+	}
 	for _, dirent := range bootDirectory.EntryList {
 		if strings.HasPrefix(dirent.Name, "initrd.img-") ||
 			strings.HasPrefix(dirent.Name, "initramfs-") {
 			if bootInfo.InitrdImageFile != "" {
 				return nil, errors.New("multiple initrd images")
 			}
+			bootInfo.InitrdImageDirent = dirent
 			bootInfo.InitrdImageFile = "/boot/" + dirent.Name
 		}
 		if strings.HasPrefix(dirent.Name, "vmlinuz-") {
 			if bootInfo.KernelImageFile != "" {
 				return nil, errors.New("multiple kernel images")
 			}
+			bootInfo.KernelImageDirent = dirent
 			bootInfo.KernelImageFile = "/boot/" + dirent.Name
 		}
 	}
@@ -377,8 +390,8 @@ func getBootInfo(fs *filesystem.FileSystem) (*bootInfoType, error) {
 	return bootInfo, nil
 }
 
-func (bootInfo *bootInfoType) makeBootable(deviceName string, rootDir string,
-	doChroot bool, logger log.DebugLogger) error {
+func (bootInfo *BootInfoType) installBootloader(deviceName string,
+	rootDir, rootLabel string, doChroot bool, logger log.DebugLogger) error {
 	startTime := time.Now()
 	var bootDir, chrootDir string
 	if doChroot {
@@ -415,21 +428,10 @@ func (bootInfo *bootInfoType) makeBootable(deviceName string, rootDir string,
 	if err := bootInfo.writeGrubConfig(grubConfigFile); err != nil {
 		return err
 	}
-	err = bootInfo.writeGrubTemplate(grubConfigFile + ".template")
-	if err != nil {
-		return err
-	}
-	file, err := os.Create(filepath.Join(rootDir, "etc", "fstab"))
-	if err != nil {
-		return err
-	} else {
-		defer file.Close()
-		return writeFstabEntry(file, "LABEL="+bootInfo.RootLabel, "/", "ext4",
-			"", 0, 1)
-	}
+	return bootInfo.writeGrubTemplate(grubConfigFile + ".template")
 }
 
-func (bootInfo *bootInfoType) writeGrubConfig(filename string) error {
+func (bootInfo *BootInfoType) writeGrubConfig(filename string) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("error creating GRUB config file: %s", err)
@@ -441,7 +443,7 @@ func (bootInfo *bootInfoType) writeGrubConfig(filename string) error {
 	return file.Close()
 }
 
-func (bootInfo *bootInfoType) writeGrubTemplate(filename string) error {
+func (bootInfo *BootInfoType) writeGrubTemplate(filename string) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("error creating GRUB config file template: %s", err)
@@ -466,7 +468,7 @@ func writeFstabEntry(writer io.Writer,
 
 func writeToBlock(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, bootDevice string,
-	tableType mbr.TableType, makeBootableFlag bool,
+	tableType mbr.TableType, options WriteRawOptions,
 	logger log.DebugLogger) error {
 	if err := mbr.WriteDefault(bootDevice, tableType); err != nil {
 		return err
@@ -475,14 +477,13 @@ func writeToBlock(fs *filesystem.FileSystem,
 		return err
 	} else {
 		return makeAndWriteRoot(fs, objectsGetter, bootDevice, rootDevice,
-			makeBootableFlag, logger)
+			options, logger)
 	}
 }
 
 func writeToFile(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, rawFilename string,
-	perm os.FileMode, tableType mbr.TableType, minFreeSpace uint64,
-	roundupPower uint64, makeBootableFlag, allocateBlocks bool,
+	perm os.FileMode, tableType mbr.TableType, options WriteRawOptions,
 	logger log.DebugLogger) error {
 	tmpFilename := rawFilename + "~"
 	if file, err := os.OpenFile(tmpFilename, createFlags, perm); err != nil {
@@ -493,19 +494,19 @@ func writeToFile(fs *filesystem.FileSystem,
 	}
 	usageEstimate := fs.EstimateUsage(0)
 	minBytes := usageEstimate + usageEstimate>>3 // 12% extra for good luck.
-	minBytes += minFreeSpace
-	if roundupPower < 24 {
-		roundupPower = 24 // 16 MiB.
+	minBytes += options.MinimumFreeBytes
+	if options.RoundupPower < 24 {
+		options.RoundupPower = 24 // 16 MiB.
 	}
-	imageUnits := minBytes >> roundupPower
-	if imageUnits<<roundupPower < minBytes {
+	imageUnits := minBytes >> options.RoundupPower
+	if imageUnits<<options.RoundupPower < minBytes {
 		imageUnits++
 	}
-	imageSize := imageUnits << roundupPower
+	imageSize := imageUnits << options.RoundupPower
 	if err := os.Truncate(tmpFilename, int64(imageSize)); err != nil {
 		return err
 	}
-	if allocateBlocks {
+	if options.AllocateBlocks {
 		if err := fsutil.Fallocate(tmpFilename, imageSize); err != nil {
 			return err
 		}
@@ -524,7 +525,7 @@ func writeToFile(fs *filesystem.FileSystem,
 	loopDevice := string(output)
 	defer exec.Command("losetup", "-d", loopDevice).Run()
 	err = makeAndWriteRoot(fs, objectsGetter, loopDevice, loopDevice+"p1",
-		makeBootableFlag, logger)
+		options, logger)
 	if err != nil {
 		return err
 	}
@@ -533,8 +534,7 @@ func writeToFile(fs *filesystem.FileSystem,
 
 func writeRaw(fs *filesystem.FileSystem,
 	objectsGetter objectserver.ObjectsGetter, rawFilename string,
-	perm os.FileMode, tableType mbr.TableType, minFreeSpace uint64,
-	roundupPower uint64, makeBootableFlag, allocateBlocks bool,
+	perm os.FileMode, tableType mbr.TableType, options WriteRawOptions,
 	logger log.DebugLogger) error {
 	if isBlock, err := checkIsBlock(rawFilename); err != nil {
 		if !os.IsNotExist(err) {
@@ -542,10 +542,21 @@ func writeRaw(fs *filesystem.FileSystem,
 		}
 	} else if isBlock {
 		return writeToBlock(fs, objectsGetter, rawFilename, tableType,
-			makeBootableFlag, logger)
+			options, logger)
 	}
 	return writeToFile(fs, objectsGetter, rawFilename, perm, tableType,
-		minFreeSpace, roundupPower, makeBootableFlag, allocateBlocks, logger)
+		options, logger)
+}
+
+func writeRootFstabEntry(rootDir, rootLabel string) error {
+	file, err := os.Create(filepath.Join(rootDir, "etc", "fstab"))
+	if err != nil {
+		return err
+	} else {
+		defer file.Close()
+		return writeFstabEntry(file, "LABEL="+rootLabel, "/", "ext4",
+			"", 0, 1)
+	}
 }
 
 const grubTemplateString string = `# Generated from simple template.
@@ -559,7 +570,7 @@ menuentry 'Linux' 'Solitary Linux' {
         insmod part_msdos
         insmod ext2
         echo    'Loading Linux {{.KernelImageFile}} ...'
-        linux   {{.KernelImageFile}} root=LABEL={{.RootLabel}} ro console=tty0 console=ttyS0,115200n8 {{.KernelOptions}}
+        linux   {{.KernelImageFile}} {{.KernelOptions}}
         echo    'Loading initial ramdisk ...'
         initrd  {{.InitrdImageFile}}
 }

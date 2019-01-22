@@ -49,6 +49,11 @@ func (objSrv *ObjectServer) GetObjects(hashes []hash.Hash) (
 	return objSrv.getObjects(hashes)
 }
 
+func (objSrv *ObjectServer) LinkObject(filename string,
+	hashVal hash.Hash) (bool, error) {
+	return objSrv.linkObject(filename, hashVal)
+}
+
 func (objSrv *ObjectServer) WriteHtml(writer io.Writer) {
 	objSrv.writeHtml(writer)
 }

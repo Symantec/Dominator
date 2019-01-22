@@ -155,6 +155,7 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 	if *imageName != "" {
 		request.ImageName = *imageName
 		request.ImageTimeout = *imageTimeout
+		request.SkipBootloader = *skipBootloader
 	} else if *imageURL != "" {
 		request.ImageURL = *imageURL
 	} else if *imageFile != "" {
