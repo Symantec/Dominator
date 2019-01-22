@@ -83,6 +83,7 @@ func replaceVmImageOnHypervisor(hypervisor string, ipAddr net.IP,
 	if *imageName != "" {
 		request.ImageName = *imageName
 		request.ImageTimeout = *imageTimeout
+		request.SkipBootloader = *skipBootloader
 	} else if *imageURL != "" {
 		request.ImageURL = *imageURL
 	} else if *imageFile != "" {

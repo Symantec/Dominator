@@ -54,7 +54,9 @@ var (
 		"Time to wait before timing out on probing VM port")
 	secondarySubnetIDs   flagutil.StringList
 	secondaryVolumeSizes flagutil.StringList
-	subnetId             = flag.String("subnetId", "",
+	skipBootloader       = flag.Bool("skipBootloader", false,
+		"If true, directly boot into the kernel")
+	subnetId = flag.String("subnetId", "",
 		"Subnet ID to launch VM in")
 	requestIPs   flagutil.StringList
 	roundupPower = flag.Uint64("roundupPower", 24,
