@@ -7,7 +7,7 @@ import (
 )
 
 func filenameToHash(fileName string) (hash.Hash, error) {
-	var hash hash.Hash
+	var hashVal hash.Hash
 	var prev_nibble byte = 16
 	index := 0
 	for _, char := range fileName {
@@ -20,16 +20,19 @@ func filenameToHash(fileName string) (hash.Hash, error) {
 			continue // Ignore everything else. Treat them as separators.
 		}
 		if prev_nibble < 16 {
-			hash[index] = nibble | prev_nibble<<4
+			if index >= len(hashVal) {
+				return hashVal, fmt.Errorf("filename too long: %s", fileName)
+			}
+			hashVal[index] = nibble | prev_nibble<<4
 			index++
 			prev_nibble = 16
 		} else {
 			prev_nibble = nibble
 		}
 	}
-	return hash, nil
+	return hashVal, nil
 }
 
-func hashToFilename(hash hash.Hash) string {
-	return fmt.Sprintf("%02x/%02x/%0x", hash[0], hash[1], hash[2:])
+func hashToFilename(hashVal hash.Hash) string {
+	return fmt.Sprintf("%02x/%02x/%0x", hashVal[0], hashVal[1], hashVal[2:])
 }
