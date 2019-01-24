@@ -294,7 +294,6 @@ func makeBootable(fs *filesystem.FileSystem,
 	if bootInfo, err := getBootInfo(fs, rootLabel, kernelOptions); err != nil {
 		return err
 	} else {
-		bootInfo.KernelOptions = kernelOptions
 		return bootInfo.installBootloader(deviceName, rootDir, rootLabel,
 			doChroot, logger)
 	}
