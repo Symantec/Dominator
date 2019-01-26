@@ -21,6 +21,8 @@ fi
 readonly signing_key="$1"
 readonly newkey="$2"
 
+KEY_LIFETIME=${KEY_LIFETIME:-1096}
+
 if [ "$3" = "AUTO" ]; then
     if [ -r .serial ]; then
 	old_serial=$(< .serial)
@@ -76,9 +78,10 @@ fi
 # Now generate the signed certificate.
 openssl genpkey -algorithm RSA -out "$newkey.key.pem" \
 		-pkeyopt rsa_keygen_bits:2048
-openssl req -new -key "$newkey.key.pem" -days 1096 -extensions v3_ca \
+openssl req -new -key "$newkey.key.pem" -days "$KEY_LIFETIME" \
+	    -extensions v3_ca \
 	    -batch -out "$newkey.csr" -utf8 -subj "/CN=$username"
-openssl x509 -req -sha256 -days 1096 -in "$newkey.csr" \
+openssl x509 -req -sha256 -days "$KEY_LIFETIME" -in "$newkey.csr" \
 	     -extfile "$tmpfile" $methods_args \
 	     -CAkey "$signing_key.key.pem" -CA "$signing_key.pem" \
 	     -set_serial "$serial" \
