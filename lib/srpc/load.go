@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/x509util"
 )
 
 func loadCertificates(directory string) ([]tls.Certificate, error) {
@@ -47,10 +49,18 @@ func loadCertificates(directory string) ([]tls.Certificate, error) {
 			return nil, fmt.Errorf("%s expired %s ago",
 				certName, format.Duration(expired))
 		}
+		cert.Leaf = x509Cert
 		certs = append(certs, cert)
 	}
 	if len(certs) < 1 {
 		return nil, nil
 	}
+	// Sort list so that certificates with the most permitted methods are listed
+	// first and in turn should be tried first when doing the TLS handshake.
+	sort.Slice(certs, func(leftIndex, rightIndex int) bool {
+		leftMethods, _ := x509util.GetPermittedMethods(certs[leftIndex].Leaf)
+		rightMethods, _ := x509util.GetPermittedMethods(certs[rightIndex].Leaf)
+		return len(leftMethods) > len(rightMethods)
+	})
 	return certs, nil
 }
