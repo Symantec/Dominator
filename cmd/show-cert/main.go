@@ -7,7 +7,9 @@ import (
 	"io/ioutil"
 	"os"
 	"sort"
+	"time"
 
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/x509util"
 )
 
@@ -36,6 +38,14 @@ func showCert(filename string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to parse certificate: %s\n", err)
 		return
+	}
+	now := time.Now()
+	if notYet := cert.NotBefore.Sub(now); notYet > 0 {
+		fmt.Fprintf(os.Stderr, "  Will not be valid for %s\n",
+			format.Duration(notYet))
+	}
+	if expired := now.Sub(cert.NotAfter); expired > 0 {
+		fmt.Fprintf(os.Stderr, "  Expired %s ago\n", format.Duration(expired))
 	}
 	username, err := x509util.GetUsername(cert)
 	if err != nil {
