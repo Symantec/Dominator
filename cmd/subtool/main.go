@@ -18,6 +18,8 @@ import (
 var (
 	computedFilesRoot = flag.String("computedFilesRoot", "",
 		"Name of directory tree containing computed files")
+	connectTimeout = flag.Duration("connectTimeout", 15*time.Second,
+		"connection timeout")
 	cpuPercent = flag.Uint("cpuPercent", 0,
 		"CPU speed as percentage of capacity (default 50)")
 	debug             = flag.Bool("debug", false, "Enable debug mode")
@@ -99,7 +101,7 @@ func printUsage() {
 
 func getSubClient() *srpc.Client {
 	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
-	client, err := srpc.DialHTTP("tcp", clientName, time.Second*5)
+	client, err := srpc.DialHTTP("tcp", clientName, *connectTimeout)
 	if err != nil {
 		logger.Fatalf("Error dialing %s: %s\n", clientName, err)
 	}
