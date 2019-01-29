@@ -95,6 +95,21 @@ type CommitImportedVmResponse struct {
 	Error string
 }
 
+type CopyVmRequest struct {
+	AccessToken      []byte
+	DhcpTimeout      time.Duration
+	IpAddress        net.IP
+	SourceHypervisor string
+}
+
+type CopyVmResponse struct { // Multiple responses are sent.
+	DhcpTimedOut    bool
+	Error           string
+	Final           bool // If true, this is the final response.
+	IpAddress       net.IP
+	ProgressMessage string
+}
+
 type CreateVmRequest struct {
 	DhcpTimeout      time.Duration
 	ImageDataSize    uint64
