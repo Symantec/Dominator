@@ -100,6 +100,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  change-vm-destroy-protection IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-owner-users IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-tags IPaddr")
+	fmt.Fprintln(os.Stderr, "  copy-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  create-vm")
 	fmt.Fprintln(os.Stderr, "  delete-vm-volume IPaddr")
 	fmt.Fprintln(os.Stderr, "  destroy-vm IPaddr")
@@ -143,6 +144,7 @@ var subcommands = []subcommand{
 	{"change-vm-destroy-protection", 1, 1, changeVmDestroyProtectionSubcommand},
 	{"change-vm-owner-users", 1, 1, changeVmOwnerUsersSubcommand},
 	{"change-vm-tags", 1, 1, changeVmTagsSubcommand},
+	{"copy-vm", 1, 1, copyVmSubcommand},
 	{"create-vm", 0, 0, createVmSubcommand},
 	{"delete-vm-volume", 1, 1, deleteVmVolumeSubcommand},
 	{"destroy-vm", 1, 1, destroyVmSubcommand},

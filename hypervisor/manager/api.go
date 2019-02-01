@@ -137,6 +137,11 @@ func (m *Manager) CommitImportedVm(ipAddr net.IP,
 	return m.commitImportedVm(ipAddr, authInfo)
 }
 
+func (m *Manager) CopyVm(conn *srpc.Conn, request proto.CopyVmRequest,
+	encoder srpc.Encoder) error {
+	return m.copyVm(conn, request, encoder)
+}
+
 func (m *Manager) CreateVm(conn *srpc.Conn, decoder srpc.Decoder,
 	encoder srpc.Encoder) error {
 	return m.createVm(conn, decoder, encoder)
