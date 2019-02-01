@@ -24,9 +24,12 @@ vm-control -h
 Some of the sub-commands available are:
 
 - **become-primary-vm-owner**: become the primary owner of a VM
+- **change-vm-destroy-protection**: enable/disable destroy protect for a VM
 - **change-vm-owner-users**: change the extra owners for a VM
 - **change-vm-tags**: change the tags for a VM
+- **copy-vm**: make a copy of a VM
 - **create-vm**: create a VM
+- **delete-vm-volume**: delete a specified volume from a VM
 - **destroy-vm**: destroy a VM (all ephemeral data and metadata are lost)
 - **discard-vm-old-image**: discard the previous root image for a VM
 - **discard-vm-old-user-data**: discard the previous user data for a VM
