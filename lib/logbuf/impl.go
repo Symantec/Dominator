@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Symantec/Dominator/lib/bufwriter"
 	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/format"
 )
@@ -61,7 +62,7 @@ func (lb *LogBuffer) setupFileLogging() error {
 	}
 	writeNotifier := make(chan struct{}, 1)
 	lb.writeNotifier = writeNotifier
-	go lb.flushWhenIdle(writeNotifier)
+	go lb.idleMarker(writeNotifier)
 	return nil
 }
 
@@ -196,7 +197,7 @@ func (lb *LogBuffer) openNewFile() error {
 		syscall.Dup2(int(file.Fd()), int(os.Stderr.Fd()))
 	}
 	lb.file = file
-	lb.writer = bufio.NewWriter(file)
+	lb.writer = bufwriter.NewWriter(file, time.Second)
 	symlink := path.Join(lb.options.Directory, "latest")
 	tmpSymlink := symlink + "~"
 	os.Remove(tmpSymlink)
@@ -275,23 +276,20 @@ func (lb *LogBuffer) enforceQuota() error {
 	return nil
 }
 
-func (lb *LogBuffer) flushWhenIdle(writeNotifier <-chan struct{}) {
-	flushTimer := time.NewTimer(time.Second)
+func (lb *LogBuffer) idleMarker(writeNotifier <-chan struct{}) {
 	idleMarkDuration := lb.options.IdleMarkTimeout
 	if idleMarkDuration < 1 {
-		idleMarkDuration = time.Hour * 24 * 365 * 280 // Far in the future.
+		for {
+			<-writeNotifier
+		}
 	}
 	idleMarkTimer := time.NewTimer(idleMarkDuration)
 	for {
 		select {
 		case <-writeNotifier:
-			flushTimer.Reset(time.Second)
 			idleMarkTimer.Reset(idleMarkDuration)
-		case <-flushTimer.C:
-			lb.flush()
 		case <-idleMarkTimer.C:
 			lb.writeMark()
-			flushTimer.Reset(time.Second)
 			idleMarkTimer.Reset(idleMarkDuration)
 		}
 	}

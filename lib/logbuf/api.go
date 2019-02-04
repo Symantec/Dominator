@@ -8,7 +8,6 @@
 package logbuf
 
 import (
-	"bufio"
 	"container/ring"
 	"flag"
 	"io"
@@ -18,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Symantec/Dominator/lib/bufwriter"
 	"github.com/Symantec/Dominator/lib/flagutil"
 )
 
@@ -38,7 +38,7 @@ type LogBuffer struct {
 	rwMutex       sync.RWMutex
 	buffer        *ring.Ring // Always points to next insert position.
 	file          *os.File
-	writer        *bufio.Writer
+	writer        *bufwriter.Writer
 	fileSize      flagutil.Size
 	usage         flagutil.Size
 	writeNotifier chan<- struct{}
