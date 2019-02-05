@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	stdlog "log"
 	"os"
@@ -23,7 +24,7 @@ import (
 
 func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 	streamName string, expiresIn time.Duration, gitBranch string,
-	maxSourceAge time.Duration, buildLog *bytes.Buffer) (
+	maxSourceAge time.Duration, buildLog buildLogger) (
 	string, error) {
 	manifestDirectory, err := stream.getManifest(b, streamName,
 		gitBranch, buildLog)
@@ -34,7 +35,7 @@ func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 	name, err := buildImageFromManifest(client, streamName, manifestDirectory,
 		expiresIn,
 		func(client *srpc.Client, streamName, rootDir string,
-			buildLog *bytes.Buffer) (*sourceImageInfoType, error) {
+			buildLog buildLogger) (*sourceImageInfoType, error) {
 			return unpackImage(client, streamName, b, maxSourceAge, expiresIn,
 				rootDir, buildLog)
 		}, buildLog)
@@ -45,7 +46,7 @@ func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 }
 
 func (stream *imageStreamType) getManifest(b *Builder, streamName string,
-	gitBranch string, buildLog *bytes.Buffer) (string, error) {
+	gitBranch string, buildLog io.Writer) (string, error) {
 	if gitBranch == "" {
 		gitBranch = "master"
 	}
@@ -185,7 +186,7 @@ func listDirectory(directoryName string) ([]string, error) {
 	return filenames, nil
 }
 
-func runCommand(buildLog *bytes.Buffer, cwd string, args ...string) error {
+func runCommand(buildLog io.Writer, cwd string, args ...string) error {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = cwd
 	cmd.Stdout = buildLog
@@ -195,7 +196,7 @@ func runCommand(buildLog *bytes.Buffer, cwd string, args ...string) error {
 
 func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
 	expiresIn time.Duration, unpackImageFunc unpackImageFunction,
-	buildLog *bytes.Buffer) (string, error) {
+	buildLog buildLogger) (string, error) {
 	// First load all the various manifest files (fail early on error).
 	computedFilesList, err := util.LoadComputedFiles(
 		path.Join(manifestDir, "computed-files.json"))
@@ -308,13 +309,13 @@ func loadTriggers(manifestDir string) (*triggers.Triggers, bool, error) {
 }
 
 func unpackImageSimple(client *srpc.Client, streamName, rootDir string,
-	buildLog *bytes.Buffer) (*sourceImageInfoType, error) {
+	buildLog buildLogger) (*sourceImageInfoType, error) {
 	return unpackImage(client, streamName, nil, 0, 0, rootDir, buildLog)
 }
 
 func unpackImage(client *srpc.Client, streamName string, builder *Builder,
 	maxSourceAge, expiresIn time.Duration, rootDir string,
-	buildLog *bytes.Buffer) (*sourceImageInfoType, error) {
+	buildLog buildLogger) (*sourceImageInfoType, error) {
 	imageName, sourceImage, err := getLatestImage(client, streamName, buildLog)
 	if err != nil {
 		return nil, err
@@ -325,8 +326,8 @@ func unpackImage(client *srpc.Client, streamName string, builder *Builder,
 		}
 		fmt.Fprintf(buildLog, "No source image: %s, attempting to build one\n",
 			streamName)
-		imageName, _, err = builder.build(client, streamName, expiresIn,
-			"master", maxSourceAge)
+		imageName, err = builder.build(client, streamName, expiresIn,
+			"master", maxSourceAge, buildLog)
 		if err != nil {
 			return nil, err
 		}
@@ -342,8 +343,8 @@ func unpackImage(client *srpc.Client, streamName string, builder *Builder,
 		fmt.Fprintf(buildLog,
 			"Image: %s is too old, attempting to build a new one\n",
 			imageName)
-		imageName, _, err = builder.build(client, streamName, expiresIn,
-			"master", maxSourceAge)
+		imageName, err = builder.build(client, streamName, expiresIn,
+			"master", maxSourceAge, buildLog)
 		if err != nil {
 			return nil, err
 		}
