@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -19,7 +18,7 @@ import (
 
 func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
 	unpackImageFunc unpackImageFunction, rootDir string,
-	buildLog *bytes.Buffer) (manifestType, error) {
+	buildLog buildLogger) (manifestType, error) {
 	manifestFile := path.Join(manifestDir, "manifest")
 	var manifestConfig manifestConfigType
 	if err := json.ReadFromFile(manifestFile, &manifestConfig); err != nil {

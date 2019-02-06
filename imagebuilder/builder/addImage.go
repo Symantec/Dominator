@@ -41,7 +41,7 @@ func addImage(client *srpc.Client, streamName, dirname string,
 	scanFilter *filter.Filter, computedFilesList []util.ComputedFile,
 	imageFilter *filter.Filter,
 	trig *triggers.Triggers, expiresIn time.Duration,
-	buildLog *bytes.Buffer) (string, error) {
+	buildLog buildLogger) (string, error) {
 	packages, err := listPackages(dirname)
 	if err != nil {
 		return "", fmt.Errorf("error listing packages: %s", err)
@@ -68,8 +68,8 @@ func addImage(client *srpc.Client, streamName, dirname string,
 	}
 	objClient := objectclient.AttachObjectClient(client)
 	// Make a copy of the build log because AddObject() drains the buffer.
-	buildLog = bytes.NewBuffer(buildLog.Bytes())
-	hashVal, _, err := objClient.AddObject(buildLog, uint64(buildLog.Len()),
+	logReader := bytes.NewBuffer(buildLog.Bytes())
+	hashVal, _, err := objClient.AddObject(logReader, uint64(logReader.Len()),
 		nil)
 	if err != nil {
 		return "", err

@@ -2,7 +2,6 @@ package builder
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -66,7 +65,7 @@ func makeTempDirectory(dir, prefix string) (string, error) {
 
 func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
 	streamName string, expiresIn time.Duration, _ string, _ time.Duration,
-	buildLog *bytes.Buffer) (string, error) {
+	buildLog buildLogger) (string, error) {
 	startTime := time.Now()
 	args := make([]string, 0, len(stream.BootstrapCommand))
 	rootDir, err := makeTempDirectory("",

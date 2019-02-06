@@ -1,8 +1,8 @@
 package builder
 
 import (
-	"bytes"
 	"fmt"
+	"io"
 	"time"
 
 	imageclient "github.com/Symantec/Dominator/imageserver/client"
@@ -12,7 +12,7 @@ import (
 )
 
 func getLatestImage(client *srpc.Client, imageStream string,
-	buildLog *bytes.Buffer) (string, *image.Image, error) {
+	buildLog io.Writer) (string, *image.Image, error) {
 	imageName, err := imageclient.FindLatestImage(client, imageStream, false)
 	if err != nil {
 		return "", nil, err
@@ -27,7 +27,7 @@ func getLatestImage(client *srpc.Client, imageStream string,
 	}
 }
 
-func getImage(client *srpc.Client, imageName string, buildLog *bytes.Buffer) (
+func getImage(client *srpc.Client, imageName string, buildLog io.Writer) (
 	*image.Image, error) {
 	startTime := time.Now()
 	if img, err := imageclient.GetImage(client, imageName); err != nil {
