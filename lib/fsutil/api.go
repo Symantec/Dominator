@@ -5,9 +5,17 @@ import (
 	"hash"
 	"io"
 	"os"
+	"syscall"
 	"time"
 
 	"github.com/Symantec/Dominator/lib/log"
+)
+
+const (
+	DirPerms = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP |
+		syscall.S_IROTH | syscall.S_IXOTH
+	PrivateFilePerms = syscall.S_IRUSR | syscall.S_IWUSR
+	PublicFilePerms  = PrivateFilePerms | syscall.S_IRGRP | syscall.S_IROTH
 )
 
 var (
