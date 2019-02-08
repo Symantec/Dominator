@@ -89,6 +89,7 @@ func copyVmFromHypervisor(sourceHypervisorAddress string, vmIP net.IP,
 		SourceHypervisor: sourceHypervisorAddress,
 	}
 	var reply hyper_proto.CopyVmResponse
+	logger.Debugf(0, "copying VM to %s\n", destHypervisorAddress)
 	if err := callCopyVm(destHypervisor, request, &reply, logger); err != nil {
 		return err
 	}

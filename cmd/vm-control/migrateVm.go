@@ -71,6 +71,7 @@ func migrateVmFromHypervisor(sourceHypervisorAddress string, vmIP net.IP,
 		return err
 	}
 	defer destHypervisor.Close()
+	logger.Debugf(0, "migrating VM to %s\n", destHypervisorAddress)
 	conn, err := destHypervisor.Call("Hypervisor.MigrateVm")
 	if err != nil {
 		return err
