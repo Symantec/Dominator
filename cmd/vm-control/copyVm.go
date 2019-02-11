@@ -84,11 +84,11 @@ func copyVmFromHypervisor(sourceHypervisorAddress string, vmIP net.IP,
 	defer destHypervisor.Close()
 	request := hyper_proto.CopyVmRequest{
 		AccessToken:      accessToken,
-		DhcpTimeout:      *dhcpTimeout,
 		IpAddress:        vmIP,
 		SourceHypervisor: sourceHypervisorAddress,
 	}
 	var reply hyper_proto.CopyVmResponse
+	logger.Debugf(0, "copying VM to %s\n", destHypervisorAddress)
 	if err := callCopyVm(destHypervisor, request, &reply, logger); err != nil {
 		return err
 	}
@@ -96,12 +96,5 @@ func copyVmFromHypervisor(sourceHypervisorAddress string, vmIP net.IP,
 		return fmt.Errorf("error acknowledging VM: %s", err)
 	}
 	fmt.Println(reply.IpAddress)
-	if reply.DhcpTimedOut {
-		return errors.New("DHCP ACK timed out")
-	}
-	if *dhcpTimeout > 0 {
-		logger.Debugln(0, "Received DHCP ACK")
-	}
-	return maybeWatchVm(destHypervisor, destHypervisorAddress, reply.IpAddress,
-		logger)
+	return nil
 }

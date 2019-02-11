@@ -97,13 +97,11 @@ type CommitImportedVmResponse struct {
 
 type CopyVmRequest struct {
 	AccessToken      []byte
-	DhcpTimeout      time.Duration
 	IpAddress        net.IP
 	SourceHypervisor string
 }
 
 type CopyVmResponse struct { // Multiple responses are sent.
-	DhcpTimedOut    bool
 	Error           string
 	Final           bool // If true, this is the final response.
 	IpAddress       net.IP

@@ -346,15 +346,18 @@ func (m *Manager) copyVm(conn *srpc.Conn, request proto.CopyVmRequest,
 	if err != nil {
 		return err
 	}
+	switch getInfoReply.VmInfo.State {
+	case proto.StateStopped, proto.StateRunning:
+	default:
+		return errors.New("VM is not stopped or running")
+	}
 	accessToken := request.AccessToken
 	vmInfo := getInfoReply.VmInfo
 	vmInfo.Address = proto.Address{}
 	vmInfo.SecondaryAddresses = nil
 	vmInfo.Uncommitted = false
-	vm, err := m.allocateVm(proto.CreateVmRequest{
-		DhcpTimeout: request.DhcpTimeout,
-		VmInfo:      vmInfo,
-	}, conn.GetAuthInformation())
+	vm, err := m.allocateVm(proto.CreateVmRequest{VmInfo: vmInfo},
+		conn.GetAuthInformation())
 	vm.OwnerUsers = getInfoReply.VmInfo.OwnerUsers
 	vm.Volumes = vmInfo.Volumes
 	if err := <-tryAllocateMemory(vmInfo.MemoryInMiB); err != nil {
@@ -376,9 +379,6 @@ func (m *Manager) copyVm(conn *srpc.Conn, request proto.CopyVmRequest,
 			return
 		}
 		vm.cleanup()
-		if getInfoReply.VmInfo.State == proto.StateRunning {
-			hyperclient.StartVm(hypervisor, request.IpAddress, accessToken)
-		}
 	}()
 	vm.ownerUsers = make(map[string]struct{}, len(vm.OwnerUsers))
 	for _, username := range vm.OwnerUsers {
@@ -406,6 +406,7 @@ func (m *Manager) copyVm(conn *srpc.Conn, request proto.CopyVmRequest,
 		if err != nil {
 			return err
 		}
+		defer hyperclient.StartVm(hypervisor, request.IpAddress, accessToken)
 		err = sendVmCopyMessage(conn, encoder, "update volume(s)")
 		if err != nil {
 			return err
@@ -420,18 +421,11 @@ func (m *Manager) copyVm(conn *srpc.Conn, request proto.CopyVmRequest,
 	if err != nil {
 		return err
 	}
-	if err := sendVmCopyMessage(conn, encoder, "starting VM"); err != nil {
-		return err
-	}
-	dhcpTimedOut, err := vm.startManaging(request.DhcpTimeout, false)
-	if err != nil {
-		return err
-	}
+	vm.setState(proto.StateStopped)
 	vm.destroyTimer = time.AfterFunc(time.Second*15, vm.autoDestroy)
 	response := proto.CopyVmResponse{
-		DhcpTimedOut: dhcpTimedOut,
-		Final:        true,
-		IpAddress:    vm.Address.IpAddress,
+		Final:     true,
+		IpAddress: vm.Address.IpAddress,
 	}
 	if err := encoder.Encode(response); err != nil {
 		return err
