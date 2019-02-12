@@ -358,6 +358,9 @@ func (m *Manager) copyVm(conn *srpc.Conn, request proto.CopyVmRequest,
 	vmInfo.Uncommitted = false
 	vm, err := m.allocateVm(proto.CreateVmRequest{VmInfo: vmInfo},
 		conn.GetAuthInformation())
+	if err != nil {
+		return err
+	}
 	vm.OwnerUsers = getInfoReply.VmInfo.OwnerUsers
 	vm.Volumes = vmInfo.Volumes
 	if err := <-tryAllocateMemory(vmInfo.MemoryInMiB); err != nil {
