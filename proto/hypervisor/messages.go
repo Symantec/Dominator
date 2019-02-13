@@ -252,7 +252,8 @@ type ImportLocalVmResponse struct {
 }
 
 type ListVMsRequest struct {
-	Sort bool
+	OwnerUsers []string
+	Sort       bool
 }
 
 type ListVMsResponse struct {
