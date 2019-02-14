@@ -82,7 +82,10 @@ func listVMsOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 		return err
 	}
 	defer client.Close()
-	request := hyper_proto.ListVMsRequest{true}
+	request := hyper_proto.ListVMsRequest{
+		OwnerUsers: ownerUsers,
+		Sort:       true,
+	}
 	var reply hyper_proto.ListVMsResponse
 	err = client.RequestReply("Hypervisor.ListVMs", request, &reply)
 	if err != nil {
