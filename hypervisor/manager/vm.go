@@ -1027,11 +1027,23 @@ func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 	return nil
 }
 
-func (m *Manager) listVMs(doSort bool) []string {
+func (m *Manager) listVMs(ownerUsers []string, doSort bool) []string {
 	m.mutex.RLock()
 	ipAddrs := make([]string, 0, len(m.vms))
-	for ipAddr := range m.vms {
-		ipAddrs = append(ipAddrs, ipAddr)
+	for ipAddr, vm := range m.vms {
+		include := true
+		if len(ownerUsers) > 0 {
+			include = false
+			for _, ownerUser := range ownerUsers {
+				if _, ok := vm.ownerUsers[ownerUser]; ok {
+					include = true
+					break
+				}
+			}
+		}
+		if include {
+			ipAddrs = append(ipAddrs, ipAddr)
+		}
 	}
 	m.mutex.RUnlock()
 	if doSort {

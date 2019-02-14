@@ -16,7 +16,7 @@ func (s state) listVMsHandler(w http.ResponseWriter, req *http.Request) {
 	parsedQuery := url.ParseQuery(req.URL)
 	writer := bufio.NewWriter(w)
 	defer writer.Flush()
-	ipAddrs := s.manager.ListVMs(true)
+	ipAddrs := s.manager.ListVMs(nil, true)
 	matchState := parsedQuery.Table["state"]
 	if parsedQuery.OutputType() == url.OutputTypeText && matchState == "" {
 		for _, ipAddr := range ipAddrs {
