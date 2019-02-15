@@ -99,6 +99,7 @@ type CopyVmRequest struct {
 	AccessToken      []byte
 	IpAddress        net.IP
 	SourceHypervisor string
+	VmInfo
 }
 
 type CopyVmResponse struct { // Multiple responses are sent.
