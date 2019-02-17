@@ -140,6 +140,12 @@ func (m *Manager) acknowledgeVm(ipAddr net.IP,
 
 func (m *Manager) allocateVm(req proto.CreateVmRequest,
 	authInfo *srpc.AuthInformation) (*vmInfoType, error) {
+	if req.MemoryInMiB < 1 {
+		return nil, errors.New("no memory specified")
+	}
+	if req.MilliCPUs < 1 {
+		return nil, errors.New("no CPUs specified")
+	}
 	subnetIDs := map[string]struct{}{req.SubnetId: struct{}{}}
 	for _, subnetId := range req.SecondarySubnetIDs {
 		if subnetId == "" {
@@ -325,7 +331,7 @@ func (m *Manager) commitImportedVm(ipAddr net.IP,
 
 func (m *Manager) copyVm(conn *srpc.Conn, request proto.CopyVmRequest,
 	encoder srpc.Encoder) error {
-	m.Logger.Debugln(1, "CopyVm() starting")
+	m.Logger.Debugf(1, "CopyVm(%s) starting\n", conn.Username())
 	hypervisor, err := srpc.DialHTTP("tcp", request.SourceHypervisor, 0)
 	if err != nil {
 		return err
@@ -352,16 +358,27 @@ func (m *Manager) copyVm(conn *srpc.Conn, request proto.CopyVmRequest,
 		return errors.New("VM is not stopped or running")
 	}
 	accessToken := request.AccessToken
-	vmInfo := getInfoReply.VmInfo
+	ownerUsers := make([]string, 1, len(request.OwnerUsers)+1)
+	ownerUsers[0] = conn.Username()
+	if ownerUsers[0] == "" {
+		return errors.New("no authentication data")
+	}
+	ownerUsers = append(ownerUsers, request.OwnerUsers...)
+	vmInfo := request.VmInfo
 	vmInfo.Address = proto.Address{}
 	vmInfo.SecondaryAddresses = nil
 	vmInfo.Uncommitted = false
+	vmInfo.Volumes = getInfoReply.VmInfo.Volumes
 	vm, err := m.allocateVm(proto.CreateVmRequest{VmInfo: vmInfo},
 		conn.GetAuthInformation())
 	if err != nil {
 		return err
 	}
-	vm.OwnerUsers = getInfoReply.VmInfo.OwnerUsers
+	vm.OwnerUsers = ownerUsers
+	vm.ownerUsers = make(map[string]struct{}, len(ownerUsers))
+	for _, username := range ownerUsers {
+		vm.ownerUsers[username] = struct{}{}
+	}
 	vm.Volumes = vmInfo.Volumes
 	if err := <-tryAllocateMemory(vmInfo.MemoryInMiB); err != nil {
 		return err
@@ -454,7 +471,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 		return conn.Flush()
 	}
 
-	m.Logger.Debugln(1, "CreateVm() starting")
+	m.Logger.Debugf(1, "CreateVm(%s) starting\n", conn.Username())
 	var request proto.CreateVmRequest
 	if err := decoder.Decode(&request); err != nil {
 		return err

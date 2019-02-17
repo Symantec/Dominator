@@ -107,22 +107,32 @@ func createVm(logger log.DebugLogger) error {
 	}
 }
 
+func createVmInfoFromFlags() hyper_proto.VmInfo {
+	return hyper_proto.VmInfo{
+		DestroyProtection:  *destroyProtection,
+		Hostname:           *vmHostname,
+		MemoryInMiB:        uint64(memory >> 20),
+		MilliCPUs:          *milliCPUs,
+		OwnerGroups:        ownerGroups,
+		OwnerUsers:         ownerUsers,
+		Tags:               vmTags,
+		SecondarySubnetIDs: secondarySubnetIDs,
+		SubnetId:           *subnetId,
+	}
+}
+
 func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 	request := hyper_proto.CreateVmRequest{
-		DhcpTimeout: *dhcpTimeout,
-		VmInfo: hyper_proto.VmInfo{
-			DestroyProtection:  *destroyProtection,
-			Hostname:           *vmHostname,
-			MemoryInMiB:        uint64(memory >> 20),
-			MilliCPUs:          *milliCPUs,
-			OwnerGroups:        ownerGroups,
-			OwnerUsers:         ownerUsers,
-			Tags:               vmTags,
-			SecondarySubnetIDs: secondarySubnetIDs,
-			SubnetId:           *subnetId,
-		},
+		DhcpTimeout:      *dhcpTimeout,
 		MinimumFreeBytes: uint64(minFreeBytes),
 		RoundupPower:     *roundupPower,
+		VmInfo:           createVmInfoFromFlags(),
+	}
+	if request.VmInfo.MemoryInMiB < 1 {
+		request.VmInfo.MemoryInMiB = 1024
+	}
+	if request.VmInfo.MilliCPUs < 1 {
+		request.VmInfo.MilliCPUs = 250
 	}
 	if len(requestIPs) > 0 && requestIPs[0] != "" {
 		ipAddr := net.ParseIP(requestIPs[0])
