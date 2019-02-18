@@ -4,6 +4,16 @@ import (
 	"net"
 	"os"
 	"time"
+
+	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/log/nulllogger"
+)
+
+const (
+	InterfaceTypeEtherNet = 1 << iota
+	InterfaceTypeBridge
+	InterfaceTypeVlan
+	InterfaceTypeTunTap
 )
 
 // CpuSharer defines the interface for types which can be used to
@@ -50,10 +60,18 @@ func GetBridgeVlanId(bridgeIf string) (int, error) {
 
 // ListBridges will return a list of EtherNet (layer 2) bridges.
 func ListBridges() ([]net.Interface, error) {
-	return listBridges()
+	bl, _, err := listBroadcastInterfaces(InterfaceTypeBridge, nulllogger.New())
+	return bl, err
 }
 
-// ListenWithResuse is similar to the net.Listen function from the standard
+// ListBroadcastInterfaces will return a list of broadcast (EtherNet, bridge,
+// vlan) interfaces. Debugging progress messages are logged to logger.
+func ListBroadcastInterfaces(interfaceType uint, logger log.DebugLogger) (
+	[]net.Interface, map[string]net.Interface, error) {
+	return listBroadcastInterfaces(interfaceType, logger)
+}
+
+// ListenWithReuse is similar to the net.Listen function from the standard
 // library but sets the SO_REUSEADDR and SO_REUSEPORT options on the underlying
 // socket. This is needed if using BindAndDial to specify the same local address
 // as with the listener.
