@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	InterfaceTypeEtherNet = 1 << iota
+	InterfaceTypeBonding = 1 << iota
 	InterfaceTypeBridge
+	InterfaceTypeEtherNet
 	InterfaceTypeVlan
 	InterfaceTypeTunTap
 )
@@ -92,6 +93,11 @@ func ListenWithReuse(network, address string) (net.Listener, error) {
 // responsiveness of other goroutines such as dashboards and health checks.
 func NewCpuSharingDialer(dialer Dialer, cpuSharer CpuSharer) Dialer {
 	return newCpuSharingDialer(dialer, cpuSharer)
+}
+
+// TestCarrier will return true if the interface has a carrier signal.
+func TestCarrier(name string) bool {
+	return testCarrier(name)
 }
 
 // MeasuringConnection implements the net.Conn interface. Additionally it has

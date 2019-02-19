@@ -33,10 +33,10 @@ func listBroadcastInterfaces(interfaceType uint, logger log.DebugLogger) (
 
 func includeType(iface net.Interface, interfaceType uint,
 	logger log.DebugLogger) bool {
-	pathname := filepath.Join(sysClassNet, iface.Name, "device")
+	pathname := filepath.Join(sysClassNet, iface.Name, "bonding")
 	if _, err := os.Stat(pathname); err == nil {
-		if interfaceType&InterfaceTypeEtherNet == 0 {
-			logger.Debugf(2, "skipping EtherNet interface: %s\n", iface.Name)
+		if interfaceType&InterfaceTypeBonding == 0 {
+			logger.Debugf(2, "skipping bonding interface: %s\n", iface.Name)
 			return false
 		} else {
 			return true
@@ -46,6 +46,15 @@ func includeType(iface net.Interface, interfaceType uint,
 	if _, err := os.Stat(pathname); err == nil {
 		if interfaceType&InterfaceTypeBridge == 0 {
 			logger.Debugf(2, "skipping bridge interface: %s\n", iface.Name)
+			return false
+		} else {
+			return true
+		}
+	}
+	pathname = filepath.Join(sysClassNet, iface.Name, "device")
+	if _, err := os.Stat(pathname); err == nil {
+		if interfaceType&InterfaceTypeEtherNet == 0 {
+			logger.Debugf(2, "skipping EtherNet interface: %s\n", iface.Name)
 			return false
 		} else {
 			return true
