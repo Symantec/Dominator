@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/log"
+	libnet "github.com/Symantec/Dominator/lib/net"
 	"github.com/Symantec/Dominator/lib/net/util"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 	dhcp "github.com/krolaw/dhcp4"
@@ -38,13 +39,13 @@ func newServer(interfaceNames []string, logger log.DebugLogger) (
 	}
 	if len(interfaceNames) < 1 {
 		logger.Debugln(0, "Starting DHCP server on all broadcast interfaces")
-		if interfaces, err := net.Interfaces(); err != nil {
+		interfaces, _, err := libnet.ListBroadcastInterfaces(
+			libnet.InterfaceTypeEtherNet|libnet.InterfaceTypeBridge, logger)
+		if err != nil {
 			return nil, err
 		} else {
 			for _, iface := range interfaces {
-				if iface.Flags&net.FlagBroadcast != 0 {
-					interfaceNames = append(interfaceNames, iface.Name)
-				}
+				interfaceNames = append(interfaceNames, iface.Name)
 			}
 		}
 	} else {
