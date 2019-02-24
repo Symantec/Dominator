@@ -21,17 +21,23 @@ func reinstallSubcommand(args []string, logger log.DebugLogger) {
 	os.Exit(0)
 }
 
+func getHostname() (string, error) {
+	cmd := exec.Command("hostname", "-f")
+	if stdout, err := cmd.Output(); err != nil {
+		return "", err
+	} else {
+		return strings.TrimSpace(string(stdout)), nil
+	}
+}
+
 func reinstall(logger log.DebugLogger) error {
 	kexec, err := exec.LookPath("kexec")
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("hostname", "-f")
-	var hostname string
-	if stdout, err := cmd.Output(); err != nil {
+	hostname, err := getHostname()
+	if err != nil {
 		return err
-	} else {
-		hostname = strings.TrimSpace(string(stdout))
 	}
 	rootDir, err := ioutil.TempDir("", "kexec")
 	if err != nil {
@@ -56,7 +62,7 @@ func reinstall(logger log.DebugLogger) error {
 		"--append=console=tty0 console=ttyS0,115200n8",
 		"--console-serial", "--serial-baud=115200",
 		"--initrd="+initrdFile, "-f")
-	cmd = exec.Command(command, args...)
+	cmd := exec.Command(command, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
