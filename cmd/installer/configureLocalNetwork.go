@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"errors"
-	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -11,6 +9,8 @@ import (
 
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
+	libnet "github.com/Symantec/Dominator/lib/net"
+	"github.com/Symantec/Dominator/lib/net/configurator"
 	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 	"github.com/d2g/dhcp4"
@@ -33,7 +33,8 @@ func configureLocalNetwork(logger log.DebugLogger) (
 	if err := run("ifconfig", "", logger, "lo", "up"); err != nil {
 		return nil, nil, err
 	}
-	interfaces, err := listInterfaces(logger)
+	_, interfaces, err := libnet.ListBroadcastInterfaces(
+		libnet.InterfaceTypeEtherNet, logger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -71,7 +72,7 @@ func dhcpRequest(interfaces map[string]net.Interface,
 	stopTime := time.Now().Add(time.Minute * 5)
 	for ; time.Until(stopTime) > 0; time.Sleep(time.Second) {
 		for name, client := range clients {
-			if testCarrier(name) {
+			if libnet.TestCarrier(name) {
 				logger.Debugf(1, "%s: DHCP attempt\n", name)
 				if ok, packet, err := client.Request(); err != nil {
 					logger.Debugf(1, "%s: DHCP failed: %s\n", name, err)
@@ -87,7 +88,7 @@ func dhcpRequest(interfaces map[string]net.Interface,
 func findInterfaceToConfigure(interfaces map[string]net.Interface,
 	machineInfo fm_proto.GetMachineInfoResponse, logger log.DebugLogger) (
 	net.Interface, net.IP, *hyper_proto.Subnet, error) {
-	networkEntries := getNetworkEntries(machineInfo)
+	networkEntries := configurator.GetNetworkEntries(machineInfo)
 	hwAddrToInterface := make(map[string]net.Interface, len(interfaces))
 	for _, iface := range interfaces {
 		hwAddrToInterface[iface.HardwareAddr.String()] = iface
@@ -100,7 +101,7 @@ func findInterfaceToConfigure(interfaces map[string]net.Interface,
 		if !ok {
 			continue
 		}
-		subnet := findMatchingSubnet(machineInfo.Subnets,
+		subnet := configurator.FindMatchingSubnet(machineInfo.Subnets,
 			networkEntry.HostIpAddress)
 		if subnet == nil {
 			logger.Printf("no matching subnet for ip=%s\n",
@@ -111,18 +112,6 @@ func findInterfaceToConfigure(interfaces map[string]net.Interface,
 	}
 	return net.Interface{}, nil, nil,
 		errors.New("no network interfaces match injected configuration")
-}
-
-func findMatchingSubnet(subnets []*hyper_proto.Subnet,
-	ipAddr net.IP) *hyper_proto.Subnet {
-	for _, subnet := range subnets {
-		subnetMask := net.IPMask(subnet.IpMask)
-		subnetAddr := subnet.IpGateway.Mask(subnetMask)
-		if ipAddr.Mask(subnetMask).Equal(subnetAddr) {
-			return subnet
-		}
-	}
-	return nil
 }
 
 func getConfiguration(interfaces map[string]net.Interface,
@@ -146,35 +135,6 @@ func getConfiguration(interfaces map[string]net.Interface,
 	err = json.ReadFromFile(filepath.Join(*tftpDirectory, "config.json"),
 		&machineInfo)
 	return &machineInfo, nil
-}
-
-func getNetworkEntries(
-	info fm_proto.GetMachineInfoResponse) []fm_proto.NetworkEntry {
-	networkEntries := make([]fm_proto.NetworkEntry, 1,
-		len(info.Machine.SecondaryNetworkEntries)+1)
-	networkEntries[0] = info.Machine.NetworkEntry
-	for _, networkEntry := range info.Machine.SecondaryNetworkEntries {
-		networkEntries = append(networkEntries, networkEntry)
-	}
-	return networkEntries
-}
-
-func listInterfaces(logger log.DebugLogger) (map[string]net.Interface, error) {
-	interfaces := make(map[string]net.Interface)
-	if allInterfaces, err := net.Interfaces(); err != nil {
-		return nil, err
-	} else {
-		for _, iface := range allInterfaces {
-			if iface.Flags&net.FlagBroadcast == 0 {
-				logger.Debugf(2, "skipping non-EtherNet interface: %s\n",
-					iface.Name)
-			} else {
-				logger.Debugf(1, "found EtherNet interface: %s\n", iface.Name)
-				interfaces[iface.Name] = iface
-			}
-		}
-	}
-	return interfaces, nil
 }
 
 func loadTftpFiles(tftpServer net.IP, logger log.DebugLogger) error {
@@ -235,8 +195,10 @@ func setupNetwork(ifName string, ipAddr net.IP, subnet *hyper_proto.Subnet,
 			return err
 		}
 	}
-	if err := writeResolvConf("/etc/resolv.conf", subnet); err != nil {
-		return err
+	if !*dryRun {
+		if err := configurator.WriteResolvConf("", subnet); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -287,26 +249,4 @@ func setupNetworkFromDhcp(interfaces map[string]net.Interface,
 		logger.Printf("tftpServer from SIAddr: %s\n", tftpServer)
 	}
 	return loadTftpFiles(tftpServer, logger)
-}
-
-func writeResolvConf(filename string, subnet *hyper_proto.Subnet) error {
-	if file, err := create(filename); err != nil {
-		return err
-	} else {
-		defer file.Close()
-		writer := bufio.NewWriter(file)
-		defer writer.Flush()
-		if subnet.DomainName != "" {
-			fmt.Fprintf(writer, "domain %s\n", subnet.DomainName)
-			fmt.Fprintf(writer, "search %s\n", subnet.DomainName)
-			fmt.Fprintln(writer)
-		}
-		for _, nameserver := range subnet.DomainNameServers {
-			fmt.Fprintf(writer, "nameserver %s\n", nameserver)
-		}
-		if err := writer.Flush(); err != nil {
-			return err
-		}
-	}
-	return nil
 }

@@ -22,6 +22,12 @@ var (
 	ErrorChecksumMismatch = errors.New("checksum mismatch")
 )
 
+// CompareFile will read and compare the content of a file and buffer and will
+// return true if the contents are the same else false.
+func CompareFile(buffer []byte, filename string) (bool, error) {
+	return compareFile(buffer, filename)
+}
+
 // CompareFiles will read and compare the content of two files and return true
 // if they are the same else false.
 func CompareFiles(leftFilename, rightFilename string) (bool, error) {
@@ -109,6 +115,12 @@ func MakeMutable(pathname ...string) error {
 // directory does not exist.
 func ReadDirnames(dirname string, ignoreMissing bool) ([]string, error) {
 	return readDirnames(dirname, ignoreMissing)
+}
+
+// UpdateFile will read and compare the contents of a file and buffer and will
+// update the file if different. It returns true if the contents were updated.
+func UpdateFile(buffer []byte, filename string) (bool, error) {
+	return updateFile(buffer, filename)
 }
 
 // WaitFile waits for the file given by pathname to become available to read and

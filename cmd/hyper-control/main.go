@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/cmdlogger"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"github.com/Symantec/Dominator/lib/tags"
 )
@@ -78,6 +80,8 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  remove-ip-address IPaddr")
 	fmt.Fprintln(os.Stderr, "  remove-mac-address MACaddr")
 	fmt.Fprintln(os.Stderr, "  rollout-image name")
+	fmt.Fprintln(os.Stderr, "  show-network-configuration")
+	fmt.Fprintln(os.Stderr, "  update-network-configuration")
 	fmt.Fprintln(os.Stderr, "  write-netboot-files hostname dirname")
 }
 
@@ -106,7 +110,34 @@ var subcommands = []subcommand{
 	{"remove-ip-address", 1, 1, removeIpAddressSubcommand},
 	{"remove-mac-address", 1, 1, removeMacAddressSubcommand},
 	{"rollout-image", 1, 1, rolloutImageSubcommand},
+	{"show-network-configuration", 0, 0, showNetworkConfigurationSubcommand},
+	{"update-network-configuration", 0, 0,
+		updateNetworkConfigurationSubcommand},
 	{"write-netboot-files", 2, 2, writeNetbootFilesSubcommand},
+}
+
+func loadCerts() error {
+	err := setupclient.SetupTls(false)
+	if err == nil {
+		return nil
+	}
+	if !os.IsNotExist(err) {
+		return err
+	}
+	if os.Geteuid() != 0 {
+		return err
+	}
+	cert, e := tls.LoadX509KeyPair("/etc/ssl/hypervisor/cert.pem",
+		"/etc/ssl/hypervisor/key.pem")
+	if e != nil {
+		return err
+	}
+	srpc.RegisterClientTlsConfig(&tls.Config{
+		InsecureSkipVerify: true,
+		MinVersion:         tls.VersionTLS12,
+		Certificates:       []tls.Certificate{cert},
+	})
+	return nil
 }
 
 func main() {
@@ -121,7 +152,7 @@ func main() {
 		os.Exit(2)
 	}
 	logger := cmdlogger.New()
-	if err := setupclient.SetupTls(false); err != nil {
+	if err := loadCerts(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
