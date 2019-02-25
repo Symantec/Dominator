@@ -13,10 +13,25 @@ import (
 	proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
 
+type commonStateType struct {
+	hostnames    map[string]struct{}
+	ipAddresses  map[string]struct{}
+	macAddresses map[string]struct{}
+}
+
 type inheritingState struct {
 	owners    *ownersType
 	subnetIds map[string]struct{}
 	tags      tags.Tags
+}
+
+func checkMacAddressIsZero(macAddr proto.HardwareAddr) bool {
+	for _, b := range macAddr {
+		if b != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func cloneSet(set map[string]struct{}) map[string]struct{} {
@@ -33,7 +48,13 @@ func load(topologyDir string) (*Topology, error) {
 		reservedIpAddrs: make(map[string]struct{}),
 	}
 	directory, err := topology.readDirectory(topologyDir, "",
-		newInheritingState())
+		newInheritingState(),
+		&commonStateType{
+			hostnames:    make(map[string]struct{}),
+			ipAddresses:  make(map[string]struct{}),
+			macAddresses: make(map[string]struct{}),
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +135,72 @@ func loadTags(filename string) (tags.Tags, error) {
 	return loadedTags, nil
 }
 
+func (state *commonStateType) addHostname(name string) error {
+	if name == "" {
+		return nil
+	}
+	if _, ok := state.hostnames[name]; ok {
+		return fmt.Errorf("duplicate hostname: %s", name)
+	}
+	state.hostnames[name] = struct{}{}
+	return nil
+}
+
+func (state *commonStateType) addIpAddress(ipAddr net.IP) error {
+	if len(ipAddr) < 1 {
+		return nil
+	}
+	name := ipAddr.String()
+	if _, ok := state.ipAddresses[name]; ok {
+		return fmt.Errorf("duplicate IP address: %s", name)
+	}
+	state.ipAddresses[name] = struct{}{}
+	return nil
+}
+
+func (state *commonStateType) addMacAddress(macAddr proto.HardwareAddr) error {
+	if len(macAddr) < 1 {
+		return nil
+	}
+	if checkMacAddressIsZero(macAddr) {
+		return nil
+	}
+	name := macAddr.String()
+	if _, ok := state.macAddresses[name]; ok {
+		return fmt.Errorf("duplicate MAC address: %s", name)
+	}
+	state.macAddresses[name] = struct{}{}
+	return nil
+}
+
+func (state *commonStateType) addMachine(machine *proto.Machine) error {
+	if err := state.addNetworkEntry(machine.NetworkEntry); err != nil {
+		return err
+	}
+	if err := state.addNetworkEntry(machine.IPMI); err != nil {
+		return err
+	}
+	for _, entry := range machine.SecondaryNetworkEntries {
+		if err := state.addNetworkEntry(entry); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (state *commonStateType) addNetworkEntry(entry proto.NetworkEntry) error {
+	if err := state.addHostname(entry.Hostname); err != nil {
+		return err
+	}
+	if err := state.addIpAddress(entry.HostIpAddress); err != nil {
+		return err
+	}
+	if err := state.addMacAddress(entry.HostMacAddress); err != nil {
+		return err
+	}
+	return nil
+}
+
 func newInheritingState() *inheritingState {
 	return &inheritingState{
 		owners:    &ownersType{},
@@ -144,7 +231,7 @@ func (t *Topology) loadSubnets(directory *Directory, dirpath string,
 }
 
 func (t *Topology) readDirectory(topDir, dirname string,
-	state *inheritingState) (*Directory, error) {
+	state *inheritingState, commonState *commonStateType) (*Directory, error) {
 	directory := &Directory{
 		nameToDirectory:  make(map[string]*Directory),
 		path:             dirname,
@@ -160,7 +247,7 @@ func (t *Topology) readDirectory(topDir, dirname string,
 	if err := directory.loadTags(dirpath, state.tags); err != nil {
 		return nil, err
 	}
-	if err := t.loadMachines(directory, dirpath); err != nil {
+	if err := t.loadMachines(directory, dirpath, commonState); err != nil {
 		return nil, err
 	}
 	dirnames, err := fsutil.ReadDirnames(dirpath, false)
@@ -180,7 +267,8 @@ func (t *Topology) readDirectory(topDir, dirname string,
 			continue
 		}
 		state := state.copy()
-		if subdir, err := t.readDirectory(topDir, path, state); err != nil {
+		subdir, err := t.readDirectory(topDir, path, state, commonState)
+		if err != nil {
 			return nil, err
 		} else {
 			subdir.Name = name
@@ -308,13 +396,14 @@ func (to *ownersType) merge(from *ownersType) {
 	}
 }
 
-func (t *Topology) loadMachines(directory *Directory, dirname string) error {
+func (t *Topology) loadMachines(directory *Directory, dirname string,
+	commonState *commonStateType) error {
 	if err := directory.loadMachines(dirname); err != nil {
 		return err
 	}
 	for _, machine := range directory.Machines {
-		if _, ok := t.machineParents[machine.Hostname]; ok {
-			return fmt.Errorf("duplicate machine name: %s", machine.Hostname)
+		if err := commonState.addMachine(machine); err != nil {
+			return fmt.Errorf("error adding: %s: %s", machine.Hostname, err)
 		}
 		t.machineParents[machine.Hostname] = directory
 	}
