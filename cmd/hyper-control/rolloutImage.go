@@ -63,7 +63,7 @@ func gitCommand(repositoryDirectory string, command ...string) ([]byte, error) {
 	cmd.Dir = repositoryDirectory
 	cmd.Stderr = os.Stderr
 	if output, err := cmd.Output(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error running git %v: %s", cmd.Args, err)
 	} else {
 		return output, nil
 	}
@@ -482,9 +482,14 @@ func (h *hypervisorType) upgrade(clientResource *srpc.ClientResource,
 	}
 	stopTime := time.Now().Add(time.Minute * 15)
 	updateCompleted := false
+	var lastError string
 	for ; time.Until(stopTime) > 0; cpuSharer.Sleep(time.Second) {
-		if syncedImage, err := h.waitLastImageName(cpuSharer); err != nil {
-			return err
+		if syncedImage, err := h.getLastImageName(cpuSharer); err != nil {
+			if lastError != err.Error() {
+				h.logger.Debugln(0, err)
+			}
+			lastError = err.Error()
+			continue
 		} else if syncedImage == imageName {
 			updateCompleted = true
 			break
