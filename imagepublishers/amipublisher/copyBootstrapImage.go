@@ -38,8 +38,8 @@ func copyBootstrapImage(streamName string, targets awsutil.TargetList,
 	instanceType string, sshKeyName string, logger log.Logger) error {
 	imageSearchTags := libtags.Tags{"Name": streamName}
 	type resultType struct {
-		targetResult
-		error error
+		targetResult *targetResult
+		error        error
 	}
 	resultsChannel := make(chan *resultType, 1)
 	numTargets, err := awsutil.ForEachTarget(targets, skipList,
@@ -62,7 +62,7 @@ func copyBootstrapImage(streamName string, targets awsutil.TargetList,
 				err = result.error
 			}
 		} else {
-			target := &result.targetResult
+			target := result.targetResult
 			targetResults = append(targetResults, target)
 			if target.client != nil {
 				if stream, ok := target.status.ImageStreams[streamName]; ok {
@@ -114,7 +114,7 @@ func copyBootstrapImage(streamName string, targets awsutil.TargetList,
 
 func probeTarget(awsService *ec2.EC2, streamName string,
 	imageSearchTags libtags.Tags, unpackerName string, logger log.Logger) (
-	targetResult, error) {
+	*targetResult, error) {
 	var result targetResult
 	instance, client, err := getWorkingUnpacker(awsService, unpackerName,
 		logger)
@@ -130,10 +130,10 @@ func probeTarget(awsService *ec2.EC2, streamName string,
 	image, err := findImage(awsService, imageSearchTags)
 	if err != nil {
 		logger.Println(err)
-		return result, err
+		return nil, err
 	}
 	result.image = image
-	return result, nil
+	return &result, nil
 }
 
 func (target *targetResult) bootstrap(streamName string,

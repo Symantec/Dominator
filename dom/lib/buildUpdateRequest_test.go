@@ -302,7 +302,7 @@ func testDataDirectory0() *filesystem.FileSystem {
 		},
 		DirectoryInode: filesystem.DirectoryInode{
 			EntryList: []*filesystem.DirectoryEntry{
-				&filesystem.DirectoryEntry{
+				{
 					Name:        "dir0",
 					InodeNumber: 1,
 				},
@@ -319,11 +319,11 @@ func testDataDirectory01() *filesystem.FileSystem {
 		},
 		DirectoryInode: filesystem.DirectoryInode{
 			EntryList: []*filesystem.DirectoryEntry{
-				&filesystem.DirectoryEntry{
+				{
 					Name:        "dir0",
 					InodeNumber: 1,
 				},
-				&filesystem.DirectoryEntry{
+				{
 					Name:        "dir1",
 					InodeNumber: 2,
 				},
@@ -339,7 +339,7 @@ func testDataDirectory2() *filesystem.FileSystem {
 		},
 		DirectoryInode: filesystem.DirectoryInode{
 			EntryList: []*filesystem.DirectoryEntry{
-				&filesystem.DirectoryEntry{
+				{
 					Name:        "dir2",
 					InodeNumber: 1,
 				},
@@ -355,7 +355,7 @@ func testDataFile0(uid uint32) *filesystem.FileSystem {
 		},
 		DirectoryInode: filesystem.DirectoryInode{
 			EntryList: []*filesystem.DirectoryEntry{
-				&filesystem.DirectoryEntry{
+				{
 					Name:        "file0",
 					InodeNumber: 1,
 				},
@@ -371,7 +371,7 @@ func testDataFile1(uid uint32) *filesystem.FileSystem {
 		},
 		DirectoryInode: filesystem.DirectoryInode{
 			EntryList: []*filesystem.DirectoryEntry{
-				&filesystem.DirectoryEntry{
+				{
 					Name:        "file1",
 					InodeNumber: 1,
 				},
@@ -388,11 +388,11 @@ func testDataDuplicateFiles() *filesystem.FileSystem {
 		},
 		DirectoryInode: filesystem.DirectoryInode{
 			EntryList: []*filesystem.DirectoryEntry{
-				&filesystem.DirectoryEntry{
+				{
 					Name:        "file1",
 					InodeNumber: 1,
 				},
-				&filesystem.DirectoryEntry{
+				{
 					Name:        "file2",
 					InodeNumber: 2,
 				},

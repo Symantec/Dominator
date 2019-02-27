@@ -71,7 +71,6 @@ func doTraceMetadata(client *srpc.Client, ipAddr net.IP,
 			logger.Print(line)
 		}
 	}
-	return nil
 }
 
 func maybeWatchVm(client *srpc.Client, hypervisor string, ipAddr net.IP,

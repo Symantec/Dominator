@@ -41,5 +41,4 @@ func newDialer(proxy string) (Dialer, error) {
 			return nil, errorUnsupportedProxy
 		}
 	}
-	return nil, nil
 }

@@ -112,5 +112,4 @@ func watchTimeout(channel <-chan io.ReadCloser, timeout time.Duration) (
 	case <-time.After(timeout):
 		return nil, errorTimeout
 	}
-	panic("impossible")
 }

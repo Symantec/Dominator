@@ -260,7 +260,6 @@ func (sub *Sub) processFileUpdates() bool {
 			return haveUpdates
 		}
 	}
-	return haveUpdates
 }
 
 func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {

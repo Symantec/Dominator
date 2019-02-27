@@ -100,7 +100,6 @@ func (decoderData *decoderData) addHeader(tarReader *tar.Reader, hasher Hasher,
 		return errors.New(fmt.Sprintf("Unsupported file type: %v",
 			header.Typeflag))
 	}
-	return nil
 }
 
 func (decoderData *decoderData) addRegularFile(tarReader *tar.Reader,

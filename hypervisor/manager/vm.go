@@ -146,7 +146,7 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest,
 	if req.MilliCPUs < 1 {
 		return nil, errors.New("no CPUs specified")
 	}
-	subnetIDs := map[string]struct{}{req.SubnetId: struct{}{}}
+	subnetIDs := map[string]struct{}{req.SubnetId: {}}
 	for _, subnetId := range req.SecondarySubnetIDs {
 		if subnetId == "" {
 			return nil,
@@ -982,7 +982,7 @@ func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 		manager:          m,
 		dirname:          path.Join(m.StateDir, "VMs", ipAddress),
 		ipAddress:        ipAddress,
-		ownerUsers:       map[string]struct{}{authInfo.Username: struct{}{}},
+		ownerUsers:       map[string]struct{}{authInfo.Username: {}},
 		logger:           prefixlogger.New(ipAddress+": ", m.Logger),
 		metadataChannels: make(map[chan<- string]struct{}),
 	}
@@ -1814,7 +1814,6 @@ func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	default:
 		return false, errors.New("unknown state: " + vm.State.String())
 	}
-	return false, nil
 }
 
 func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
