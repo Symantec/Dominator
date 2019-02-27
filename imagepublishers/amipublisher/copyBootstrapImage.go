@@ -38,8 +38,8 @@ func copyBootstrapImage(streamName string, targets awsutil.TargetList,
 	instanceType string, sshKeyName string, logger log.Logger) error {
 	imageSearchTags := libtags.Tags{"Name": streamName}
 	type resultType struct {
-		targetResult
-		error error
+		targetResult *targetResult
+		error        error
 	}
 	resultsChannel := make(chan *resultType, 1)
 	numTargets, err := awsutil.ForEachTarget(targets, skipList,
@@ -49,7 +49,7 @@ func copyBootstrapImage(streamName string, targets awsutil.TargetList,
 			result.awsService = awsService
 			result.region = region
 			result.logger = logger
-			resultsChannel <- &resultType{targetResult: result, error: err}
+			resultsChannel <- &resultType{targetResult: &result, error: err}
 		},
 		logger)
 	// Collect results.
@@ -62,7 +62,7 @@ func copyBootstrapImage(streamName string, targets awsutil.TargetList,
 				err = result.error
 			}
 		} else {
-			target := &result.targetResult
+			target := result.targetResult
 			targetResults = append(targetResults, target)
 			if target.client != nil {
 				if stream, ok := target.status.ImageStreams[streamName]; ok {

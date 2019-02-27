@@ -76,7 +76,7 @@ func (fsh *FileSystemHistory) ScanCount() uint64 {
 	return fsh.scanCount
 }
 
-func (fsh FileSystemHistory) String() string {
+func (fsh *FileSystemHistory) String() string {
 	fsh.rwMutex.RLock()
 	defer fsh.rwMutex.RUnlock()
 	return fmt.Sprintf("GenerationCount=%d\n", fsh.generationCount)
