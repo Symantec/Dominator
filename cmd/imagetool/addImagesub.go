@@ -78,7 +78,7 @@ func copyMissingObjects(fs *filesystem.FileSystem, imageSClient *srpc.Client,
 	objectClient *objectclient.ObjectClient, subName string) error {
 	// Check to see which objects are in the objectserver.
 	hashes := make([]hash.Hash, 0, fs.NumRegularInodes)
-	for hash, _ := range fs.HashToInodesTable() {
+	for hash := range fs.HashToInodesTable() {
 		hashes = append(hashes, hash)
 	}
 	objectSizes, err := objectClient.CheckObjects(hashes)
