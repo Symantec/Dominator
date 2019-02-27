@@ -49,7 +49,7 @@ func copyBootstrapImage(streamName string, targets awsutil.TargetList,
 			result.awsService = awsService
 			result.region = region
 			result.logger = logger
-			resultsChannel <- &resultType{targetResult: &result, error: err}
+			resultsChannel <- &resultType{targetResult: result, error: err}
 		},
 		logger)
 	// Collect results.
@@ -114,7 +114,7 @@ func copyBootstrapImage(streamName string, targets awsutil.TargetList,
 
 func probeTarget(awsService *ec2.EC2, streamName string,
 	imageSearchTags libtags.Tags, unpackerName string, logger log.Logger) (
-	targetResult, error) {
+	*targetResult, error) {
 	var result targetResult
 	instance, client, err := getWorkingUnpacker(awsService, unpackerName,
 		logger)
@@ -130,10 +130,10 @@ func probeTarget(awsService *ec2.EC2, streamName string,
 	image, err := findImage(awsService, imageSearchTags)
 	if err != nil {
 		logger.Println(err)
-		return result, err
+		return nil, err
 	}
 	result.image = image
-	return result, nil
+	return &result, nil
 }
 
 func (target *targetResult) bootstrap(streamName string,
