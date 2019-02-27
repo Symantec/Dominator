@@ -82,5 +82,4 @@ func installerShell(hostname string, logger log.DebugLogger) error {
 			}
 		}
 	}
-	return nil
 }

@@ -1814,7 +1814,6 @@ func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	default:
 		return false, errors.New("unknown state: " + vm.State.String())
 	}
-	return false, nil
 }
 
 func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation,

@@ -55,5 +55,5 @@ func (or *ObjectsReader) nextObject() (uint64, io.ReadCloser, error) {
 	}
 	size := or.sizes[or.nextIndex]
 	return size,
-		ioutil.NopCloser(&io.LimitedReader{or.reader, int64(size)}), nil
+		ioutil.NopCloser(&io.LimitedReader{R: or.reader, N: int64(size)}), nil
 }

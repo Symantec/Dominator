@@ -70,7 +70,6 @@ func getUpdatesOnFleetManager(fleetManager string,
 			return err
 		}
 	}
-	return nil
 }
 
 func getUpdatesOnHypervisor(hypervisor string, logger log.DebugLogger) error {
@@ -94,5 +93,4 @@ func getUpdatesOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 			return err
 		}
 	}
-	return nil
 }

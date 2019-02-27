@@ -277,7 +277,6 @@ func (l *Listener) connect(network, serverAddress string, timeout time.Duration,
 	// Wait for other side to consume.
 	if _, err := rawConn.Read(buffer); err != nil {
 		return nil, errors.New("error reading sync byte: " + err.Error())
-		return nil, err
 	}
 	logger.Println("remote has consumed, injecting to local listener")
 	l.remember(rawConn)

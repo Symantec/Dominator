@@ -101,7 +101,7 @@ func main() {
 			logger.Fatalln(err)
 		}
 	}
-	rlim := syscall.Rlimit{*fdLimit, *fdLimit}
+	rlim := syscall.Rlimit{Cur: *fdLimit, Max: *fdLimit}
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot set FD limit\t%s\n", err)
 		os.Exit(1)
