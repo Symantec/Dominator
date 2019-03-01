@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
 )
 
@@ -37,7 +38,8 @@ func (b *Builder) rebuildImages(minInterval time.Duration) {
 			continue
 		}
 		for _, streamName := range b.listStreamsToAutoRebuild() {
-			_, err := b.build(client, streamName, minInterval*2, "", 0, nil)
+			_, _, err := b.build(client, streamName, minInterval*2, "", 0, true,
+				nil)
 			if err != nil {
 				b.logger.Printf("Error building image: %s: %s\n",
 					streamName, err)
@@ -49,24 +51,24 @@ func (b *Builder) rebuildImages(minInterval time.Duration) {
 
 func (b *Builder) buildImage(streamName string,
 	expiresIn time.Duration, gitBranch string, maxSourceAge time.Duration,
-	logWriter io.Writer) (string, error) {
+	uploadImage bool, logWriter io.Writer) (*image.Image, string, error) {
 	client, err := srpc.DialHTTP("tcp", b.imageServerAddress, 0)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 	defer client.Close()
-	name, err := b.build(client, streamName, expiresIn, gitBranch, maxSourceAge,
-		logWriter)
-	return name, err
+	img, name, err := b.build(client, streamName, expiresIn, gitBranch,
+		maxSourceAge, uploadImage, logWriter)
+	return img, name, err
 }
 
 func (b *Builder) build(client *srpc.Client, streamName string,
 	expiresIn time.Duration, gitBranch string, maxSourceAge time.Duration,
-	logWriter io.Writer) (string, error) {
+	uploadImage bool, logWriter io.Writer) (*image.Image, string, error) {
 	startTime := time.Now()
 	builder := b.getImageBuilderWithReload(streamName)
 	if builder == nil {
-		return "", errors.New("unknown stream: " + streamName)
+		return nil, "", errors.New("unknown stream: " + streamName)
 	}
 	b.logger.Printf("Building new image for stream: %s\n", streamName)
 	buildLogBuffer := &bytes.Buffer{}
@@ -82,8 +84,8 @@ func (b *Builder) build(client *srpc.Client, streamName string,
 			writer: io.MultiWriter(buildLogBuffer, logWriter),
 		}
 	}
-	name, err := builder.build(b, client, streamName, expiresIn, gitBranch,
-		maxSourceAge, buildLog)
+	img, name, err := builder.build(b, client, streamName, expiresIn, gitBranch,
+		maxSourceAge, uploadImage, buildLog)
 	finishTime := time.Now()
 	buildDuration := finishTime.Sub(startTime)
 	if err == nil {
@@ -98,7 +100,7 @@ func (b *Builder) build(client *srpc.Client, streamName string,
 	delete(b.currentBuildLogs, streamName)
 	b.lastBuildResults[streamName] = buildResultType{
 		name, startTime, finishTime, buildLog.Bytes(), err}
-	return name, err
+	return img, name, err
 }
 
 func (b *Builder) getImageBuilder(streamName string) imageBuilder {

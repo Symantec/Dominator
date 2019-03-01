@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/triggers"
@@ -20,7 +21,7 @@ type buildLogger interface {
 type imageBuilder interface {
 	build(b *Builder, client *srpc.Client, streamName string,
 		expiresIn time.Duration, gitBranch string, maxSourceAge time.Duration,
-		buildLog buildLogger) (string, error)
+		uploadImage bool, buildLog buildLogger) (*image.Image, string, error)
 }
 
 type bootstrapStream struct {
@@ -117,10 +118,10 @@ func Load(confUrl, variablesFile, stateDir, imageServerAddress string,
 }
 
 func (b *Builder) BuildImage(streamName string, expiresIn time.Duration,
-	gitBranch string, maxSourceAge time.Duration,
-	logWriter io.Writer) (string, error) {
+	gitBranch string, maxSourceAge time.Duration, uploadImage bool,
+	logWriter io.Writer) (*image.Image, string, error) {
 	return b.buildImage(streamName, expiresIn, gitBranch, maxSourceAge,
-		logWriter)
+		uploadImage, logWriter)
 }
 
 func (b *Builder) GetCurrentBuildLog(streamName string) ([]byte, error) {
@@ -146,8 +147,9 @@ func (b *Builder) WriteHtml(writer io.Writer) {
 func BuildImageFromManifest(client *srpc.Client, manifestDir, streamName string,
 	expiresIn time.Duration, buildLog buildLogger, logger log.Logger) (
 	string, error) {
-	return buildImageFromManifest(client, manifestDir, streamName, expiresIn,
-		unpackImageSimple, buildLog)
+	_, name, err := buildImageFromManifest(client, manifestDir, streamName,
+		expiresIn, true, unpackImageSimple, buildLog)
+	return name, err
 }
 
 func BuildTreeFromManifest(client *srpc.Client, manifestDir string,

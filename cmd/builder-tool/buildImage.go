@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/gob"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
+	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/imaginator"
@@ -34,6 +37,9 @@ func buildImage(args []string, logger log.Logger) error {
 	if len(args) > 1 {
 		request.GitBranch = args[1]
 	}
+	if *imageFilename != "" {
+		request.ReturnImage = true
+	}
 	logBuffer := &bytes.Buffer{}
 	var logWriter io.Writer
 	if *alwaysShowBuildLog {
@@ -53,6 +59,17 @@ func buildImage(args []string, logger log.Logger) error {
 	}
 	if *alwaysShowBuildLog {
 		fmt.Fprintln(os.Stderr, "End of build log ============================")
+	}
+	if *imageFilename != "" {
+		if reply.Image == nil {
+			if reply.ImageName == "" {
+				return errors.New("no image returned: upgrade the Imaginator")
+			}
+			return fmt.Errorf(
+				"image: %s uploaded, not returned: upgrade the Imaginator",
+				reply.ImageName)
+		}
+		return writeImage(reply.Image, *imageFilename)
 	}
 	fmt.Println(reply.ImageName)
 	return nil
@@ -90,9 +107,21 @@ func callBuildImage(client *srpc.Client, request proto.BuildImageRequest,
 		}
 		logWriter.Write(reply.BuildLog)
 		reply.BuildLog = nil
-		if reply.ImageName != "" {
+		if reply.Image != nil || reply.ImageName != "" {
 			*response = reply
 			return nil
 		}
 	}
+}
+
+func writeImage(img *image.Image, filename string) error {
+	file, err := fsutil.CreateRenamingWriter(filename, fsutil.PublicFilePerms)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+	encoder := gob.NewEncoder(writer)
+	return encoder.Encode(img)
 }
