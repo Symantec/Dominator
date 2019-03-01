@@ -40,19 +40,19 @@ func (h *hasher) Hash(reader io.Reader, length uint64) (
 func addImage(client *srpc.Client, streamName, dirname string,
 	scanFilter *filter.Filter, computedFilesList []util.ComputedFile,
 	imageFilter *filter.Filter,
-	trig *triggers.Triggers, expiresIn time.Duration,
-	buildLog buildLogger) (string, error) {
+	trig *triggers.Triggers, expiresIn time.Duration, uploadImage bool,
+	buildLog buildLogger) (*image.Image, string, error) {
 	packages, err := listPackages(dirname)
 	if err != nil {
-		return "", fmt.Errorf("error listing packages: %s", err)
+		return nil, "", fmt.Errorf("error listing packages: %s", err)
 	}
 	buildStartTime := time.Now()
 	fs, err := buildFileSystem(client, dirname, scanFilter)
 	if err != nil {
-		return "", fmt.Errorf("error building file-system: %s", err)
+		return nil, "", fmt.Errorf("error building file-system: %s", err)
 	}
 	if err := util.SpliceComputedFiles(fs, computedFilesList); err != nil {
-		return "", fmt.Errorf("error splicing computed files: %s", err)
+		return nil, "", fmt.Errorf("error splicing computed files: %s", err)
 	}
 	fs.ComputeTotalDataBytes()
 	duration := time.Since(buildStartTime)
@@ -62,7 +62,7 @@ func addImage(client *srpc.Client, streamName, dirname string,
 		len(fs.InodeTable), format.FormatBytes(fs.TotalDataBytes),
 		format.Duration(duration), format.FormatBytes(speed))
 	if _, img, err := getLatestImage(client, streamName, buildLog); err != nil {
-		return "", fmt.Errorf("error getting latest image: %s", err)
+		return nil, "", fmt.Errorf("error getting latest image: %s", err)
 	} else if img != nil {
 		util.CopyMtimes(img.FileSystem, fs)
 	}
@@ -72,10 +72,10 @@ func addImage(client *srpc.Client, streamName, dirname string,
 	hashVal, _, err := objClient.AddObject(logReader, uint64(logReader.Len()),
 		nil)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 	if err := objClient.Close(); err != nil {
-		return "", err
+		return nil, "", err
 	}
 	img := &image.Image{
 		BuildLog:   &image.Annotation{Object: &hashVal},
@@ -88,13 +88,16 @@ func addImage(client *srpc.Client, streamName, dirname string,
 		img.ExpiresAt = time.Now().Add(expiresIn)
 	}
 	if err := img.Verify(); err != nil {
-		return "", err
+		return nil, "", err
+	}
+	if !uploadImage {
+		return img, "", nil
 	}
 	name := path.Join(streamName, time.Now().Format(timeFormat))
 	if err := imageclient.AddImage(client, name, img); err != nil {
-		return "", errors.New("remote error: " + err.Error())
+		return nil, "", errors.New("remote error: " + err.Error())
 	}
-	return name, nil
+	return img, name, nil
 }
 
 func listPackages(rootDir string) ([]image.Package, error) {
