@@ -26,6 +26,8 @@ var (
 		"Port number of image build server")
 	expiresIn = flag.Duration("expiresIn", time.Hour,
 		"How long before the image expires (auto deletes)")
+	imageFilename = flag.String("imageFilename", "",
+		"Name of file to write image to")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
 		"Hostname of image server")
 	imageServerPortNum = flag.Uint("imageServerPortNum",
