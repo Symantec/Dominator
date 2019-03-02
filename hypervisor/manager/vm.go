@@ -2167,6 +2167,8 @@ func (vm *vmInfoType) processMonitorResponses(monitorSock net.Conn) {
 	io.Copy(ioutil.Discard, monitorSock) // Read all and drop.
 	vm.mutex.Lock()
 	defer vm.mutex.Unlock()
+	close(vm.commandChannel)
+	vm.commandChannel = nil
 	switch vm.State {
 	case proto.StateStarting:
 		return
@@ -2190,7 +2192,6 @@ func (vm *vmInfoType) processMonitorResponses(monitorSock net.Conn) {
 	default:
 		vm.logger.Println("unknown state: " + vm.State.String())
 	}
-	close(vm.commandChannel)
 }
 
 func (vm *vmInfoType) rootLabel() string {
