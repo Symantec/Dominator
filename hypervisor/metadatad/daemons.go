@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
@@ -20,6 +21,12 @@ type statusType struct {
 	namespaceFd int
 	threadId    int
 	err         error
+}
+
+func httpServe(listener net.Listener, handler http.Handler,
+	idleTimeout time.Duration) error {
+	httpServer := &http.Server{Handler: handler, IdleTimeout: idleTimeout}
+	return httpServer.Serve(listener)
 }
 
 func (s *server) startServer() error {
@@ -116,8 +123,8 @@ func (s *server) createNamespace(startChannel <-chan struct{},
 	}
 	statusChannel <- statusType{namespaceFd: namespaceFd, threadId: threadId}
 	logger.Printf("starting metadata server in thread: %d\n", threadId)
-	go http.Serve(hypervisorListener, nil)
-	http.Serve(metadataListener, s)
+	go httpServe(hypervisorListener, nil, time.Second*5)
+	httpServe(metadataListener, s, time.Second*5)
 }
 
 func createInterface(bridge net.Interface, threadId int,
