@@ -479,7 +479,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 	ownerUsers := make([]string, 1, len(request.OwnerUsers)+1)
 	ownerUsers[0] = conn.Username()
 	if ownerUsers[0] == "" {
-		return errors.New("no authentication data")
+		return sendError(conn, encoder, errors.New("no authentication data"))
 	}
 	ownerUsers = append(ownerUsers, request.OwnerUsers...)
 	vm, err := m.allocateVm(request, conn.GetAuthInformation())
