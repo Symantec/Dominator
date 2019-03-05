@@ -21,8 +21,7 @@ func (t *srpcType) ProbeVmPort(conn *srpc.Conn,
 	ok, err := probeVmPort(
 		fmt.Sprintf("%s:%d", request.IpAddress, request.PortNumber),
 		request.Timeout)
-	response := hypervisor.ProbeVmPortResponse{ok, errors.ErrorToString(err)}
-	*reply = response
+	*reply = hypervisor.ProbeVmPortResponse{ok, errors.ErrorToString(err)}
 	return nil
 }
 
@@ -48,9 +47,10 @@ func probeVmPort(addr string, timeout time.Duration) (bool, error) {
 
 func probeOnce(addr string, okChannel chan<- struct{}) {
 	if conn, err := net.DialTimeout("tcp", addr, time.Second); err == nil {
+		conn.Close()
 		select {
 		case okChannel <- struct{}{}:
+		default:
 		}
-		conn.Close()
 	}
 }

@@ -479,7 +479,7 @@ func (m *Manager) createVm(conn *srpc.Conn, decoder srpc.Decoder,
 	ownerUsers := make([]string, 1, len(request.OwnerUsers)+1)
 	ownerUsers[0] = conn.Username()
 	if ownerUsers[0] == "" {
-		return errors.New("no authentication data")
+		return sendError(conn, encoder, errors.New("no authentication data"))
 	}
 	ownerUsers = append(ownerUsers, request.OwnerUsers...)
 	vm, err := m.allocateVm(request, conn.GetAuthInformation())
@@ -2167,6 +2167,8 @@ func (vm *vmInfoType) processMonitorResponses(monitorSock net.Conn) {
 	io.Copy(ioutil.Discard, monitorSock) // Read all and drop.
 	vm.mutex.Lock()
 	defer vm.mutex.Unlock()
+	close(vm.commandChannel)
+	vm.commandChannel = nil
 	switch vm.State {
 	case proto.StateStarting:
 		return
@@ -2190,7 +2192,6 @@ func (vm *vmInfoType) processMonitorResponses(monitorSock net.Conn) {
 	default:
 		vm.logger.Println("unknown state: " + vm.State.String())
 	}
-	close(vm.commandChannel)
 }
 
 func (vm *vmInfoType) rootLabel() string {

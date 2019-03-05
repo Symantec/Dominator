@@ -46,6 +46,7 @@ func saveObject(filename string,
 	if size, reader, err := objectsReader.NextObject(); err != nil {
 		return err
 	} else {
+		defer reader.Close()
 		err := fsutil.CopyToFile(filename, privateFilePerms, reader, size)
 		if err == nil {
 			return nil
@@ -212,7 +213,7 @@ func timeoutFunction(f func(), timeout time.Duration) {
 		f()
 		return
 	}
-	completionChannel := make(chan struct{})
+	completionChannel := make(chan struct{}, 1)
 	go func() {
 		f()
 		completionChannel <- struct{}{}

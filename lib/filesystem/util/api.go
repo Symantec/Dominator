@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"text/template"
 
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/log"
@@ -19,7 +18,6 @@ type BootInfoType struct {
 	KernelImageDirent *filesystem.DirectoryEntry
 	KernelImageFile   string
 	KernelOptions     string
-	grubTemplate      *template.Template
 }
 
 type ComputedFile struct {
