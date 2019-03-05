@@ -34,6 +34,8 @@ const (
 var (
 	mutex               sync.Mutex
 	defaultMkfsFeatures map[string]struct{} // Key: feature name.
+	grubTemplate        = template.Must(template.New("grub").Parse(
+		grubTemplateString))
 )
 
 func checkIfPartition(device string) (bool, error) {
@@ -381,11 +383,6 @@ func getBootInfo(fs *filesystem.FileSystem, rootLabel string,
 			bootInfo.KernelImageFile = "/boot/" + dirent.Name
 		}
 	}
-	bootInfo.grubTemplate, err = template.New("grub").Parse(
-		grubTemplateString)
-	if err != nil {
-		return nil, err
-	}
 	return bootInfo, nil
 }
 
@@ -436,7 +433,7 @@ func (bootInfo *BootInfoType) writeGrubConfig(filename string) error {
 		return fmt.Errorf("error creating GRUB config file: %s", err)
 	}
 	defer file.Close()
-	if err := bootInfo.grubTemplate.Execute(file, bootInfo); err != nil {
+	if err := grubTemplate.Execute(file, bootInfo); err != nil {
 		return err
 	}
 	return file.Close()
