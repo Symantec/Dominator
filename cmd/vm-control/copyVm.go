@@ -125,7 +125,8 @@ func copyVmFromHypervisor(sourceHypervisorAddress string, vmIP net.IP,
 	if err := callCopyVm(destHypervisor, request, &reply, logger); err != nil {
 		return err
 	}
-	if err := acknowledgeVm(destHypervisor, reply.IpAddress); err != nil {
+	err = hyperclient.AcknowledgeVm(destHypervisor, reply.IpAddress)
+	if err != nil {
 		return fmt.Errorf("error acknowledging VM: %s", err)
 	}
 	fmt.Println(reply.IpAddress)

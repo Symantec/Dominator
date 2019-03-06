@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
 	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -29,12 +30,6 @@ func createVmSubcommand(args []string, logger log.DebugLogger) {
 		os.Exit(1)
 	}
 	os.Exit(0)
-}
-
-func acknowledgeVm(client *srpc.Client, ipAddress net.IP) error {
-	request := hyper_proto.AcknowledgeVmRequest{ipAddress}
-	var reply hyper_proto.AcknowledgeVmResponse
-	return client.RequestReply("Hypervisor.AcknowledgeVm", request, &reply)
 }
 
 func callCreateVm(client *srpc.Client, request hyper_proto.CreateVmRequest,
@@ -201,7 +196,7 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 	if err != nil {
 		return err
 	}
-	if err := acknowledgeVm(client, reply.IpAddress); err != nil {
+	if err := hyperclient.AcknowledgeVm(client, reply.IpAddress); err != nil {
 		return fmt.Errorf("error acknowledging VM: %s", err)
 	}
 	fmt.Println(reply.IpAddress)
