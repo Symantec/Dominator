@@ -1,12 +1,54 @@
 package client
 
 import (
+	"encoding/gob"
+	"fmt"
 	"net"
 
 	"github.com/Symantec/Dominator/lib/errors"
+	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
+
+func acknowledgeVm(client *srpc.Client, ipAddress net.IP) error {
+	request := proto.AcknowledgeVmRequest{ipAddress}
+	var reply proto.AcknowledgeVmResponse
+	return client.RequestReply("Hypervisor.AcknowledgeVm", request, &reply)
+}
+
+func createVm(client *srpc.Client, request proto.CreateVmRequest,
+	reply *proto.CreateVmResponse, logger log.DebugLogger) error {
+	if conn, err := client.Call("Hypervisor.CreateVm"); err != nil {
+		return err
+	} else {
+		defer conn.Close()
+		encoder := gob.NewEncoder(conn)
+		if err := encoder.Encode(request); err != nil {
+			return err
+		}
+		if err := conn.Flush(); err != nil {
+			return err
+		}
+		decoder := gob.NewDecoder(conn)
+		for {
+			var response proto.CreateVmResponse
+			if err := decoder.Decode(&response); err != nil {
+				return fmt.Errorf("error decoding: %s", err)
+			}
+			if response.Error != "" {
+				return errors.New(response.Error)
+			}
+			if response.ProgressMessage != "" {
+				logger.Debugln(0, response.ProgressMessage)
+			}
+			if response.Final {
+				*reply = response
+				return nil
+			}
+		}
+	}
+}
 
 func deleteVmVolume(client *srpc.Client, ipAddr net.IP, accessToken []byte,
 	volumeIndex uint) error {
