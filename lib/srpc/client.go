@@ -106,7 +106,7 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 				tlsConn.Close()
 				return nil, err
 			}
-			return newClient(tlsConn, true), nil
+			return newClient(unsecuredConn, tlsConn, true), nil
 		} else if err == ErrorNoSrpcEndpoint &&
 			tlsConfig != nil &&
 			tlsConfig.InsecureSkipVerify {
@@ -119,13 +119,13 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 				unsecuredConn.Close()
 				return nil, err
 			}
-			return newClient(unsecuredConn, false), nil
+			return newClient(unsecuredConn, unsecuredConn, false), nil
 		} else {
 			return nil, err
 		}
 	}
 	if tlsConfig == nil {
-		return newClient(unsecuredConn, false), nil
+		return newClient(unsecuredConn, unsecuredConn, false), nil
 	}
 	tlsConn := tls.Client(unsecuredConn, tlsConfig)
 	if err := tlsConn.Handshake(); err != nil {
@@ -135,7 +135,7 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 		}
 		return nil, err
 	}
-	return newClient(tlsConn, true), nil
+	return newClient(unsecuredConn, tlsConn, true), nil
 }
 
 func doHTTPConnect(conn net.Conn, path string) error {
@@ -161,15 +161,19 @@ func doHTTPConnect(conn net.Conn, path string) error {
 	return nil
 }
 
-func newClient(conn net.Conn, isEncrypted bool) *Client {
+func newClient(rawConn, dataConn net.Conn, isEncrypted bool) *Client {
 	clientMetricsMutex.Lock()
 	numOpenClientConnections++
 	clientMetricsMutex.Unlock()
-	return &Client{
-		conn:        conn,
+	client := &Client{
+		conn:        dataConn,
 		isEncrypted: isEncrypted,
-		bufrw: bufio.NewReadWriter(bufio.NewReader(conn),
-			bufio.NewWriter(conn))}
+		bufrw: bufio.NewReadWriter(bufio.NewReader(dataConn),
+			bufio.NewWriter(dataConn))}
+	if tcpConn, ok := rawConn.(libnet.TCPConn); ok {
+		client.tcpConn = tcpConn
+	}
+	return client
 }
 
 func (client *Client) call(serviceMethod string) (*Conn, error) {
