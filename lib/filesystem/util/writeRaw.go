@@ -502,11 +502,6 @@ func writeToFile(fs *filesystem.FileSystem,
 	if err := os.Truncate(tmpFilename, int64(imageSize)); err != nil {
 		return err
 	}
-	if options.AllocateBlocks {
-		if err := fsutil.Fallocate(tmpFilename, imageSize); err != nil {
-			return err
-		}
-	}
 	if err := mbr.WriteDefault(tmpFilename, tableType); err != nil {
 		return err
 	}
@@ -522,6 +517,11 @@ func writeToFile(fs *filesystem.FileSystem,
 	defer exec.Command("losetup", "-d", loopDevice).Run()
 	err = makeAndWriteRoot(fs, objectsGetter, loopDevice, loopDevice+"p1",
 		options, logger)
+	if options.AllocateBlocks { // mkfs discards blocks, so do this after.
+		if err := fsutil.Fallocate(tmpFilename, imageSize); err != nil {
+			return err
+		}
+	}
 	if err != nil {
 		return err
 	}
