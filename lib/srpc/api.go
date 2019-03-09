@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	libnet "github.com/Symantec/Dominator/lib/net"
 	"github.com/Symantec/Dominator/lib/net/proxy"
 	"github.com/Symantec/Dominator/lib/resourcepool"
 )
@@ -235,6 +236,7 @@ func (cr *ClientResource) ScheduleClose() {
 
 type Client struct {
 	conn        net.Conn
+	tcpConn     libnet.TCPConn // The underlying raw connection.
 	isEncrypted bool
 	resource    *ClientResource
 	bufrw       *bufio.ReadWriter
@@ -318,6 +320,17 @@ func (client *Client) Ping() error {
 // operation and is commonly used in some programming patterns).
 func (client *Client) Put() {
 	client.put()
+}
+
+// SetKeepAlive sets whether the operating system should send keepalive messages
+// on the connection.
+func (client *Client) SetKeepAlive(keepalive bool) error {
+	return client.tcpConn.SetKeepAlive(keepalive)
+}
+
+// SetKeepAlivePeriod sets the period between keepalive messages.
+func (client *Client) SetKeepAlivePeriod(d time.Duration) error {
+	return client.tcpConn.SetKeepAlivePeriod(d)
 }
 
 // RequestReply sends a request message to the named Service.Method function,
