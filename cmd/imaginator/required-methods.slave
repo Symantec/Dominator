@@ -1,8 +1,5 @@
-ImageServer.AddImage
 ImageServer.GetImage
 ImageServer.ListDirectories
 ImageServer.ListImages
-ImageServer.MakeDirectory
-Imaginator.BuildImage
 ObjectServer.AddObjects
 ObjectServer.GetObjects
