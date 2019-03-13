@@ -13,6 +13,7 @@ type BuildImageRequest struct {
 	MaxSourceAge   time.Duration
 	ReturnImage    bool
 	StreamBuildLog bool
+	Variables      map[string]string
 }
 
 type BuildImageResponse struct {
