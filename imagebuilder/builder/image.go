@@ -21,39 +21,41 @@ import (
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/triggers"
+	proto "github.com/Symantec/Dominator/proto/imaginator"
 )
 
 func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
-	streamName string, expiresIn time.Duration, gitBranch string,
-	maxSourceAge time.Duration, uploadImage bool, buildLog buildLogger) (
-	*image.Image, string, error) {
-	manifestDirectory, err := stream.getManifest(b, streamName,
-		gitBranch, buildLog)
+	request proto.BuildImageRequest, buildLog buildLogger) (
+	*image.Image, error) {
+	manifestDirectory, err := stream.getManifest(b, request.StreamName,
+		request.GitBranch, request.Variables, buildLog)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	defer os.RemoveAll(manifestDirectory)
-	img, name, err := buildImageFromManifest(client, streamName,
-		manifestDirectory, expiresIn, uploadImage,
+	img, err := buildImageFromManifest(client, manifestDirectory,
+		request,
 		func(client *srpc.Client, streamName, rootDir string,
 			buildLog buildLogger) (*sourceImageInfoType, error) {
-			return unpackImage(client, streamName, b, maxSourceAge, expiresIn,
-				rootDir, buildLog)
+			return unpackImage(client, streamName, b, request.MaxSourceAge,
+				request.ExpiresIn, rootDir, buildLog)
 		}, buildLog)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	return img, name, nil
+	return img, nil
 }
 
 func (stream *imageStreamType) getManifest(b *Builder, streamName string,
-	gitBranch string, buildLog io.Writer) (string, error) {
+	gitBranch string, variables map[string]string,
+	buildLog io.Writer) (string, error) {
 	if gitBranch == "" {
 		gitBranch = "master"
 	}
 	variableFunc := b.getVariableFunc(map[string]string{
 		"IMAGE_STREAM": streamName,
-	})
+	},
+		variables)
 	fmt.Fprintf(buildLog, "Cloning repository: %s branch: %s\n",
 		stream.ManifestUrl, gitBranch)
 	manifestRoot, err := makeTempDirectory("",
@@ -195,10 +197,9 @@ func runCommand(buildLog io.Writer, cwd string, args ...string) error {
 	return cmd.Run()
 }
 
-func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
-	expiresIn time.Duration, uploadImage bool,
-	unpackImageFunc unpackImageFunction,
-	buildLog buildLogger) (*image.Image, string, error) {
+func buildImageFromManifest(client *srpc.Client, manifestDir string,
+	request proto.BuildImageRequest, unpackImageFunc unpackImageFunction,
+	buildLog buildLogger) (*image.Image, error) {
 	// First load all the various manifest files (fail early on error).
 	computedFilesList, err := util.LoadComputedFiles(
 		path.Join(manifestDir, "computed-files.json"))
@@ -207,28 +208,27 @@ func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
 			path.Join(manifestDir, "computed-files"))
 	}
 	if err != nil && !os.IsNotExist(err) {
-		return nil, "", errors.New(
-			"error loading computed files: " + err.Error())
+		return nil, fmt.Errorf("error loading computed files: %s", err)
 	}
 	imageFilter, addFilter, err := loadFilter(manifestDir)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	imageTriggers, addTriggers, err := loadTriggers(manifestDir)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	rootDir, err := makeTempDirectory("",
-		strings.Replace(streamName, "/", "_", -1)+".root")
+		strings.Replace(request.StreamName, "/", "_", -1)+".root")
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	defer os.RemoveAll(rootDir)
 	fmt.Fprintf(buildLog, "Created image working directory: %s\n", rootDir)
 	manifest, err := unpackImageAndProcessManifest(client, manifestDir,
 		unpackImageFunc, rootDir, buildLog)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	if addFilter {
 		mergeableFilter := &filter.MergeableFilter{}
@@ -242,15 +242,22 @@ func buildImageFromManifest(client *srpc.Client, streamName, manifestDir string,
 		mergeableTriggers.Merge(imageTriggers)
 		imageTriggers = mergeableTriggers.ExportTriggers()
 	}
-	startTime := time.Now()
-	img, name, err := addImage(client, streamName, rootDir, manifest.filter,
-		computedFilesList, imageFilter, imageTriggers, expiresIn, uploadImage,
-		buildLog)
+	return packImage(client, request, rootDir, manifest.filter,
+		computedFilesList, imageFilter, imageTriggers, buildLog)
+}
+
+func buildImageFromManifestAndUpload(client *srpc.Client, manifestDir string,
+	request proto.BuildImageRequest, unpackImageFunc unpackImageFunction,
+	buildLog buildLogger) (*image.Image, string, error) {
+	img, err := buildImageFromManifest(client, manifestDir, request,
+		unpackImageFunc, buildLog)
 	if err != nil {
 		return nil, "", err
 	}
-	fmt.Fprintf(buildLog, "Uploaded: %s in %s\n", name,
-		format.Duration(time.Since(startTime)))
+	name, err := addImage(client, request, img)
+	if err != nil {
+		return nil, "", err
+	}
 	return img, name, nil
 }
 
@@ -329,8 +336,14 @@ func unpackImage(client *srpc.Client, streamName string, builder *Builder,
 		}
 		fmt.Fprintf(buildLog, "No source image: %s, attempting to build one\n",
 			streamName)
-		sourceImage, imageName, err = builder.build(client, streamName,
-			expiresIn, "master", maxSourceAge, true, buildLog)
+		sourceImage, imageName, err = builder.build(client,
+			proto.BuildImageRequest{
+				StreamName:   streamName,
+				ExpiresIn:    expiresIn,
+				GitBranch:    "master",
+				MaxSourceAge: maxSourceAge,
+			},
+			buildLog)
 		if err != nil {
 			return nil, err
 		}
@@ -342,8 +355,14 @@ func unpackImage(client *srpc.Client, streamName string, builder *Builder,
 		fmt.Fprintf(buildLog,
 			"Image: %s is too old, attempting to build a new one\n",
 			imageName)
-		sourceImage, imageName, err = builder.build(client, streamName,
-			expiresIn, "master", maxSourceAge, true, buildLog)
+		sourceImage, imageName, err = builder.build(client,
+			proto.BuildImageRequest{
+				StreamName:   streamName,
+				ExpiresIn:    expiresIn,
+				GitBranch:    "master",
+				MaxSourceAge: maxSourceAge,
+			},
+			buildLog)
 		if err != nil {
 			return nil, err
 		}

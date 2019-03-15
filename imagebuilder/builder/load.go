@@ -16,6 +16,7 @@ import (
 	"github.com/Symantec/Dominator/lib/configwatch"
 	libjson "github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/slavedriver"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/url/urlutil"
 )
@@ -30,8 +31,8 @@ func imageStreamsDecoder(reader io.Reader) (interface{}, error) {
 }
 
 func load(confUrl, variablesFile, stateDir, imageServerAddress string,
-	imageRebuildInterval time.Duration, logger log.DebugLogger) (
-	*Builder, error) {
+	imageRebuildInterval time.Duration, slaveDriver *slavedriver.SlaveDriver,
+	logger log.DebugLogger) (*Builder, error) {
 	err := syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, "")
 	if err != nil {
 		return nil, fmt.Errorf("error making mounts private: %s", err)
@@ -64,6 +65,7 @@ func load(confUrl, variablesFile, stateDir, imageServerAddress string,
 		imageStreamsUrl:           masterConfiguration.ImageStreamsUrl,
 		bootstrapStreams:          masterConfiguration.BootstrapStreams,
 		imageStreamsToAutoRebuild: imageStreamsToAutoRebuild,
+		slaveDriver:               slaveDriver,
 		currentBuildLogs:          make(map[string]*bytes.Buffer),
 		lastBuildResults:          make(map[string]buildResultType),
 		packagerTypes:             masterConfiguration.PackagerTypes,
