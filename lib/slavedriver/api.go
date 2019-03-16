@@ -16,13 +16,14 @@ type SlaveTrader interface {
 }
 
 type SlaveDriver struct {
-	options     SlaveDriverOptions
-	slaveTrader SlaveTrader
-	logger      log.DebugLogger
-	mutex       sync.Mutex // Lock everthing below (those can change).
-	busySlaves  map[*Slave]struct{}
-	idleSlaves  map[*Slave]struct{}
-	zombies     map[*Slave]struct{}
+	options         SlaveDriverOptions
+	logger          log.DebugLogger
+	rollCallTrigger chan<- struct{}
+	slaveTrader     SlaveTrader
+	mutex           sync.Mutex // Lock everthing below (those can change).
+	busySlaves      map[*Slave]struct{}
+	idleSlaves      map[*Slave]struct{}
+	zombies         map[*Slave]struct{}
 }
 
 type SlaveDriverOptions struct {
