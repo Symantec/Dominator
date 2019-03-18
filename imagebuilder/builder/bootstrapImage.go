@@ -30,9 +30,9 @@ const (
 )
 
 var environmentToCopy = map[string]struct{}{
-	"PATH":  struct{}{},
-	"TZ":    struct{}{},
-	"SHELL": struct{}{},
+	"PATH":  {},
+	"TZ":    {},
+	"SHELL": {},
 }
 
 var environmentToSet = map[string]string{
