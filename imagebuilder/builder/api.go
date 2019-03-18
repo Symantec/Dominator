@@ -92,9 +92,6 @@ type sourceImageInfoType struct {
 	triggers *triggers.Triggers
 }
 
-type unpackImageFunction func(client *srpc.Client, streamName, rootDir string,
-	buildLog buildLogger) (*sourceImageInfoType, error)
-
 type Builder struct {
 	stateDir                  string
 	imageServerAddress        string
@@ -152,7 +149,7 @@ func BuildImageFromManifest(client *srpc.Client, manifestDir, streamName string,
 			StreamName: streamName,
 			ExpiresIn:  expiresIn,
 		},
-		unpackImageSimple, buildLog)
+		buildLog)
 	return name, err
 }
 

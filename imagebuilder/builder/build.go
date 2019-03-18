@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	buildclient "github.com/Symantec/Dominator/imagebuilder/client"
@@ -14,9 +15,23 @@ import (
 	proto "github.com/Symantec/Dominator/proto/imaginator"
 )
 
+const errNoSourceImage = "no source image: "
+const errTooOldSourceImage = "too old source image: "
+
 type dualBuildLogger struct {
 	buffer *bytes.Buffer
 	writer io.Writer
+}
+
+func needSourceImage(err error) (bool, string) {
+	errString := err.Error()
+	if index := strings.Index(errString, errNoSourceImage); index >= 0 {
+		return true, errString[index+len(errNoSourceImage):]
+	}
+	if index := strings.Index(errString, errTooOldSourceImage); index >= 0 {
+		return true, errString[index+len(errTooOldSourceImage):]
+	}
+	return false, ""
 }
 
 func (bl *dualBuildLogger) Bytes() []byte {
@@ -31,14 +46,9 @@ func (b *Builder) rebuildImages(minInterval time.Duration) {
 	if minInterval < 1 {
 		return
 	}
-	firstTime := true // HACK.
 	var sleepUntil time.Time
 	for ; ; time.Sleep(time.Until(sleepUntil)) {
 		sleepUntil = time.Now().Add(minInterval)
-		if firstTime {
-			firstTime = false
-			continue
-		}
 		client, err := srpc.DialHTTP("tcp", b.imageServerAddress, 0)
 		if err != nil {
 			b.logger.Println(err)
@@ -67,7 +77,10 @@ func (b *Builder) buildImage(request proto.BuildImageRequest,
 	}
 	defer client.Close()
 	img, name, err := b.build(client, request, logWriter)
-	return img, name, err
+	if request.ReturnImage {
+		return img, "", err
+	}
+	return nil, name, err
 }
 
 func (b *Builder) build(client *srpc.Client, request proto.BuildImageRequest,
@@ -90,47 +103,87 @@ func (b *Builder) build(client *srpc.Client, request proto.BuildImageRequest,
 			writer: io.MultiWriter(buildLogBuffer, logWriter),
 		}
 	}
-	var img *image.Image
-	var err error
-	if b.slaveDriver == nil {
-		b.logger.Printf("Building new image for stream: %s\n",
-			request.StreamName)
-		img, err = builder.build(b, client, request, buildLog)
-	} else {
-		img, err = b.buildOnSlave(client, request, buildLog)
-	}
+	img, name, err := b.buildWithLogger(builder, client, request, startTime,
+		buildLog)
 	finishTime := time.Now()
-	var name string
-	if err != nil {
-		fmt.Fprintf(buildLog, "Error building image: %s\n", err)
-	} else {
-		if !request.ReturnImage {
-			uploadStartTime := time.Now()
-			name, err = addImage(client, request, img)
-			finishTime = time.Now()
-			if err != nil {
-				fmt.Fprintln(buildLog, err)
-			} else {
-				fmt.Fprintf(buildLog,
-					"Uploaded %s in %s, total build duration: %s\n",
-					name, format.Duration(finishTime.Sub(uploadStartTime)),
-					format.Duration(finishTime.Sub(startTime)))
-			}
-		}
-		b.logger.Printf("Built image for stream: %s in %s\n",
-			request.StreamName, format.Duration(finishTime.Sub(startTime)))
-	}
 	b.buildResultsLock.Lock()
 	defer b.buildResultsLock.Unlock()
 	delete(b.currentBuildLogs, request.StreamName)
 	b.lastBuildResults[request.StreamName] = buildResultType{
 		name, startTime, finishTime, buildLog.Bytes(), err}
-	return img, name, nil
+	if err == nil {
+		b.logger.Printf("Built image for stream: %s in %s\n",
+			request.StreamName, format.Duration(finishTime.Sub(startTime)))
+	}
+	return img, name, err
+}
+
+func (b *Builder) buildSomewhere(builder imageBuilder, client *srpc.Client,
+	request proto.BuildImageRequest,
+	buildLog buildLogger) (*image.Image, error) {
+	if b.slaveDriver == nil {
+		b.logger.Printf("Building new image for stream: %s\n",
+			request.StreamName)
+		img, err := builder.build(b, client, request, buildLog)
+		if err != nil {
+			fmt.Fprintf(buildLog, "Error building image: %s\n", err)
+		}
+		return img, err
+	} else {
+		return b.buildOnSlave(client, request, buildLog)
+	}
+}
+
+func (b *Builder) buildWithLogger(builder imageBuilder, client *srpc.Client,
+	request proto.BuildImageRequest, startTime time.Time,
+	buildLog buildLogger) (*image.Image, string, error) {
+	img, err := b.buildSomewhere(builder, client, request, buildLog)
+	if err != nil {
+		if needSource, sourceImage := needSourceImage(err); needSource {
+			if request.DisableRecursiveBuild {
+				return nil, "", err
+			}
+			// Try to build source image.
+			expiresIn := time.Hour
+			if request.ExpiresIn > 0 {
+				expiresIn = request.ExpiresIn
+			}
+			sourceReq := proto.BuildImageRequest{
+				StreamName:   sourceImage,
+				ExpiresIn:    expiresIn,
+				MaxSourceAge: request.MaxSourceAge,
+				Variables:    request.Variables,
+			}
+			if _, _, err := b.build(client, sourceReq, buildLog); err != nil {
+				return nil, "", err
+			}
+			img, err = b.buildSomewhere(builder, client, request, buildLog)
+		}
+	}
+	if err != nil {
+		return nil, "", err
+	}
+	if request.ReturnImage {
+		return img, "", nil
+	}
+	uploadStartTime := time.Now()
+	if name, err := addImage(client, request, img); err != nil {
+		fmt.Fprintln(buildLog, err)
+		return nil, "", err
+	} else {
+		finishTime := time.Now()
+		fmt.Fprintf(buildLog,
+			"Uploaded %s in %s, total build duration: %s\n",
+			name, format.Duration(finishTime.Sub(uploadStartTime)),
+			format.Duration(finishTime.Sub(startTime)))
+		return img, name, nil
+	}
 }
 
 func (b *Builder) buildOnSlave(client *srpc.Client,
 	request proto.BuildImageRequest,
 	buildLog buildLogger) (*image.Image, error) {
+	request.DisableRecursiveBuild = true
 	request.ReturnImage = true
 	request.StreamBuildLog = true
 	if len(request.Variables) < 1 {
@@ -150,7 +203,14 @@ func (b *Builder) buildOnSlave(client *srpc.Client,
 	if err != nil {
 		return nil, fmt.Errorf("error getting slave: %s", err)
 	}
-	defer slave.Destroy()
+	keepSlave := false
+	defer func() {
+		if keepSlave {
+			slave.Release()
+		} else {
+			slave.Destroy()
+		}
+	}()
 	b.logger.Printf("Building new image on %s for stream: %s\n",
 		slave, request.StreamName)
 	fmt.Fprintf(buildLog, "Building new image on %s for stream: %s\n",
@@ -158,6 +218,9 @@ func (b *Builder) buildOnSlave(client *srpc.Client,
 	var reply proto.BuildImageResponse
 	err = buildclient.BuildImage(slave.GetClient(), request, &reply, buildLog)
 	if err != nil {
+		if needSource, _ := needSourceImage(err); needSource {
+			keepSlave = true
+		}
 		return nil, err
 	}
 	return reply.Image, nil

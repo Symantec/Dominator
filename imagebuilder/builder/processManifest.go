@@ -17,15 +17,15 @@ import (
 )
 
 func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
-	unpackImageFunc unpackImageFunction, rootDir string,
-	buildLog buildLogger) (manifestType, error) {
+	rootDir string, buildLog buildLogger) (manifestType, error) {
 	manifestFile := path.Join(manifestDir, "manifest")
 	var manifestConfig manifestConfigType
 	if err := json.ReadFromFile(manifestFile, &manifestConfig); err != nil {
-		return manifestType{}, err
+		return manifestType{},
+			errors.New("error reading manifest file: " + err.Error())
 	}
-	sourceImageInfo, err := unpackImageFunc(client, manifestConfig.SourceImage,
-		rootDir, buildLog)
+	sourceImageInfo, err := unpackImage(client, manifestConfig.SourceImage,
+		0, 0, rootDir, buildLog)
 	if err != nil {
 		return manifestType{},
 			errors.New("error unpacking image: " + err.Error())
