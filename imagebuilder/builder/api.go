@@ -9,8 +9,10 @@ import (
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/slavedriver"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/triggers"
+	proto "github.com/Symantec/Dominator/proto/imaginator"
 )
 
 type buildLogger interface {
@@ -19,9 +21,8 @@ type buildLogger interface {
 }
 
 type imageBuilder interface {
-	build(b *Builder, client *srpc.Client, streamName string,
-		expiresIn time.Duration, gitBranch string, maxSourceAge time.Duration,
-		uploadImage bool, buildLog buildLogger) (*image.Image, string, error)
+	build(b *Builder, client *srpc.Client, request proto.BuildImageRequest,
+		buildLog buildLogger) (*image.Image, error)
 }
 
 type bootstrapStream struct {
@@ -91,9 +92,6 @@ type sourceImageInfoType struct {
 	triggers *triggers.Triggers
 }
 
-type unpackImageFunction func(client *srpc.Client, streamName, rootDir string,
-	buildLog buildLogger) (*sourceImageInfoType, error)
-
 type Builder struct {
 	stateDir                  string
 	imageServerAddress        string
@@ -103,6 +101,7 @@ type Builder struct {
 	bootstrapStreams          map[string]*bootstrapStream
 	imageStreams              map[string]*imageStreamType
 	imageStreamsToAutoRebuild []string
+	slaveDriver               *slavedriver.SlaveDriver
 	buildResultsLock          sync.RWMutex
 	currentBuildLogs          map[string]*bytes.Buffer   // Key: stream name.
 	lastBuildResults          map[string]buildResultType // Key: stream name.
@@ -111,17 +110,15 @@ type Builder struct {
 }
 
 func Load(confUrl, variablesFile, stateDir, imageServerAddress string,
-	imageRebuildInterval time.Duration, logger log.DebugLogger) (
-	*Builder, error) {
+	imageRebuildInterval time.Duration, slaveDriver *slavedriver.SlaveDriver,
+	logger log.DebugLogger) (*Builder, error) {
 	return load(confUrl, variablesFile, stateDir, imageServerAddress,
-		imageRebuildInterval, logger)
+		imageRebuildInterval, slaveDriver, logger)
 }
 
-func (b *Builder) BuildImage(streamName string, expiresIn time.Duration,
-	gitBranch string, maxSourceAge time.Duration, uploadImage bool,
+func (b *Builder) BuildImage(request proto.BuildImageRequest,
 	logWriter io.Writer) (*image.Image, string, error) {
-	return b.buildImage(streamName, expiresIn, gitBranch, maxSourceAge,
-		uploadImage, logWriter)
+	return b.buildImage(request, logWriter)
 }
 
 func (b *Builder) GetCurrentBuildLog(streamName string) ([]byte, error) {
@@ -147,8 +144,12 @@ func (b *Builder) WriteHtml(writer io.Writer) {
 func BuildImageFromManifest(client *srpc.Client, manifestDir, streamName string,
 	expiresIn time.Duration, buildLog buildLogger, logger log.Logger) (
 	string, error) {
-	_, name, err := buildImageFromManifest(client, manifestDir, streamName,
-		expiresIn, true, unpackImageSimple, buildLog)
+	_, name, err := buildImageFromManifestAndUpload(client, manifestDir,
+		proto.BuildImageRequest{
+			StreamName: streamName,
+			ExpiresIn:  expiresIn,
+		},
+		buildLog)
 	return name, err
 }
 

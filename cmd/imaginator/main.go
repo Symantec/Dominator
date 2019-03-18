@@ -36,6 +36,8 @@ var (
 		"time between automatic rebuilds of images")
 	portNum = flag.Uint("portNum", constants.ImaginatorPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
+	slaveDriverConfigurationFile = flag.String("slaveDriverConfigurationFile",
+		"", "Name of configuration file for slave builders")
 	stateDir = flag.String("stateDir", "/var/lib/imaginator",
 		"Name of state directory")
 	variablesFile = flag.String("variablesFile", "",
@@ -64,10 +66,14 @@ func main() {
 	if err := os.MkdirAll(*stateDir, dirPerms); err != nil {
 		logger.Fatalf("Cannot create state directory: %s\n", err)
 	}
+	slaveDriver, err := createSlaveDriver(logger)
+	if err != nil {
+		logger.Fatalf("Error starting slave driver: %s\n", err)
+	}
 	builderObj, err := builder.Load(*configurationUrl, *variablesFile,
 		*stateDir,
 		fmt.Sprintf("%s:%d", *imageServerHostname, *imageServerPortNum),
-		*imageRebuildInterval, logger)
+		*imageRebuildInterval, slaveDriver, logger)
 	if err != nil {
 		logger.Fatalf("Cannot start builder: %s\n", err)
 	}
@@ -76,6 +82,9 @@ func main() {
 		logger.Fatalf("Cannot start builder: %s\n", err)
 	}
 	httpd.AddHtmlWriter(builderObj)
+	if slaveDriver != nil {
+		httpd.AddHtmlWriter(slaveDriver)
+	}
 	httpd.AddHtmlWriter(rpcHtmlWriter)
 	httpd.AddHtmlWriter(logger)
 	if err = httpd.StartServer(*portNum, builderObj, false); err != nil {

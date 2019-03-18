@@ -38,9 +38,7 @@ func (t *srpcType) BuildImage(conn *srpc.Conn) error {
 		encoder = gob.NewEncoder(conn)
 		logWriter = buildLogBuffer
 	}
-	image, name, err := t.builder.BuildImage(request.StreamName,
-		request.ExpiresIn, request.GitBranch, request.MaxSourceAge,
-		!request.ReturnImage, logWriter)
+	image, name, err := t.builder.BuildImage(request, logWriter)
 	reply := proto.BuildImageResponse{
 		Image:       image,
 		ImageName:   name,

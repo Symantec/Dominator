@@ -20,6 +20,7 @@ import (
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/triggers"
+	proto "github.com/Symantec/Dominator/proto/imaginator"
 )
 
 const timeFormat = "2006-01-02:15:04:05"
@@ -37,67 +38,47 @@ func (h *hasher) Hash(reader io.Reader, length uint64) (
 	return hash, nil
 }
 
-func addImage(client *srpc.Client, streamName, dirname string,
-	scanFilter *filter.Filter, computedFilesList []util.ComputedFile,
-	imageFilter *filter.Filter,
-	trig *triggers.Triggers, expiresIn time.Duration, uploadImage bool,
-	buildLog buildLogger) (*image.Image, string, error) {
-	packages, err := listPackages(dirname)
-	if err != nil {
-		return nil, "", fmt.Errorf("error listing packages: %s", err)
+func addImage(client *srpc.Client, request proto.BuildImageRequest,
+	img *image.Image) (string, error) {
+	if request.ExpiresIn > 0 {
+		img.ExpiresAt = time.Now().Add(request.ExpiresIn)
 	}
-	buildStartTime := time.Now()
-	fs, err := buildFileSystem(client, dirname, scanFilter)
-	if err != nil {
-		return nil, "", fmt.Errorf("error building file-system: %s", err)
-	}
-	if err := util.SpliceComputedFiles(fs, computedFilesList); err != nil {
-		return nil, "", fmt.Errorf("error splicing computed files: %s", err)
-	}
-	fs.ComputeTotalDataBytes()
-	duration := time.Since(buildStartTime)
-	speed := uint64(float64(fs.TotalDataBytes) / duration.Seconds())
-	fmt.Fprintf(buildLog,
-		"Scanned file-system and uploaded %d objects (%s) in %s (%s/s)\n",
-		len(fs.InodeTable), format.FormatBytes(fs.TotalDataBytes),
-		format.Duration(duration), format.FormatBytes(speed))
-	if _, img, err := getLatestImage(client, streamName, buildLog); err != nil {
-		return nil, "", fmt.Errorf("error getting latest image: %s", err)
-	} else if img != nil {
-		util.CopyMtimes(img.FileSystem, fs)
-	}
-	objClient := objectclient.AttachObjectClient(client)
-	// Make a copy of the build log because AddObject() drains the buffer.
-	logReader := bytes.NewBuffer(buildLog.Bytes())
-	hashVal, _, err := objClient.AddObject(logReader, uint64(logReader.Len()),
-		nil)
-	if err != nil {
-		return nil, "", err
-	}
-	if err := objClient.Close(); err != nil {
-		return nil, "", err
-	}
-	img := &image.Image{
-		BuildLog:   &image.Annotation{Object: &hashVal},
-		FileSystem: fs,
-		Filter:     imageFilter,
-		Triggers:   trig,
-		Packages:   packages,
-	}
-	if expiresIn > 0 {
-		img.ExpiresAt = time.Now().Add(expiresIn)
-	}
-	if err := img.Verify(); err != nil {
-		return nil, "", err
-	}
-	if !uploadImage {
-		return img, "", nil
-	}
-	name := path.Join(streamName, time.Now().Format(timeFormat))
+	name := path.Join(request.StreamName, time.Now().Format(timeFormat))
 	if err := imageclient.AddImage(client, name, img); err != nil {
-		return nil, "", errors.New("remote error: " + err.Error())
+		return "", errors.New("remote error: " + err.Error())
 	}
-	return img, name, nil
+	return name, nil
+}
+
+func buildFileSystem(client *srpc.Client, dirname string,
+	scanFilter *filter.Filter) (
+	*filesystem.FileSystem, error) {
+	var h hasher
+	var err error
+	h.objQ, err = objectclient.NewObjectAdderQueue(client)
+	if err != nil {
+		return nil, err
+	}
+	fs, err := buildFileSystemWithHasher(dirname, &h, scanFilter)
+	if err != nil {
+		h.objQ.Close()
+		return nil, err
+	}
+	err = h.objQ.Close()
+	if err != nil {
+		return nil, err
+	}
+	return fs, nil
+}
+
+func buildFileSystemWithHasher(dirname string, h *hasher,
+	scanFilter *filter.Filter) (
+	*filesystem.FileSystem, error) {
+	fs, err := scanner.ScanFileSystem(dirname, nil, scanFilter, nil, h, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &fs.FileSystem, nil
 }
 
 func listPackages(rootDir string) ([]image.Package, error) {
@@ -155,33 +136,58 @@ func listPackages(rootDir string) ([]image.Package, error) {
 	return packages, nil
 }
 
-func buildFileSystem(client *srpc.Client, dirname string,
-	scanFilter *filter.Filter) (
-	*filesystem.FileSystem, error) {
-	var h hasher
-	var err error
-	h.objQ, err = objectclient.NewObjectAdderQueue(client)
+func packImage(client *srpc.Client, request proto.BuildImageRequest,
+	dirname string, scanFilter *filter.Filter,
+	computedFilesList []util.ComputedFile, imageFilter *filter.Filter,
+	trig *triggers.Triggers, buildLog buildLogger) (*image.Image, error) {
+	packages, err := listPackages(dirname)
+	if err != nil {
+		return nil, fmt.Errorf("error listing packages: %s", err)
+	}
+	buildStartTime := time.Now()
+	fs, err := buildFileSystem(client, dirname, scanFilter)
+	if err != nil {
+		return nil, fmt.Errorf("error building file-system: %s", err)
+	}
+	if err := util.SpliceComputedFiles(fs, computedFilesList); err != nil {
+		return nil, fmt.Errorf("error splicing computed files: %s", err)
+	}
+	fs.ComputeTotalDataBytes()
+	duration := time.Since(buildStartTime)
+	speed := uint64(float64(fs.TotalDataBytes) / duration.Seconds())
+	fmt.Fprintf(buildLog,
+		"Scanned file-system and uploaded %d objects (%s) in %s (%s/s)\n",
+		len(fs.InodeTable), format.FormatBytes(fs.TotalDataBytes),
+		format.Duration(duration), format.FormatBytes(speed))
+	_, oldImage, err := getLatestImage(client, request.StreamName, buildLog)
+	if err != nil {
+		return nil, fmt.Errorf("error getting latest image: %s", err)
+	} else if oldImage != nil {
+		patchStartTime := time.Now()
+		util.CopyMtimes(oldImage.FileSystem, fs)
+		fmt.Fprintf(buildLog, "Copied mtimes in %s\n",
+			format.Duration(time.Since(patchStartTime)))
+	}
+	objClient := objectclient.AttachObjectClient(client)
+	// Make a copy of the build log because AddObject() drains the buffer.
+	logReader := bytes.NewBuffer(buildLog.Bytes())
+	hashVal, _, err := objClient.AddObject(logReader, uint64(logReader.Len()),
+		nil)
 	if err != nil {
 		return nil, err
 	}
-	fs, err := buildFileSystemWithHasher(dirname, &h, scanFilter)
-	if err != nil {
-		h.objQ.Close()
+	if err := objClient.Close(); err != nil {
 		return nil, err
 	}
-	err = h.objQ.Close()
-	if err != nil {
+	img := &image.Image{
+		BuildLog:   &image.Annotation{Object: &hashVal},
+		FileSystem: fs,
+		Filter:     imageFilter,
+		Triggers:   trig,
+		Packages:   packages,
+	}
+	if err := img.Verify(); err != nil {
 		return nil, err
 	}
-	return fs, nil
-}
-
-func buildFileSystemWithHasher(dirname string, h *hasher,
-	scanFilter *filter.Filter) (
-	*filesystem.FileSystem, error) {
-	fs, err := scanner.ScanFileSystem(dirname, nil, scanFilter, nil, h, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &fs.FileSystem, nil
+	return img, nil
 }

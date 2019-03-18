@@ -18,6 +18,7 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
+	proto "github.com/Symantec/Dominator/proto/imaginator"
 )
 
 const (
@@ -65,14 +66,14 @@ func makeTempDirectory(dir, prefix string) (string, error) {
 }
 
 func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
-	streamName string, expiresIn time.Duration, _ string, _ time.Duration,
-	uploadImage bool, buildLog buildLogger) (*image.Image, string, error) {
+	request proto.BuildImageRequest,
+	buildLog buildLogger) (*image.Image, error) {
 	startTime := time.Now()
 	args := make([]string, 0, len(stream.BootstrapCommand))
 	rootDir, err := makeTempDirectory("",
-		strings.Replace(streamName, "/", "_", -1))
+		strings.Replace(request.StreamName, "/", "_", -1))
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	defer os.RemoveAll(rootDir)
 	fmt.Fprintf(buildLog, "Created image working directory: %s\n", rootDir)
@@ -86,32 +87,23 @@ func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
 	cmd.Stdout = buildLog
 	cmd.Stderr = buildLog
 	if err := cmd.Run(); err != nil {
-		return nil, "", err
+		return nil, err
 	} else {
 		packager := b.packagerTypes[stream.PackagerType]
 		if err := packager.writePackageInstaller(rootDir); err != nil {
-			return nil, "", err
+			return nil, err
 		}
 		if err := clearResolvConf(buildLog, rootDir); err != nil {
-			return nil, "", err
+			return nil, err
 		}
 		buildDuration := time.Since(startTime)
 		fmt.Fprintf(buildLog, "\nBuild time: %s\n",
 			format.Duration(buildDuration))
 		if err := clean(rootDir, buildLog); err != nil {
-			return nil, "", err
+			return nil, err
 		}
-		startTime = time.Now()
-		img, name, err := addImage(client, streamName, rootDir, stream.Filter,
-			nil, &filter.Filter{}, nil, expiresIn, uploadImage, buildLog)
-		if err != nil {
-			return nil, "", fmt.Errorf("error adding image: %s", err)
-		}
-		uploadDuration := time.Since(startTime)
-		fmt.Fprintf(buildLog, "Built: %s in %s, uploaded in %s\n",
-			name, format.Duration(buildDuration),
-			format.Duration(uploadDuration))
-		return img, name, nil
+		return packImage(client, request, rootDir,
+			stream.Filter, nil, &filter.Filter{}, nil, buildLog)
 	}
 }
 

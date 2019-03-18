@@ -187,7 +187,7 @@ func (stream *imageStreamType) WriteHtml(writer io.Writer) {
 		stream.ManifestDirectory)
 	buildLog := new(bytes.Buffer)
 	manifestDirectory, err := stream.getManifest(stream.builder, stream.name,
-		"", buildLog)
+		"", nil, buildLog)
 	if err != nil {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
