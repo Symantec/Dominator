@@ -10,9 +10,12 @@ var (
 	errorUnsupportedProxy = errors.New("unsupported proxy")
 )
 
-func newDialer(proxy string) (Dialer, error) {
+func newDialer(proxy string, dialer *net.Dialer) (Dialer, error) {
+	if dialer == nil {
+		dialer = new(net.Dialer)
+	}
 	if proxy == "" {
-		return new(net.Dialer), nil
+		return dialer, nil
 	}
 	if parsedProxy, err := url.Parse(proxy); err != nil {
 		return nil, err
@@ -20,19 +23,25 @@ func newDialer(proxy string) (Dialer, error) {
 		switch parsedProxy.Scheme {
 		case "socks": // Assume SOCKS 5
 			return &socksDialer{
+				dialer:       dialer,
 				proxyAddress: parsedProxy.Host,
 				proxyDNS:     true,
 				udpSupported: true,
 			}, nil
 		case "socks4":
-			return &socksDialer{proxyAddress: parsedProxy.Host}, nil
+			return &socksDialer{
+				dialer:       dialer,
+				proxyAddress: parsedProxy.Host,
+			}, nil
 		case "socks4a":
 			return &socksDialer{
+				dialer:       dialer,
 				proxyAddress: parsedProxy.Host,
 				proxyDNS:     true,
 			}, nil
 		case "socks5":
 			return &socksDialer{
+				dialer:       dialer,
 				proxyAddress: parsedProxy.Host,
 				proxyDNS:     true,
 				udpSupported: true,
