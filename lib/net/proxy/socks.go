@@ -22,6 +22,7 @@ var (
 )
 
 type socksDialer struct {
+	dialer       *net.Dialer
 	proxyAddress string
 	proxyDNS     bool
 	udpSupported bool
@@ -59,7 +60,7 @@ func (d *socksDialer) dialTCP(address string) (net.Conn, error) {
 			return nil, err
 		}
 	}
-	if conn, err := net.Dial("tcp", d.proxyAddress); err != nil {
+	if conn, err := d.dialer.Dial("tcp", d.proxyAddress); err != nil {
 		return nil, err
 	} else {
 		if nWritten, err := conn.Write(request); err != nil {

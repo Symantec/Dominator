@@ -9,6 +9,6 @@ type Dialer interface {
 	Dial(network, address string) (net.Conn, error)
 }
 
-func NewDialer(proxy string) (Dialer, error) {
-	return newDialer(proxy)
+func NewDialer(proxy string, dialer *net.Dialer) (Dialer, error) {
+	return newDialer(proxy, dialer)
 }

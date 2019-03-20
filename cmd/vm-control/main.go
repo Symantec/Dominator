@@ -33,8 +33,6 @@ var (
 		"Hostname of hypervisor")
 	hypervisorPortNum = flag.Uint("hypervisorPortNum",
 		constants.HypervisorPortNumber, "Port number of hypervisor")
-	hypervisorProxy = flag.String("hypervisorProxy", "",
-		"URL for hypervisor proxy")
 	imageFile = flag.String("imageFile", "",
 		"Name of RAW image file to boot with")
 	imageName    = flag.String("imageName", "", "Name of image to boot with")
