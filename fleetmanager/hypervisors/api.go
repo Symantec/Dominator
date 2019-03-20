@@ -53,17 +53,18 @@ type locationType struct {
 }
 
 type Manager struct {
-	storer       Storer
-	logger       log.DebugLogger
-	invertTable  [256]byte
-	mutex        sync.RWMutex
-	topology     *topology.Topology
-	hypervisors  map[string]*hypervisorType // Key: hypervisor machine name.
-	locations    map[string]*locationType   // Key: location.
-	migratingIPs map[string]struct{}        // Key: VM IP address.
-	notifiers    map[<-chan fm_proto.Update]*locationType
-	subnets      map[string]*subnetType // Key: Gateway IP.
-	vms          map[string]*vmInfoType // Key: VM IP address.
+	storer        Storer
+	logger        log.DebugLogger
+	invertTable   [256]byte
+	mutex         sync.RWMutex
+	allocatingIPs map[string]struct{} // Key: VM IP address.
+	topology      *topology.Topology
+	hypervisors   map[string]*hypervisorType // Key: hypervisor machine name.
+	locations     map[string]*locationType   // Key: location.
+	migratingIPs  map[string]struct{}        // Key: VM IP address.
+	notifiers     map[<-chan fm_proto.Update]*locationType
+	subnets       map[string]*subnetType // Key: Gateway IP.
+	vms           map[string]*vmInfoType // Key: VM IP address.
 }
 
 type probeStatus uint

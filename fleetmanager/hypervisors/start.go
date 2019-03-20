@@ -10,12 +10,13 @@ func newManager(storer Storer, logger log.DebugLogger) (*Manager, error) {
 		return nil, err
 	}
 	manager := &Manager{
-		storer:       storer,
-		logger:       logger,
-		hypervisors:  make(map[string]*hypervisorType),
-		migratingIPs: make(map[string]struct{}),
-		subnets:      make(map[string]*subnetType),
-		vms:          make(map[string]*vmInfoType),
+		storer:        storer,
+		logger:        logger,
+		allocatingIPs: make(map[string]struct{}),
+		hypervisors:   make(map[string]*hypervisorType),
+		migratingIPs:  make(map[string]struct{}),
+		subnets:       make(map[string]*subnetType),
+		vms:           make(map[string]*vmInfoType),
 	}
 	manager.initInvertTable()
 	html.HandleFunc("/listHypervisors", manager.listHypervisorsHandler)

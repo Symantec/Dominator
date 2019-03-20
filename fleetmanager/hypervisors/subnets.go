@@ -54,13 +54,17 @@ func (m *Manager) checkIpReserved(tSubnet *topology.Subnet, ip net.IP) bool {
 	if _, ok := tSubnet.GetReservedIpSet()[ipAddr]; ok {
 		return true
 	}
+	if _, ok := m.allocatingIPs[ipAddr]; ok {
+		return true
+	}
 	if _, ok := m.migratingIPs[ipAddr]; ok {
 		return true
 	}
 	return false
 }
 
-// This must be called with the lock held.
+// This must be called with the lock held. This will update the allocatingIPs
+// map.
 func (m *Manager) findFreeIPs(tSubnet *topology.Subnet,
 	numNeeded uint) ([]net.IP, error) {
 	var freeIPs []net.IP
@@ -88,6 +92,9 @@ func (m *Manager) findFreeIPs(tSubnet *topology.Subnet,
 		if initialIp.Equal(subnet.nextIp) {
 			break
 		}
+	}
+	for _, ip := range freeIPs {
+		m.allocatingIPs[ip.String()] = struct{}{}
 	}
 	return freeIPs, nil
 }
@@ -120,5 +127,16 @@ func (m *Manager) makeSubnet(tSubnet *topology.Subnet) *subnetType {
 		startIp: startIp,
 		stopIp:  stopIp,
 		nextIp:  nextIp,
+	}
+}
+
+func (m *Manager) unmarkAllocatingIPs(ips []net.IP) {
+	if len(ips) < 1 {
+		return
+	}
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	for _, ip := range ips {
+		delete(m.allocatingIPs, ip.String())
 	}
 }

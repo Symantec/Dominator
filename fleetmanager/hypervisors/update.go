@@ -518,6 +518,7 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 			m.mutex.Lock()
 			freeIPs, err := m.findFreeIPs(tSubnet,
 				addressPoolOptions.desiredSize-numFreeAddresses)
+			defer m.unmarkAllocatingIPs(freeIPs)
 			m.mutex.Unlock()
 			if err != nil {
 				h.logger.Println(err)
