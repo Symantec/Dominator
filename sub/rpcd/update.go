@@ -147,6 +147,9 @@ func runTriggers(triggers []*triggers.Trigger, action string,
 			}
 			continue
 		}
+		if trigger.Service == "" {
+			continue
+		}
 		logger.Printf("%sAction: service %s %s\n",
 			logPrefix, trigger.Service, action)
 		if *disableTriggers {
