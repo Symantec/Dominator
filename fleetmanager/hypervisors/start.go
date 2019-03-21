@@ -1,22 +1,32 @@
 package hypervisors
 
 import (
+	"os"
+
 	"github.com/Symantec/Dominator/lib/html"
-	"github.com/Symantec/Dominator/lib/log"
 )
 
-func newManager(storer Storer, logger log.DebugLogger) (*Manager, error) {
+func newManager(startOptions StartOptions) (*Manager, error) {
 	if err := checkPoolLimits(); err != nil {
 		return nil, err
 	}
+	if startOptions.IpmiPasswordFile != "" {
+		file, err := os.Open(startOptions.IpmiPasswordFile)
+		if err != nil {
+			return nil, err
+		}
+		file.Close()
+	}
 	manager := &Manager{
-		storer:        storer,
-		logger:        logger,
-		allocatingIPs: make(map[string]struct{}),
-		hypervisors:   make(map[string]*hypervisorType),
-		migratingIPs:  make(map[string]struct{}),
-		subnets:       make(map[string]*subnetType),
-		vms:           make(map[string]*vmInfoType),
+		ipmiUsername:     startOptions.IpmiUsername,
+		ipmiPasswordFile: startOptions.IpmiPasswordFile,
+		logger:           startOptions.Logger,
+		storer:           startOptions.Storer,
+		allocatingIPs:    make(map[string]struct{}),
+		hypervisors:      make(map[string]*hypervisorType),
+		migratingIPs:     make(map[string]struct{}),
+		subnets:          make(map[string]*subnetType),
+		vms:              make(map[string]*vmInfoType),
 	}
 	manager.initInvertTable()
 	html.HandleFunc("/listHypervisors", manager.listHypervisorsHandler)

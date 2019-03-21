@@ -26,6 +26,7 @@ border-collapse: collapse;
 
 const (
 	rowStyleProbeBad = iota
+	rowStyleOff
 	rowStyleHealthMarginal
 	rowStyleHealthAtRisk
 	rowStyleHighlight
@@ -41,6 +42,7 @@ type rowStyleType struct {
 var (
 	rowStyles = map[uint]rowStyleType{
 		rowStyleProbeBad:       {"color:red", false},
+		rowStyleOff:            {"color:#ff8080", false},
 		rowStyleHealthMarginal: {"color:#800000", false},
 		rowStyleHealthAtRisk:   {"color:#c00000", false},
 		rowStyleHighlight:      {"background-color:#fafafa", true},
@@ -119,7 +121,9 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 			fmt.Fprintln(writer, vm.ipAddr)
 		case url.OutputTypeHtml:
 			var rowStyle []rowStyleType
-			if vm.hypervisor.probeStatus != probeStatusConnected {
+			if vm.hypervisor.probeStatus == probeStatusOff {
+				rowStyle = append(rowStyle, rowStyles[rowStyleOff])
+			} else if vm.hypervisor.probeStatus != probeStatusConnected {
 				rowStyle = append(rowStyle, rowStyles[rowStyleProbeBad])
 			} else if vm.hypervisor.healthStatus == "at risk" {
 				rowStyle = append(rowStyle, rowStyles[rowStyleHealthAtRisk])
