@@ -16,6 +16,7 @@ const (
 	showOK = iota
 	showConnected
 	showAll
+	showOff
 )
 
 type hypervisorList []*hypervisorType
@@ -67,6 +68,10 @@ func (m *Manager) listHypervisors(topologyDir string, showFilter int,
 			}
 		case showAll:
 			hypervisors = append(hypervisors, hypervisor)
+		case showOff:
+			if hypervisor.probeStatus == probeStatusOff {
+				hypervisors = append(hypervisors, hypervisor)
+			}
 		}
 	}
 	return hypervisors, nil
@@ -88,6 +93,8 @@ func (m *Manager) listHypervisorsHandler(w http.ResponseWriter,
 		showFilter = showConnected
 	case "OK":
 		showFilter = showOK
+	case "off":
+		showFilter = showOff
 	}
 	hypervisors, err := m.listHypervisors("", showFilter, "")
 	if err != nil {

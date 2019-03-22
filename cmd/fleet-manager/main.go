@@ -29,6 +29,10 @@ const (
 var (
 	checkTopology = flag.Bool("checkTopology", false,
 		"If true, perform a one-time check, write to stdout and exit")
+	ipmiPasswordFile = flag.String("ipmiPasswordFile", "",
+		"Name of password file used to authenticate for IPMI requests")
+	ipmiUsername = flag.String("ipmiUsername", "",
+		"Name of user to authenticate as when making IPMI requests")
 	topologyCheckInterval = flag.Duration("topologyCheckInterval",
 		time.Minute, "Configuration check interval")
 	portNum = flag.Uint("portNum", constants.FleetManagerPortNumber,
@@ -82,7 +86,12 @@ func main() {
 	if err != nil {
 		logger.Fatalf("Cannot create DB: %s\n", err)
 	}
-	hyperManager, err := hypervisors.New(storer, logger)
+	hyperManager, err := hypervisors.New(hypervisors.StartOptions{
+		IpmiPasswordFile: *ipmiPasswordFile,
+		IpmiUsername:     *ipmiUsername,
+		Logger:           logger,
+		Storer:           storer,
+	})
 	if err != nil {
 		logger.Fatalf("Cannot create hypervisors manager: %s\n", err)
 	}

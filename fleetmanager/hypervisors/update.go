@@ -390,7 +390,7 @@ func (m *Manager) manageHypervisorLoop(h *hypervisorType, hostname string) {
 
 func (m *Manager) manageHypervisor(h *hypervisorType,
 	hostname string) time.Duration {
-	failureProbeStatus := probeStatusBad
+	failureProbeStatus := probeStatusUnreachable
 	defer func() {
 		h.mutex.Lock()
 		defer h.mutex.Unlock()
@@ -405,8 +405,15 @@ func (m *Manager) manageHypervisor(h *hypervisorType,
 		time.Second*15)
 	if err != nil {
 		h.logger.Debugln(1, err)
-		if err == srpc.ErrorNoSrpcEndpoint {
+		switch err {
+		case srpc.ErrorAccessToMethodDenied:
+			failureProbeStatus = probeStatusAccessDenied
+		case srpc.ErrorNoSrpcEndpoint:
 			failureProbeStatus = probeStatusNoSrpc
+		case srpc.ErrorConnectionRefused:
+			failureProbeStatus = probeStatusConnectionRefused
+		default:
+			failureProbeStatus = m.probeUnreachable(h)
 		}
 		return time.Second
 	}

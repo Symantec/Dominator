@@ -10,8 +10,12 @@ func (s probeStatus) String() string {
 		return "no SRPC"
 	case probeStatusNoService:
 		return "no service"
-	case probeStatusBad:
-		return "bad"
+	case probeStatusConnectionRefused:
+		return "connection refused"
+	case probeStatusUnreachable:
+		return "unreachable"
+	case probeStatusOff:
+		return "off"
 	default:
 		return "UNKNOWN"
 	}

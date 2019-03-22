@@ -4,6 +4,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/Symantec/Dominator/fleetmanager/topology"
 	"github.com/Symantec/Dominator/lib/log"
@@ -16,9 +17,12 @@ import (
 const (
 	probeStatusNotYetProbed probeStatus = iota
 	probeStatusConnected
+	probeStatusAccessDenied
 	probeStatusNoSrpc
 	probeStatusNoService
-	probeStatusBad
+	probeStatusConnectionRefused
+	probeStatusUnreachable
+	probeStatusOff
 )
 
 type hypervisorType struct {
@@ -29,6 +33,7 @@ type hypervisorType struct {
 	conn               *srpc.Conn
 	deleteScheduled    bool
 	healthStatus       string
+	lastIpmiProbe      time.Time
 	localTags          tags.Tags
 	location           string
 	machine            *fm_proto.Machine
@@ -53,32 +58,41 @@ type locationType struct {
 }
 
 type Manager struct {
-	storer        Storer
-	logger        log.DebugLogger
-	invertTable   [256]byte
-	mutex         sync.RWMutex
-	allocatingIPs map[string]struct{} // Key: VM IP address.
-	topology      *topology.Topology
-	hypervisors   map[string]*hypervisorType // Key: hypervisor machine name.
-	locations     map[string]*locationType   // Key: location.
-	migratingIPs  map[string]struct{}        // Key: VM IP address.
-	notifiers     map[<-chan fm_proto.Update]*locationType
-	subnets       map[string]*subnetType // Key: Gateway IP.
-	vms           map[string]*vmInfoType // Key: VM IP address.
+	invertTable      [256]byte
+	ipmiPasswordFile string
+	ipmiUsername     string
+	logger           log.DebugLogger
+	storer           Storer
+	mutex            sync.RWMutex               // Protect everything below.
+	allocatingIPs    map[string]struct{}        // Key: VM IP address.
+	hypervisors      map[string]*hypervisorType // Key: hypervisor machine name.
+	locations        map[string]*locationType   // Key: location.
+	migratingIPs     map[string]struct{}        // Key: VM IP address.
+	notifiers        map[<-chan fm_proto.Update]*locationType
+	topology         *topology.Topology
+	subnets          map[string]*subnetType // Key: Gateway IP.
+	vms              map[string]*vmInfoType // Key: VM IP address.
 }
 
 type probeStatus uint
+
+type serialStorer interface {
+	ReadMachineSerialNumber(hypervisor net.IP) (string, error)
+	WriteMachineSerialNumber(hypervisor net.IP, serialNumber string) error
+}
+
+type StartOptions struct {
+	IpmiPasswordFile string
+	IpmiUsername     string
+	Logger           log.DebugLogger
+	Storer           Storer
+}
 
 type Storer interface {
 	ipStorer
 	serialStorer
 	tagsStorer
 	vmStorer
-}
-
-type serialStorer interface {
-	ReadMachineSerialNumber(hypervisor net.IP) (string, error)
-	WriteMachineSerialNumber(hypervisor net.IP, serialNumber string) error
 }
 
 type subnetType struct {
@@ -106,8 +120,8 @@ type vmStorer interface {
 	WriteVm(hypervisor net.IP, ipAddr string, vmInfo hyper_proto.VmInfo) error
 }
 
-func New(storer Storer, logger log.DebugLogger) (*Manager, error) {
-	return newManager(storer, logger)
+func New(startOptions StartOptions) (*Manager, error) {
+	return newManager(startOptions)
 }
 
 func (m *Manager) ChangeMachineTags(hostname string,

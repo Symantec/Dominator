@@ -46,7 +46,7 @@ func (h *hypervisorType) monitorLoop(client *srpc.Client, conn *srpc.Conn) {
 			h.mutex.Unlock()
 		case <-timer.C:
 			h.mutex.Lock()
-			h.probeStatus = probeStatusBad
+			h.probeStatus = probeStatusUnreachable
 			h.conn = nil
 			h.mutex.Unlock()
 			h.logger.Debugln(0, "shutting down unresponsive client")
