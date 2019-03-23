@@ -33,6 +33,8 @@ var (
 	ErrorBadCertificate       = errors.New("bad certificate")
 	ErrorNoSrpcEndpoint       = errors.New("no SRPC endpoint")
 	ErrorAccessToMethodDenied = errors.New("access to method denied")
+
+	ErrorCloseClient = errors.New("close client")
 )
 
 var (

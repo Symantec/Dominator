@@ -462,7 +462,9 @@ func handleConnection(conn *Conn) {
 			return
 		}
 		if err := method.call(conn); err != nil {
-			log.Println(err)
+			if err != ErrorCloseClient {
+				log.Println(err)
+			}
 			return
 		}
 	}
