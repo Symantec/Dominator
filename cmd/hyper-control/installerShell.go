@@ -5,9 +5,8 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/crypto/ssh/terminal"
-
 	"github.com/Symantec/Dominator/lib/log"
+	terminalclient "github.com/Symantec/Dominator/lib/net/terminal/client"
 	"github.com/Symantec/Dominator/lib/srpc"
 )
 
@@ -38,48 +37,11 @@ func installerShell(hostname string, logger log.DebugLogger) error {
 		return err
 	}
 	defer conn.Close()
-	closed := false
-	defer func() {
-		closed = true
-	}()
 	fmt.Fprintf(os.Stderr, " connected...\n")
-	oldState, err := terminal.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		return err
+	if err := terminalclient.StartTerminal(conn); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
-	defer func() {
-		terminal.Restore(int(os.Stdin.Fd()), oldState)
-		fmt.Println()
-	}()
-	go func() { // Read from connection, write to stdout.
-		for {
-			buffer := make([]byte, 256)
-			if nRead, err := conn.Read(buffer); err != nil {
-				if closed {
-					return
-				}
-				logger.Printf("error reading from remote shell: %s\n", err)
-				return
-			} else {
-				os.Stderr.Write(buffer[:nRead])
-			}
-		}
-	}()
-	// Read from stdin until control-d (EOT).
-	for {
-		buffer := make([]byte, 256)
-		if nRead, err := os.Stdin.Read(buffer); err != nil {
-			return fmt.Errorf("error reading from stdin: %s", err)
-		} else {
-			if buffer[0] == '\x04' { // Control-d: EndOfTransmission.
-				return nil
-			}
-			if _, err := conn.Write(buffer[:nRead]); err != nil {
-				return fmt.Errorf("error writing to connection: %s", err)
-			}
-			if err := conn.Flush(); err != nil {
-				return fmt.Errorf("error flushing connection: %s", err)
-			}
-		}
-	}
+	fmt.Fprint(os.Stderr, "\r")
+	return nil
 }
