@@ -95,6 +95,18 @@ type CommitImportedVmResponse struct {
 	Error string
 }
 
+// The ConnectToVmSerialPort RPC is fully streamed. After the request/response,
+// the connection/client is hijacked and each side of the connection will send
+// a stream of bytes.
+type ConnectToVmSerialPortRequest struct {
+	IpAddress  net.IP
+	PortNumber uint
+}
+
+type ConnectToVmSerialPortResponse struct {
+	Error string
+}
+
 type CopyVmRequest struct {
 	AccessToken      []byte
 	IpAddress        net.IP
