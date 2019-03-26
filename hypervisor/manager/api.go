@@ -62,20 +62,22 @@ type vmInfoType struct {
 	mutex                      sync.RWMutex
 	accessToken                []byte
 	accessTokenCleanupNotifier chan<- struct{}
+	commandChannel             chan<- string
+	destroyTimer               *time.Timer
+	dirname                    string
+	doNotWriteOrSend           bool
+	hasHealthAgent             bool
+	ipAddress                  string
+	logger                     log.DebugLogger
+	manager                    *Manager
+	metadataChannels           map[chan<- string]struct{}
+	monitorSockname            string
+	ownerUsers                 map[string]struct{}
+	serialInput                io.Writer
+	serialOutput               chan<- byte
+	stoppedNotifier            chan<- struct{}
+	VolumeLocations            []volumeType
 	proto.VmInfo
-	VolumeLocations  []volumeType
-	manager          *Manager
-	dirname          string
-	doNotWriteOrSend bool
-	hasHealthAgent   bool
-	ipAddress        string
-	monitorSockname  string
-	ownerUsers       map[string]struct{}
-	commandChannel   chan<- string
-	logger           log.DebugLogger
-	destroyTimer     *time.Timer
-	metadataChannels map[chan<- string]struct{}
-	stoppedNotifier  chan<- struct{}
 }
 
 type volumeType struct {
@@ -135,6 +137,12 @@ func (m *Manager) CloseUpdateChannel(channel <-chan proto.Update) {
 func (m *Manager) CommitImportedVm(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
 	return m.commitImportedVm(ipAddr, authInfo)
+}
+
+func (m *Manager) ConnectToVmSerialPort(ipAddr net.IP,
+	authInfo *srpc.AuthInformation,
+	portNumber uint) (chan<- byte, <-chan byte, error) {
+	return m.connectToVmSerialPort(ipAddr, authInfo, portNumber)
 }
 
 func (m *Manager) CopyVm(conn *srpc.Conn, request proto.CopyVmRequest,
