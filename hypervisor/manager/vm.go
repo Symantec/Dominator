@@ -34,6 +34,11 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
+const (
+	bootlogFilename    = "bootlog"
+	serialSockFilename = "serial0.sock"
+)
+
 var (
 	errorNoAccessToResource = errors.New("no access to resource")
 )
@@ -118,6 +123,22 @@ func maybeDrainUserData(conn *srpc.Conn, request proto.CreateVmRequest) error {
 		return err
 	}
 	return nil
+}
+
+func readData(firstByte byte, moreBytes <-chan byte) []byte {
+	buffer := make([]byte, 1, len(moreBytes)+1)
+	buffer[0] = firstByte
+	for {
+		select {
+		case char, ok := <-moreBytes:
+			if !ok {
+				return buffer
+			}
+			buffer = append(buffer, char)
+		default:
+			return buffer
+		}
+	}
 }
 
 func setVolumeSize(filename string, size uint64) error {
@@ -327,6 +348,49 @@ func (m *Manager) commitImportedVm(ipAddr net.IP,
 	vm.Uncommitted = false
 	vm.writeAndSendInfo()
 	return nil
+}
+
+func (m *Manager) connectToVmSerialPort(ipAddr net.IP,
+	authInfo *srpc.AuthInformation,
+	portNumber uint) (chan<- byte, <-chan byte, error) {
+	if portNumber > 0 {
+		return nil, nil, errors.New("only one serial port is supported")
+	}
+	input := make(chan byte, 256)
+	output := make(chan byte, 16<<10)
+	vm, err := m.getVmLockAndAuth(ipAddr, true, authInfo, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer vm.mutex.Unlock()
+	if vm.State != proto.StateRunning {
+		return nil, nil, errors.New("VM is not running")
+	}
+	serialInput := vm.serialInput
+	if serialInput == nil {
+		return nil, nil, errors.New("no serial input device for VM")
+	}
+	if vm.serialOutput != nil {
+		return nil, nil, errors.New("VM already has a serial port connection")
+	}
+	vm.serialOutput = output
+	go func(input <-chan byte, output chan<- byte) {
+		for char := range input {
+			buffer := readData(char, input)
+			if _, err := serialInput.Write(buffer); err != nil {
+				vm.logger.Printf("error writing to serial port: %s\n", err)
+				break
+			}
+		}
+		vm.logger.Debugln(0, "input channel for console closed")
+		vm.mutex.Lock()
+		if vm.serialOutput != nil {
+			close(vm.serialOutput)
+			vm.serialOutput = nil
+		}
+		vm.mutex.Unlock()
+	}(input, output)
+	return input, output, nil
 }
 
 func (m *Manager) copyVm(conn *srpc.Conn, request proto.CopyVmRequest,
@@ -1793,7 +1857,12 @@ func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	if err != nil {
 		return false, err
 	}
-	defer vm.mutex.Unlock()
+	doUnlock := true
+	defer func() {
+		if doUnlock {
+			vm.mutex.Unlock()
+		}
+	}()
 	if err := checkAvailableMemory(vm.MemoryInMiB); err != nil {
 		return false, err
 	}
@@ -1806,6 +1875,8 @@ func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		return false, errors.New("VM is stopping")
 	case proto.StateStopped, proto.StateFailedToStart:
 		vm.setState(proto.StateStarting)
+		vm.mutex.Unlock()
+		doUnlock = false
 		return vm.startManaging(dhcpTimeout, false)
 	case proto.StateDestroying:
 		return false, errors.New("VM is destroying")
@@ -2113,8 +2184,8 @@ func (vm *vmInfoType) getKernelPath() string {
 }
 
 func (vm *vmInfoType) kill() {
-	vm.mutex.Lock()
-	defer vm.mutex.Unlock()
+	vm.mutex.RLock()
+	defer vm.mutex.RUnlock()
 	if vm.State == proto.StateStopping {
 		vm.commandChannel <- "quit"
 	}
@@ -2127,6 +2198,7 @@ func (vm *vmInfoType) monitor(monitorSock net.Conn,
 	go vm.processMonitorResponses(monitorSock)
 	cancelChannel := make(chan struct{}, 1)
 	go vm.probeHealthAgent(cancelChannel)
+	go vm.serialManager()
 	for command := range commandChannel {
 		_, err := fmt.Fprintf(monitorSock, `{"execute":"%s"}`, command)
 		if err != nil {
@@ -2200,6 +2272,55 @@ func (vm *vmInfoType) rootLabel() string {
 		ipAddr[0], ipAddr[1], ipAddr[2], ipAddr[3])
 }
 
+func (vm *vmInfoType) serialManager() {
+	bootlogFile, err := os.OpenFile(path.Join(vm.dirname, bootlogFilename),
+		os.O_CREATE|os.O_WRONLY|os.O_APPEND, fsutil.PublicFilePerms)
+	if err != nil {
+		vm.logger.Printf("error opening bootlog file: %s\n", err)
+		return
+	}
+	defer bootlogFile.Close()
+	serialSock, err := net.Dial("unix",
+		path.Join(vm.dirname, serialSockFilename))
+	if err != nil {
+		vm.logger.Printf("error connecting to console: %s\n", err)
+		return
+	}
+	defer serialSock.Close()
+	vm.mutex.Lock()
+	vm.serialInput = serialSock
+	vm.mutex.Unlock()
+	buffer := make([]byte, 256)
+	for {
+		if nRead, err := serialSock.Read(buffer); err != nil {
+			if err != io.EOF {
+				vm.logger.Printf("error reading from serial port: %s\n", err)
+			} else {
+				vm.logger.Debugln(0, "serial port closed")
+			}
+			break
+		} else if nRead > 0 {
+			vm.mutex.RLock()
+			if vm.serialOutput != nil {
+				for _, char := range buffer[:nRead] {
+					vm.serialOutput <- char
+				}
+				vm.mutex.RUnlock()
+			} else {
+				vm.mutex.RUnlock()
+				bootlogFile.Write(buffer[:nRead])
+			}
+		}
+	}
+	vm.mutex.Lock()
+	vm.serialInput = nil
+	if vm.serialOutput != nil {
+		close(vm.serialOutput)
+		vm.serialOutput = nil
+	}
+	vm.mutex.Unlock()
+}
+
 func (vm *vmInfoType) setState(state proto.State) {
 	vm.State = state
 	if !vm.doNotWriteOrSend {
@@ -2236,6 +2357,7 @@ func (vm *vmInfoType) setupVolumes(rootSize uint64,
 	return nil
 }
 
+// This may grab the VM lock.
 func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration,
 	haveManagerLock bool) (bool, error) {
 	vm.monitorSockname = path.Join(vm.dirname, "monitor.sock")
@@ -2371,7 +2493,6 @@ func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 	if nCpus*1000 < vm.MilliCPUs {
 		nCpus++
 	}
-	bootlogFilename := path.Join(vm.dirname, "bootlog")
 	bridges, netOptions, err := vm.getBridgesAndOptions(haveManagerLock)
 	if err != nil {
 		return err
@@ -2391,7 +2512,8 @@ func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 		"-name", vm.ipAddress,
 		"-m", fmt.Sprintf("%dM", vm.MemoryInMiB),
 		"-smp", fmt.Sprintf("cpus=%d", nCpus),
-		"-serial", "file:"+bootlogFilename,
+		"-serial",
+		"unix:"+path.Join(vm.dirname, serialSockFilename)+",server,nowait",
 		"-chroot", "/tmp",
 		"-runas", vm.manager.Username,
 		"-qmp", "unix:"+vm.monitorSockname+",server,nowait",
@@ -2425,7 +2547,7 @@ func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 			"-drive", "file="+volume.Filename+",format="+volumeFormat.String()+
 				",if=virtio")
 	}
-	os.Remove(bootlogFilename)
+	os.Remove(path.Join(vm.dirname, "bootlog"))
 	cmd.ExtraFiles = tapFiles // Start at fd=3 for QEMU.
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("error starting QEMU: %s: %s", err, output)
