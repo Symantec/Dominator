@@ -52,7 +52,9 @@ var (
 		"Time to wait before timing out on probing VM port")
 	secondarySubnetIDs   flagutil.StringList
 	secondaryVolumeSizes flagutil.StringList
-	skipBootloader       = flag.Bool("skipBootloader", false,
+	serialPort           = flag.Uint("serialPort", 0,
+		"Serial port number on VM")
+	skipBootloader = flag.Bool("skipBootloader", false,
 		"If true, directly boot into the kernel")
 	subnetId = flag.String("subnetId", "",
 		"Subnet ID to launch VM in")
@@ -98,6 +100,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  change-vm-destroy-protection IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-owner-users IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-tags IPaddr")
+	fmt.Fprintln(os.Stderr, "  connect-to-vm-serial-port IPaddr")
 	fmt.Fprintln(os.Stderr, "  copy-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  create-vm")
 	fmt.Fprintln(os.Stderr, "  delete-vm-volume IPaddr")
@@ -142,6 +145,7 @@ var subcommands = []subcommand{
 	{"change-vm-destroy-protection", 1, 1, changeVmDestroyProtectionSubcommand},
 	{"change-vm-owner-users", 1, 1, changeVmOwnerUsersSubcommand},
 	{"change-vm-tags", 1, 1, changeVmTagsSubcommand},
+	{"connect-to-vm-serial-port", 1, 1, connectToVmSerialPortSubcommand},
 	{"copy-vm", 1, 1, copyVmSubcommand},
 	{"create-vm", 0, 0, createVmSubcommand},
 	{"delete-vm-volume", 1, 1, deleteVmVolumeSubcommand},
