@@ -22,7 +22,6 @@ import (
 	"time"
 
 	libnet "github.com/Symantec/Dominator/lib/net"
-	"github.com/Symantec/Dominator/lib/net/proxy"
 	"github.com/Symantec/Dominator/lib/resourcepool"
 )
 
@@ -251,7 +250,7 @@ type Client struct {
 func DialHTTP(network, address string, timeout time.Duration) (*Client, error) {
 	netDialer := &net.Dialer{Timeout: timeout}
 	if *srpcProxy != "" {
-		dialer, err := proxy.NewDialer(*srpcProxy, netDialer)
+		dialer, err := newProxyDialer(*srpcProxy, netDialer)
 		if err != nil {
 			return nil, err
 		}
