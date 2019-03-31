@@ -1,6 +1,7 @@
 /*
 	Package rrdialer implements a dialer which provides improved behaviour for
 	hostnames with multiple IP addresses (aka. round-robin DNS).
+
 	Unlike the default net.Dialer which divides the timeout between the multiple
 	endpoints (IP addresses), the round-robin dialer tracks the historic
 	performance of each endpoint to dial the fastest endpoint first and will
