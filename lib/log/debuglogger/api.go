@@ -27,28 +27,33 @@ func Upgrade(logger log.Logger) log.DebugLogger {
 	return New(logger)
 }
 
-// Debug will call the Print method if level is less than the max debug level
-// for the Logger.
+// Debug will call the Print method if level is less than or equal to the max
+// debug level for the Logger.
 func (l *Logger) Debug(level uint8, v ...interface{}) {
 	if l.level >= int16(level) {
 		l.Print(v...)
 	}
 }
 
-// Debugf will call the Printf method if level is less than the max debug level
-// for the Logger.
+// Debugf will call the Printf method if level is less than or equal to the max
+// debug level for the Logger.
 func (l *Logger) Debugf(level uint8, format string, v ...interface{}) {
 	if l.level >= int16(level) {
 		l.Printf(format, v...)
 	}
 }
 
-// Debugln will call the Println method if level is less than the max debug
-// level for the Logger.
+// Debugln will call the Println method if level is less than or equal to the
+// max debug level for the Logger.
 func (l *Logger) Debugln(level uint8, v ...interface{}) {
 	if l.level >= int16(level) {
 		l.Println(v...)
 	}
+}
+
+// GetLevel gets the current maximum debug level.
+func (l *Logger) GetLevel() int16 {
+	return l.level
 }
 
 // SetLevel sets the maximum debug level. A negative level will cause all debug
