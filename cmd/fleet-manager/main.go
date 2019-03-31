@@ -17,6 +17,7 @@ import (
 	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log/serverlogger"
+	"github.com/Symantec/Dominator/lib/srpc/proxy"
 	"github.com/Symantec/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/tricorder/go/tricorder"
 )
@@ -72,6 +73,9 @@ func main() {
 	if err := setupserver.SetupTls(); err != nil {
 		logger.Fatalln(err)
 	}
+	if err := proxy.New(logger); err != nil {
+		logger.Fatalln(err)
+	}
 	if err := os.MkdirAll(*stateDir, dirPerms); err != nil {
 		logger.Fatalf("Cannot create state directory: %s\n", err)
 	}
@@ -111,5 +115,4 @@ func main() {
 		webServer.UpdateTopology(topology)
 		hyperManager.UpdateTopology(topology)
 	}
-
 }
