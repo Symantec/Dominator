@@ -263,7 +263,6 @@ func (d *Dialer) recordEvent(endpoint *endpointType, latency float64) {
 	d.logger.Debugf(3, "%s: L: %f ms, Lm: %f ms, Lsd: %f ms\n",
 		endpoint.address, latency*1e3, endpoint.MeanLatency*1e3,
 		endpoint.standardDeviationOfLatency*1e3)
-	// endpoint.LastLatency = latency
 	if latency > endpoint.MaximumLatency {
 		endpoint.MaximumLatency = latency
 	}
