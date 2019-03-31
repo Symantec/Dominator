@@ -79,6 +79,7 @@ func TestDialOneIsFastEnough(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(time.Millisecond * 20)
 	if *counter50 != 1 {
 		t.Fatal("endpoint50 did not connect")
 	}
@@ -104,7 +105,7 @@ func TestDialTwoAreFastEnough(t *testing.T) {
 	}
 	counter50 := endpoint50.makeListener(0, dialer.logger)
 	counter100 := endpoint100.makeListener(time.Millisecond*40, dialer.logger)
-	counter150 := endpoint100.makeListener(0, dialer.logger)
+	counter150 := endpoint150.makeListener(0, dialer.logger)
 	endpoints := []*endpointType{endpoint50, endpoint100, endpoint150}
 	time.Sleep(time.Millisecond * 20)
 	_, err := dialer.dialEndpoints(context.Background(), "tcp",
@@ -112,6 +113,7 @@ func TestDialTwoAreFastEnough(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(time.Millisecond * 20)
 	if *counter50 != 1 && *counter150 != 1 {
 		t.Fatal("endpoint50 and endpoint150 did not connect")
 	}
