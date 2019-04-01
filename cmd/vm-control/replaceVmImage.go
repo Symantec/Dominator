@@ -7,19 +7,17 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func replaceVmImageSubcommand(args []string, logger log.DebugLogger) {
+func replaceVmImageSubcommand(args []string, logger log.DebugLogger) error {
 	if err := replaceVmImage(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error replacing VM image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error replacing VM image: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func callReplaceVmImage(client *srpc.Client,

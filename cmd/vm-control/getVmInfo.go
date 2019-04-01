@@ -12,12 +12,11 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func getVmInfoSubcommand(args []string, logger log.DebugLogger) {
+func getVmInfoSubcommand(args []string, logger log.DebugLogger) error {
 	if err := getVmInfo(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting VM info: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error getting VM info: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getVmInfo(vmHostname string, logger log.DebugLogger) error {

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/Symantec/Dominator/lib/errors"
@@ -10,12 +9,11 @@ import (
 	proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
 
-func listHypervisorsSubcommand(args []string, logger log.DebugLogger) {
+func listHypervisorsSubcommand(args []string, logger log.DebugLogger) error {
 	if err := listHypervisors(logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing Hypervisors: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error listing Hypervisors: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func listHypervisors(logger log.DebugLogger) error {

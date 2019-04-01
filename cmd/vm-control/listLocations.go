@@ -2,23 +2,21 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
 	proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
 
-func listLocationsSubcommand(args []string, logger log.DebugLogger) {
+func listLocationsSubcommand(args []string, logger log.DebugLogger) error {
 	var topLocation string
 	if len(args) > 0 {
 		topLocation = args[0]
 	}
 	if err := listLocations(topLocation, logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing locations: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error listing locations: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func listLocations(topLocation string, logger log.DebugLogger) error {

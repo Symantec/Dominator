@@ -4,7 +4,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"net"
-	"os"
 	"time"
 
 	"github.com/Symantec/Dominator/lib/errors"
@@ -13,12 +12,11 @@ import (
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func migrateVmSubcommand(args []string, logger log.DebugLogger) {
+func migrateVmSubcommand(args []string, logger log.DebugLogger) error {
 	if err := migrateVm(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error migrating VM: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error migrating VM: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func discardAccessToken(hypervisor *srpc.Client, ipAddr net.IP) {

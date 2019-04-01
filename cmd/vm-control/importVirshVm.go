@@ -66,12 +66,11 @@ type volumeType struct {
 	Type   string     `xml:"type,attr"`
 }
 
-func importVirshVmSubcommand(args []string, logger log.DebugLogger) {
+func importVirshVmSubcommand(args []string, logger log.DebugLogger) error {
 	if err := importVirshVm(args[0], args[1], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error importing VM: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error importing VM: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func ensureDomainIsStopped(domainName string) error {

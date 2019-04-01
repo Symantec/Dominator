@@ -3,19 +3,18 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func becomePrimaryVmOwnerSubcommand(args []string, logger log.DebugLogger) {
+func becomePrimaryVmOwnerSubcommand(args []string,
+	logger log.DebugLogger) error {
 	if err := becomePrimaryVmOwner(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error becoming primary VM owner: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error becoming primary VM owner: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func becomePrimaryVmOwner(vmHostname string, logger log.DebugLogger) error {

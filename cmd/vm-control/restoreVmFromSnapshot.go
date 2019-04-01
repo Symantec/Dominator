@@ -3,19 +3,18 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func restoreVmFromSnapshotSubcommand(args []string, logger log.DebugLogger) {
+func restoreVmFromSnapshotSubcommand(args []string,
+	logger log.DebugLogger) error {
 	if err := restoreVmFromSnapshot(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error restoring VM from snapshot: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error restoring VM from snapshot: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func restoreVmFromSnapshot(vmHostname string, logger log.DebugLogger) error {

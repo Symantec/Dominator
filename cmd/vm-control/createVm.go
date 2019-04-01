@@ -24,12 +24,11 @@ func init() {
 	rand.Seed(time.Now().Unix() + time.Now().UnixNano())
 }
 
-func createVmSubcommand(args []string, logger log.DebugLogger) {
+func createVmSubcommand(args []string, logger log.DebugLogger) error {
 	if err := createVm(logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating VM: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error creating VM: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func callCreateVm(client *srpc.Client, request hyper_proto.CreateVmRequest,

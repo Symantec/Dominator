@@ -3,19 +3,17 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 )
 
-func stopVmSubcommand(args []string, logger log.DebugLogger) {
+func stopVmSubcommand(args []string, logger log.DebugLogger) error {
 	if err := stopVm(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error stopping VM: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error stopping VM: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func logVmName(client *srpc.Client, ipAddr net.IP, action string,

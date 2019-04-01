@@ -6,19 +6,17 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func replaceVmUserDataSubcommand(args []string, logger log.DebugLogger) {
+func replaceVmUserDataSubcommand(args []string, logger log.DebugLogger) error {
 	if err := replaceVmUserData(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error replacing VM user data: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error replacing VM user data: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func replaceVmUserData(vmHostname string, logger log.DebugLogger) error {

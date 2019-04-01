@@ -2,27 +2,24 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func setVmMigratingSubcommand(args []string, logger log.DebugLogger) {
+func setVmMigratingSubcommand(args []string, logger log.DebugLogger) error {
 	if err := changeVmMigrationState(args[0], true, logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error setting VM migration state: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error setting VM migration state: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
-func unsetVmMigratingSubcommand(args []string, logger log.DebugLogger) {
+func unsetVmMigratingSubcommand(args []string, logger log.DebugLogger) error {
 	if err := changeVmMigrationState(args[0], false, logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error clearing VM migration state: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error clearing VM migration state: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func changeVmMigrationState(vmHostname string, enable bool,

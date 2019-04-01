@@ -5,19 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func traceVmMetadataSubcommand(args []string, logger log.DebugLogger) {
+func traceVmMetadataSubcommand(args []string, logger log.DebugLogger) error {
 	if err := traceVmMetadata(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error tracing VM metadata: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error tracing VM metadata: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func traceVmMetadata(vmHostname string, logger log.DebugLogger) error {

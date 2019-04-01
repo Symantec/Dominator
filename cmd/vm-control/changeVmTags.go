@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
@@ -12,12 +11,11 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func changeVmTagsSubcommand(args []string, logger log.DebugLogger) {
+func changeVmTagsSubcommand(args []string, logger log.DebugLogger) error {
 	if err := changeVmTags(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error changing VM tags: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error changing VM tags: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func changeVmTags(vmHostname string, logger log.DebugLogger) error {

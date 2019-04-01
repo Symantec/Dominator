@@ -12,12 +12,11 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func getVmVolumeSubcommand(args []string, logger log.DebugLogger) {
+func getVmVolumeSubcommand(args []string, logger log.DebugLogger) error {
 	if err := getVmVolume(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting VM volume: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error getting VM volume: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getVmVolume(vmHostname string, logger log.DebugLogger) error {

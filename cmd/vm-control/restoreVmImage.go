@@ -3,19 +3,17 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func restoreVmImageSubcommand(args []string, logger log.DebugLogger) {
+func restoreVmImageSubcommand(args []string, logger log.DebugLogger) error {
 	if err := restoreVmImage(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error restoring VM image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error restoring VM image: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func restoreVmImage(vmHostname string, logger log.DebugLogger) error {
