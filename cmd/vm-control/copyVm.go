@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
 
 	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
 	"github.com/Symantec/Dominator/lib/log"
@@ -13,12 +12,11 @@ import (
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func copyVmSubcommand(args []string, logger log.DebugLogger) {
+func copyVmSubcommand(args []string, logger log.DebugLogger) error {
 	if err := copyVm(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error copying VM: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error copying VM: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func copyVm(vmHostname string, logger log.DebugLogger) error {

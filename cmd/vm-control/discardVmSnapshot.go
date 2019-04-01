@@ -3,19 +3,17 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func discardVmSnapshotSubcommand(args []string, logger log.DebugLogger) {
+func discardVmSnapshotSubcommand(args []string, logger log.DebugLogger) error {
 	if err := discardVmSnapshot(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error discarding VM snapshot: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error discarding VM snapshot: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func discardVmSnapshot(vmHostname string, logger log.DebugLogger) error {

@@ -3,19 +3,17 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func deleteVmVolumeSubcommand(args []string, logger log.DebugLogger) {
+func deleteVmVolumeSubcommand(args []string, logger log.DebugLogger) error {
 	if err := deleteVmVolume(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error deleting VM volume: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error deleting VM volume: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func deleteVmVolume(vmHostname string, logger log.DebugLogger) error {

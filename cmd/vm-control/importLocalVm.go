@@ -82,12 +82,11 @@ func commitVm(client *srpc.Client, ipAddress net.IP) error {
 	return errors.New(reply.Error)
 }
 
-func importLocalVmSubcommand(args []string, logger log.DebugLogger) {
+func importLocalVmSubcommand(args []string, logger log.DebugLogger) error {
 	if err := importLocalVm(args[0], args[1], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error importing VM: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error importing VM: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func importLocalVm(infoFile, rootVolume string, logger log.DebugLogger) error {

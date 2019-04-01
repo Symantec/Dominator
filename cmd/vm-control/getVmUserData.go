@@ -13,12 +13,11 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func getVmUserDataSubcommand(args []string, logger log.DebugLogger) {
+func getVmUserDataSubcommand(args []string, logger log.DebugLogger) error {
 	if err := getVmUserData(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting VM user data: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error getting VM user data: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getVmUserData(vmHostname string, logger log.DebugLogger) error {

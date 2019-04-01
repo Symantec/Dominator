@@ -3,18 +3,16 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func destroyVmSubcommand(args []string, logger log.DebugLogger) {
+func destroyVmSubcommand(args []string, logger log.DebugLogger) error {
 	if err := destroyVm(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error destroying VM: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error destroying VM: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func destroyVm(vmHostname string, logger log.DebugLogger) error {

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
@@ -11,13 +10,11 @@ import (
 )
 
 func changeVmDestroyProtectionSubcommand(args []string,
-	logger log.DebugLogger) {
+	logger log.DebugLogger) error {
 	if err := changeVmDestroyProtection(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error changing VM destroy protection: %s\n",
-			err)
-		os.Exit(1)
+		return fmt.Errorf("Error changing VM destroy protection: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func changeVmDestroyProtection(vmHostname string,

@@ -13,7 +13,7 @@ import (
 func findHypervisor(vmIpAddr net.IP) (string, error) {
 	if *fleetManagerHostname != "" {
 		cm := fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum)
-		client, err := srpc.DialHTTP("tcp", cm, time.Second*10)
+		client, err := dialFleetManager(cm)
 		if err != nil {
 			return "", err
 		}

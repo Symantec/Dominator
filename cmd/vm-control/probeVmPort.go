@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
@@ -11,16 +10,14 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func probeVmPortSubcommand(args []string, logger log.DebugLogger) {
+func probeVmPortSubcommand(args []string, logger log.DebugLogger) error {
 	if *probePortNum < 1 {
-		fmt.Fprintln(os.Stderr, "Must provide -probePortNum flag")
-		os.Exit(1)
+		return fmt.Errorf("Must provide -probePortNum flag")
 	}
 	if err := probeVmPort(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error probing VM: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error probing VM: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func probeVmPort(vmHostname string, logger log.DebugLogger) error {

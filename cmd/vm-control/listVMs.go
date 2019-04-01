@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/gob"
 	"fmt"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
@@ -12,12 +11,11 @@ import (
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func listVMsSubcommand(args []string, logger log.DebugLogger) {
+func listVMsSubcommand(args []string, logger log.DebugLogger) error {
 	if err := listVMs(logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing VMs: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error listing VMs: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func listVMs(logger log.DebugLogger) error {

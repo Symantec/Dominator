@@ -12,12 +12,12 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func connectToVmSerialPortSubcommand(args []string, logger log.DebugLogger) {
+func connectToVmSerialPortSubcommand(args []string,
+	logger log.DebugLogger) error {
 	if err := connectToVmSerialPort(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error connecting to VM serial port: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error connecting to VM serial port: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func connectToVmSerialPort(vmHostname string, logger log.DebugLogger) error {
