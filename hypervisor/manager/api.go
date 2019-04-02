@@ -309,6 +309,10 @@ func (m *Manager) RestoreVmUserData(ipAddr net.IP,
 	return m.restoreVmUserData(ipAddr, authInfo)
 }
 
+func (m *Manager) ShutdownVMsAndExit() {
+	m.shutdownVMsAndExit()
+}
+
 func (m *Manager) SnapshotVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	forceIfNotStopped, snapshotRootOnly bool) error {
 	return m.snapshotVm(ipAddr, authInfo, forceIfNotStopped, snapshotRootOnly)

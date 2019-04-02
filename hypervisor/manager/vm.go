@@ -2243,8 +2243,16 @@ func (vm *vmInfoType) processMonitorResponses(monitorSock net.Conn) {
 	vm.commandChannel = nil
 	switch vm.State {
 	case proto.StateStarting:
+		select {
+		case vm.stoppedNotifier <- struct{}{}:
+		default:
+		}
 		return
 	case proto.StateRunning:
+		select {
+		case vm.stoppedNotifier <- struct{}{}:
+		default:
+		}
 		return
 	case proto.StateFailedToStart:
 		return
