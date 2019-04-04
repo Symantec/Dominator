@@ -30,24 +30,6 @@ func fallocate(fd int, mode uint32, off int64, len int64) error {
 	return syscall.Fallocate(fd, mode, off, len)
 }
 
-func lstat(path string, statbuf *Stat_t) error {
-	var rawStatbuf syscall.Stat_t
-	if err := syscall.Lstat(path, &rawStatbuf); err != nil {
-		return err
-	}
-	convertStat(statbuf, &rawStatbuf)
-	return nil
-}
-
-func mount(source string, target string, fstype string, flags uintptr,
-	data string) error {
-	var linuxFlags uintptr
-	if flags&MS_BIND != 0 {
-		linuxFlags |= syscall.MS_BIND
-	}
-	return syscall.Mount(source, target, fstype, linuxFlags, data)
-}
-
 func getrusage(who int, rusage *Rusage) error {
 	switch who {
 	case RUSAGE_CHILDREN:
@@ -81,6 +63,33 @@ func getrusage(who int, rusage *Rusage) error {
 	rusage.Nvcsw = int64(syscallRusage.Nvcsw)
 	rusage.Nivcsw = int64(syscallRusage.Nivcsw)
 	return nil
+}
+
+func ioctl(fd int, request, argp uintptr) error {
+	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), request,
+		argp)
+	if errno != 0 {
+		return os.NewSyscallError("ioctl", errno)
+	}
+	return nil
+}
+
+func lstat(path string, statbuf *Stat_t) error {
+	var rawStatbuf syscall.Stat_t
+	if err := syscall.Lstat(path, &rawStatbuf); err != nil {
+		return err
+	}
+	convertStat(statbuf, &rawStatbuf)
+	return nil
+}
+
+func mount(source string, target string, fstype string, flags uintptr,
+	data string) error {
+	var linuxFlags uintptr
+	if flags&MS_BIND != 0 {
+		linuxFlags |= syscall.MS_BIND
+	}
+	return syscall.Mount(source, target, fstype, linuxFlags, data)
 }
 
 func setAllGid(gid int) error {
