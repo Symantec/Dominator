@@ -30,6 +30,15 @@ func fallocate(fd int, mode uint32, off int64, len int64) error {
 	return syscall.Fallocate(fd, mode, off, len)
 }
 
+func lstat(path string, statbuf *Stat_t) error {
+	var rawStatbuf syscall.Stat_t
+	if err := syscall.Lstat(path, &rawStatbuf); err != nil {
+		return err
+	}
+	convertStat(statbuf, &rawStatbuf)
+	return nil
+}
+
 func mount(source string, target string, fstype string, flags uintptr,
 	data string) error {
 	var linuxFlags uintptr
@@ -91,6 +100,15 @@ func setNetNamespace(namespaceFd int) error {
 	}
 	return nil
 
+}
+
+func stat(path string, statbuf *Stat_t) error {
+	var rawStatbuf syscall.Stat_t
+	if err := syscall.Stat(path, &rawStatbuf); err != nil {
+		return err
+	}
+	convertStat(statbuf, &rawStatbuf)
+	return nil
 }
 
 func unshareMountNamespace() error {
