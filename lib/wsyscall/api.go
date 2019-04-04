@@ -59,12 +59,7 @@ func Ioctl(fd int, request, argp uintptr) error {
 }
 
 func Lstat(path string, statbuf *Stat_t) error {
-	var rawStatbuf syscall.Stat_t
-	if err := syscall.Lstat(path, &rawStatbuf); err != nil {
-		return err
-	}
-	convertStat(statbuf, &rawStatbuf)
-	return nil
+	return lstat(path, statbuf)
 }
 
 func Mount(source string, target string, fstype string, flags uintptr,
@@ -89,12 +84,7 @@ func SetNetNamespace(fd int) error {
 }
 
 func Stat(path string, statbuf *Stat_t) error {
-	var rawStatbuf syscall.Stat_t
-	if err := syscall.Stat(path, &rawStatbuf); err != nil {
-		return err
-	}
-	convertStat(statbuf, &rawStatbuf)
-	return nil
+	return stat(path, statbuf)
 }
 
 func UnshareMountNamespace() error {
