@@ -58,12 +58,41 @@ func init() {
 		"Comma separated list of volume directories. If empty, scan for space")
 }
 
+func printUsage() {
+	fmt.Fprintln(os.Stderr,
+		"Usage: hypervisor [flags...] [run|stop|stop-vms-on-next-stop]")
+	fmt.Fprintln(os.Stderr, "Common flags:")
+	flag.PrintDefaults()
+}
+
+func processCommand(args []string) {
+	if len(args) < 1 {
+		return
+	} else if len(args) > 1 {
+		printUsage()
+		os.Exit(2)
+	}
+	switch args[0] {
+	case "run":
+		return
+	case "stop":
+		requestStop()
+	case "stop-vms-on-next-stop":
+		configureVMsToStopOnNextStop()
+	default:
+		printUsage()
+		os.Exit(2)
+	}
+}
+
 func main() {
 	if err := loadflags.LoadForDaemon("hypervisor"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	flag.Usage = printUsage
 	flag.Parse()
+	processCommand(flag.Args())
 	if *testMemoryAvailable > 0 {
 		nBytes := *testMemoryAvailable << 20
 		mem := make([]byte, nBytes)
@@ -132,6 +161,9 @@ func main() {
 	})
 	if err != nil {
 		logger.Fatalf("Cannot start hypervisor: %s\n", err)
+	}
+	if err := listenForControl(managerObj, logger); err != nil {
+		logger.Fatalf("Cannot listen for control: %s\n", err)
 	}
 	httpd.AddHtmlWriter(managerObj)
 	if len(bridges) < 1 {

@@ -1,0 +1,12 @@
+[Unit]
+Description=Virtual Machines clean shutdown
+After=hypervisor.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/bin/true
+ExecStop=/usr/local/sbin/hypervisor stop-vms-on-next-stop
+
+[Install]
+WantedBy=multi-user.target

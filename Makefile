@@ -13,7 +13,8 @@ fleet-manager.tarball:
 	@./scripts/make-tarball fleet-manager -C $(ETCDIR) ssl
 
 hypervisor.tarball:
-	@./scripts/make-tarball hypervisor -C $(ETCDIR) ssl
+	@./scripts/make-tarball hypervisor init.d/virtual-machines.* \
+		-C $(ETCDIR) ssl
 
 image-unpacker.tarball:
 	@./scripts/make-tarball image-unpacker \
