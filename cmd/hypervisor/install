@@ -7,3 +7,4 @@ cd "${0%/*}"
 . ./scripts/install.lib
 
 install_all hypervisor
+install_service virtual-machines

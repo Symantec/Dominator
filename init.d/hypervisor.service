@@ -5,6 +5,7 @@ After=network.target
 [Service]
 KillMode=process
 ExecStart=/usr/local/sbin/hypervisor
+ExecStop=/usr/local/sbin/hypervisor stop
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=1
