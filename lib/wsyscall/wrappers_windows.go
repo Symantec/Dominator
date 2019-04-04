@@ -6,16 +6,20 @@ func fallocate(fd int, mode uint32, off int64, len int64) error {
 	return syscall.ENOTSUP
 }
 
+func getrusage(who int, rusage *Rusage) error {
+	return syscall.ENOTSUP
+}
+
+func ioctl(fd int, request, argp uintptr) error {
+	return syscall.ENOTSUP
+}
+
 func lstat(path string, statbuf *Stat_t) error {
 	return syscall.ENOTSUP
 }
 
 func mount(source string, target string, fstype string, flags uintptr,
 	data string) error {
-	return syscall.ENOTSUP
-}
-
-func getrusage(who int, rusage *Rusage) error {
 	return syscall.ENOTSUP
 }
 

@@ -1,6 +1,9 @@
 package wsyscall
 
-import "syscall"
+import (
+	"os"
+	"syscall"
+)
 
 func convertStat(dest *Stat_t, source *syscall.Stat_t) {
 	dest.Dev = uint64(source.Dev)
@@ -16,24 +19,6 @@ func convertStat(dest *Stat_t, source *syscall.Stat_t) {
 	dest.Atim = source.Atimespec
 	dest.Mtim = source.Mtimespec
 	dest.Ctim = source.Ctimespec
-}
-
-func fallocate(fd int, mode uint32, off int64, len int64) error {
-	return syscall.ENOTSUP
-}
-
-func lstat(path string, statbuf *Stat_t) error {
-	var rawStatbuf syscall.Stat_t
-	if err := syscall.Lstat(path, &rawStatbuf); err != nil {
-		return err
-	}
-	convertStat(statbuf, &rawStatbuf)
-	return nil
-}
-
-func mount(source string, target string, fstype string, flags uintptr,
-	data string) error {
-	return syscall.ENOTSUP
 }
 
 func getrusage(who int, rusage *Rusage) error {
@@ -67,6 +52,33 @@ func getrusage(who int, rusage *Rusage) error {
 	rusage.Nvcsw = int64(syscallRusage.Nvcsw)
 	rusage.Nivcsw = int64(syscallRusage.Nivcsw)
 	return nil
+}
+
+func fallocate(fd int, mode uint32, off int64, len int64) error {
+	return syscall.ENOTSUP
+}
+
+func ioctl(fd int, request, argp uintptr) error {
+	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), request,
+		argp)
+	if errno != 0 {
+		return os.NewSyscallError("ioctl", errno)
+	}
+	return nil
+}
+
+func lstat(path string, statbuf *Stat_t) error {
+	var rawStatbuf syscall.Stat_t
+	if err := syscall.Lstat(path, &rawStatbuf); err != nil {
+		return err
+	}
+	convertStat(statbuf, &rawStatbuf)
+	return nil
+}
+
+func mount(source string, target string, fstype string, flags uintptr,
+	data string) error {
+	return syscall.ENOTSUP
 }
 
 func setAllGid(gid int) error {
