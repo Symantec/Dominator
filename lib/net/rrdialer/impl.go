@@ -12,12 +12,17 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-const weight = 0.2
+const (
+	weight = 0.2
+
+	dirPerms         = 0755
+	privateFilePerms = 0600
+	publicFilePerms  = 0644
+)
 
 var (
 	pid = strconv.FormatInt(int64(os.Getpid()), 10)
@@ -270,17 +275,17 @@ func (d *Dialer) recordEvent(endpoint *endpointType, latency float64) {
 		endpoint.MinimumLatency = latency
 	}
 	file, err := os.OpenFile(tmpFilename, os.O_CREATE|os.O_EXCL|os.O_WRONLY,
-		fsutil.PublicFilePerms)
+		publicFilePerms)
 	if err != nil {
 		if os.IsNotExist(err) {
-			if e := os.MkdirAll(d.dirname, fsutil.DirPerms); e != nil {
+			if e := os.MkdirAll(d.dirname, dirPerms); e != nil {
 				d.logger.Println(err)
 				d.logger.Println(e)
 				return
 			}
 		}
 		file, err = os.OpenFile(tmpFilename, os.O_CREATE|os.O_EXCL|os.O_WRONLY,
-			fsutil.PublicFilePerms)
+			publicFilePerms)
 	}
 	if err != nil {
 		d.logger.Println(err)

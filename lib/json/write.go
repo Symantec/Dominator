@@ -5,20 +5,28 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-
-	"github.com/Symantec/Dominator/lib/fsutil"
 )
 
 func writeToFile(filename string, perm os.FileMode, indent string,
 	value interface{}) error {
-	file, err := fsutil.CreateRenamingWriter(filename, perm)
+	tmpFilename := filename + "~"
+	file, err := os.OpenFile(tmpFilename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
+		perm)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer os.Remove(tmpFilename)
 	writer := bufio.NewWriter(file)
-	defer writer.Flush()
-	return writeWithIndent(writer, indent, value)
+	if err := writeWithIndent(writer, indent, value); err != nil {
+		return err
+	}
+	if err := writer.Flush(); err != nil {
+		return err
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpFilename, filename)
 }
 
 func writeWithIndent(w io.Writer, indent string, value interface{}) error {
