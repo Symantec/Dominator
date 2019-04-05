@@ -35,6 +35,10 @@ func setNetNamespace(namespaceFd int) error {
 	return syscall.ENOTSUP
 }
 
+func stat(path string, statbuf *Stat_t) error {
+	return syscall.ENOTSUP
+}
+
 func unshareNetNamespace() (int, int, error) {
 	return -1, -1, syscall.ENOTSUP
 }
