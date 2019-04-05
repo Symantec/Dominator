@@ -20,6 +20,23 @@ const (
 	rootDevName        = "/dev/sda1"
 )
 
+var (
+	amiNameReplacer = strings.NewReplacer(
+		"@", "@@",
+		"~", "@tilde@",
+		"!", "@bang@",
+		"#", "@hash@",
+		"$", "@dollar@",
+		"%", "@percent@",
+		"^", "@caret@",
+		"&", "@ampersand@",
+		"*", "@asterix@", // the gaul.
+		"=", "@equal@",
+		"+", "@plus@",
+		":", ".",
+	)
+)
+
 func attachVolume(awsService *ec2.EC2, instance *ec2.Instance, volumeId string,
 	logger log.Logger) error {
 	usedBlockDevices := make(map[string]struct{})
@@ -730,7 +747,7 @@ func registerAmi(awsService *ec2.EC2, snapshotId string, s3Manifest string,
 		Architecture:       aws.String("x86_64"),
 		Description:        aws.String(imageName),
 		EnaSupport:         aws.Bool(publishOptions.EnaSupport),
-		Name:               aws.String(strings.Replace(amiName, ":", ".", -1)),
+		Name:               aws.String(amiNameReplacer.Replace(amiName)),
 		RootDeviceName:     aws.String(rootDevName),
 		SriovNetSupport:    aws.String("simple"),
 		VirtualizationType: aws.String("hvm"),
