@@ -13,12 +13,11 @@ import (
 	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func getUpdatesSubcommand(args []string, logger log.DebugLogger) {
+func getUpdatesSubcommand(args []string, logger log.DebugLogger) error {
 	if err := getUpdates(logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting updates: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error getting updates: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getUpdates(logger log.DebugLogger) error {
@@ -39,7 +38,7 @@ func getUpdates(logger log.DebugLogger) error {
 
 func getUpdatesOnFleetManager(fleetManager string,
 	logger log.DebugLogger) error {
-	client, err := srpc.DialHTTP("tcp", fleetManager, 0)
+	client, err := srpc.DialHTTPWithDialer("tcp", fleetManager, rrDialer)
 	if err != nil {
 		return err
 	}

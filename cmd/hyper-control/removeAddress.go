@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
@@ -11,28 +10,25 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func removeIpAddressSubcommand(args []string, logger log.DebugLogger) {
+func removeIpAddressSubcommand(args []string, logger log.DebugLogger) error {
 	ipAddr := net.ParseIP(args[0])
 	if len(ipAddr) < 4 {
-		fmt.Fprintf(os.Stderr, "Invalid IP address: %s\n", args[0])
-		os.Exit(1)
+		return fmt.Errorf("Invalid IP address: %s", args[0])
 	}
 	err := removeAddress(proto.Address{IpAddress: ipAddr}, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error removing IP address: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error removing IP address: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
-func removeMacAddressSubcommand(args []string, logger log.DebugLogger) {
+func removeMacAddressSubcommand(args []string, logger log.DebugLogger) error {
 	address := proto.Address{MacAddress: args[0]}
 	err := removeAddress(address, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error removing MAC address: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error removing MAC address: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func removeAddress(address proto.Address, logger log.DebugLogger) error {

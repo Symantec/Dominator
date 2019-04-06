@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/Symantec/Dominator/lib/errors"
@@ -11,13 +10,13 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func removeExcessAddressesSubcommand(args []string, logger log.DebugLogger) {
+func removeExcessAddressesSubcommand(args []string,
+	logger log.DebugLogger) error {
 	err := removeExcessAddresses(args[0], logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error removing excess addresses: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error removing excess addresses: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func removeExcessAddresses(maxAddr string, logger log.DebugLogger) error {

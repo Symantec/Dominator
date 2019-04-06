@@ -28,13 +28,12 @@ const (
 		syscall.S_IROTH | syscall.S_IXOTH
 )
 
-func makeInstallerIsoSubcommand(args []string, logger log.DebugLogger) {
+func makeInstallerIsoSubcommand(args []string, logger log.DebugLogger) error {
 	err := makeInstallerIso(args[0], args[1], logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error making installer ISO: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error making installer ISO: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func makeInstallerDirectory(hostname, rootDir string, logger log.DebugLogger) (

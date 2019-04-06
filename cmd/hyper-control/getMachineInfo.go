@@ -11,13 +11,12 @@ import (
 	proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
 
-func getMachineInfoSubcommand(args []string, logger log.DebugLogger) {
+func getMachineInfoSubcommand(args []string, logger log.DebugLogger) error {
 	err := getMachineInfo(args[0], logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting machine info: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error getting machine info: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getMachineInfo(hostname string, logger log.DebugLogger) error {

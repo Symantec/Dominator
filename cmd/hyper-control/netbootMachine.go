@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
@@ -12,17 +11,16 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func netbootMachineSubcommand(args []string, logger log.DebugLogger) {
+func netbootMachineSubcommand(args []string, logger log.DebugLogger) error {
 	var hostname string
 	if len(args) > 2 {
 		hostname = args[2]
 	}
 	err := netbootMachine(args[0], args[1], hostname, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error netbooting machine: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error netbooting machine: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func netbootMachine(macAddr, ipAddr, hostname string,

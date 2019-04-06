@@ -10,13 +10,13 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 )
 
-func showNetworkConfigurationSubcommand(args []string, logger log.DebugLogger) {
+func showNetworkConfigurationSubcommand(args []string,
+	logger log.DebugLogger) error {
 	err := showNetworkConfiguration(logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error showing network configuration: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error showing network configuration: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getNetworkConfiguration(logger log.DebugLogger) (
