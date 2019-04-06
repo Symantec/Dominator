@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
-	"os"
 
 	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/errors"
@@ -28,13 +27,12 @@ type leaseType struct {
 	subnet  *hyper_proto.Subnet
 }
 
-func netbootHostSubcommand(args []string, logger log.DebugLogger) {
+func netbootHostSubcommand(args []string, logger log.DebugLogger) error {
 	err := netbootHost(args[0], logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error netbooting host: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error netbooting host: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func findMatchingSubnet(subnets []*hyper_proto.Subnet,

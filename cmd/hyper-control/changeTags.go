@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
@@ -10,12 +9,11 @@ import (
 	proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
 
-func changeTagsSubcommand(args []string, logger log.DebugLogger) {
+func changeTagsSubcommand(args []string, logger log.DebugLogger) error {
 	if err := changeTags(logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error changing Hypervisor tags: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error changing Hypervisor tags: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func changeTags(logger log.DebugLogger) error {
@@ -29,7 +27,7 @@ func changeTags(logger log.DebugLogger) error {
 	var reply proto.ChangeMachineTagsResponse
 	clientName := fmt.Sprintf("%s:%d", *fleetManagerHostname,
 		*fleetManagerPortNum)
-	client, err := srpc.DialHTTP("tcp", clientName, 0)
+	client, err := srpc.DialHTTPWithDialer("tcp", clientName, rrDialer)
 	if err != nil {
 		return err
 	}

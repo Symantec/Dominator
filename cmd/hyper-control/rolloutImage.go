@@ -49,13 +49,12 @@ type hypervisorType struct {
 	subClientResource         *srpc.ClientResource
 }
 
-func rolloutImageSubcommand(args []string, logger log.DebugLogger) {
+func rolloutImageSubcommand(args []string, logger log.DebugLogger) error {
 	err := rolloutImage(args[0], logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error rolling out image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error rolling out image: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func gitCommand(repositoryDirectory string, command ...string) ([]byte, error) {

@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/Symantec/Dominator/lib/flags/loadflags"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/cmdlogger"
+	"github.com/Symantec/Dominator/lib/net/rrdialer"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"github.com/Symantec/Dominator/lib/tags"
@@ -52,6 +54,8 @@ var (
 		"Name of file containing storage layout for installing machine")
 	topologyDir = flag.String("topologyDir", "",
 		"Name of local topology directory in Git repository")
+
+	rrDialer *rrdialer.Dialer
 )
 
 func init() {
@@ -85,7 +89,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  write-netboot-files hostname dirname")
 }
 
-type commandFunc func([]string, log.DebugLogger)
+type commandFunc func([]string, log.DebugLogger) error
 
 type subcommand struct {
 	command string
@@ -140,22 +144,30 @@ func loadCerts() error {
 	return nil
 }
 
-func main() {
+func doMain() int {
 	if err := loadflags.LoadForCli("hyper-control"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {
 		printUsage()
-		os.Exit(2)
+		return 2
 	}
 	logger := cmdlogger.New()
 	if err := loadCerts(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
+	var err error
+	rrDialer, err = rrdialer.New(&net.Dialer{Timeout: time.Second * 10}, "",
+		logger)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	defer rrDialer.WaitForBackgroundResults(time.Second)
 	numSubcommandArgs := flag.NArg() - 1
 	for _, subcommand := range subcommands {
 		if flag.Arg(0) == subcommand.command {
@@ -163,12 +175,19 @@ func main() {
 				(subcommand.maxArgs >= 0 &&
 					numSubcommandArgs > subcommand.maxArgs) {
 				printUsage()
-				os.Exit(2)
+				return 2
 			}
-			subcommand.cmdFunc(flag.Args()[1:], logger)
-			os.Exit(3)
+			if err := subcommand.cmdFunc(flag.Args()[1:], logger); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return 1
+			}
+			return 0
 		}
 	}
 	printUsage()
-	os.Exit(2)
+	return 2
+}
+
+func main() {
+	os.Exit(doMain())
 }

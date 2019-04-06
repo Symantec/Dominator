@@ -9,14 +9,12 @@ import (
 )
 
 func updateNetworkConfigurationSubcommand(args []string,
-	logger log.DebugLogger) {
+	logger log.DebugLogger) error {
 	err := updateNetworkConfiguration(logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error updating network configuration: %s\n",
-			err)
-		os.Exit(1)
+		return fmt.Errorf("Error updating network configuration: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func updateNetworkConfiguration(logger log.DebugLogger) error {

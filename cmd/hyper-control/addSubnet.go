@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
@@ -11,13 +10,12 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func addSubnetSubcommand(args []string, logger log.DebugLogger) {
+func addSubnetSubcommand(args []string, logger log.DebugLogger) error {
 	err := addSubnet(args[0], args[1], args[2], args[3:], logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error adding subnet: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error adding subnet: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func addSubnet(subnetId, ipGateway, ipMask string, nameservers []string,

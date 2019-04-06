@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/log"
@@ -11,17 +10,16 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func addAddressSubcommand(args []string, logger log.DebugLogger) {
+func addAddressSubcommand(args []string, logger log.DebugLogger) error {
 	var ipAddr string
 	if len(args) > 1 {
 		ipAddr = args[1]
 	}
 	err := addAddress(args[0], ipAddr, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error adding address: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error adding address: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func addAddress(macAddr, ipAddr string, logger log.DebugLogger) error {

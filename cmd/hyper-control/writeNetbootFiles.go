@@ -9,13 +9,12 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 )
 
-func writeNetbootFilesSubcommand(args []string, logger log.DebugLogger) {
+func writeNetbootFilesSubcommand(args []string, logger log.DebugLogger) error {
 	err := writeNetbootFiles(args[0], args[1], logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing netboot files: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error writing netboot files: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func emptyTree(rootDir string) error {

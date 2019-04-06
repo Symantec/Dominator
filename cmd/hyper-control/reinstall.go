@@ -12,13 +12,12 @@ import (
 	"github.com/Symantec/Dominator/lib/log"
 )
 
-func reinstallSubcommand(args []string, logger log.DebugLogger) {
+func reinstallSubcommand(args []string, logger log.DebugLogger) error {
 	err := reinstall(logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reinstalling: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error reinstalling: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getHostname() (string, error) {

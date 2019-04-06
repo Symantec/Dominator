@@ -10,13 +10,12 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 )
 
-func installerShellSubcommand(args []string, logger log.DebugLogger) {
+func installerShellSubcommand(args []string, logger log.DebugLogger) error {
 	err := installerShell(args[0], logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error talking to installer shell: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error talking to installer shell: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func installerShell(hostname string, logger log.DebugLogger) error {
@@ -39,8 +38,7 @@ func installerShell(hostname string, logger log.DebugLogger) error {
 	defer conn.Close()
 	fmt.Fprintf(os.Stderr, " connected...\n")
 	if err := terminalclient.StartTerminal(conn); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return err
 	}
 	fmt.Fprint(os.Stderr, "\r")
 	return nil
