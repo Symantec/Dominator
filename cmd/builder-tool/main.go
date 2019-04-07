@@ -1,5 +1,3 @@
-// +build linux
-
 package main
 
 import (
@@ -36,7 +34,7 @@ var (
 	maxSourceAge = flag.Duration("maxSourceAge", time.Hour,
 		"Maximum age of a source image before it is rebuilt")
 
-	minimumExpiration = 15 * time.Minute
+	minimumExpiration = 5 * time.Minute
 )
 
 func printUsage() {
