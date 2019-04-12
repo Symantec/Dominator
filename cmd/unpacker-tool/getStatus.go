@@ -36,6 +36,9 @@ func getDeviceForStreamSubcommand(srpcClient *srpc.Client, args []string) {
 
 func getDeviceForStream(srpcClient *srpc.Client, streamName string) error {
 	status, err := client.GetStatus(srpcClient)
+	if err != nil {
+		return err
+	}
 	streamInfo, ok := status.ImageStreams[streamName]
 	if !ok {
 		return errors.New("unknown stream: " + streamName)
