@@ -389,9 +389,9 @@ func main() {
 			os.Exit(1)
 		}
 		fsh.Update(nil)
-		sighupChannel := make(chan os.Signal)
+		sighupChannel := make(chan os.Signal, 1)
 		signal.Notify(sighupChannel, syscall.SIGHUP)
-		sigtermChannel := make(chan os.Signal)
+		sigtermChannel := make(chan os.Signal, 1)
 		signal.Notify(sigtermChannel, syscall.SIGTERM, syscall.SIGINT)
 		writePidfile()
 		for iter := 0; true; {

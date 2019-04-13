@@ -64,9 +64,6 @@ func adjustVcpuLimit(limit *uint, logger log.Logger) {
 	vCpuCreditRate, err := getAwsVcpuCreditRate()
 	if err == nil && vCpuCreditRate > 0 {
 		newLimit := initialLimit * vCpuCreditRate / 60 / uint(runtime.NumCPU())
-		if newLimit < 0 {
-			newLimit = 1
-		}
 		logger.Printf("Adjusting default CPU limit to: %d%%\n", newLimit)
 		*limit = newLimit
 	}
