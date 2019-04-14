@@ -419,7 +419,7 @@ func main() {
 				iter++
 				runtime.GC() // An opportune time to take out the garbage.
 				if *showStats {
-					fmt.Print(fsh)
+					fmt.Print(&fsh) // Use pointer to silence go vet.
 					fmt.Print(fsh.FileSystem())
 					memstats.WriteMemoryStats(os.Stdout)
 					fmt.Println()
