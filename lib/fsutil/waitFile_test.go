@@ -17,7 +17,7 @@ func TestWaitFile(t *testing.T) {
 	pathNotExist := path.Join(dirname, "never-exists")
 	rc, err := WaitFile(pathNotExist, time.Microsecond)
 	if err == nil {
-		t.Errorf("Expected timeout error for non-existant file")
+		t.Errorf("Expected timeout error for non-existent file")
 		rc.Close()
 	}
 	pathExists := path.Join(dirname, "exists")
@@ -45,7 +45,7 @@ func TestWaitFile(t *testing.T) {
 	rc, err = WaitFile(pathExistsLater, time.Millisecond*10)
 	if err == nil {
 		rc.Close()
-		t.Errorf("Expected timeout error for non-existant file")
+		t.Errorf("Expected timeout error for non-existent file")
 	}
 	rc, err = WaitFile(pathExistsLater, time.Millisecond*90)
 	if err != nil {

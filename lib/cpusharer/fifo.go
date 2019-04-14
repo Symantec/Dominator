@@ -107,7 +107,7 @@ func (s *FifoCpuSharer) grabIdleCpu(minIdleTime, timeout time.Duration) bool {
 				time.Sleep(minIdleTime)
 				select {
 				case s.semaphore <- struct{}{}: // A CPU was idle.
-				default: // No idle CPU: try agin.
+				default: // No idle CPU: try again.
 					continue
 				}
 			}

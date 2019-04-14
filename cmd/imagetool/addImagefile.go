@@ -28,7 +28,7 @@ func addImagefile(imageSClient *srpc.Client,
 	name, imageFilename, filterFilename, triggersFilename string) error {
 	imageExists, err := client.CheckImage(imageSClient, name)
 	if err != nil {
-		return errors.New("error checking for image existance: " + err.Error())
+		return errors.New("error checking for image existence: " + err.Error())
 	}
 	if imageExists {
 		return errors.New("image exists")

@@ -34,7 +34,7 @@ type Manager struct {
 	numCPU            int
 	serialNumber      string
 	volumeDirectories []string
-	mutex             sync.RWMutex // Lock everthing below (those can change).
+	mutex             sync.RWMutex // Lock everything below (those can change).
 	addressPool       addressPoolType
 	healthStatus      string
 	notifiers         map[<-chan proto.Update]chan<- proto.Update
