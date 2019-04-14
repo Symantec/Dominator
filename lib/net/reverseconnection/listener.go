@@ -202,21 +202,18 @@ func (l *Listener) connectLoop(config ReverseListenerConfig,
 			continue
 		}
 		if message.MinimumInterval >= time.Second {
-			newMinimumInterval := message.MinimumInterval
-			newMaximumInterval := config.MaximumInterval
-			if message.MaximumInterval > newMinimumInterval {
-				newMaximumInterval = message.MaximumInterval
-			} else {
-				newMaximumInterval = newMinimumInterval * 11 / 10
+			newMaximumInterval := message.MaximumInterval
+			if newMaximumInterval <= message.MinimumInterval {
+				newMaximumInterval = message.MinimumInterval * 11 / 10
 			}
-			if newMinimumInterval != config.MinimumInterval ||
+			if message.MinimumInterval != config.MinimumInterval ||
 				newMaximumInterval != config.MaximumInterval {
 				logger.Debugf(0,
 					"min interval: %s -> %s, max interval: %s -> %s\n",
-					config.MinimumInterval, newMinimumInterval,
+					config.MinimumInterval, message.MinimumInterval,
 					config.MaximumInterval, newMaximumInterval)
 			}
-			config.MinimumInterval = newMinimumInterval
+			config.MinimumInterval = message.MinimumInterval
 			config.MaximumInterval = newMaximumInterval
 		}
 	}

@@ -135,6 +135,9 @@ func (objectsGetter *combinedObjectsGetter) scanDirectory(realDir string,
 	}
 	names, err := file.Readdirnames(-1)
 	file.Close()
+	if err != nil {
+		return err
+	}
 	for _, name := range names {
 		realPath := path.Join(realDir, name)
 		mapPath := path.Join(mapDir, name)
