@@ -210,6 +210,18 @@ connections: it only responds to RPC requests. Thus, it does not need permission
 to access any methods. The certificate+key pair is a standard requirement for
 every TLS server.
 
+### Creating a certificate+key for [mdbd](../cmd/mdbd/README.md)
+Run the following command:
+
+```
+make-cert root mdbd AUTO mdbd cmd/mdbd/required-methods
+```
+This will create the `mdbd.pem` and `mdbd.key.pem` files. These
+should be copied to the files `/etc/ssl/mdbd/cert.pem` and
+`/etc/ssl/mdbd/key.pem` on the machine where
+[mdbd](../cmd/mdbd/README.md) will run.
+
+
 ### Creating a certificate+key pair for a user
 Unlike daemons, which require access to a specific set of methods, users require
 access to a variety of methods depending on their level of access and your
