@@ -126,7 +126,7 @@ certificate and key pair for [subd](../cmd/subd/README.md) using the
 Use the following command to generate the certificate and key pair:
 
 ```
-make-cert root subd AUTO subd 'ObjectServer.GetObjects'
+make-cert root subd AUTO subd cmd/subd/required-methods
 ```
 
 This will create the `subd.pem` and `subd.key.pem` files. These should be copied
@@ -150,8 +150,7 @@ install or activate the boot script.
 Run the following command:
 
 ```
-make-cert root Dominator AUTO dominator \
-    'ObjectServer.AddObjects,Subd.*,ImageServer.GetImage,FileGenerator.Connect'
+make-cert root Dominator AUTO dominator cmd/dominator/required-methods
 ```
 
 This will create the `Dominator.pem` and `Dominator.key.pem` files. These should
@@ -168,8 +167,7 @@ gives root level access to your fleet, so you should restrict access to it.
 Run the following command:
 
 ```
-make-cert root imageserver AUTO imageserver \
-    'ImageServer.GetImageUpdates,ImageServer.GetImage,ObjectServer.GetObjects'
+make-cert root imageserver AUTO imageserver cmd/imageserver/required-methods
 ```
 
 This will create the `imageserver.pem` and `imageserver.key.pem` files. These
@@ -181,6 +179,18 @@ Note that the list of RPC methods given above allows
 [imageserver](../cmd/imageserver/README.md) to replicate images from another
 [imageserver](../cmd/imageserver/README.md). If you never plan to enable image
 replication (that would be unwise), you could provide an empty list of methods.
+
+### Creating a certificate+key for [imaginator](../cmd/imaginator/README.md)
+Run the following command:
+
+```
+make-cert root imaginator AUTO imaginator cmd/imaginator/required-methods
+```
+
+This will create the `imaginator.pem` and `imaginator.key.pem` files. These
+should be copied to the files `/etc/ssl/imaginator/cert.pem` and
+`/etc/ssl/imaginator/key.pem` on the machine where
+[imaginator](../cmd/imaginator/README.md) will run.
 
 ### Creating a certificate+key for [filegen-server](../cmd/filegen-server/README.md)
 Run the following command:
@@ -222,8 +232,10 @@ is issued to. This username will be recorded in logs for certain RPC methods and
 will be recorded in image metadata when images are created. The entity creating
 the certificate+key pairs must therefore be trusted.
 
-The final parameter is the comma separated list of methods that the user may
-access. The sections below discuss how to determine the list of methods.
+The final parameter specifies the list of methods that the user may access. This
+may either be a filename containing method names separated by newlines or a
+comma separated list. The sections below discuss how to determine the list of
+methods if there isn't a `required-methods` file to provide.
 
 #### Discovering methods
 The [list-methods](../scripts/list-methods) utility provided in the source
