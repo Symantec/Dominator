@@ -298,9 +298,8 @@ func installRoot(device string, fileSystem *filesystem.FileSystem,
 	if err != nil {
 		return err
 	}
-	err = util.MakeBootable(fileSystem, device, "rootfs", *mountPoint, "", true,
-		logger)
-	return nil
+	return util.MakeBootable(fileSystem, device, "rootfs", *mountPoint, "",
+		true, logger)
 }
 
 func installTmpRoot(fileSystem *filesystem.FileSystem,

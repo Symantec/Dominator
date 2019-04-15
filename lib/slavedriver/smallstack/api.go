@@ -12,7 +12,7 @@ import (
 type SlaveTrader struct {
 	createRequest hyper_proto.CreateVmRequest
 	logger        log.DebugLogger
-	mutex         sync.Mutex // Lock everthing below (those can change).
+	mutex         sync.Mutex // Lock everything below (those can change).
 	hypervisor    *srpc.Client
 }
 

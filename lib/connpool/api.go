@@ -117,7 +117,7 @@ func (cr *ConnResource) GetWithDialer(cancelChannel <-chan struct{},
 	return cr.get(cancelChannel, dialer)
 }
 
-// ScheduleClose will immediatly Close the associated Conn if it is not in use
+// ScheduleClose will immediately Close the associated Conn if it is not in use
 // or will mark the Conn to be closed when it is next Put.
 func (cr *ConnResource) ScheduleClose() {
 	cr.resource.ScheduleRelease()

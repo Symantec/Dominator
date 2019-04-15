@@ -86,6 +86,9 @@ func ensureDomainIsStopped(domainName string) error {
 	}
 	response, err := askForInputChoice("Cannot import running VM",
 		[]string{"shutdown", "quit"})
+	if err != nil {
+		return err
+	}
 	if response == "quit" {
 		return fmt.Errorf("domain must be shut off but is \"%s\"", state)
 	}

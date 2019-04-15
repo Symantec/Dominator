@@ -14,10 +14,6 @@ type flushWriter interface {
 }
 
 func startTerminal(conn FlushReadWriter) error {
-	closed := false
-	defer func() {
-		closed = true
-	}()
 	oldState, err := terminal.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		return err

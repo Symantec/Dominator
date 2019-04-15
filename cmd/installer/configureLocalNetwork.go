@@ -136,6 +136,9 @@ func getConfiguration(interfaces map[string]net.Interface,
 	}
 	err = json.ReadFromFile(filepath.Join(*tftpDirectory, "config.json"),
 		&machineInfo)
+	if err != nil {
+		return nil, err
+	}
 	return &machineInfo, nil
 }
 

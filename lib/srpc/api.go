@@ -395,7 +395,7 @@ func (conn *Conn) RequestReply(request interface{}, reply interface{}) error {
 
 // Username will return the username of the client who holds the certificate
 // used to authenticate the connection to the server. If the connection was not
-// authenticated the emtpy string is returned. If the connection is a client
+// authenticated the empty string is returned. If the connection is a client
 // connection, then Username will panic.
 func (conn *Conn) Username() string {
 	return conn.getUsername()

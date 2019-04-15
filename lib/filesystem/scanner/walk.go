@@ -96,7 +96,6 @@ func scanFileSystem(rootDirectoryName string,
 	err, _ := scanDirectory(&fileSystem.FileSystem.DirectoryInode, oldDirectory,
 		&fileSystem, oldFS, "/")
 	oldFS = nil
-	oldDirectory = nil
 	if err != nil {
 		return nil, err
 	}

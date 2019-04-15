@@ -20,7 +20,7 @@ type SlaveDriver struct {
 	logger          log.DebugLogger
 	rollCallTrigger chan<- struct{}
 	slaveTrader     SlaveTrader
-	mutex           sync.Mutex // Lock everthing below (those can change).
+	mutex           sync.Mutex // Lock everything below (those can change).
 	busySlaves      map[*Slave]struct{}
 	idleSlaves      map[*Slave]struct{}
 	zombies         map[*Slave]struct{}
@@ -43,7 +43,7 @@ type Slave struct {
 	clientAddress string
 	driver        *SlaveDriver
 	info          SlaveInfo
-	mutex         sync.Mutex // Lock everthing below (those can change).
+	mutex         sync.Mutex // Lock everything below (those can change).
 	client        *srpc.Client
 }
 

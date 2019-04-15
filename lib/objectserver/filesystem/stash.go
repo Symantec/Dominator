@@ -63,7 +63,6 @@ func (objSrv *ObjectServer) stashOrVerifyObject(reader io.Reader,
 	if err != nil {
 		return hashVal, nil, err
 	}
-	length = uint64(len(data))
 	hashName := objectcache.HashToFilename(hashVal)
 	filename := path.Join(objSrv.baseDir, hashName)
 	// Check for existing object and collision.

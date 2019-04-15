@@ -100,7 +100,7 @@ func (s *FifoCpuSharer) GoWhenIdle(minIdleTime, timeout time.Duration,
 
 // GrabCpu will grab a CPU for use. If there are none available (i.e. all CPUs
 // are in use by other co-operating goroutines) then this will block until a CPU
-// is available. Grab requests are fullfilled in the order they are made.
+// is available. Grab requests are fulfilled in the order they are made.
 func (s *FifoCpuSharer) GrabCpu() {
 	s.grabCpu()
 }
@@ -117,7 +117,7 @@ func (s *FifoCpuSharer) GrabIdleCpu(minIdleTime, timeout time.Duration) bool {
 }
 
 // GrabSemaphore will safely grab the provided semaphore, releasing and
-// re-aquiring the CPU if the semaphore blocks. Use this to avoid deadlocks.
+// re-acquiring the CPU if the semaphore blocks. Use this to avoid deadlocks.
 func (s *FifoCpuSharer) GrabSemaphore(semaphore chan<- struct{}) {
 	grabSemaphore(s, semaphore)
 }

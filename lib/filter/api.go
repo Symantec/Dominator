@@ -7,7 +7,7 @@ import (
 // A Filter contains a list of regular expressions matching pathnames which
 // should be filtered out: excluded when building or not changed when pushing
 // images to a sub.
-// A Filter with no lines is an empty filter (nothing is excluded, everthing is
+// A Filter with no lines is an empty filter (nothing is excluded, everything is
 // changed when pushing).
 // A nil *Filter is a sparse filter: when building nothing is excluded. When
 // pushing to a sub, all files are pushed but files on the sub which are not in

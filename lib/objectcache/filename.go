@@ -11,7 +11,7 @@ func filenameToHash(fileName string) (hash.Hash, error) {
 	var prev_nibble byte = 16
 	index := 0
 	for _, char := range fileName {
-		var nibble byte = 16
+		var nibble byte
 		if char >= '0' && char <= '9' {
 			nibble = byte(char) - '0'
 		} else if char >= 'a' && char <= 'f' {
