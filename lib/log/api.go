@@ -26,3 +26,9 @@ type DebugLogLevelGetter interface {
 type DebugLogLevelSetter interface {
 	SetLevel(maxLevel int16)
 }
+
+type FullDebugLogger interface {
+	DebugLogger
+	DebugLogLevelGetter
+	DebugLogLevelSetter
+}
