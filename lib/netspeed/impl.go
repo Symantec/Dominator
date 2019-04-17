@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	procRouteFilename string = "/proc/net/route"
-	speedPathFormat          = "/sys/class/net/%s/speed"
+	procRouteFilename = "/proc/net/route"
+	speedPathFormat   = "/sys/class/net/%s/speed"
 )
 
 var (
@@ -64,7 +64,7 @@ func findInterfaceForHost(hostname string) (string, error) {
 		hostIP = make(net.IP, 4)
 	} else {
 		hostIPs, err := net.LookupIP(hostname)
-		if err != err {
+		if err != nil {
 			return "", err
 		}
 		if len(hostIPs) < 1 {
