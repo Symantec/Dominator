@@ -6,7 +6,7 @@ readonly dir='/tmp/dominator-unpack'
 
 rm -rf "$dir" || true
 mkdir -p "$dir"
-wget -q -O /tmp/dominator.tar.gz http://mirror.symcpe.net/misc/Dominator/dominator.tar.gz
+wget -q -O /tmp/dominator.tar.gz http://mirror.prod.acme.com/misc/Dominator/dominator.tar.gz
 tar -C "$dir" -xzf /tmp/dominator.tar.gz
 rm /tmp/dominator.tar.gz
 

@@ -6,7 +6,7 @@ readonly dir='/tmp/filegen-server-unpack'
 
 rm -rf "$dir" || true
 mkdir -p "$dir"
-wget -q -O /tmp/filegen-server.tar.gz http://mirror.symcpe.net/misc/Dominator/filegen-server.tar.gz
+wget -q -O /tmp/filegen-server.tar.gz http://mirror.prod.acme.com/misc/Dominator/filegen-server.tar.gz
 tar -C "$dir" -xzf /tmp/filegen-server.tar.gz
 rm /tmp/filegen-server.tar.gz
 
