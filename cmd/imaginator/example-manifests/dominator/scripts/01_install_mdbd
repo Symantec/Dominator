@@ -1,0 +1,18 @@
+#! /bin/bash --posix
+
+set -ex
+
+readonly dir='/tmp/mdbd-unpack'
+
+rm -rf "$dir" || true
+mkdir -p "$dir"
+wget -q -O /tmp/mdbd.tar.gz http://mirror.symcpe.net/misc/Dominator/mdbd.tar.gz
+tar -C "$dir" -xzf /tmp/mdbd.tar.gz
+rm /tmp/mdbd.tar.gz
+
+"$dir/install"
+rm -rf "$dir"
+
+mkdir -p /var/log/mdbd
+
+chown -R mdbd /var/log/mdbd

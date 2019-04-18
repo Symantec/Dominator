@@ -1,0 +1,3 @@
+fdLimit             = 64000
+idleMarkTimeout     = 5m
+imageServerHostname = imageserver.prod.acme.com

@@ -1,0 +1,19 @@
+#! /bin/bash --posix
+
+set -ex
+
+readonly dir='/tmp/filegen-server-unpack'
+
+rm -rf "$dir" || true
+mkdir -p "$dir"
+wget -q -O /tmp/filegen-server.tar.gz http://mirror.symcpe.net/misc/Dominator/filegen-server.tar.gz
+tar -C "$dir" -xzf /tmp/filegen-server.tar.gz
+rm /tmp/filegen-server.tar.gz
+
+"$dir/install"
+rm -rf "$dir"
+
+mkdir -p /var/lib/filegen-server /var/log/filegen-server
+
+chown -R filegen-server /etc/ssl/filegen-server /var/lib/filegen-server \
+                        /var/log/filegen-server
