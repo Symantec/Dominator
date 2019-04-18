@@ -1,0 +1,1 @@
+DynamicTemplateFile  /etc/issue.net  /var/lib/filegen-server/computed-files/issue.net.template

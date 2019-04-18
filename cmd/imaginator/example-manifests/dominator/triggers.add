@@ -1,0 +1,31 @@
+[
+    {
+        "MatchLines": [
+            "/etc/dominator/.*",
+            "/etc/reverse-listeners/Scotty",
+            "/etc/ssl/CA[.]pem",
+            "/etc/ssl/dominator/.*",
+            "/etc/systemd/system/dominator[.]service[.d]/.*",
+            "/usr/local/sbin/dominator"
+        ],
+        "Service": "dominator"
+    },
+    {
+        "MatchLines": [
+            "/etc/filegen-server/.*",
+            "/etc/reverse-listeners/Scotty",
+            "/etc/systemd/system/filegen-server[.]service[.d]/.*",
+            "/usr/local/sbin/filegen-server"
+        ],
+        "Service": "filegen-server"
+    },
+    {
+        "MatchLines": [
+            "/etc/mdbd/.*",
+            "/etc/reverse-listeners/Scotty",
+            "/etc/systemd/system/mdbd[.]service[.d]/.*",
+            "/usr/local/sbin/mdbd"
+        ],
+        "Service": "mdbd"
+    }
+]

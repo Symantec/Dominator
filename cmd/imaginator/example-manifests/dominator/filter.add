@@ -1,0 +1,6 @@
+/etc/dominator/flags[.]extra
+/etc/filegen-server/flags[.]extra
+/etc/mdbd/flags[.]extra
+/etc/ssl/mdbd(|/.*)$
+/var/lib/Dominator/.*
+/var/lib/filegen-server/.*

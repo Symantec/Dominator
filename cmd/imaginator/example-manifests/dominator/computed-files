@@ -1,0 +1,5 @@
+/etc/issue.net				localhost:6972
+/etc/mdb.json				localhost:6972
+/etc/ssl/CA.pem				localhost:6972
+/etc/ssl/dominator/cert.pem		localhost:6972
+/etc/ssl/dominator/key.pem		localhost:6972
