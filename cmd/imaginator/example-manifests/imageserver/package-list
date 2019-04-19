@@ -1,0 +1,15 @@
+bash-completion
+curl
+dnsutils
+lsof
+ltrace
+man-db
+manpages
+mtr-tiny
+strace
+tcpdump
+tcptraceroute
+tcsh
+telnet
+tmpreaper
+traceroute

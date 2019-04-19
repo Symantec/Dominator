@@ -1,0 +1,22 @@
+#! /bin/bash --posix
+
+set -ex
+
+readonly dir='/tmp/imageserver-unpack'
+
+rm -rf "$dir" || true
+mkdir -p "$dir"
+wget -q -O /tmp/imageserver.tar.gz http://mirror.prod.acme.com/misc/Dominator/imageserver.tar.gz
+tar -C "$dir" -xzf /tmp/imageserver.tar.gz
+rm /tmp/imageserver.tar.gz
+
+"$dir/install"
+rm -rf "$dir"
+
+mkdir -p /data /etc/imageserver /var/log/imageserver
+chmod a-w /data
+
+chown -R imageserver /etc/imageserver /etc/ssl/imageserver /var/log/imageserver
+
+# Remove noise.
+rm -f /etc/motd
