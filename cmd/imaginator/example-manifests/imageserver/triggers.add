@@ -1,0 +1,14 @@
+[
+    {
+        "MatchLines": [
+            "/etc/imageserver/.*",
+            "/etc/reverse-listeners/Scotty",
+            "/etc/ssl/CA[.]pem",
+            "/etc/ssl/imageserver/.*",
+            "/etc/systemd/system/imageserver[.]service[.d]/.*",
+            "/lib/systemd/system/imageserver[.]service",
+            "/usr/local/sbin/imageserver"
+        ],
+        "Service": "imageserver"
+    }
+]

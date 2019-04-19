@@ -1,0 +1,4 @@
+/etc/issue.net			localhost:6972
+/etc/mdb.json			localhost:6972
+/etc/ssl/imageserver/cert.pem	localhost:6972
+/etc/ssl/imageserver/key.pem	localhost:6972
