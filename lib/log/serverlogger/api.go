@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"regexp"
 	"sync"
 
 	"github.com/Symantec/Dominator/lib/logbuf"
@@ -29,8 +30,10 @@ type Logger struct {
 }
 
 type streamerType struct {
-	debugLevel int16
-	output     chan<- []byte
+	debugLevel   int16
+	excludeRegex *regexp.Regexp // nil: nothing excluded. Processed after incl.
+	includeRegex *regexp.Regexp // nil: everything included.
+	output       chan<- []byte
 }
 
 // New will create a Logger which has an internal log buffer (see the

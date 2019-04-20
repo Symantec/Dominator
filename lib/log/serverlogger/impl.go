@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -118,7 +119,11 @@ func (l *Logger) log(level int16, msg string, dying bool) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 	for streamer := range l.streamers {
-		if streamer.debugLevel >= level {
+		if streamer.debugLevel >= level &&
+			(streamer.includeRegex == nil ||
+				streamer.includeRegex.Match(buffer.data)) &&
+			(streamer.excludeRegex == nil ||
+				!streamer.excludeRegex.Match(buffer.data)) {
 			select {
 			case streamer.output <- buffer.data:
 			default:
@@ -138,6 +143,29 @@ func (l *Logger) log(level int16, msg string, dying bool) {
 	} else if recalculateLevels {
 		l.updateMaxLevel()
 	}
+}
+
+func (l *Logger) makeStreamer(request proto.WatchRequest) (
+	*streamerType, error) {
+	if request.DebugLevel < -1 {
+		request.DebugLevel = -1
+	}
+	streamer := &streamerType{debugLevel: request.DebugLevel}
+	if request.ExcludeRegex != "" {
+		var err error
+		streamer.excludeRegex, err = regexp.Compile(request.ExcludeRegex)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if request.IncludeRegex != "" {
+		var err error
+		streamer.includeRegex, err = regexp.Compile(request.IncludeRegex)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return streamer, nil
 }
 
 func (l *Logger) panics(msg string) {
@@ -169,29 +197,17 @@ func (l *Logger) updateMaxLevel() {
 	l.maxLevel = maxLevel
 }
 
-func (l *Logger) watch(conn *srpc.Conn, request proto.WatchRequest) {
+func (l *Logger) watch(conn *srpc.Conn, streamer *streamerType) {
 	channel := make(chan []byte, 256)
-	if request.DebugLevel < -1 {
-		request.DebugLevel = -1
-	}
-	streamer := &streamerType{
-		debugLevel: request.DebugLevel,
-		output:     channel,
-	}
+	streamer.output = channel
 	l.mutex.Lock()
 	l.streamers[streamer] = struct{}{}
 	l.updateMaxLevel()
 	l.mutex.Unlock()
-	keepGoing := true
-	if request.DumpBuffer {
-		if err := l.circularBuffer.Dump(conn, "", "", false); err != nil {
-			keepGoing = false
-		}
-	}
 	timer := time.NewTimer(time.Millisecond * 100)
-	flushPending := true
+	flushPending := false
 	closeNotifier := conn.GetCloseNotifier()
-	for keepGoing {
+	for keepGoing := true; keepGoing; {
 		select {
 		case <-closeNotifier:
 			keepGoing = false
@@ -293,6 +309,8 @@ func (t *loggerMapT) Watch(conn *srpc.Conn, decoder srpc.Decoder,
 	authInfo := conn.GetAuthInformation()
 	if logger, err := t.getLogger(request.Name, authInfo); err != nil {
 		return encoder.Encode(proto.WatchResponse{Error: err.Error()})
+	} else if streamer, err := logger.makeStreamer(request); err != nil {
+		return encoder.Encode(proto.WatchResponse{Error: err.Error()})
 	} else {
 		if err := encoder.Encode(proto.WatchResponse{}); err != nil {
 			return err
@@ -300,7 +318,7 @@ func (t *loggerMapT) Watch(conn *srpc.Conn, decoder srpc.Decoder,
 		if err := conn.Flush(); err != nil {
 			return err
 		}
-		logger.watch(conn, request)
+		logger.watch(conn, streamer)
 		return srpc.ErrorCloseClient
 	}
 }
