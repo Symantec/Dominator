@@ -13,6 +13,10 @@ import (
 )
 
 var (
+	excludeRegex = flag.String("excludeRegex", "",
+		"The exclude regular expression to filter out when watching (after include)")
+	includeRegex = flag.String("includeRegex", "",
+		"The include regular expression to filter for when watching")
 	loggerHostname = flag.String("loggerHostname", "localhost",
 		"Hostname of log server")
 	loggerName    = flag.String("loggerName", "", "Name of logger")
@@ -28,6 +32,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  debug           level args...")
 	fmt.Fprintln(os.Stderr, "  print                 args...")
 	fmt.Fprintln(os.Stderr, "  set-debug-level level")
+	fmt.Fprintln(os.Stderr, "  watch           level")
 }
 
 type commandFunc func(*srpc.Client, []string, log.Logger)
@@ -43,6 +48,7 @@ var subcommands = []subcommand{
 	{"debug", 2, -1, debugSubcommand},
 	{"print", 1, -1, printSubcommand},
 	{"set-debug-level", 1, 1, setDebugLevelSubcommand},
+	{"watch", 1, 1, watchSubcommand},
 }
 
 func main() {
