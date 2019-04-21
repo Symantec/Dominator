@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -40,6 +41,18 @@ var loggerMap *loggerMapT = &loggerMapT{
 
 func init() {
 	srpc.RegisterName("Logger", loggerMap)
+}
+
+func getCallerName(depth int) string {
+	if pc, _, _, ok := runtime.Caller(depth); !ok {
+		return "UNKNOWN"
+	} else if fi := runtime.FuncForPC(pc); fi == nil {
+		return "UNKNOWN"
+	} else if splitName := strings.Split(fi.Name(), "."); len(splitName) < 1 {
+		return "UNKNOWN"
+	} else {
+		return splitName[len(splitName)-1]
+	}
 }
 
 func (w *grabWriter) Write(p []byte) (int, error) {
@@ -78,7 +91,7 @@ func (l *Logger) checkAuth(authInfo *srpc.AuthInformation) error {
 	}
 	if accessChecker := l.accessChecker; accessChecker == nil {
 		return errors.New("no access to resource")
-	} else if accessChecker(authInfo) {
+	} else if accessChecker(getCallerName(3), authInfo) {
 		return nil
 	} else {
 		return errors.New("no access to resource")
