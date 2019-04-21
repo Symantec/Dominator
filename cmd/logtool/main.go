@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 
 	"github.com/Symantec/Dominator/lib/flags/loadflags"
@@ -13,6 +14,10 @@ import (
 )
 
 var (
+	excludeRegex = flag.String("excludeRegex", "",
+		"The exclude regular expression to filter out when watching (after include)")
+	includeRegex = flag.String("includeRegex", "",
+		"The include regular expression to filter for when watching")
 	loggerHostname = flag.String("loggerHostname", "localhost",
 		"Hostname of log server")
 	loggerName    = flag.String("loggerName", "", "Name of logger")
@@ -28,21 +33,38 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  debug           level args...")
 	fmt.Fprintln(os.Stderr, "  print                 args...")
 	fmt.Fprintln(os.Stderr, "  set-debug-level level")
+	fmt.Fprintln(os.Stderr, "  watch           level")
 }
 
-type commandFunc func(*srpc.Client, []string, log.Logger)
+type commandFunc func(clients []*srpc.Client, addrs, args []string,
+	logger log.Logger)
 
 type subcommand struct {
-	command string
-	minArgs int
-	maxArgs int
-	cmdFunc commandFunc
+	command          string
+	minArgs          int
+	maxArgs          int
+	allowMultiClient bool
+	cmdFunc          commandFunc
 }
 
 var subcommands = []subcommand{
-	{"debug", 2, -1, debugSubcommand},
-	{"print", 1, -1, printSubcommand},
-	{"set-debug-level", 1, 1, setDebugLevelSubcommand},
+	{"debug", 2, -1, false, debugSubcommand},
+	{"print", 1, -1, false, printSubcommand},
+	{"set-debug-level", 1, 1, false, setDebugLevelSubcommand},
+	{"watch", 1, 1, true, watchSubcommand},
+}
+
+func dialAll(addrs []string) ([]*srpc.Client, error) {
+	clients := make([]*srpc.Client, 0, len(addrs))
+	for _, addr := range addrs {
+		clientName := fmt.Sprintf("%s:%d", addr, *loggerPortNum)
+		if client, err := srpc.DialHTTP("tcp", clientName, 0); err != nil {
+			return nil, err
+		} else {
+			clients = append(clients, client)
+		}
+	}
+	return clients, nil
 }
 
 func main() {
@@ -60,10 +82,12 @@ func main() {
 	if err := setupclient.SetupTls(true); err != nil {
 		logger.Fatalln(err)
 	}
-	clientName := fmt.Sprintf("%s:%d", *loggerHostname, *loggerPortNum)
-	client, err := srpc.DialHTTP("tcp", clientName, 0)
+	addrs, err := net.LookupHost(*loggerHostname)
 	if err != nil {
-		logger.Fatalf("Error dialing: %s\n", err)
+		logger.Fatalln(err)
+	}
+	if len(addrs) < 1 {
+		logger.Fatalf("no addresses for: %s\n", *loggerHostname)
 	}
 	numSubcommandArgs := flag.NArg() - 1
 	for _, subcommand := range subcommands {
@@ -74,7 +98,15 @@ func main() {
 				printUsage()
 				os.Exit(2)
 			}
-			subcommand.cmdFunc(client, flag.Args()[1:], logger)
+			if len(addrs) > 1 && !subcommand.allowMultiClient {
+				logger.Fatalf("%s does not support multiple endpoints\n",
+					flag.Arg(0))
+			}
+			clients, err := dialAll(addrs)
+			if err != nil {
+				logger.Fatalln(err)
+			}
+			subcommand.cmdFunc(clients, addrs, flag.Args()[1:], logger)
 			os.Exit(3)
 		}
 	}

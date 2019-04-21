@@ -9,13 +9,13 @@ import (
 	proto "github.com/Symantec/Dominator/proto/logger"
 )
 
-func setDebugLevelSubcommand(client *srpc.Client, args []string,
+func setDebugLevelSubcommand(clients []*srpc.Client, addrs, args []string,
 	logger log.Logger) {
 	level, err := strconv.ParseInt(args[0], 10, 16)
 	if err != nil {
 		logger.Fatalf("Error parsing level: %s\n", err)
 	}
-	if err := setDebugLevel(client, int16(level)); err != nil {
+	if err := setDebugLevel(clients[0], int16(level)); err != nil {
 		logger.Fatalf("Error setting debug level: %s\n", err)
 	}
 	os.Exit(0)

@@ -20,7 +20,7 @@ var (
 )
 
 type Logger struct {
-	accessChecker  func(authInfo *srpc.AuthInformation) bool
+	accessChecker  func(method string, authInfo *srpc.AuthInformation) bool
 	circularBuffer *logbuf.LogBuffer
 	flags          int
 	level          int16
@@ -154,7 +154,7 @@ func (l *Logger) Println(v ...interface{}) {
 // called for the Logger. This allows the application to control which users or
 // groups are permitted to remotely control the Logger.
 func (l *Logger) SetAccessChecker(
-	accessChecker func(authInfo *srpc.AuthInformation) bool) {
+	accessChecker func(method string, authInfo *srpc.AuthInformation) bool) {
 	l.accessChecker = accessChecker
 }
 
