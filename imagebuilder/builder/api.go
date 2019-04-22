@@ -62,6 +62,7 @@ type manifestType struct {
 type imageStreamType struct {
 	builder           *Builder
 	name              string
+	BuilderGroups     []string
 	ManifestUrl       string
 	ManifestDirectory string
 }
@@ -117,8 +118,9 @@ func Load(confUrl, variablesFile, stateDir, imageServerAddress string,
 }
 
 func (b *Builder) BuildImage(request proto.BuildImageRequest,
+	authInfo *srpc.AuthInformation,
 	logWriter io.Writer) (*image.Image, string, error) {
-	return b.buildImage(request, logWriter)
+	return b.buildImage(request, authInfo, logWriter)
 }
 
 func (b *Builder) GetCurrentBuildLog(streamName string) ([]byte, error) {

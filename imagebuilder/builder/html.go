@@ -181,6 +181,10 @@ func (b *Builder) writeHtml(writer io.Writer) {
 }
 
 func (stream *imageStreamType) WriteHtml(writer io.Writer) {
+	if len(stream.BuilderGroups) > 0 {
+		fmt.Fprintf(writer, "BuilderGroups: %s<br>\n",
+			strings.Join(stream.BuilderGroups, ", "))
+	}
 	fmt.Fprintf(writer, "Manifest URL: <code>%s</code><br>\n",
 		stream.ManifestUrl)
 	fmt.Fprintf(writer, "Manifest Directory: <code>%s</code><br>\n",

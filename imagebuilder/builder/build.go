@@ -23,6 +23,24 @@ type dualBuildLogger struct {
 	writer io.Writer
 }
 
+func checkPermission(builder imageBuilder, request proto.BuildImageRequest,
+	authInfo *srpc.AuthInformation) error {
+	if authInfo == nil || authInfo.HaveMethodAccess {
+		return nil
+	}
+	if request.ExpiresIn > time.Hour*24 {
+		return errors.New("maximum expiration time is 1 day")
+	}
+	if builder, ok := builder.(*imageStreamType); ok {
+		for _, group := range builder.BuilderGroups {
+			if _, ok := authInfo.GroupList[group]; ok {
+				return nil
+			}
+		}
+	}
+	return errors.New("no permission to build: " + request.StreamName)
+}
+
 func needSourceImage(err error) (bool, string) {
 	errString := err.Error()
 	if index := strings.Index(errString, errNoSourceImage); index >= 0 {
@@ -59,7 +77,7 @@ func (b *Builder) rebuildImages(minInterval time.Duration) {
 				StreamName: streamName,
 				ExpiresIn:  minInterval * 2,
 			},
-				nil)
+				nil, nil)
 			if err != nil {
 				b.logger.Printf("Error building image: %s: %s\n",
 					streamName, err)
@@ -70,13 +88,17 @@ func (b *Builder) rebuildImages(minInterval time.Duration) {
 }
 
 func (b *Builder) buildImage(request proto.BuildImageRequest,
+	authInfo *srpc.AuthInformation,
 	logWriter io.Writer) (*image.Image, string, error) {
+	if request.ExpiresIn < time.Minute*15 {
+		return nil, "", errors.New("minimum expiration time is 15 minutes")
+	}
 	client, err := srpc.DialHTTP("tcp", b.imageServerAddress, 0)
 	if err != nil {
 		return nil, "", err
 	}
 	defer client.Close()
-	img, name, err := b.build(client, request, logWriter)
+	img, name, err := b.build(client, request, authInfo, logWriter)
 	if request.ReturnImage {
 		return img, "", err
 	}
@@ -84,11 +106,15 @@ func (b *Builder) buildImage(request proto.BuildImageRequest,
 }
 
 func (b *Builder) build(client *srpc.Client, request proto.BuildImageRequest,
+	authInfo *srpc.AuthInformation,
 	logWriter io.Writer) (*image.Image, string, error) {
 	startTime := time.Now()
 	builder := b.getImageBuilderWithReload(request.StreamName)
 	if builder == nil {
 		return nil, "", errors.New("unknown stream: " + request.StreamName)
+	}
+	if err := checkPermission(builder, request, authInfo); err != nil {
+		return nil, "", err
 	}
 	buildLogBuffer := &bytes.Buffer{}
 	b.buildResultsLock.Lock()
@@ -154,8 +180,8 @@ func (b *Builder) buildWithLogger(builder imageBuilder, client *srpc.Client,
 				MaxSourceAge: request.MaxSourceAge,
 				Variables:    request.Variables,
 			}
-			if _, _, err := b.build(client, sourceReq, buildLog); err != nil {
-				return nil, "", err
+			if _, _, e := b.build(client, sourceReq, nil, buildLog); e != nil {
+				return nil, "", e
 			}
 			img, err = b.buildSomewhere(builder, client, request, buildLog)
 		}
