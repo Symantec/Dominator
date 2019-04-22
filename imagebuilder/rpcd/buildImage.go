@@ -38,7 +38,8 @@ func (t *srpcType) BuildImage(conn *srpc.Conn) error {
 		encoder = gob.NewEncoder(conn)
 		logWriter = buildLogBuffer
 	}
-	image, name, err := t.builder.BuildImage(request, logWriter)
+	image, name, err := t.builder.BuildImage(request, conn.GetAuthInformation(),
+		logWriter)
 	reply := proto.BuildImageResponse{
 		Image:       image,
 		ImageName:   name,
