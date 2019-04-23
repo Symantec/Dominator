@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -25,8 +27,17 @@ import (
 
 const timeFormat = "2006-01-02:15:04:05"
 
+var errorTestTimedOut = errors.New("test timed out")
+
 type hasher struct {
 	objQ *objectclient.ObjectAdderQueue
+}
+
+type testResultType struct {
+	buffer   chan byte
+	duration time.Duration
+	err      error
+	prog     string
 }
 
 func (h *hasher) Hash(reader io.Reader, length uint64) (
@@ -168,6 +179,9 @@ func packImage(client *srpc.Client, request proto.BuildImageRequest,
 		fmt.Fprintf(buildLog, "Copied mtimes in %s\n",
 			format.Duration(time.Since(patchStartTime)))
 	}
+	if err := runTests(dirname, buildLog); err != nil {
+		return nil, err
+	}
 	objClient := objectclient.AttachObjectClient(client)
 	// Make a copy of the build log because AddObject() drains the buffer.
 	logReader := bytes.NewBuffer(buildLog.Bytes())
@@ -190,4 +204,90 @@ func packImage(client *srpc.Client, request proto.BuildImageRequest,
 		return nil, err
 	}
 	return img, nil
+}
+
+func runTests(rootDir string, buildLog buildLogger) error {
+	var testProgrammes []string
+	err := filepath.Walk(filepath.Join(rootDir, "tests"),
+		func(path string, fi os.FileInfo, err error) error {
+			if fi == nil || !fi.Mode().IsRegular() || fi.Mode()&0100 == 0 {
+				return nil
+			}
+			testProgrammes = append(testProgrammes, path[len(rootDir):])
+			return nil
+		})
+	if err != nil {
+		return err
+	}
+	if len(testProgrammes) < 1 {
+		return nil
+	}
+	fmt.Fprintf(buildLog, "Running %d tests\n", len(testProgrammes))
+	results := make(chan testResultType, 1)
+	for _, prog := range testProgrammes {
+		go func(prog string) {
+			results <- runTest(rootDir, prog)
+		}(prog)
+	}
+	numFailures := 0
+	for range testProgrammes {
+		result := <-results
+		io.Copy(buildLog, &result)
+		if result.err != nil {
+			fmt.Fprintf(buildLog, "error running: %s: %s\n",
+				result.prog, result.err)
+			numFailures++
+		} else {
+			fmt.Fprintf(buildLog, "%s passed in %s\n",
+				result.prog, format.Duration(result.duration))
+		}
+		fmt.Fprintln(buildLog)
+	}
+	if numFailures > 0 {
+		return fmt.Errorf("%d tests failed", numFailures)
+	}
+	return nil
+}
+
+func runTest(rootDir, prog string) testResultType {
+	startTime := time.Now()
+	result := testResultType{
+		buffer: make(chan byte, 4096),
+		prog:   prog,
+	}
+	errChannel := make(chan error, 1)
+	timer := time.NewTimer(time.Second * 10)
+	go func() {
+		errChannel <- runInTarget(nil, &result, rootDir, packagerPathname,
+			"run", prog)
+	}()
+	select {
+	case result.err = <-errChannel:
+		result.duration = time.Since(startTime)
+	case <-timer.C:
+		result.err = errorTestTimedOut
+	}
+	return result
+}
+
+func (w *testResultType) Read(p []byte) (int, error) {
+	for count := 0; count < len(p); count++ {
+		select {
+		case p[count] = <-w.buffer:
+		default:
+			return count, io.EOF
+		}
+	}
+	return len(p), nil
+}
+
+func (w *testResultType) Write(p []byte) (int, error) {
+	for index, ch := range p {
+		select {
+		case w.buffer <- ch:
+		default:
+			return index, io.ErrShortWrite
+		}
+	}
+	return len(p), nil
 }
