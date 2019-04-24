@@ -108,6 +108,8 @@ of objects with the following fields:
 - `MatchLines`: an array of regular expressions
 - `Service`: the service to restart if a file is changed which matches one of
   	     the regular expressions
+- `DoReboot`: if true, reboot the machine after restarting all services that
+              require restarting, provided those restarts succeed
 - `HighImpact`: if true, restarting the service will have a high impact on the
   		machine (i.e. a reboot)
 
@@ -118,3 +120,12 @@ This is similar to the `triggers` file, except that the triggers are *added*
 (merged) to the triggers of the *SourceImage*, thus inheriting and (if not
 `[]`) extending the triggers. This must not be present if the `triggers` file is
 present.
+
+### `tests` directory
+An optional directory containing test scripts to run. These are copied into the
+`/tests` directory tree in the image, merging with tests from the *SourceImage*.
+The tests are run concurrently after the image content is built. If any test
+fails or exceeds the 10 second timeout, the image is not uploaded and the build
+fails. The test scripts are processed in lexical order. The scripts are run in a
+contained environment where the root directory is the root directory of the
+image that was built.
