@@ -17,6 +17,7 @@ import (
 	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/image"
 	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -224,6 +225,18 @@ func buildImageFromManifest(client *srpc.Client, manifestDir string,
 		rootDir, buildLog)
 	if err != nil {
 		return nil, err
+	}
+	if fi, err := os.Lstat(filepath.Join(manifestDir, "tests")); err == nil {
+		if fi.IsDir() {
+			testsDir := filepath.Join(rootDir, "tests", request.StreamName)
+			if err := os.MkdirAll(testsDir, fsutil.DirPerms); err != nil {
+				return nil, err
+			}
+			err := copyFiles(manifestDir, "tests", testsDir, buildLog)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 	if addFilter {
 		mergeableFilter := &filter.MergeableFilter{}

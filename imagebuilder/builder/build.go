@@ -129,8 +129,8 @@ func (b *Builder) build(client *srpc.Client, request proto.BuildImageRequest,
 			writer: io.MultiWriter(buildLogBuffer, logWriter),
 		}
 	}
-	img, name, err := b.buildWithLogger(builder, client, request, startTime,
-		buildLog)
+	img, name, err := b.buildWithLogger(builder, client, request, authInfo,
+		startTime, buildLog)
 	finishTime := time.Now()
 	b.buildResultsLock.Lock()
 	defer b.buildResultsLock.Unlock()
@@ -145,25 +145,30 @@ func (b *Builder) build(client *srpc.Client, request proto.BuildImageRequest,
 }
 
 func (b *Builder) buildSomewhere(builder imageBuilder, client *srpc.Client,
-	request proto.BuildImageRequest,
+	request proto.BuildImageRequest, authInfo *srpc.AuthInformation,
 	buildLog buildLogger) (*image.Image, error) {
 	if b.slaveDriver == nil {
-		b.logger.Printf("Building new image for stream: %s\n",
-			request.StreamName)
+		if authInfo == nil {
+			b.logger.Printf("Auto building image for stream: %s\n",
+				request.StreamName)
+		} else {
+			b.logger.Printf("%s requested building image for stream: %s\n",
+				authInfo.Username, request.StreamName)
+		}
 		img, err := builder.build(b, client, request, buildLog)
 		if err != nil {
 			fmt.Fprintf(buildLog, "Error building image: %s\n", err)
 		}
 		return img, err
 	} else {
-		return b.buildOnSlave(client, request, buildLog)
+		return b.buildOnSlave(client, request, authInfo, buildLog)
 	}
 }
 
 func (b *Builder) buildWithLogger(builder imageBuilder, client *srpc.Client,
-	request proto.BuildImageRequest, startTime time.Time,
-	buildLog buildLogger) (*image.Image, string, error) {
-	img, err := b.buildSomewhere(builder, client, request, buildLog)
+	request proto.BuildImageRequest, authInfo *srpc.AuthInformation,
+	startTime time.Time, buildLog buildLogger) (*image.Image, string, error) {
+	img, err := b.buildSomewhere(builder, client, request, authInfo, buildLog)
 	if err != nil {
 		if needSource, sourceImage := needSourceImage(err); needSource {
 			if request.DisableRecursiveBuild {
@@ -183,7 +188,8 @@ func (b *Builder) buildWithLogger(builder imageBuilder, client *srpc.Client,
 			if _, _, e := b.build(client, sourceReq, nil, buildLog); e != nil {
 				return nil, "", e
 			}
-			img, err = b.buildSomewhere(builder, client, request, buildLog)
+			img, err = b.buildSomewhere(builder, client, request, authInfo,
+				buildLog)
 		}
 	}
 	if err != nil {
@@ -207,7 +213,7 @@ func (b *Builder) buildWithLogger(builder imageBuilder, client *srpc.Client,
 }
 
 func (b *Builder) buildOnSlave(client *srpc.Client,
-	request proto.BuildImageRequest,
+	request proto.BuildImageRequest, authInfo *srpc.AuthInformation,
 	buildLog buildLogger) (*image.Image, error) {
 	request.DisableRecursiveBuild = true
 	request.ReturnImage = true
@@ -237,10 +243,18 @@ func (b *Builder) buildOnSlave(client *srpc.Client,
 			slave.Destroy()
 		}
 	}()
-	b.logger.Printf("Building new image on %s for stream: %s\n",
-		slave, request.StreamName)
-	fmt.Fprintf(buildLog, "Building new image on %s for stream: %s\n",
-		slave, request.StreamName)
+	if authInfo == nil {
+		b.logger.Printf("Auto building image on %s for stream: %s\n",
+			slave, request.StreamName)
+		fmt.Fprintf(buildLog, "Auto building image on %s for stream: %s\n",
+			slave, request.StreamName)
+	} else {
+		b.logger.Printf("%s requested building image on %s for stream: %s\n",
+			authInfo.Username, slave, request.StreamName)
+		fmt.Fprintf(buildLog,
+			"%s requested building image on %s for stream: %s\n",
+			authInfo.Username, slave, request.StreamName)
+	}
 	var reply proto.BuildImageResponse
 	err = buildclient.BuildImage(slave.GetClient(), request, &reply, buildLog)
 	if err != nil {
