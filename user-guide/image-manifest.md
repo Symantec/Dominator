@@ -126,6 +126,5 @@ An optional directory containing test scripts to run. These are copied into the
 `/tests` directory tree in the image, merging with tests from the *SourceImage*.
 The tests are run concurrently after the image content is built. If any test
 fails or exceeds the 10 second timeout, the image is not uploaded and the build
-fails. The test scripts are processed in lexical order. The scripts are run in a
-contained environment where the root directory is the root directory of the
-image that was built.
+fails. The scripts are run in a contained environment where the root directory
+is the root directory of the image that was built.
