@@ -344,6 +344,8 @@ func (client *Client) RequestReply(serviceMethod string, request interface{},
 }
 
 type Conn struct {
+	Decoder
+	Encoder
 	parent      *Client // nil: server-side connection.
 	isEncrypted bool
 	*bufio.ReadWriter

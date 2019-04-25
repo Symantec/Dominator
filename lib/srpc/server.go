@@ -555,6 +555,8 @@ func (m *methodWrapper) call(conn *Conn) error {
 
 func (m *methodWrapper) _call(conn *Conn) error {
 	connValue := reflect.ValueOf(conn)
+	conn.Decoder = gob.NewDecoder(conn)
+	conn.Encoder = gob.NewEncoder(conn)
 	switch m.methodType {
 	case methodTypeRaw:
 		returnValues := m.fn.Call([]reflect.Value{connValue})
@@ -564,12 +566,10 @@ func (m *methodWrapper) _call(conn *Conn) error {
 		}
 		return nil
 	case methodTypeCoder:
-		decoder := gob.NewDecoder(conn)
-		encoder := gob.NewEncoder(conn)
 		returnValues := m.fn.Call([]reflect.Value{
 			connValue,
-			reflect.ValueOf(decoder),
-			reflect.ValueOf(encoder),
+			reflect.ValueOf(conn.Decoder),
+			reflect.ValueOf(conn.Encoder),
 		})
 		errInter := returnValues[0].Interface()
 		if errInter != nil {
@@ -579,8 +579,7 @@ func (m *methodWrapper) _call(conn *Conn) error {
 	case methodTypeRequestReply:
 		request := reflect.New(m.requestType)
 		response := reflect.New(m.responseType)
-		decoder := gob.NewDecoder(conn)
-		if err := decoder.Decode(request.Interface()); err != nil {
+		if err := conn.Decode(request.Interface()); err != nil {
 			_, err = conn.WriteString(err.Error() + "\n")
 			return err
 		}
@@ -599,7 +598,7 @@ func (m *methodWrapper) _call(conn *Conn) error {
 		if _, err := conn.WriteString("\n"); err != nil {
 			return err
 		}
-		return gob.NewEncoder(conn).Encode(response.Interface())
+		return conn.Encode(response.Interface())
 	}
 	return errors.New("unknown method type")
 }

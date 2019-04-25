@@ -208,6 +208,8 @@ func (client *Client) callWithLock(serviceMethod string) (*Conn, error) {
 		return nil, errors.New(resp)
 	}
 	conn := &Conn{
+		Decoder:     gob.NewDecoder(client.bufrw),
+		Encoder:     gob.NewEncoder(client.bufrw),
 		parent:      client,
 		isEncrypted: client.isEncrypted,
 		ReadWriter:  client.bufrw,
@@ -254,8 +256,7 @@ func (client *Client) requestReply(serviceMethod string, request interface{},
 }
 
 func (conn *Conn) requestReply(request interface{}, reply interface{}) error {
-	encoder := gob.NewEncoder(conn)
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return err
 	}
 	if err := conn.Flush(); err != nil {
@@ -268,5 +269,5 @@ func (conn *Conn) requestReply(request interface{}, reply interface{}) error {
 	if str != "\n" {
 		return errors.New(str[:len(str)-1])
 	}
-	return gob.NewDecoder(conn).Decode(reply)
+	return conn.Decode(reply)
 }
