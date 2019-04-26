@@ -18,15 +18,14 @@ type writeFlusher interface {
 	io.Writer
 }
 
-func (t *srpcType) Connect(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
+func (t *srpcType) Connect(conn *srpc.Conn) error {
 	var request proto.ConnectRequest
-	if err := decoder.Decode(&request); err != nil {
+	if err := conn.Decode(&request); err != nil {
 		return err
 	}
 	requestedConn, err := net.DialTimeout(request.Network, request.Address,
 		request.Timeout)
-	e := encoder.Encode(proto.ConnectResponse{Error: errors.ErrorToString(err)})
+	e := conn.Encode(proto.ConnectResponse{Error: errors.ErrorToString(err)})
 	if e != nil {
 		return e
 	}
