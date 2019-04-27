@@ -78,11 +78,10 @@ func serverWatchDaemon(mdbServerHostname string, mdbServerPortNum uint,
 			client.Close()
 			continue
 		}
-		decoder := gob.NewDecoder(conn)
 		lastMdb := &mdb.Mdb{}
 		for {
 			var mdbUpdate mdbserver.MdbUpdate
-			if err := decoder.Decode(&mdbUpdate); err != nil {
+			if err := conn.Decode(&mdbUpdate); err != nil {
 				logger.Println(err)
 				break
 			} else {
