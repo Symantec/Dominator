@@ -145,14 +145,12 @@ func (m *Manager) ConnectToVmSerialPort(ipAddr net.IP,
 	return m.connectToVmSerialPort(ipAddr, authInfo, portNumber)
 }
 
-func (m *Manager) CopyVm(conn *srpc.Conn, request proto.CopyVmRequest,
-	encoder srpc.Encoder) error {
-	return m.copyVm(conn, request, encoder)
+func (m *Manager) CopyVm(conn *srpc.Conn, request proto.CopyVmRequest) error {
+	return m.copyVm(conn, request)
 }
 
-func (m *Manager) CreateVm(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
-	return m.createVm(conn, decoder, encoder)
+func (m *Manager) CreateVm(conn *srpc.Conn) error {
+	return m.createVm(conn)
 }
 
 func (m *Manager) DeleteVmVolume(ipAddr net.IP, authInfo *srpc.AuthInformation,
@@ -223,9 +221,8 @@ func (m *Manager) GetVmUserDataRPC(ipAddr net.IP,
 	return m.getVmUserData(ipAddr, authInfo, accessToken)
 }
 
-func (m *Manager) GetVmVolume(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
-	return m.getVmVolume(conn, decoder, encoder)
+func (m *Manager) GetVmVolume(conn *srpc.Conn) error {
+	return m.getVmVolume(conn)
 }
 
 func (m *Manager) ImportLocalVm(authInfo *srpc.AuthInformation,
@@ -257,9 +254,8 @@ func (m *Manager) MakeUpdateChannel() <-chan proto.Update {
 	return m.makeUpdateChannel()
 }
 
-func (m *Manager) MigrateVm(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
-	return m.migrateVm(conn, decoder, encoder)
+func (m *Manager) MigrateVm(conn *srpc.Conn) error {
+	return m.migrateVm(conn)
 }
 
 func (m *Manager) NotifyVmMetadataRequest(ipAddr net.IP, path string) {
@@ -284,9 +280,9 @@ func (m *Manager) RegisterVmMetadataNotifier(ipAddr net.IP,
 	return m.registerVmMetadataNotifier(ipAddr, authInfo, pathChannel)
 }
 
-func (m *Manager) ReplaceVmImage(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder, authInfo *srpc.AuthInformation) error {
-	return m.replaceVmImage(conn, decoder, encoder, authInfo)
+func (m *Manager) ReplaceVmImage(conn *srpc.Conn,
+	authInfo *srpc.AuthInformation) error {
+	return m.replaceVmImage(conn, authInfo)
 }
 
 func (m *Manager) ReplaceVmUserData(ipAddr net.IP, reader io.Reader,
