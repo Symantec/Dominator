@@ -11,13 +11,11 @@ import (
 	proto "github.com/Symantec/Dominator/proto/filegenerator"
 )
 
-func (t *rpcType) Connect(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
-	return t.manager.connect(conn, decoder, encoder) // Long-lived.
+func (t *rpcType) Connect(conn *srpc.Conn) error {
+	return t.manager.connect(conn) // Long-lived.
 }
 
-func (m *Manager) connect(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
+func (m *Manager) connect(conn *srpc.Conn) error {
 	defer conn.Flush()
 	clientChannel := make(chan *proto.ServerMessage, 4096)
 	m.rwMutex.Lock()
@@ -29,13 +27,11 @@ func (m *Manager) connect(conn *srpc.Conn, decoder srpc.Decoder,
 		m.rwMutex.Unlock()
 	}()
 	closeNotifyChannel := make(chan struct{})
-	// The client must keep the same encoder/decoder pair over the lifetime
-	// of the connection.
-	go m.handleClientRequests(decoder, clientChannel, closeNotifyChannel)
+	go m.handleClientRequests(conn, clientChannel, closeNotifyChannel)
 	for {
 		select {
 		case serverMessage := <-clientChannel:
-			if err := encoder.Encode(serverMessage); err != nil {
+			if err := conn.Encode(serverMessage); err != nil {
 				m.logger.Printf("error encoding ServerMessage: %s\n", err)
 				return err
 			}
