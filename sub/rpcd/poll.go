@@ -10,12 +10,11 @@ import (
 
 var startTime time.Time = time.Now()
 
-func (t *rpcType) Poll(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
+func (t *rpcType) Poll(conn *srpc.Conn) error {
 	defer conn.Flush()
 	var request sub.PollRequest
 	var response sub.PollResponse
-	if err := decoder.Decode(&request); err != nil {
+	if err := conn.Decode(&request); err != nil {
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
 	}
@@ -53,7 +52,7 @@ func (t *rpcType) Poll(conn *srpc.Conn, decoder srpc.Decoder,
 		request.HaveGeneration != t.fileSystemHistory.GenerationCount() {
 		response.FileSystemFollows = true
 	}
-	if err := encoder.Encode(response); err != nil {
+	if err := conn.Encode(response); err != nil {
 		return err
 	}
 	if response.FileSystemFollows {
