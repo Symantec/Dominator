@@ -13,8 +13,7 @@ import (
 
 var exclusive sync.RWMutex
 
-func (objSrv *srpcType) GetObjects(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
+func (objSrv *srpcType) GetObjects(conn *srpc.Conn) error {
 	defer conn.Flush()
 	var request objectserver.GetObjectsRequest
 	var response objectserver.GetObjectsResponse
@@ -28,14 +27,14 @@ func (objSrv *srpcType) GetObjects(conn *srpc.Conn, decoder srpc.Decoder,
 		defer releaseSemaphore(objSrv.getSemaphore)
 	}
 	var err error
-	if err = decoder.Decode(&request); err != nil {
+	if err = conn.Decode(&request); err != nil {
 		response.ResponseString = err.Error()
-		return encoder.Encode(response)
+		return conn.Encode(response)
 	}
 	response.ObjectSizes, err = objSrv.objectServer.CheckObjects(request.Hashes)
 	if err != nil {
 		response.ResponseString = err.Error()
-		return encoder.Encode(response)
+		return conn.Encode(response)
 	}
 	// First a quick check for existence. If any objects missing, fail request.
 	var firstMissingObject *hash.Hash
@@ -55,15 +54,15 @@ func (objSrv *srpcType) GetObjects(conn *srpc.Conn, decoder srpc.Decoder,
 				"first of %d unknown objects: %x", numMissingObjects,
 				*firstMissingObject)
 		}
-		return encoder.Encode(response)
+		return conn.Encode(response)
 	}
 	objectsReader, err := objSrv.objectServer.GetObjects(request.Hashes)
 	if err != nil {
 		response.ResponseString = err.Error()
-		return encoder.Encode(response)
+		return conn.Encode(response)
 	}
 	defer objectsReader.Close()
-	if err := encoder.Encode(response); err != nil {
+	if err := conn.Encode(response); err != nil {
 		return err
 	}
 	conn.Flush()
