@@ -1,7 +1,6 @@
 package rpcd
 
 import (
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
@@ -57,14 +56,13 @@ func (t *srpcType) getUpdates(conn *srpc.Conn,
 	finishedReplication *chan<- struct{}) error {
 	t.logger.Printf("Image replicator: connected to: %s\n", t.replicationMaster)
 	replicationStartTime := time.Now()
-	decoder := gob.NewDecoder(conn)
 	initialImages := make(map[string]struct{})
 	if t.archiveMode {
 		initialImages = nil
 	}
 	for {
 		var imageUpdate imageserver.ImageUpdate
-		if err := decoder.Decode(&imageUpdate); err != nil {
+		if err := conn.Decode(&imageUpdate); err != nil {
 			if err == io.EOF {
 				return err
 			}
