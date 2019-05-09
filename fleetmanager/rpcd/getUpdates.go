@@ -10,10 +10,9 @@ import (
 
 const flushDelay = time.Millisecond * 10
 
-func (t *srpcType) GetUpdates(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
+func (t *srpcType) GetUpdates(conn *srpc.Conn) error {
 	var request proto.GetUpdatesRequest
-	if err := decoder.Decode(&request); err != nil {
+	if err := conn.Decode(&request); err != nil {
 		return err
 	}
 	closeChannel := conn.GetCloseNotifier()
@@ -30,7 +29,7 @@ func (t *srpcType) GetUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 				t.logger.Printf("error sending update: %s\n", err)
 				return err
 			}
-			if err := encoder.Encode(update); err != nil {
+			if err := conn.Encode(update); err != nil {
 				t.logger.Printf("error sending update: %s\n", err)
 				return err
 			}
