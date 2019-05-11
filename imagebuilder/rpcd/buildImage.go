@@ -2,24 +2,25 @@ package rpcd
 
 import (
 	"bytes"
-	"encoding/gob"
 	"io"
+	"sync"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/bufwriter"
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/imaginator"
 )
 
 type logWriterType struct {
-	encoder srpc.Encoder
+	conn         *srpc.Conn
+	mutex        sync.Mutex // Protect everything below.
+	err          error
+	flushPending bool
 }
 
 func (t *srpcType) BuildImage(conn *srpc.Conn) error {
-	decoder := gob.NewDecoder(conn)
 	var request proto.BuildImageRequest
-	if err := decoder.Decode(&request); err != nil {
+	if err := conn.Decode(&request); err != nil {
 		_, err = conn.WriteString(err.Error() + "\n")
 		return err
 	}
@@ -28,14 +29,9 @@ func (t *srpcType) BuildImage(conn *srpc.Conn) error {
 	}
 	buildLogBuffer := &bytes.Buffer{}
 	var logWriter io.Writer
-	var encoder srpc.Encoder
 	if request.StreamBuildLog {
-		writer := bufwriter.NewWriter(conn, time.Millisecond*100)
-		defer writer.Flush()
-		encoder = gob.NewEncoder(writer)
-		logWriter = &logWriterType{encoder}
+		logWriter = &logWriterType{conn: conn}
 	} else {
-		encoder = gob.NewEncoder(conn)
 		logWriter = buildLogBuffer
 	}
 	image, name, err := t.builder.BuildImage(request, conn.GetAuthInformation(),
@@ -46,12 +42,42 @@ func (t *srpcType) BuildImage(conn *srpc.Conn) error {
 		BuildLog:    buildLogBuffer.Bytes(),
 		ErrorString: errors.ErrorToString(err),
 	}
-	return encoder.Encode(reply)
+	return conn.Encode(reply)
+}
+
+func (w *logWriterType) delayedFlush() {
+	time.Sleep(time.Millisecond * 100)
+	w.flush()
+}
+
+func (w *logWriterType) flush() error {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+	w.flushPending = false
+	if w.err != nil {
+		return w.err
+	}
+	w.err = w.conn.Flush()
+	return w.err
+}
+
+func (w *logWriterType) lockAndScheduleFlush() {
+	w.mutex.Lock()
+	if w.flushPending {
+		return
+	}
+	w.flushPending = true
+	go w.delayedFlush()
 }
 
 func (w *logWriterType) Write(p []byte) (int, error) {
+	w.lockAndScheduleFlush()
+	defer w.mutex.Unlock()
+	if w.err != nil {
+		return 0, w.err
+	}
 	reply := proto.BuildImageResponse{BuildLog: p}
-	if err := w.encoder.Encode(reply); err != nil {
+	if err := w.conn.Encode(reply); err != nil {
 		return 0, err
 	}
 	return len(p), nil
