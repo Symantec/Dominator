@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
@@ -39,9 +38,7 @@ func callCreateVm(client *srpc.Client, request hyper_proto.CreateVmRequest,
 		return fmt.Errorf("error calling Hypervisor.CreateVm: %s", err)
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	decoder := gob.NewDecoder(conn)
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return fmt.Errorf("error encoding request: %s", err)
 	}
 	// Stream any required data.
@@ -62,7 +59,7 @@ func callCreateVm(client *srpc.Client, request hyper_proto.CreateVmRequest,
 	}
 	for {
 		var response hyper_proto.CreateVmResponse
-		if err := decoder.Decode(&response); err != nil {
+		if err := conn.Decode(&response); err != nil {
 			return fmt.Errorf("error decoding: %s", err)
 		}
 		if response.Error != "" {
