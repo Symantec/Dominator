@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 	"io"
 	"os"
@@ -68,16 +67,14 @@ func watchOne(client *srpc.Client, level int16, prefix string) error {
 		return err
 	} else {
 		defer conn.Close()
-		encoder := gob.NewEncoder(conn)
-		if err := encoder.Encode(request); err != nil {
+		if err := conn.Encode(request); err != nil {
 			return err
 		}
 		if err := conn.Flush(); err != nil {
 			return err
 		}
-		decoder := gob.NewDecoder(conn)
 		var response proto.WatchResponse
-		if err := decoder.Decode(&response); err != nil {
+		if err := conn.Decode(&response); err != nil {
 			return fmt.Errorf("error decoding: %s", err)
 		}
 		if response.Error != "" {
