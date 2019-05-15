@@ -28,8 +28,7 @@ func startRpcd(logger log.Logger) *rpcType {
 	return rpcObj
 }
 
-func (t *rpcType) GetMdbUpdates(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
+func (t *rpcType) GetMdbUpdates(conn *srpc.Conn) error {
 	updateChannel := make(chan mdbserver.MdbUpdate, 10)
 	t.rwMutex.Lock()
 	t.updateChannels[conn] = updateChannel
@@ -42,7 +41,7 @@ func (t *rpcType) GetMdbUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 	}()
 	if t.currentMdb != nil {
 		mdbUpdate := mdbserver.MdbUpdate{MachinesToAdd: t.currentMdb.Machines}
-		if err := encoder.Encode(mdbUpdate); err != nil {
+		if err := conn.Encode(mdbUpdate); err != nil {
 			return err
 		}
 		if err := conn.Flush(); err != nil {
@@ -58,7 +57,7 @@ func (t *rpcType) GetMdbUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 				t.logger.Printf("Queue for: %s is filling up: dropping client")
 				return errors.New("update queue too full")
 			}
-			if err = encoder.Encode(mdbUpdate); err != nil {
+			if err = conn.Encode(mdbUpdate); err != nil {
 				break
 			}
 			if err = conn.Flush(); err != nil {

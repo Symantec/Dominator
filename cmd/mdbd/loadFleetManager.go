@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 	"sync"
 	"time"
@@ -60,19 +59,17 @@ func (g *fleetManagerGeneratorType) getUpdates(fleetManager string) error {
 		return err
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
 	request := fm_proto.GetUpdatesRequest{Location: g.location}
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return err
 	}
 	if err := conn.Flush(); err != nil {
 		return err
 	}
-	decoder := gob.NewDecoder(conn)
 	initialUpdate := true
 	for {
 		var update fm_proto.Update
-		if err := decoder.Decode(&update); err != nil {
+		if err := conn.Decode(&update); err != nil {
 			return err
 		}
 		g.update(update, initialUpdate)
