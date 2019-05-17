@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/gob"
 	"errors"
 	"io"
 	"log"
@@ -25,8 +24,9 @@ import (
 
 const (
 	connectString   = "200 Connected to Go SRPC"
-	rpcPath         = "/_goSRPC_/"
-	tlsRpcPath      = "/_go_TLS_SRPC_/"
+	rpcPath         = "/_goSRPC_/"      // GOB coder.
+	tlsRpcPath      = "/_go_TLS_SRPC_/" // GOB coder.
+	gobTlsRpcPath   = "/_go_TLS_SRPC_/GOB"
 	listMethodsPath = rpcPath + "listMethods"
 
 	methodTypeRaw = iota
@@ -78,7 +78,8 @@ var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
 
 func init() {
 	http.HandleFunc(rpcPath, unsecuredHttpHandler)
-	http.HandleFunc(tlsRpcPath, tlsHttpHandler)
+	http.HandleFunc(tlsRpcPath, gobTlsHttpHandler)
+	http.HandleFunc(gobTlsRpcPath, gobTlsHttpHandler)
 	http.HandleFunc(listMethodsPath, listMethodsHttpHandler)
 	registerServerMetrics()
 }
@@ -252,14 +253,15 @@ func (m *methodWrapper) registerMetrics(dir *tricorder.DirectorySpec) error {
 }
 
 func unsecuredHttpHandler(w http.ResponseWriter, req *http.Request) {
-	httpHandler(w, req, false)
+	httpHandler(w, req, false, &gobCoder{})
 }
 
-func tlsHttpHandler(w http.ResponseWriter, req *http.Request) {
-	httpHandler(w, req, true)
+func gobTlsHttpHandler(w http.ResponseWriter, req *http.Request) {
+	httpHandler(w, req, true, &gobCoder{})
 }
 
-func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
+func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool,
+	makeCoder coderMaker) {
 	serverMetricsMutex.Lock()
 	numServerConnections++
 	serverMetricsMutex.Unlock()
@@ -360,7 +362,7 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 	serverMetricsMutex.Lock()
 	numOpenServerConnections++
 	serverMetricsMutex.Unlock()
-	handleConnection(myConn)
+	handleConnection(myConn, makeCoder)
 	serverMetricsMutex.Lock()
 	numOpenServerConnections--
 	serverMetricsMutex.Unlock()
@@ -418,7 +420,7 @@ func getAuth(state tls.ConnectionState) (string, map[string]struct{},
 	return username, permittedMethods, groupList, nil
 }
 
-func handleConnection(conn *Conn) {
+func handleConnection(conn *Conn, makeCoder coderMaker) {
 	defer conn.callReleaseNotifier()
 	defer conn.Flush()
 	for ; ; conn.Flush() {
@@ -461,7 +463,7 @@ func handleConnection(conn *Conn) {
 			log.Println(err)
 			return
 		}
-		if err := method.call(conn); err != nil {
+		if err := method.call(conn, makeCoder); err != nil {
 			if err != ErrorCloseClient {
 				log.Println(err)
 			}
@@ -540,10 +542,10 @@ func listMethodsHttpHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (m *methodWrapper) call(conn *Conn) error {
+func (m *methodWrapper) call(conn *Conn, makeCoder coderMaker) error {
 	m.numPermittedCalls++
 	startTime := time.Now()
-	err := m._call(conn)
+	err := m._call(conn, makeCoder)
 	timeTaken := time.Since(startTime)
 	if err == nil {
 		m.successfulCallsDistribution.Add(timeTaken)
@@ -553,10 +555,10 @@ func (m *methodWrapper) call(conn *Conn) error {
 	return err
 }
 
-func (m *methodWrapper) _call(conn *Conn) error {
+func (m *methodWrapper) _call(conn *Conn, makeCoder coderMaker) error {
 	connValue := reflect.ValueOf(conn)
-	conn.Decoder = gob.NewDecoder(conn)
-	conn.Encoder = gob.NewEncoder(conn)
+	conn.Decoder = makeCoder.MakeDecoder(conn)
+	conn.Encoder = makeCoder.MakeEncoder(conn)
 	switch m.methodType {
 	case methodTypeRaw:
 		returnValues := m.fn.Call([]reflect.Value{connValue})

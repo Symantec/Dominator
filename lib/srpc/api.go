@@ -236,12 +236,13 @@ func (cr *ClientResource) ScheduleClose() {
 }
 
 type Client struct {
-	conn        net.Conn
-	tcpConn     libnet.TCPConn // The underlying raw connection.
-	isEncrypted bool
-	resource    *ClientResource
 	bufrw       *bufio.ReadWriter
 	callLock    sync.Mutex
+	conn        net.Conn
+	isEncrypted bool
+	makeCoder   coderMaker
+	resource    *ClientResource
+	tcpConn     libnet.TCPConn // The underlying raw connection.
 }
 
 // DialHTTP connects to an HTTP SRPC server at the specified network address

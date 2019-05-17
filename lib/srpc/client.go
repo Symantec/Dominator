@@ -3,7 +3,6 @@ package srpc
 import (
 	"bufio"
 	"crypto/tls"
-	"encoding/gob"
 	"errors"
 	"io"
 	"net"
@@ -75,6 +74,11 @@ func dial(network, address string, dialer Dialer) (net.Conn, error) {
 
 func dialHTTP(network, address string, tlsConfig *tls.Config,
 	dialer Dialer) (*Client, error) {
+	return dialHTTPWithCoder(network, address, tlsConfig, dialer, &gobCoder{})
+}
+
+func dialHTTPWithCoder(network, address string, tlsConfig *tls.Config,
+	dialer Dialer, makeCoder coderMaker) (*Client, error) {
 	unsecuredConn, err := dial(network, address, dialer)
 	if err != nil {
 		return nil, err
@@ -106,7 +110,7 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 				tlsConn.Close()
 				return nil, err
 			}
-			return newClient(unsecuredConn, tlsConn, true), nil
+			return newClient(unsecuredConn, tlsConn, true, makeCoder), nil
 		} else if err == ErrorNoSrpcEndpoint &&
 			tlsConfig != nil &&
 			tlsConfig.InsecureSkipVerify {
@@ -119,13 +123,14 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 				unsecuredConn.Close()
 				return nil, err
 			}
-			return newClient(unsecuredConn, unsecuredConn, false), nil
+			return newClient(unsecuredConn, unsecuredConn, false, makeCoder),
+				nil
 		} else {
 			return nil, err
 		}
 	}
 	if tlsConfig == nil {
-		return newClient(unsecuredConn, unsecuredConn, false), nil
+		return newClient(unsecuredConn, unsecuredConn, false, makeCoder), nil
 	}
 	tlsConn := tls.Client(unsecuredConn, tlsConfig)
 	if err := tlsConn.Handshake(); err != nil {
@@ -135,7 +140,7 @@ func dialHTTP(network, address string, tlsConfig *tls.Config,
 		}
 		return nil, err
 	}
-	return newClient(unsecuredConn, tlsConn, true), nil
+	return newClient(unsecuredConn, tlsConn, true, makeCoder), nil
 }
 
 func doHTTPConnect(conn net.Conn, path string) error {
@@ -161,15 +166,18 @@ func doHTTPConnect(conn net.Conn, path string) error {
 	return nil
 }
 
-func newClient(rawConn, dataConn net.Conn, isEncrypted bool) *Client {
+func newClient(rawConn, dataConn net.Conn, isEncrypted bool,
+	makeCoder coderMaker) *Client {
 	clientMetricsMutex.Lock()
 	numOpenClientConnections++
 	clientMetricsMutex.Unlock()
 	client := &Client{
+		bufrw: bufio.NewReadWriter(bufio.NewReader(dataConn),
+			bufio.NewWriter(dataConn)),
 		conn:        dataConn,
 		isEncrypted: isEncrypted,
-		bufrw: bufio.NewReadWriter(bufio.NewReader(dataConn),
-			bufio.NewWriter(dataConn))}
+		makeCoder:   makeCoder,
+	}
 	if tcpConn, ok := rawConn.(libnet.TCPConn); ok {
 		client.tcpConn = tcpConn
 	}
@@ -208,8 +216,8 @@ func (client *Client) callWithLock(serviceMethod string) (*Conn, error) {
 		return nil, errors.New(resp)
 	}
 	conn := &Conn{
-		Decoder:     gob.NewDecoder(client.bufrw),
-		Encoder:     gob.NewEncoder(client.bufrw),
+		Decoder:     client.makeCoder.MakeDecoder(client.bufrw),
+		Encoder:     client.makeCoder.MakeEncoder(client.bufrw),
 		parent:      client,
 		isEncrypted: client.isEncrypted,
 		ReadWriter:  client.bufrw,
