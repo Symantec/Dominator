@@ -2,6 +2,7 @@ package srpc
 
 import (
 	"encoding/gob"
+	"encoding/json"
 	"io"
 )
 
@@ -18,4 +19,14 @@ func (c *gobCoder) MakeDecoder(r io.Reader) Decoder {
 
 func (c *gobCoder) MakeEncoder(w io.Writer) Encoder {
 	return gob.NewEncoder(w)
+}
+
+type jsonCoder struct{}
+
+func (c *jsonCoder) MakeDecoder(r io.Reader) Decoder {
+	return json.NewDecoder(r)
+}
+
+func (c *jsonCoder) MakeEncoder(w io.Writer) Encoder {
+	return json.NewEncoder(w)
 }

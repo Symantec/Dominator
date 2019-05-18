@@ -27,6 +27,7 @@ const (
 	rpcPath         = "/_goSRPC_/"      // GOB coder.
 	tlsRpcPath      = "/_go_TLS_SRPC_/" // GOB coder.
 	gobTlsRpcPath   = "/_go_TLS_SRPC_/GOB"
+	jsonTlsRpcPath  = "/_go_TLS_SRPC_/JSON"
 	listMethodsPath = rpcPath + "listMethods"
 
 	methodTypeRaw = iota
@@ -80,6 +81,7 @@ func init() {
 	http.HandleFunc(rpcPath, unsecuredHttpHandler)
 	http.HandleFunc(tlsRpcPath, gobTlsHttpHandler)
 	http.HandleFunc(gobTlsRpcPath, gobTlsHttpHandler)
+	http.HandleFunc(jsonTlsRpcPath, jsonTlsHttpHandler)
 	http.HandleFunc(listMethodsPath, listMethodsHttpHandler)
 	registerServerMetrics()
 }
@@ -258,6 +260,10 @@ func unsecuredHttpHandler(w http.ResponseWriter, req *http.Request) {
 
 func gobTlsHttpHandler(w http.ResponseWriter, req *http.Request) {
 	httpHandler(w, req, true, &gobCoder{})
+}
+
+func jsonTlsHttpHandler(w http.ResponseWriter, req *http.Request) {
+	httpHandler(w, req, true, &jsonCoder{})
 }
 
 func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool,

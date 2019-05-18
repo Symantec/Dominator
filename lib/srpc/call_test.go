@@ -167,12 +167,24 @@ func TestGobCallPlain(t *testing.T) {
 	testCallPlain(t, &gobCoder{})
 }
 
+func TestJsonCallPlain(t *testing.T) {
+	testCallPlain(t, &jsonCoder{})
+}
+
 func TestGobCallRequestReply(t *testing.T) {
 	testCallRequestReply(t, &gobCoder{})
 }
 
+func TestJsonCallRequestReply(t *testing.T) {
+	testCallRequestReply(t, &jsonCoder{})
+}
+
 func TestGobCallReceiver(t *testing.T) {
 	testCallReceiver(t, &gobCoder{})
+}
+
+func TestJsonCallReceiver(t *testing.T) {
+	testCallReceiver(t, &jsonCoder{})
 }
 
 func (t *serverType) Plain(conn *Conn) error {
