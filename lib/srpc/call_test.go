@@ -5,17 +5,11 @@ import (
 	"net"
 	"strings"
 	"testing"
+
+	"github.com/Symantec/Dominator/proto/test"
 )
 
 type serverType struct{}
-
-type simpleRequest struct {
-	Request string
-}
-
-type simpleResponse struct {
-	Response string
-}
 
 func init() {
 	RegisterName("Test", &serverType{})
@@ -39,13 +33,13 @@ func testCallPlain(t *testing.T, makeCoder coderMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := conn.Encode(simpleRequest{Request: "plain0"}); err != nil {
+	if err := conn.Encode(test.EchoRequest{Request: "plain0"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := conn.Flush(); err != nil {
 		t.Fatal(err)
 	}
-	var response simpleResponse
+	var response test.EchoResponse
 	if err := conn.Decode(&response); err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +54,7 @@ func testCallPlain(t *testing.T, makeCoder coderMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := conn.Encode(simpleRequest{Request: "plain1"}); err != nil {
+	if err := conn.Encode(test.EchoRequest{Request: "plain1"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := conn.Flush(); err != nil {
@@ -87,9 +81,9 @@ func testCallRequestReply(t *testing.T, makeCoder coderMaker) {
 	client := newClient(clientPipe, clientPipe, false, makeCoder)
 	defer client.Close()
 	// Call# 0.
-	var response simpleResponse
+	var response test.EchoResponse
 	err := client.RequestReply("Test.RequestReply",
-		simpleRequest{Request: "test0"}, &response)
+		test.EchoRequest{Request: "test0"}, &response)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +92,7 @@ func testCallRequestReply(t *testing.T, makeCoder coderMaker) {
 	}
 	// Call# 1.
 	err = client.RequestReply("Test.RequestReply",
-		simpleRequest{Request: "test1"}, &response)
+		test.EchoRequest{Request: "test1"}, &response)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +121,7 @@ func testCallReceiver(t *testing.T, makeCoder coderMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := conn.Encode(simpleRequest{Request: "receiver0"}); err != nil {
+	if err := conn.Encode(test.EchoRequest{Request: "receiver0"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := conn.Flush(); err != nil {
@@ -141,7 +135,7 @@ func testCallReceiver(t *testing.T, makeCoder coderMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := conn.Encode(simpleRequest{Request: "receiver1"}); err != nil {
+	if err := conn.Encode(test.EchoRequest{Request: "receiver1"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := conn.Close(); err != nil {
@@ -152,7 +146,7 @@ func testCallReceiver(t *testing.T, makeCoder coderMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := conn.Encode(simpleRequest{Request: "receiver2"}); err != nil {
+	if err := conn.Encode(test.EchoRequest{Request: "receiver2"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := conn.Flush(); err != nil {
@@ -188,25 +182,25 @@ func TestJsonCallReceiver(t *testing.T) {
 }
 
 func (t *serverType) Plain(conn *Conn) error {
-	var request simpleRequest
+	var request test.EchoRequest
 	if err := conn.Decode(&request); err != nil {
 		return err
 	}
-	err := conn.Encode(simpleResponse{Response: request.Request})
+	err := conn.Encode(test.EchoResponse{Response: request.Request})
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (t *serverType) RequestReply(conn *Conn, request simpleRequest,
-	response *simpleResponse) error {
-	*response = simpleResponse{Response: request.Request}
+func (t *serverType) RequestReply(conn *Conn, request test.EchoRequest,
+	response *test.EchoResponse) error {
+	*response = test.EchoResponse{Response: request.Request}
 	return nil
 }
 
 func (t *serverType) Receiver(conn *Conn) error {
-	var request simpleRequest
+	var request test.EchoRequest
 	if err := conn.Decode(&request); err != nil {
 		return err
 	}
