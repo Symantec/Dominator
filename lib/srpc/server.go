@@ -24,10 +24,10 @@ import (
 
 const (
 	connectString   = "200 Connected to Go SRPC"
-	rpcPath         = "/_goSRPC_/"      // GOB coder.
-	tlsRpcPath      = "/_go_TLS_SRPC_/" // GOB coder.
-	gobTlsRpcPath   = "/_go_TLS_SRPC_/GOB"
-	jsonTlsRpcPath  = "/_go_TLS_SRPC_/JSON"
+	rpcPath         = "/_goSRPC_/"      // Legacy endpoint. GOB coder.
+	tlsRpcPath      = "/_go_TLS_SRPC_/" // Legacy endpoint. GOB coder.
+	jsonRpcPath     = "/_SRPC_/unsecured/JSON"
+	jsonTlsRpcPath  = "/_SRPC_/TLS/JSON"
 	listMethodsPath = rpcPath + "listMethods"
 
 	methodTypeRaw = iota
@@ -78,9 +78,9 @@ var typeOfEncoder = reflect.TypeOf((*Encoder)(nil)).Elem()
 var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
 
 func init() {
-	http.HandleFunc(rpcPath, unsecuredHttpHandler)
+	http.HandleFunc(rpcPath, gobUnsecuredHttpHandler)
 	http.HandleFunc(tlsRpcPath, gobTlsHttpHandler)
-	http.HandleFunc(gobTlsRpcPath, gobTlsHttpHandler)
+	http.HandleFunc(jsonRpcPath, jsonUnsecuredHttpHandler)
 	http.HandleFunc(jsonTlsRpcPath, jsonTlsHttpHandler)
 	http.HandleFunc(listMethodsPath, listMethodsHttpHandler)
 	registerServerMetrics()
@@ -254,16 +254,20 @@ func (m *methodWrapper) registerMetrics(dir *tricorder.DirectorySpec) error {
 	return nil
 }
 
-func unsecuredHttpHandler(w http.ResponseWriter, req *http.Request) {
-	httpHandler(w, req, false, &gobCoder{})
-}
-
 func gobTlsHttpHandler(w http.ResponseWriter, req *http.Request) {
 	httpHandler(w, req, true, &gobCoder{})
 }
 
+func gobUnsecuredHttpHandler(w http.ResponseWriter, req *http.Request) {
+	httpHandler(w, req, false, &gobCoder{})
+}
+
 func jsonTlsHttpHandler(w http.ResponseWriter, req *http.Request) {
 	httpHandler(w, req, true, &jsonCoder{})
+}
+
+func jsonUnsecuredHttpHandler(w http.ResponseWriter, req *http.Request) {
+	httpHandler(w, req, false, &jsonCoder{})
 }
 
 func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool,
