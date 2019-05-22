@@ -447,7 +447,7 @@ func handleConnection(conn *Conn, makeCoder coderMaker) {
 			}
 			continue
 		}
-		serviceMethod = serviceMethod[:len(serviceMethod)-1]
+		serviceMethod = strings.TrimSpace(serviceMethod)
 		if serviceMethod == "" {
 			// Received a "ping" request, send response.
 			if _, err := conn.WriteString("\n"); err != nil {
