@@ -16,6 +16,12 @@ import (
 	"github.com/Symantec/tricorder/go/tricorder/units"
 )
 
+type endpointType struct {
+	coderMaker coderMaker
+	path       string
+	tls        bool
+}
+
 var (
 	clientMetricsDir          *tricorder.DirectorySpec
 	clientMetricsMutex        sync.Mutex
@@ -74,73 +80,89 @@ func dial(network, address string, dialer Dialer) (net.Conn, error) {
 
 func dialHTTP(network, address string, tlsConfig *tls.Config,
 	dialer Dialer) (*Client, error) {
-	return dialHTTPWithCoder(network, address, tlsConfig, dialer, &gobCoder{})
+	insecureEndpoints := []endpointType{
+		{&gobCoder{}, rpcPath, false},
+		{&jsonCoder{}, jsonRpcPath, false},
+	}
+	secureEndpoints := []endpointType{
+		{&gobCoder{}, tlsRpcPath, true},
+		{&jsonCoder{}, jsonTlsRpcPath, true},
+	}
+	if tlsConfig == nil {
+		return dialHTTPEndpoints(network, address, nil, false, dialer,
+			insecureEndpoints)
+	} else {
+		var endpoints []endpointType
+		endpoints = append(endpoints, secureEndpoints...)
+		if tlsConfig.InsecureSkipVerify { // Don't have to trust server.
+			endpoints = append(endpoints, insecureEndpoints...)
+		}
+		client, err := dialHTTPEndpoints(network, address, tlsConfig, false,
+			dialer, endpoints)
+		if err != nil &&
+			strings.Contains(err.Error(), "malformed HTTP response") {
+			// The server may do TLS on all connections: try that.
+			return dialHTTPEndpoints(network, address, tlsConfig, true, dialer,
+				secureEndpoints)
+		}
+		return client, err
+	}
 }
 
-func dialHTTPWithCoder(network, address string, tlsConfig *tls.Config,
-	dialer Dialer, makeCoder coderMaker) (*Client, error) {
+func dialHTTPEndpoint(network, address string, tlsConfig *tls.Config,
+	fullTLS bool, dialer Dialer, endpoint endpointType) (*Client, error) {
 	unsecuredConn, err := dial(network, address, dialer)
 	if err != nil {
 		return nil, err
 	}
-	path := rpcPath
-	if tlsConfig != nil {
-		path = tlsRpcPath
+	dataConn := unsecuredConn
+	doClose := true
+	defer func() {
+		if doClose {
+			dataConn.Close()
+		}
+	}()
+	if fullTLS {
+		tlsConn := tls.Client(unsecuredConn, tlsConfig)
+		if err := tlsConn.Handshake(); err != nil {
+			if strings.Contains(err.Error(), ErrorBadCertificate.Error()) {
+				return nil, ErrorBadCertificate
+			}
+			return nil, err
+		}
+		dataConn = tlsConn
 	}
-	if err := doHTTPConnect(unsecuredConn, path); err != nil {
-		unsecuredConn.Close()
-		if strings.Contains(err.Error(), "malformed HTTP response") {
-			// The server may do TLS on all connections: try that.
-			if tlsConfig == nil {
-				return nil, err
+	if err := doHTTPConnect(dataConn, endpoint.path); err != nil {
+		return nil, err
+	}
+	if endpoint.tls && !fullTLS {
+		tlsConn := tls.Client(unsecuredConn, tlsConfig)
+		if err := tlsConn.Handshake(); err != nil {
+			if strings.Contains(err.Error(), ErrorBadCertificate.Error()) {
+				return nil, ErrorBadCertificate
 			}
-			unsecuredConn, err := dial(network, address, dialer)
-			if err != nil {
-				return nil, err
-			}
-			tlsConn := tls.Client(unsecuredConn, tlsConfig)
-			if err := tlsConn.Handshake(); err != nil {
-				unsecuredConn.Close()
-				if strings.Contains(err.Error(), ErrorBadCertificate.Error()) {
-					return nil, ErrorBadCertificate
-				}
-				return nil, err
-			}
-			if err := doHTTPConnect(tlsConn, tlsRpcPath); err != nil {
-				tlsConn.Close()
-				return nil, err
-			}
-			return newClient(unsecuredConn, tlsConn, true, makeCoder), nil
-		} else if err == ErrorNoSrpcEndpoint &&
-			tlsConfig != nil &&
-			tlsConfig.InsecureSkipVerify {
-			// Fall back to insecure connection.
-			unsecuredConn, err := dial(network, address, dialer)
-			if err != nil {
-				return nil, err
-			}
-			if err := doHTTPConnect(unsecuredConn, rpcPath); err != nil {
-				unsecuredConn.Close()
-				return nil, err
-			}
-			return newClient(unsecuredConn, unsecuredConn, false, makeCoder),
-				nil
-		} else {
+			return nil, err
+		}
+		dataConn = tlsConn
+	}
+	doClose = false
+	return newClient(unsecuredConn, dataConn, endpoint.tls,
+		endpoint.coderMaker), nil
+}
+
+func dialHTTPEndpoints(network, address string, tlsConfig *tls.Config,
+	fullTLS bool, dialer Dialer, endpoints []endpointType) (*Client, error) {
+	for _, endpoint := range endpoints {
+		client, err := dialHTTPEndpoint(network, address, tlsConfig, fullTLS,
+			dialer, endpoint)
+		if err == nil {
+			return client, nil
+		}
+		if err != ErrorNoSrpcEndpoint {
 			return nil, err
 		}
 	}
-	if tlsConfig == nil {
-		return newClient(unsecuredConn, unsecuredConn, false, makeCoder), nil
-	}
-	tlsConn := tls.Client(unsecuredConn, tlsConfig)
-	if err := tlsConn.Handshake(); err != nil {
-		unsecuredConn.Close()
-		if strings.Contains(err.Error(), ErrorBadCertificate.Error()) {
-			return nil, ErrorBadCertificate
-		}
-		return nil, err
-	}
-	return newClient(unsecuredConn, tlsConn, true, makeCoder), nil
+	return nil, ErrorNoSrpcEndpoint
 }
 
 func doHTTPConnect(conn net.Conn, path string) error {
