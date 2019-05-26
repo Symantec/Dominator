@@ -3,8 +3,10 @@ package srpc
 import (
 	"bufio"
 	"net"
+	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Symantec/Dominator/proto/test"
 )
@@ -23,6 +25,35 @@ func makeClientServer(makeCoder coderMaker) *Client {
 	},
 		makeCoder)
 	return newClient(clientPipe, clientPipe, false, makeCoder)
+}
+
+func makeListener(gob, json bool) (net.Addr, error) {
+	if listener, err := net.Listen("tcp", "localhost:"); err != nil {
+		return nil, err
+	} else {
+		serveMux := http.NewServeMux()
+		if gob {
+			serveMux.HandleFunc(rpcPath, gobUnsecuredHttpHandler)
+		}
+		if json {
+			serveMux.HandleFunc(jsonRpcPath, jsonUnsecuredHttpHandler)
+		}
+		go func() {
+			if err := http.Serve(listener, serveMux); err != nil {
+				panic(err)
+			}
+		}()
+		time.Sleep(time.Millisecond * 10) // Give the server time to start.
+		return listener.Addr(), nil
+	}
+}
+
+func makeListenerAndConnect(gob, json bool) (*Client, error) {
+	if addr, err := makeListener(gob, json); err != nil {
+		return nil, err
+	} else {
+		return DialHTTP(addr.Network(), addr.String(), 0)
+	}
 }
 
 func testCallPlain(t *testing.T, makeCoder coderMaker) {
@@ -179,6 +210,43 @@ func TestGobCallReceiver(t *testing.T) {
 
 func TestJsonCallReceiver(t *testing.T) {
 	testCallReceiver(t, &jsonCoder{})
+}
+
+func TestDualListener(t *testing.T) {
+	if client, err := makeListenerAndConnect(true, true); err != nil {
+		t.Fatal(err)
+	} else {
+		if _, ok := client.makeCoder.(*gobCoder); !ok {
+			t.Fatal("GOB coder not default for dual listener")
+		}
+	}
+}
+
+func TestGobListener(t *testing.T) {
+	if client, err := makeListenerAndConnect(true, false); err != nil {
+		t.Fatal(err)
+	} else {
+		if _, ok := client.makeCoder.(*gobCoder); !ok {
+			t.Fatal("GOB coder not available for GOB listener")
+		}
+	}
+}
+
+func TestJsonListener(t *testing.T) {
+	if client, err := makeListenerAndConnect(false, true); err != nil {
+		t.Fatal(err)
+	} else {
+		if _, ok := client.makeCoder.(*jsonCoder); !ok {
+			t.Fatal("JSON coder not available for JSON listener")
+		}
+	}
+}
+
+func TestSilentListener(t *testing.T) {
+	_, err := makeListenerAndConnect(false, false)
+	if err != ErrorNoSrpcEndpoint {
+		t.Fatalf("Silent listener error: %s != %s", err, ErrorNoSrpcEndpoint)
+	}
 }
 
 func (t *serverType) Plain(conn *Conn) error {
