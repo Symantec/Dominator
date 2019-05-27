@@ -1,6 +1,7 @@
 /*
 	Package srpc is similar to the net/rpc package in the Go standard library,
-	except that it provides streaming RPC access and TLS support.
+	except that it provides streaming RPC access, TLS support and authentication
+    and authorisation using X509 client certificates.
 
 	Package srpc provides access to the exported methods of an object across a
 	network or other I/O connection. A server registers an object, making it
@@ -8,6 +9,36 @@
 	registration, exported methods of the object will be accessible remotely.
 	A server may register multiple objects (services) of different types but it
 	is an error to register multiple objects of the same type.
+
+    The remainder of this documentation describes the protocol, to assist the
+    development of implementations in other languages.
+
+    Internally, multiple URL paths are registered with the HTTP default mux:
+      /_goSRPC_/              Unsecured (no TLS, no auth), GOB coder.
+      /_go_TLS_SRPC_/         Secured (TLS, full auth), GOB coder.
+      /_SRPC_/unsecured/JSON  Unsecured (no TLS, no auth), JSON coder.
+      /_SRPC_/TLS/JSON        Secured (TLS, full auth), JSON coder.
+    Thus, a web server may also support SRPC on the same port.
+
+    A client issues a HTTP CONNECT request to a server and (for secured
+    connections) performs a TLS handshake. If the server requires the TLS
+    handshake prior to the HTTP CONNECT, the client will retry with that mode.
+
+    Once connected, a client may issue a sequence of RPC calls, one at a time
+    per connection. The client sends the name of the RPC method to call,
+    followed by a newline character (a carriage return+newline is permitted).
+    For a secured connection, the server will verify if the client X509
+    certificate is signed by a trusted CA and if the method is listed in the
+    list of permitted methods in the certificate.
+    If the method call is established, the server sends a newline character. If
+    the method call is rejected then an error message followed by a newline is
+    sent.
+
+    The server then calls a registered method hander. The client and server can
+    exchange messages using the appropriate coder (GOB is preferred, JSON is
+    available as a fallback). Most method handlers wait for client messages and
+    then respond. Once the method handler exits (without an error code), the
+    server waits for another method call.
 */
 package srpc
 
