@@ -309,6 +309,12 @@ func (m *Manager) updateTopologyLocked(t *topology.Topology,
 		deleteList = append(deleteList, hypervisor)
 		delete(m.hypervisors, hypervisorName)
 		hypersToDelete = append(hypersToDelete, hypervisor)
+		for vmIP := range hypervisor.migratingVms {
+			delete(m.vms, vmIP)
+		}
+		for vmIP := range hypervisor.vms {
+			delete(m.vms, vmIP)
+		}
 	}
 	if len(hypersToChange) > 0 || len(hypersToDelete) > 0 {
 		updates := m.splitChanges(hypersToChange, hypersToDelete)
