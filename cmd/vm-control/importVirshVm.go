@@ -98,6 +98,9 @@ func ensureDomainIsStopped(domainName string) error {
 	for ; ; time.Sleep(time.Second) {
 		state, err := getDomainState(domainName)
 		if err != nil {
+			if strings.Contains(err.Error(), "Domain not found") {
+				return nil
+			}
 			return err
 		}
 		if state == "shut off" {
@@ -110,7 +113,8 @@ func getDomainState(domainName string) (string, error) {
 	cmd := exec.Command("virsh", []string{"domstate", domainName}...)
 	stdout, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("error getting VM status: %s", err)
+		return "", fmt.Errorf("error getting VM status: %s",
+			err.(*exec.ExitError).Stderr)
 	}
 	return strings.TrimSpace(string(stdout)), nil
 }
