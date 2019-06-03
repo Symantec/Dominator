@@ -505,16 +505,11 @@ func writeToFile(fs *filesystem.FileSystem,
 	if err := mbr.WriteDefault(tmpFilename, tableType); err != nil {
 		return err
 	}
-	cmd := exec.Command("losetup", "-fP", "--show", tmpFilename)
-	output, err := cmd.CombinedOutput()
+	loopDevice, err := fsutil.LoopbackSetup(tmpFilename)
 	if err != nil {
-		return fmt.Errorf("%s: %s", err, output)
+		return err
 	}
-	if output[len(output)-1] == '\n' {
-		output = output[0 : len(output)-1]
-	}
-	loopDevice := string(output)
-	defer exec.Command("losetup", "-d", loopDevice).Run()
+	defer fsutil.LoopbackDelete(loopDevice)
 	err = makeAndWriteRoot(fs, objectsGetter, loopDevice, loopDevice+"p1",
 		options, logger)
 	if options.AllocateBlocks { // mkfs discards blocks, so do this after.
