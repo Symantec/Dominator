@@ -1897,9 +1897,11 @@ func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		vm.mutex.Unlock()
 		doUnlock = false
 		<-stoppedNotifier
+	case proto.StateFailedToStart:
+		vm.setState(proto.StateStopped)
 	case proto.StateStopping:
 		return errors.New("VM is stopping")
-	case proto.StateStopped, proto.StateFailedToStart:
+	case proto.StateStopped:
 		return errors.New("VM is already stopped")
 	case proto.StateDestroying:
 		return errors.New("VM is destroying")
