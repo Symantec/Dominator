@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/gob"
 	"fmt"
 	"io"
 
@@ -17,9 +16,7 @@ func buildImage(client *srpc.Client, request proto.BuildImageRequest,
 		return err
 	}
 	defer conn.Close()
-	decoder := gob.NewDecoder(conn)
-	encoder := gob.NewEncoder(conn)
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return err
 	}
 	if err := conn.Flush(); err != nil {
@@ -34,7 +31,7 @@ func buildImage(client *srpc.Client, request proto.BuildImageRequest,
 	}
 	for {
 		var reply proto.BuildImageResponse
-		if err := decoder.Decode(&reply); err != nil {
+		if err := conn.Decode(&reply); err != nil {
 			return fmt.Errorf("error reading reply: %s", err)
 		}
 		if err := errors.New(reply.ErrorString); err != nil {

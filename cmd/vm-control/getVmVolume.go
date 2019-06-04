@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 	"net"
 	"os"
@@ -76,22 +75,20 @@ func getVmVolumeOnHypervisor(hypervisor string, ipAddr net.IP,
 		return err
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	decoder := gob.NewDecoder(conn)
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return fmt.Errorf("error encoding request: %s", err)
 	}
 	if err := conn.Flush(); err != nil {
 		return err
 	}
 	var response proto.GetVmVolumeResponse
-	if err := decoder.Decode(&response); err != nil {
+	if err := conn.Decode(&response); err != nil {
 		return err
 	}
 	if err := errors.New(response.Error); err != nil {
 		return err
 	}
-	stats, err := rsync.GetBlocks(conn, decoder, encoder, reader, writer,
+	stats, err := rsync.GetBlocks(conn, conn, conn, reader, writer,
 		vmInfo.Volumes[*volumeIndex].Size, initialFileSize)
 	if err != nil {
 		return err

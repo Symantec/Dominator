@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 	"net"
 	"os"
@@ -40,20 +39,18 @@ func connectToVmSerialPortOnHypervisor(hypervisor string, ipAddr net.IP,
 		return err
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	decoder := gob.NewDecoder(conn)
 	request := proto.ConnectToVmSerialPortRequest{
 		IpAddress:  ipAddr,
 		PortNumber: *serialPort,
 	}
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return err
 	}
 	if err := conn.Flush(); err != nil {
 		return err
 	}
 	var response proto.ChangeVmTagsResponse
-	if err := decoder.Decode(&response); err != nil {
+	if err := conn.Decode(&response); err != nil {
 		return err
 	}
 	if err := errors.New(response.Error); err != nil {

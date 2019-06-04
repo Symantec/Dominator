@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"net"
@@ -44,16 +43,14 @@ func doTraceMetadata(client *srpc.Client, ipAddr net.IP,
 		return err
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	decoder := gob.NewDecoder(conn)
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return err
 	}
 	if err := conn.Flush(); err != nil {
 		return err
 	}
 	var reply proto.TraceVmMetadataResponse
-	if err := decoder.Decode(&reply); err != nil {
+	if err := conn.Decode(&reply); err != nil {
 		return err
 	}
 	if reply.Error != "" {

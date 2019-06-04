@@ -1,7 +1,6 @@
 package srpc
 
 import (
-	"encoding/gob"
 	"fmt"
 	"net"
 	"net/url"
@@ -84,8 +83,7 @@ func (d *proxyDialer) dialTCP(address string) (net.Conn, error) {
 			conn.Close()
 		}
 	}()
-	encoder := gob.NewEncoder(conn)
-	err = encoder.Encode(proto.ConnectRequest{
+	err = conn.Encode(proto.ConnectRequest{
 		Address: address,
 		Network: "tcp",
 		Timeout: d.dialer.Timeout,
@@ -96,9 +94,8 @@ func (d *proxyDialer) dialTCP(address string) (net.Conn, error) {
 	if err := conn.Flush(); err != nil {
 		return nil, err
 	}
-	decoder := gob.NewDecoder(conn)
 	var response proto.ConnectResponse
-	if err := decoder.Decode(&response); err != nil {
+	if err := conn.Decode(&response); err != nil {
 		return nil, fmt.Errorf("error decoding: %s", err)
 	}
 	if err := errors.New(response.Error); err != nil {

@@ -3,7 +3,6 @@ package srpc
 import (
 	"bufio"
 	"crypto/tls"
-	"encoding/gob"
 	"errors"
 	"io"
 	"net"
@@ -16,6 +15,12 @@ import (
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 )
+
+type endpointType struct {
+	coderMaker coderMaker
+	path       string
+	tls        bool
+}
 
 var (
 	clientMetricsDir          *tricorder.DirectorySpec
@@ -75,67 +80,89 @@ func dial(network, address string, dialer Dialer) (net.Conn, error) {
 
 func dialHTTP(network, address string, tlsConfig *tls.Config,
 	dialer Dialer) (*Client, error) {
+	insecureEndpoints := []endpointType{
+		{&gobCoder{}, rpcPath, false},
+		{&jsonCoder{}, jsonRpcPath, false},
+	}
+	secureEndpoints := []endpointType{
+		{&gobCoder{}, tlsRpcPath, true},
+		{&jsonCoder{}, jsonTlsRpcPath, true},
+	}
+	if tlsConfig == nil {
+		return dialHTTPEndpoints(network, address, nil, false, dialer,
+			insecureEndpoints)
+	} else {
+		var endpoints []endpointType
+		endpoints = append(endpoints, secureEndpoints...)
+		if tlsConfig.InsecureSkipVerify { // Don't have to trust server.
+			endpoints = append(endpoints, insecureEndpoints...)
+		}
+		client, err := dialHTTPEndpoints(network, address, tlsConfig, false,
+			dialer, endpoints)
+		if err != nil &&
+			strings.Contains(err.Error(), "malformed HTTP response") {
+			// The server may do TLS on all connections: try that.
+			return dialHTTPEndpoints(network, address, tlsConfig, true, dialer,
+				secureEndpoints)
+		}
+		return client, err
+	}
+}
+
+func dialHTTPEndpoint(network, address string, tlsConfig *tls.Config,
+	fullTLS bool, dialer Dialer, endpoint endpointType) (*Client, error) {
 	unsecuredConn, err := dial(network, address, dialer)
 	if err != nil {
 		return nil, err
 	}
-	path := rpcPath
-	if tlsConfig != nil {
-		path = tlsRpcPath
+	dataConn := unsecuredConn
+	doClose := true
+	defer func() {
+		if doClose {
+			dataConn.Close()
+		}
+	}()
+	if fullTLS {
+		tlsConn := tls.Client(unsecuredConn, tlsConfig)
+		if err := tlsConn.Handshake(); err != nil {
+			if strings.Contains(err.Error(), ErrorBadCertificate.Error()) {
+				return nil, ErrorBadCertificate
+			}
+			return nil, err
+		}
+		dataConn = tlsConn
 	}
-	if err := doHTTPConnect(unsecuredConn, path); err != nil {
-		unsecuredConn.Close()
-		if strings.Contains(err.Error(), "malformed HTTP response") {
-			// The server may do TLS on all connections: try that.
-			if tlsConfig == nil {
-				return nil, err
+	if err := doHTTPConnect(dataConn, endpoint.path); err != nil {
+		return nil, err
+	}
+	if endpoint.tls && !fullTLS {
+		tlsConn := tls.Client(unsecuredConn, tlsConfig)
+		if err := tlsConn.Handshake(); err != nil {
+			if strings.Contains(err.Error(), ErrorBadCertificate.Error()) {
+				return nil, ErrorBadCertificate
 			}
-			unsecuredConn, err := dial(network, address, dialer)
-			if err != nil {
-				return nil, err
-			}
-			tlsConn := tls.Client(unsecuredConn, tlsConfig)
-			if err := tlsConn.Handshake(); err != nil {
-				unsecuredConn.Close()
-				if strings.Contains(err.Error(), ErrorBadCertificate.Error()) {
-					return nil, ErrorBadCertificate
-				}
-				return nil, err
-			}
-			if err := doHTTPConnect(tlsConn, tlsRpcPath); err != nil {
-				tlsConn.Close()
-				return nil, err
-			}
-			return newClient(unsecuredConn, tlsConn, true), nil
-		} else if err == ErrorNoSrpcEndpoint &&
-			tlsConfig != nil &&
-			tlsConfig.InsecureSkipVerify {
-			// Fall back to insecure connection.
-			unsecuredConn, err := dial(network, address, dialer)
-			if err != nil {
-				return nil, err
-			}
-			if err := doHTTPConnect(unsecuredConn, rpcPath); err != nil {
-				unsecuredConn.Close()
-				return nil, err
-			}
-			return newClient(unsecuredConn, unsecuredConn, false), nil
-		} else {
+			return nil, err
+		}
+		dataConn = tlsConn
+	}
+	doClose = false
+	return newClient(unsecuredConn, dataConn, endpoint.tls,
+		endpoint.coderMaker), nil
+}
+
+func dialHTTPEndpoints(network, address string, tlsConfig *tls.Config,
+	fullTLS bool, dialer Dialer, endpoints []endpointType) (*Client, error) {
+	for _, endpoint := range endpoints {
+		client, err := dialHTTPEndpoint(network, address, tlsConfig, fullTLS,
+			dialer, endpoint)
+		if err == nil {
+			return client, nil
+		}
+		if err != ErrorNoSrpcEndpoint {
 			return nil, err
 		}
 	}
-	if tlsConfig == nil {
-		return newClient(unsecuredConn, unsecuredConn, false), nil
-	}
-	tlsConn := tls.Client(unsecuredConn, tlsConfig)
-	if err := tlsConn.Handshake(); err != nil {
-		unsecuredConn.Close()
-		if strings.Contains(err.Error(), ErrorBadCertificate.Error()) {
-			return nil, ErrorBadCertificate
-		}
-		return nil, err
-	}
-	return newClient(unsecuredConn, tlsConn, true), nil
+	return nil, ErrorNoSrpcEndpoint
 }
 
 func doHTTPConnect(conn net.Conn, path string) error {
@@ -161,15 +188,18 @@ func doHTTPConnect(conn net.Conn, path string) error {
 	return nil
 }
 
-func newClient(rawConn, dataConn net.Conn, isEncrypted bool) *Client {
+func newClient(rawConn, dataConn net.Conn, isEncrypted bool,
+	makeCoder coderMaker) *Client {
 	clientMetricsMutex.Lock()
 	numOpenClientConnections++
 	clientMetricsMutex.Unlock()
 	client := &Client{
+		bufrw: bufio.NewReadWriter(bufio.NewReader(dataConn),
+			bufio.NewWriter(dataConn)),
 		conn:        dataConn,
 		isEncrypted: isEncrypted,
-		bufrw: bufio.NewReadWriter(bufio.NewReader(dataConn),
-			bufio.NewWriter(dataConn))}
+		makeCoder:   makeCoder,
+	}
 	if tcpConn, ok := rawConn.(libnet.TCPConn); ok {
 		client.tcpConn = tcpConn
 	}
@@ -208,6 +238,8 @@ func (client *Client) callWithLock(serviceMethod string) (*Conn, error) {
 		return nil, errors.New(resp)
 	}
 	conn := &Conn{
+		Decoder:     client.makeCoder.MakeDecoder(client.bufrw),
+		Encoder:     client.makeCoder.MakeEncoder(client.bufrw),
 		parent:      client,
 		isEncrypted: client.isEncrypted,
 		ReadWriter:  client.bufrw,
@@ -254,8 +286,7 @@ func (client *Client) requestReply(serviceMethod string, request interface{},
 }
 
 func (conn *Conn) requestReply(request interface{}, reply interface{}) error {
-	encoder := gob.NewEncoder(conn)
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return err
 	}
 	if err := conn.Flush(); err != nil {
@@ -268,5 +299,5 @@ func (conn *Conn) requestReply(request interface{}, reply interface{}) error {
 	if str != "\n" {
 		return errors.New(str[:len(str)-1])
 	}
-	return gob.NewDecoder(conn).Decode(reply)
+	return conn.Decode(reply)
 }

@@ -2,7 +2,6 @@ package client
 
 import (
 	"bytes"
-	"encoding/gob"
 	"io"
 	"time"
 
@@ -121,10 +120,8 @@ func manageSource(sourceName string, sourceReconnectChannel chan<- string,
 			continue
 		}
 		retryTimeout = initialRetryTimeout
-		// The server keeps the same encoder/decoder pair over the lifetime of
-		// the connection, so we must do the same.
-		go handleServerMessages(sourceName, gob.NewDecoder(conn),
-			serverMessageChannel, closeNotifyChannel, logger)
+		go handleServerMessages(sourceName, conn, serverMessageChannel,
+			closeNotifyChannel, logger)
 		if reconnect {
 			sourceReconnectChannel <- sourceName
 		} else {
@@ -140,11 +137,10 @@ func manageSource(sourceName string, sourceReconnectChannel chan<- string,
 func sendClientRequests(conn *srpc.Conn,
 	clientRequestChannel <-chan *proto.ClientRequest,
 	closeNotifyChannel <-chan struct{}, logger log.Logger) {
-	encoder := gob.NewEncoder(conn)
 	for {
 		select {
 		case clientRequest := <-clientRequestChannel:
-			if err := encoder.Encode(clientRequest); err != nil {
+			if err := conn.Encode(clientRequest); err != nil {
 				logger.Printf("error encoding client request: %s\n", err)
 				return
 			}
@@ -160,7 +156,7 @@ func sendClientRequests(conn *srpc.Conn,
 	}
 }
 
-func handleServerMessages(sourceName string, decoder *gob.Decoder,
+func handleServerMessages(sourceName string, decoder srpc.Decoder,
 	serverMessageChannel chan<- *serverMessageType,
 	closeNotifyChannel chan<- struct{}, logger log.Logger) {
 	for {

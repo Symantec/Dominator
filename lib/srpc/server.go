@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/gob"
 	"errors"
 	"io"
 	"log"
@@ -25,8 +24,10 @@ import (
 
 const (
 	connectString   = "200 Connected to Go SRPC"
-	rpcPath         = "/_goSRPC_/"
-	tlsRpcPath      = "/_go_TLS_SRPC_/"
+	rpcPath         = "/_goSRPC_/"      // Legacy endpoint. GOB coder.
+	tlsRpcPath      = "/_go_TLS_SRPC_/" // Legacy endpoint. GOB coder.
+	jsonRpcPath     = "/_SRPC_/unsecured/JSON"
+	jsonTlsRpcPath  = "/_SRPC_/TLS/JSON"
 	listMethodsPath = rpcPath + "listMethods"
 
 	methodTypeRaw = iota
@@ -77,8 +78,10 @@ var typeOfEncoder = reflect.TypeOf((*Encoder)(nil)).Elem()
 var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
 
 func init() {
-	http.HandleFunc(rpcPath, unsecuredHttpHandler)
-	http.HandleFunc(tlsRpcPath, tlsHttpHandler)
+	http.HandleFunc(rpcPath, gobUnsecuredHttpHandler)
+	http.HandleFunc(tlsRpcPath, gobTlsHttpHandler)
+	http.HandleFunc(jsonRpcPath, jsonUnsecuredHttpHandler)
+	http.HandleFunc(jsonTlsRpcPath, jsonTlsHttpHandler)
 	http.HandleFunc(listMethodsPath, listMethodsHttpHandler)
 	registerServerMetrics()
 }
@@ -251,15 +254,24 @@ func (m *methodWrapper) registerMetrics(dir *tricorder.DirectorySpec) error {
 	return nil
 }
 
-func unsecuredHttpHandler(w http.ResponseWriter, req *http.Request) {
-	httpHandler(w, req, false)
+func gobTlsHttpHandler(w http.ResponseWriter, req *http.Request) {
+	httpHandler(w, req, true, &gobCoder{})
 }
 
-func tlsHttpHandler(w http.ResponseWriter, req *http.Request) {
-	httpHandler(w, req, true)
+func gobUnsecuredHttpHandler(w http.ResponseWriter, req *http.Request) {
+	httpHandler(w, req, false, &gobCoder{})
 }
 
-func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
+func jsonTlsHttpHandler(w http.ResponseWriter, req *http.Request) {
+	httpHandler(w, req, true, &jsonCoder{})
+}
+
+func jsonUnsecuredHttpHandler(w http.ResponseWriter, req *http.Request) {
+	httpHandler(w, req, false, &jsonCoder{})
+}
+
+func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool,
+	makeCoder coderMaker) {
 	serverMetricsMutex.Lock()
 	numServerConnections++
 	serverMetricsMutex.Unlock()
@@ -360,7 +372,7 @@ func httpHandler(w http.ResponseWriter, req *http.Request, doTls bool) {
 	serverMetricsMutex.Lock()
 	numOpenServerConnections++
 	serverMetricsMutex.Unlock()
-	handleConnection(myConn)
+	handleConnection(myConn, makeCoder)
 	serverMetricsMutex.Lock()
 	numOpenServerConnections--
 	serverMetricsMutex.Unlock()
@@ -418,7 +430,7 @@ func getAuth(state tls.ConnectionState) (string, map[string]struct{},
 	return username, permittedMethods, groupList, nil
 }
 
-func handleConnection(conn *Conn) {
+func handleConnection(conn *Conn, makeCoder coderMaker) {
 	defer conn.callReleaseNotifier()
 	defer conn.Flush()
 	for ; ; conn.Flush() {
@@ -435,7 +447,7 @@ func handleConnection(conn *Conn) {
 			}
 			continue
 		}
-		serviceMethod = serviceMethod[:len(serviceMethod)-1]
+		serviceMethod = strings.TrimSpace(serviceMethod)
 		if serviceMethod == "" {
 			// Received a "ping" request, send response.
 			if _, err := conn.WriteString("\n"); err != nil {
@@ -461,7 +473,7 @@ func handleConnection(conn *Conn) {
 			log.Println(err)
 			return
 		}
-		if err := method.call(conn); err != nil {
+		if err := method.call(conn, makeCoder); err != nil {
 			if err != ErrorCloseClient {
 				log.Println(err)
 			}
@@ -540,10 +552,10 @@ func listMethodsHttpHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (m *methodWrapper) call(conn *Conn) error {
+func (m *methodWrapper) call(conn *Conn, makeCoder coderMaker) error {
 	m.numPermittedCalls++
 	startTime := time.Now()
-	err := m._call(conn)
+	err := m._call(conn, makeCoder)
 	timeTaken := time.Since(startTime)
 	if err == nil {
 		m.successfulCallsDistribution.Add(timeTaken)
@@ -553,8 +565,10 @@ func (m *methodWrapper) call(conn *Conn) error {
 	return err
 }
 
-func (m *methodWrapper) _call(conn *Conn) error {
+func (m *methodWrapper) _call(conn *Conn, makeCoder coderMaker) error {
 	connValue := reflect.ValueOf(conn)
+	conn.Decoder = makeCoder.MakeDecoder(conn)
+	conn.Encoder = makeCoder.MakeEncoder(conn)
 	switch m.methodType {
 	case methodTypeRaw:
 		returnValues := m.fn.Call([]reflect.Value{connValue})
@@ -564,12 +578,10 @@ func (m *methodWrapper) _call(conn *Conn) error {
 		}
 		return nil
 	case methodTypeCoder:
-		decoder := gob.NewDecoder(conn)
-		encoder := gob.NewEncoder(conn)
 		returnValues := m.fn.Call([]reflect.Value{
 			connValue,
-			reflect.ValueOf(decoder),
-			reflect.ValueOf(encoder),
+			reflect.ValueOf(conn.Decoder),
+			reflect.ValueOf(conn.Encoder),
 		})
 		errInter := returnValues[0].Interface()
 		if errInter != nil {
@@ -579,8 +591,7 @@ func (m *methodWrapper) _call(conn *Conn) error {
 	case methodTypeRequestReply:
 		request := reflect.New(m.requestType)
 		response := reflect.New(m.responseType)
-		decoder := gob.NewDecoder(conn)
-		if err := decoder.Decode(request.Interface()); err != nil {
+		if err := conn.Decode(request.Interface()); err != nil {
 			_, err = conn.WriteString(err.Error() + "\n")
 			return err
 		}
@@ -599,7 +610,7 @@ func (m *methodWrapper) _call(conn *Conn) error {
 		if _, err := conn.WriteString("\n"); err != nil {
 			return err
 		}
-		return gob.NewEncoder(conn).Encode(response.Interface())
+		return conn.Encode(response.Interface())
 	}
 	return errors.New("unknown method type")
 }

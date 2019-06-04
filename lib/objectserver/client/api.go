@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/gob"
 	"io"
 
 	"github.com/Symantec/Dominator/lib/hash"
@@ -72,7 +71,6 @@ func (or *ObjectsReader) ObjectSizes() []uint64 {
 
 type ObjectAdderQueue struct {
 	conn            *srpc.Conn
-	encoder         *gob.Encoder
 	getResponseChan chan<- struct{}
 	errorChan       <-chan error
 	sendSemaphore   chan struct{}

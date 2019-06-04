@@ -8,10 +8,9 @@ import (
 	"github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func (t *srpcType) ConnectToVmSerialPort(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
+func (t *srpcType) ConnectToVmSerialPort(conn *srpc.Conn) error {
 	var request hypervisor.ConnectToVmSerialPortRequest
-	if err := decoder.Decode(&request); err != nil {
+	if err := conn.Decode(&request); err != nil {
 		return err
 	}
 	closeNotifier := make(chan error, 1)
@@ -20,7 +19,7 @@ func (t *srpcType) ConnectToVmSerialPort(conn *srpc.Conn, decoder srpc.Decoder,
 	if input != nil {
 		defer close(input)
 	}
-	e := encoder.Encode(hypervisor.ConnectToVmSerialPortResponse{
+	e := conn.Encode(hypervisor.ConnectToVmSerialPortResponse{
 		Error: errors.ErrorToString(err)})
 	if e != nil {
 		return e

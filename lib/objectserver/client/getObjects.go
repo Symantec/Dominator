@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
@@ -25,14 +24,12 @@ func (objClient *ObjectClient) getObjects(hashes []hash.Hash) (
 	var reply objectserver.GetObjectsResponse
 	request.Exclusive = objClient.exclusiveGet
 	request.Hashes = hashes
-	encoder := gob.NewEncoder(conn)
-	encoder.Encode(request)
+	conn.Encode(request)
 	conn.Flush()
 	var objectsReader ObjectsReader
 	objectsReader.client = objClient
 	objectsReader.reader = conn
-	decoder := gob.NewDecoder(objectsReader.reader)
-	err = decoder.Decode(&reply)
+	err = conn.Decode(&reply)
 	if err != nil {
 		return nil, err
 	}

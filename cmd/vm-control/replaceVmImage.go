@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
@@ -28,9 +27,7 @@ func callReplaceVmImage(client *srpc.Client,
 		return err
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	decoder := gob.NewDecoder(conn)
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return err
 	}
 	// Stream any required data.
@@ -45,7 +42,7 @@ func callReplaceVmImage(client *srpc.Client,
 	}
 	for {
 		var response proto.ReplaceVmImageResponse
-		if err := decoder.Decode(&response); err != nil {
+		if err := conn.Decode(&response); err != nil {
 			return err
 		}
 		if response.Error != "" {

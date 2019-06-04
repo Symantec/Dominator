@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 	"sync"
 	"time"
@@ -53,11 +52,10 @@ func (g *hypervisorGeneratorType) getUpdates(hypervisor string) error {
 		return err
 	}
 	defer conn.Close()
-	decoder := gob.NewDecoder(conn)
 	initialUpdate := true
 	for {
 		var update proto.Update
-		if err := decoder.Decode(&update); err != nil {
+		if err := conn.Decode(&update); err != nil {
 			return err
 		}
 		g.updateVMs(update.VMs, initialUpdate)

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 
 	"github.com/Symantec/Dominator/lib/errors"
@@ -40,10 +39,8 @@ func listVMsByLocation(fleetManager string, location string,
 		return err
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	decoder := gob.NewDecoder(conn)
 	request := fm_proto.ListVMsInLocationRequest{location}
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return err
 	}
 	if err := conn.Flush(); err != nil {
@@ -52,7 +49,7 @@ func listVMsByLocation(fleetManager string, location string,
 	var addresses []string
 	for {
 		var reply fm_proto.ListVMsInLocationResponse
-		if err := decoder.Decode(&reply); err != nil {
+		if err := conn.Decode(&reply); err != nil {
 			return err
 		}
 		if err := errors.New(reply.Error); err != nil {

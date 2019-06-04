@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/gob"
 	"io"
 
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -16,10 +15,9 @@ func getFiles(client *srpc.Client, filenames []string,
 	}
 	defer conn.Close()
 	go sendRequests(conn, filenames)
-	decoder := gob.NewDecoder(conn)
 	for range filenames {
 		var reply sub.GetFileResponse
-		if err := decoder.Decode(&reply); err != nil {
+		if err := conn.Decode(&reply); err != nil {
 			return err
 		}
 		if reply.Error != nil {

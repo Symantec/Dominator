@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 	"io"
 	"net"
@@ -226,17 +225,15 @@ func getTagsForHypervisors(clientResource *srpc.ClientResource) (
 		return nil, err
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	decoder := gob.NewDecoder(conn)
 	request := fm_proto.GetUpdatesRequest{Location: *location, MaxUpdates: 1}
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return nil, err
 	}
 	if err := conn.Flush(); err != nil {
 		return nil, err
 	}
 	var reply fm_proto.Update
-	if err := decoder.Decode(&reply); err != nil {
+	if err := conn.Decode(&reply); err != nil {
 		return nil, err
 	}
 	if err := errors.New(reply.Error); err != nil {

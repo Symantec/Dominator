@@ -313,19 +313,18 @@ func (t *loggerMapT) SetDebugLevel(conn *srpc.Conn,
 	}
 }
 
-func (t *loggerMapT) Watch(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
+func (t *loggerMapT) Watch(conn *srpc.Conn) error {
 	var request proto.WatchRequest
-	if err := decoder.Decode(&request); err != nil {
+	if err := conn.Decode(&request); err != nil {
 		return err
 	}
 	authInfo := conn.GetAuthInformation()
 	if logger, err := t.getLogger(request.Name, authInfo); err != nil {
-		return encoder.Encode(proto.WatchResponse{Error: err.Error()})
+		return conn.Encode(proto.WatchResponse{Error: err.Error()})
 	} else if streamer, err := logger.makeStreamer(request); err != nil {
-		return encoder.Encode(proto.WatchResponse{Error: err.Error()})
+		return conn.Encode(proto.WatchResponse{Error: err.Error()})
 	} else {
-		if err := encoder.Encode(proto.WatchResponse{}); err != nil {
+		if err := conn.Encode(proto.WatchResponse{}); err != nil {
 			return err
 		}
 		if err := conn.Flush(); err != nil {

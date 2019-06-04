@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 	"os"
 
@@ -48,18 +47,16 @@ func getUpdatesOnFleetManager(fleetManager string,
 		return err
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
 	request := fm_proto.GetUpdatesRequest{Location: *location}
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return err
 	}
 	if err := conn.Flush(); err != nil {
 		return err
 	}
-	decoder := gob.NewDecoder(conn)
 	for {
 		var update fm_proto.Update
-		if err := decoder.Decode(&update); err != nil {
+		if err := conn.Decode(&update); err != nil {
 			return err
 		}
 		if err := errors.New(update.Error); err != nil {
@@ -82,10 +79,9 @@ func getUpdatesOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 		return err
 	}
 	defer conn.Close()
-	decoder := gob.NewDecoder(conn)
 	for {
 		var update hyper_proto.Update
-		if err := decoder.Decode(&update); err != nil {
+		if err := conn.Decode(&update); err != nil {
 			return err
 		}
 		if err := json.WriteWithIndent(os.Stdout, "    ", update); err != nil {

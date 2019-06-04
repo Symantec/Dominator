@@ -10,8 +10,7 @@ import (
 	"github.com/Symantec/Dominator/proto/sub"
 )
 
-func (t *rpcType) GetFiles(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
+func (t *rpcType) GetFiles(conn *srpc.Conn) error {
 	defer conn.Flush()
 	t.getFilesLock.Lock()
 	defer t.getFilesLock.Unlock()
@@ -26,7 +25,7 @@ func (t *rpcType) GetFiles(conn *srpc.Conn, decoder srpc.Decoder,
 			break
 		}
 		filename = path.Join(t.rootDir, filename)
-		if err := processFilename(conn, filename, encoder); err != nil {
+		if err := processFilename(conn, filename); err != nil {
 			return err
 		}
 	}
@@ -38,8 +37,7 @@ func (t *rpcType) GetFiles(conn *srpc.Conn, decoder srpc.Decoder,
 	return nil
 }
 
-func processFilename(conn *srpc.Conn, filename string,
-	encoder srpc.Encoder) error {
+func processFilename(conn *srpc.Conn, filename string) error {
 	file, err := os.Open(filename)
 	var response sub.GetFileResponse
 	if err != nil {
@@ -52,7 +50,7 @@ func processFilename(conn *srpc.Conn, filename string,
 			response.Size = uint64(fi.Size())
 		}
 	}
-	if err := encoder.Encode(response); err != nil {
+	if err := conn.Encode(response); err != nil {
 		return err
 	}
 	if response.Error != nil {

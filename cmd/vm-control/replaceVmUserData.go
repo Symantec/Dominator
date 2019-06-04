@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/gob"
 	"fmt"
 	"io"
 	"net"
@@ -52,9 +51,7 @@ func replaceVmUserDataOnHypervisor(hypervisor string, ipAddr net.IP,
 		return err
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	decoder := gob.NewDecoder(conn)
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return err
 	}
 	logger.Debugln(0, "uploading user data")
@@ -65,7 +62,7 @@ func replaceVmUserDataOnHypervisor(hypervisor string, ipAddr net.IP,
 		return err
 	}
 	var response proto.ReplaceVmUserDataResponse
-	if err := decoder.Decode(&response); err != nil {
+	if err := conn.Decode(&response); err != nil {
 		return err
 	}
 	return errors.New(response.Error)

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -43,17 +42,15 @@ func getVmUserDataOnHypervisor(hypervisor string, ipAddr net.IP,
 		return err
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	decoder := gob.NewDecoder(conn)
 	request := proto.GetVmUserDataRequest{IpAddress: ipAddr}
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return err
 	}
 	if err := conn.Flush(); err != nil {
 		return err
 	}
 	var response proto.GetVmUserDataResponse
-	if err := decoder.Decode(&response); err != nil {
+	if err := conn.Decode(&response); err != nil {
 		return err
 	}
 	if err := errors.New(response.Error); err != nil {

@@ -1,7 +1,6 @@
 package hypervisors
 
 import (
-	"encoding/gob"
 	"flag"
 	"fmt"
 	"io"
@@ -446,14 +445,13 @@ func (m *Manager) manageHypervisor(h *hypervisorType,
 	h.conn = conn
 	h.receiveChannel = make(chan struct{}, 1)
 	h.mutex.Unlock()
-	decoder := gob.NewDecoder(conn)
 	go h.monitorLoop(client, conn)
 	defer close(h.receiveChannel)
 	h.logger.Debugln(0, "waiting for Update messages")
 	firstUpdate := true
 	for {
 		var update hyper_proto.Update
-		if err := decoder.Decode(&update); err != nil {
+		if err := conn.Decode(&update); err != nil {
 			if err == io.EOF {
 				h.logger.Debugln(0, "remote closed connection")
 			} else {

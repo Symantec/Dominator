@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"net"
@@ -34,9 +33,7 @@ func callCopyVm(client *srpc.Client, request hyper_proto.CopyVmRequest,
 		return fmt.Errorf("error calling Hypervisor.CopyVm: %s", err)
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	decoder := gob.NewDecoder(conn)
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return fmt.Errorf("error encoding CopyVm request: %s", err)
 	}
 	if err := conn.Flush(); err != nil {
@@ -44,7 +41,7 @@ func callCopyVm(client *srpc.Client, request hyper_proto.CopyVmRequest,
 	}
 	for {
 		var response hyper_proto.CopyVmResponse
-		if err := decoder.Decode(&response); err != nil {
+		if err := conn.Decode(&response); err != nil {
 			return fmt.Errorf("error decoding CopyVm response: %s", err)
 		}
 		if response.Error != "" {

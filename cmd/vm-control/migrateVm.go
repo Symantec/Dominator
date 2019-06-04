@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 	"net"
 	"time"
@@ -75,14 +74,12 @@ func migrateVmFromHypervisor(sourceHypervisorAddress string, vmIP net.IP,
 		return err
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	decoder := gob.NewDecoder(conn)
 	request := hyper_proto.MigrateVmRequest{
 		AccessToken:      accessToken,
 		IpAddress:        vmIP,
 		SourceHypervisor: sourceHypervisorAddress,
 	}
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return err
 	}
 	if err := conn.Flush(); err != nil {
@@ -90,7 +87,7 @@ func migrateVmFromHypervisor(sourceHypervisorAddress string, vmIP net.IP,
 	}
 	for {
 		var reply hyper_proto.MigrateVmResponse
-		if err := decoder.Decode(&reply); err != nil {
+		if err := conn.Decode(&reply); err != nil {
 			return err
 		}
 		if reply.Error != "" {
@@ -100,7 +97,7 @@ func migrateVmFromHypervisor(sourceHypervisorAddress string, vmIP net.IP,
 			logger.Debugln(0, reply.ProgressMessage)
 		}
 		if reply.RequestCommit {
-			if err := requestCommit(conn, encoder); err != nil {
+			if err := requestCommit(conn); err != nil {
 				return err
 			}
 		}
@@ -111,7 +108,7 @@ func migrateVmFromHypervisor(sourceHypervisorAddress string, vmIP net.IP,
 	return nil
 }
 
-func requestCommit(conn *srpc.Conn, encoder srpc.Encoder) error {
+func requestCommit(conn *srpc.Conn) error {
 	userResponse, err := askForInputChoice("Commit VM",
 		[]string{"commit", "abandon"})
 	if err != nil {
@@ -125,7 +122,7 @@ func requestCommit(conn *srpc.Conn, encoder srpc.Encoder) error {
 	default:
 		return fmt.Errorf("invalid response: %s", userResponse)
 	}
-	if err := encoder.Encode(response); err != nil {
+	if err := conn.Encode(response); err != nil {
 		return err
 	}
 	return conn.Flush()

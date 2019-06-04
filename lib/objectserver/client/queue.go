@@ -2,7 +2,6 @@ package client
 
 import (
 	"crypto/sha512"
-	"encoding/gob"
 	"fmt"
 	"io"
 
@@ -20,7 +19,6 @@ func newObjectAdderQueue(client *srpc.Client) (*ObjectAdderQueue, error) {
 	if err != nil {
 		return nil, err
 	}
-	objQ.encoder = gob.NewEncoder(objQ.conn)
 	getResponseSendChan, getResponseReceiveChan := queue.NewEventQueue()
 	errorChan := make(chan error, 1024)
 	objQ.getResponseChan = getResponseSendChan
@@ -65,7 +63,7 @@ func (objQ *ObjectAdderQueue) addData(data []byte, hashVal hash.Hash) error {
 		var request objectserver.AddObjectRequest
 		request.Length = uint64(len(data))
 		request.ExpectedHash = &hashVal
-		objQ.encoder.Encode(request)
+		objQ.conn.Encode(request)
 		objQ.conn.Write(data)
 		objQ.getResponseChan <- struct{}{}
 	}()
@@ -76,7 +74,7 @@ func (objQ *ObjectAdderQueue) close() error {
 	// Wait for any sends in progress to complete.
 	objQ.sendSemaphore <- struct{}{}
 	var request objectserver.AddObjectRequest
-	err := objQ.encoder.Encode(request)
+	err := objQ.conn.Encode(request)
 	err = updateError(err, objQ.conn.Flush())
 	close(objQ.getResponseChan)
 	err = updateError(err, objQ.consumeErrors(true))
@@ -111,10 +109,9 @@ func (objQ *ObjectAdderQueue) consumeErrors(untilClose bool) error {
 func readResponses(conn *srpc.Conn, getResponseChan <-chan struct{},
 	errorChan chan<- error) {
 	defer close(errorChan)
-	decoder := gob.NewDecoder(conn)
 	for range getResponseChan {
 		var reply objectserver.AddObjectResponse
-		err := decoder.Decode(&reply)
+		err := conn.Decode(&reply)
 		if err == nil {
 			err = errors.New(reply.ErrorString)
 		}

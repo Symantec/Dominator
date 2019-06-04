@@ -6,8 +6,7 @@ import (
 	"github.com/Symantec/Dominator/proto/imageserver"
 )
 
-func (t *srpcType) GetImageUpdates(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
+func (t *srpcType) GetImageUpdates(conn *srpc.Conn) error {
 	defer conn.Flush()
 	t.logger.Printf("New image replication client connected from: %s\n",
 		conn.RemoteAddr())
@@ -36,20 +35,20 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 			Directory: &directory,
 			Operation: imageserver.OperationMakeDirectory,
 		}
-		if err := encoder.Encode(imageUpdate); err != nil {
+		if err := conn.Encode(imageUpdate); err != nil {
 			t.logger.Println(err)
 			return err
 		}
 	}
 	for _, imageName := range t.imageDataBase.ListImages() {
 		imageUpdate := imageserver.ImageUpdate{Name: imageName}
-		if err := encoder.Encode(imageUpdate); err != nil {
+		if err := conn.Encode(imageUpdate); err != nil {
 			t.logger.Println(err)
 			return err
 		}
 	}
 	// Signal end of initial image list.
-	if err := encoder.Encode(imageserver.ImageUpdate{}); err != nil {
+	if err := conn.Encode(imageserver.ImageUpdate{}); err != nil {
 		t.logger.Println(err)
 		return err
 	}
@@ -63,19 +62,19 @@ func (t *srpcType) GetImageUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 	for {
 		select {
 		case imageName := <-addChannel:
-			if err := sendUpdate(encoder, imageName,
+			if err := sendUpdate(conn, imageName,
 				imageserver.OperationAddImage); err != nil {
 				t.logger.Println(err)
 				return err
 			}
 		case imageName := <-deleteChannel:
-			if err := sendUpdate(encoder, imageName,
+			if err := sendUpdate(conn, imageName,
 				imageserver.OperationDeleteImage); err != nil {
 				t.logger.Println(err)
 				return err
 			}
 		case directory := <-mkdirChannel:
-			if err := sendMakeDirectory(encoder, directory); err != nil {
+			if err := sendMakeDirectory(conn, directory); err != nil {
 				t.logger.Println(err)
 				return err
 			}

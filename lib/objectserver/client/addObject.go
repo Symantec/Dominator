@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
@@ -29,8 +28,7 @@ func (objClient *ObjectClient) addObject(reader io.Reader, length uint64,
 	defer conn.Close()
 	request.Length = length
 	request.ExpectedHash = expectedHash
-	encoder := gob.NewEncoder(conn)
-	encoder.Encode(request)
+	conn.Encode(request)
 	nCopied, err := io.Copy(conn, reader)
 	if err != nil {
 		return reply.Hash, false, err
@@ -41,10 +39,9 @@ func (objClient *ObjectClient) addObject(reader io.Reader, length uint64,
 	}
 	// Send end-of-stream marker.
 	request = objectserver.AddObjectRequest{}
-	encoder.Encode(request)
+	conn.Encode(request)
 	conn.Flush()
-	decoder := gob.NewDecoder(conn)
-	if err := decoder.Decode(&reply); err != nil {
+	if err := conn.Decode(&reply); err != nil {
 		return reply.Hash, false, err
 	}
 	if reply.ErrorString != "" {

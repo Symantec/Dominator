@@ -6,10 +6,9 @@ import (
 	proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
 
-func (t *srpcType) ListVMsInLocation(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
+func (t *srpcType) ListVMsInLocation(conn *srpc.Conn) error {
 	var request proto.ListVMsInLocationRequest
-	if err := decoder.Decode(&request); err != nil {
+	if err := conn.Decode(&request); err != nil {
 		return err
 	}
 	addresses, err := t.hypervisorsManager.ListVMsInLocation(
@@ -18,16 +17,16 @@ func (t *srpcType) ListVMsInLocation(conn *srpc.Conn, decoder srpc.Decoder,
 		response := proto.ListVMsInLocationResponse{
 			Error: errors.ErrorToString(err),
 		}
-		if err := encoder.Encode(response); err != nil {
+		if err := conn.Encode(response); err != nil {
 			return err
 		}
 		return nil
 	}
 	// TODO(rgooch): Chunk the response.
 	response := proto.ListVMsInLocationResponse{IpAddresses: addresses}
-	if err := encoder.Encode(response); err != nil {
+	if err := conn.Encode(response); err != nil {
 		return err
 	}
 	response.IpAddresses = nil // Send end-of-chunks message.
-	return encoder.Encode(response)
+	return conn.Encode(response)
 }

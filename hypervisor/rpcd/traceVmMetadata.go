@@ -8,10 +8,9 @@ import (
 	"github.com/Symantec/Dominator/proto/hypervisor"
 )
 
-func (t *srpcType) TraceVmMetadata(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
+func (t *srpcType) TraceVmMetadata(conn *srpc.Conn) error {
 	var request hypervisor.TraceVmMetadataRequest
-	if err := decoder.Decode(&request); err != nil {
+	if err := conn.Decode(&request); err != nil {
 		return err
 	}
 	pathChannel := make(chan string, 1024)
@@ -25,7 +24,7 @@ func (t *srpcType) TraceVmMetadata(conn *srpc.Conn, decoder srpc.Decoder,
 	}
 	var response hypervisor.TraceVmMetadataResponse
 	response.Error = errors.ErrorToString(err)
-	if err := encoder.Encode(response); err != nil {
+	if err := conn.Encode(response); err != nil {
 		return err
 	}
 	if err := conn.Flush(); err != nil {

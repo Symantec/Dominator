@@ -11,9 +11,8 @@ import (
 
 const flushDelay = time.Millisecond * 10
 
-func (t *srpcType) GetUpdates(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
-	closeChannel, responseChannel := t.getUpdatesReader(decoder)
+func (t *srpcType) GetUpdates(conn *srpc.Conn) error {
+	closeChannel, responseChannel := t.getUpdatesReader(conn)
 	updateChannel := t.manager.MakeUpdateChannel()
 	defer t.manager.CloseUpdateChannel(updateChannel)
 	flushTimer := time.NewTimer(flushDelay)
@@ -26,7 +25,7 @@ func (t *srpcType) GetUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 				t.logger.Printf("error sending update: %s\n", err)
 				return err
 			}
-			if err := encoder.Encode(update); err != nil {
+			if err := conn.Encode(update); err != nil {
 				t.logger.Printf("error sending update: %s\n", err)
 				return err
 			}
@@ -38,7 +37,7 @@ func (t *srpcType) GetUpdates(conn *srpc.Conn, decoder srpc.Decoder,
 				t.logger.Printf("error sending response: %s\n", err)
 				return err
 			}
-			if err := encoder.Encode(update); err != nil {
+			if err := conn.Encode(update); err != nil {
 				t.logger.Printf("error sending response: %s\n", err)
 				return err
 			}

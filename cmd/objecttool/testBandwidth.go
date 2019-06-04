@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 	"io"
 	"math/rand"
@@ -44,13 +43,11 @@ func testBandwidthFromServer() error {
 		return err
 	}
 	defer conn.Close()
-	decoder := gob.NewDecoder(conn)
-	encoder := gob.NewEncoder(conn)
 	request := proto.TestBandwidthRequest{
 		Duration:  *testDuration,
 		ChunkSize: *chunkSize,
 	}
-	if err := encoder.Encode(&request); err != nil {
+	if err := conn.Encode(&request); err != nil {
 		return err
 	}
 	if err := conn.Flush(); err != nil {
@@ -70,7 +67,7 @@ func testBandwidthFromServer() error {
 	}
 	localDuration := time.Since(startTime)
 	var response proto.TestBandwidthResponse
-	if err := decoder.Decode(&response); err != nil {
+	if err := conn.Decode(&response); err != nil {
 		return err
 	}
 	localSpeed := totalBytes / uint64(localDuration.Seconds())
@@ -96,14 +93,12 @@ func testBandwidthToServer() error {
 		return err
 	}
 	defer conn.Close()
-	decoder := gob.NewDecoder(conn)
-	encoder := gob.NewEncoder(conn)
 	request := proto.TestBandwidthRequest{
 		Duration:     *testDuration,
 		ChunkSize:    *chunkSize,
 		SendToServer: true,
 	}
-	if err := encoder.Encode(&request); err != nil {
+	if err := conn.Encode(&request); err != nil {
 		return err
 	}
 	if err := conn.Flush(); err != nil {
@@ -131,7 +126,7 @@ func testBandwidthToServer() error {
 	}
 	localDuration := time.Since(startTime)
 	var response proto.TestBandwidthResponse
-	if err := decoder.Decode(&response); err != nil {
+	if err := conn.Decode(&response); err != nil {
 		return err
 	}
 	localSpeed := totalBytes / uint64(localDuration.Seconds())

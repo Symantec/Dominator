@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/gob"
 	"errors"
 
 	"github.com/Symantec/Dominator/lib/filesystem"
@@ -17,8 +16,7 @@ func callPoll(client *srpc.Client, request sub.PollRequest,
 		return err
 	}
 	defer conn.Close()
-	encoder := gob.NewEncoder(conn)
-	if err := encoder.Encode(request); err != nil {
+	if err := conn.Encode(request); err != nil {
 		return err
 	}
 	conn.Flush()
@@ -29,7 +27,7 @@ func callPoll(client *srpc.Client, request sub.PollRequest,
 	if str != "\n" {
 		return errors.New(str[:len(str)-1])
 	}
-	if err := gob.NewDecoder(conn).Decode(reply); err != nil {
+	if err := conn.Decode(reply); err != nil {
 		return err
 	}
 	if reply.FileSystemFollows {

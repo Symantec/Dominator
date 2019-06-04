@@ -1,7 +1,6 @@
 package hypervisors
 
 import (
-	"encoding/gob"
 	"flag"
 	"time"
 
@@ -58,7 +57,6 @@ func (h *hypervisorType) monitorLoop(client *srpc.Client, conn *srpc.Conn) {
 
 func (h *hypervisorType) pingLoop(conn *srpc.Conn,
 	pingDeferChannel <-chan struct{}) {
-	encoder := gob.NewEncoder(conn)
 	pingsSinceLastDefer := 0
 	for {
 		timer := time.NewTimer(*hypervisorProbeTimeout)
@@ -83,7 +81,7 @@ func (h *hypervisorType) pingLoop(conn *srpc.Conn,
 			} else {
 				h.logger.Debugln(1, "sending first ping since last activity")
 			}
-			err := encoder.Encode(hyper_proto.GetUpdateRequest{})
+			err := conn.Encode(hyper_proto.GetUpdateRequest{})
 			if err != nil {
 				h.logger.Printf("error sending ping: %s\n", err)
 			} else {

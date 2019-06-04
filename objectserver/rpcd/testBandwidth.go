@@ -10,22 +10,21 @@ import (
 	proto "github.com/Symantec/Dominator/proto/objectserver"
 )
 
-func (t *srpcType) TestBandwidth(conn *srpc.Conn, decoder srpc.Decoder,
-	encoder srpc.Encoder) error {
+func (t *srpcType) TestBandwidth(conn *srpc.Conn) error {
 	var request proto.TestBandwidthRequest
-	if err := decoder.Decode(&request); err != nil {
+	if err := conn.Decode(&request); err != nil {
 		return err
 	}
 	if request.ChunkSize > 65535 {
 		return fmt.Errorf("ChunkSize: %d exceeds 65535", request.ChunkSize)
 	}
 	if request.SendToServer {
-		return t.testBandwidthToServer(conn, encoder, request)
+		return t.testBandwidthToServer(conn, request)
 	}
-	return t.testBandwidthToClient(conn, encoder, request)
+	return t.testBandwidthToClient(conn, request)
 }
 
-func (t *srpcType) testBandwidthToClient(conn *srpc.Conn, encoder srpc.Encoder,
+func (t *srpcType) testBandwidthToClient(conn *srpc.Conn,
 	request proto.TestBandwidthRequest) error {
 	buffer := make([]byte, request.ChunkSize+1)
 	rand.Read(buffer[:request.ChunkSize])
@@ -46,10 +45,10 @@ func (t *srpcType) testBandwidthToClient(conn *srpc.Conn, encoder srpc.Encoder,
 	if _, err := conn.Write(buffer); err != nil {
 		return err
 	}
-	return encoder.Encode(&proto.TestBandwidthResponse{time.Since(startTime)})
+	return conn.Encode(&proto.TestBandwidthResponse{time.Since(startTime)})
 }
 
-func (t *srpcType) testBandwidthToServer(conn *srpc.Conn, encoder srpc.Encoder,
+func (t *srpcType) testBandwidthToServer(conn *srpc.Conn,
 	request proto.TestBandwidthRequest) error {
 	buffer := make([]byte, request.ChunkSize+1)
 	startTime := time.Now()
@@ -61,5 +60,5 @@ func (t *srpcType) testBandwidthToServer(conn *srpc.Conn, encoder srpc.Encoder,
 			break
 		}
 	}
-	return encoder.Encode(&proto.TestBandwidthResponse{time.Since(startTime)})
+	return conn.Encode(&proto.TestBandwidthResponse{time.Since(startTime)})
 }
