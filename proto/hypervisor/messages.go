@@ -313,6 +313,18 @@ type NetbootMachineResponse struct {
 	Error string
 }
 
+type PatchVmImageRequest struct {
+	ImageName    string
+	ImageTimeout time.Duration
+	IpAddress    net.IP
+}
+
+type PatchVmImageResponse struct { // Multiple responses are sent.
+	Final           bool // If true, this is the final response.
+	ProgressMessage string
+	Error           string
+}
+
 type PrepareVmForMigrationRequest struct {
 	AccessToken []byte
 	Enable      bool
