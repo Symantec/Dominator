@@ -13,9 +13,8 @@ import (
 
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/srpc"
-	//"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/srpc"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
@@ -94,11 +93,14 @@ func ensureDomainIsStopped(domainName string) error {
 	}
 	err = exec.Command("virsh", []string{"shutdown", domainName}...).Run()
 	if err != nil {
-		return err
+		return fmt.Errorf("error shutting down VM: %s", err)
 	}
 	for ; ; time.Sleep(time.Second) {
 		state, err := getDomainState(domainName)
 		if err != nil {
+			if strings.Contains(err.Error(), "Domain not found") {
+				return nil
+			}
 			return err
 		}
 		if state == "shut off" {
@@ -111,7 +113,8 @@ func getDomainState(domainName string) (string, error) {
 	cmd := exec.Command("virsh", []string{"domstate", domainName}...)
 	stdout, err := cmd.Output()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error getting VM status: %s",
+			err.(*exec.ExitError).Stderr)
 	}
 	return strings.TrimSpace(string(stdout)), nil
 }
@@ -152,14 +155,11 @@ func importVirshVm(macAddr, domainName string, logger log.DebugLogger) error {
 	for _, dirname := range directories {
 		volumeRoots[filepath.Dir(dirname)] = dirname
 	}
-	if err := ensureDomainIsStopped(domainName); err != nil {
-		return err
-	}
 	cmd := exec.Command("virsh",
 		[]string{"dumpxml", "--inactive", domainName}...)
 	stdout, err := cmd.Output()
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting XML data: %s", err)
 	}
 	var virshInfo virshInfoType
 	if err := xml.Unmarshal(stdout, &virshInfo); err != nil {
@@ -189,6 +189,10 @@ func importVirshVm(macAddr, domainName string, logger log.DebugLogger) error {
 	}
 	request.VmInfo.MilliCPUs = virshInfo.VCpu.Num * 1000
 	myPidStr := strconv.Itoa(os.Getpid())
+	if err := ensureDomainIsStopped(domainName); err != nil {
+		return err
+	}
+	logger.Debugln(0, "finding volumes")
 	for index, inputVolume := range virshInfo.Devices.Volumes {
 		if inputVolume.Device != "disk" {
 			continue
@@ -232,12 +236,13 @@ func importVirshVm(macAddr, domainName string, logger log.DebugLogger) error {
 	requestWithoutSecrets.VerificationCookie = nil
 	json.WriteWithIndent(os.Stdout, "    ", requestWithoutSecrets)
 	var reply proto.GetVmInfoResponse
+	logger.Debugln(0, "issuing import RPC")
 	err = client.RequestReply("Hypervisor.ImportLocalVm", request, &reply)
 	if err != nil {
-		return err
+		return fmt.Errorf("Hypervisor.ImportLocalVm RPC failed: %s", err)
 	}
 	if err := errors.New(reply.Error); err != nil {
-		return err
+		return fmt.Errorf("Hypervisor failed to import: %s", err)
 	}
 	logger.Debugln(0, "imported VM")
 	for _, dirname := range directories {
@@ -267,7 +272,7 @@ func importVirshVm(macAddr, domainName string, logger log.DebugLogger) error {
 			"--remove-all-storage", domainName}...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		logger.Println(string(output))
-		return err
+		return fmt.Errorf("error destroying old VM: %s", err)
 	}
 	return nil
 }
