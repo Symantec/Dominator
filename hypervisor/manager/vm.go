@@ -12,18 +12,26 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 	"time"
 
+	domlib "github.com/Symantec/Dominator/dom/lib"
 	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
 	imclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filesystem/scanner"
 	"github.com/Symantec/Dominator/lib/filesystem/util"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/log/debuglogger"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/Symantec/Dominator/lib/mbr"
 	libnet "github.com/Symantec/Dominator/lib/net"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	objclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/rsync"
@@ -31,6 +39,8 @@ import (
 	"github.com/Symantec/Dominator/lib/tags"
 	"github.com/Symantec/Dominator/lib/verstr"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	subproto "github.com/Symantec/Dominator/proto/sub"
+	sublib "github.com/Symantec/Dominator/sub/lib"
 )
 
 const (
@@ -134,6 +144,16 @@ func readData(firstByte byte, moreBytes <-chan byte) []byte {
 			return buffer
 		}
 	}
+}
+
+func readOne(objectsDir string, hashVal hash.Hash, length uint64,
+	reader io.Reader) error {
+	filename := filepath.Join(objectsDir, objectcache.HashToFilename(hashVal))
+	dirname := filepath.Dir(filename)
+	if err := os.MkdirAll(dirname, dirPerms); err != nil {
+		return err
+	}
+	return fsutil.CopyToFile(filename, fsutil.PrivateFilePerms, reader, length)
 }
 
 func setVolumeSize(filename string, size uint64) error {
@@ -568,12 +588,13 @@ func (m *Manager) createVm(conn *srpc.Conn) error {
 		if err := sendUpdate(conn, "getting image"); err != nil {
 			return err
 		}
-		client, fs, imageName, err := m.getImage(request.ImageName,
+		client, img, imageName, err := m.getImage(request.ImageName,
 			request.ImageTimeout)
 		if err != nil {
 			return sendError(conn, err)
 		}
 		defer client.Close()
+		fs := img.FileSystem
 		vm.ImageName = imageName
 		size := computeSize(request.MinimumFreeBytes, request.RoundupPower,
 			fs.EstimateUsage(0))
@@ -794,7 +815,7 @@ func (m *Manager) discardVmSnapshot(ipAddr net.IP,
 }
 
 func (m *Manager) getImage(searchName string, imageTimeout time.Duration) (
-	*srpc.Client, *filesystem.FileSystem, string, error) {
+	*srpc.Client, *image.Image, string, error) {
 	client, err := srpc.DialHTTP("tcp", m.ImageServerAddress, 0)
 	if err != nil {
 		return nil, nil, "",
@@ -824,7 +845,7 @@ func (m *Manager) getImage(searchName string, imageTimeout time.Duration) (
 		}
 		img.FileSystem.RebuildInodePointers()
 		doClose = false
-		return client, img.FileSystem, imageName, nil
+		return client, img, imageName, nil
 	}
 	img, err := imclient.GetImageWithTimeout(client, searchName, imageTimeout)
 	if err != nil {
@@ -833,9 +854,11 @@ func (m *Manager) getImage(searchName string, imageTimeout time.Duration) (
 	if img == nil {
 		return nil, nil, "", errors.New("timeout getting image")
 	}
-	img.FileSystem.RebuildInodePointers()
+	if err := img.FileSystem.RebuildInodePointers(); err != nil {
+		return nil, nil, "", err
+	}
 	doClose = false
-	return client, img.FileSystem, searchName, nil
+	return client, img, searchName, nil
 }
 
 func (m *Manager) getNumVMs() (uint, uint) {
@@ -1335,6 +1358,14 @@ func sendVmMigrationMessage(conn *srpc.Conn, message string) error {
 	return conn.Flush()
 }
 
+func sendVmPatchImageMessage(conn *srpc.Conn, message string) error {
+	request := proto.PatchVmImageResponse{ProgressMessage: message}
+	if err := conn.Encode(request); err != nil {
+		return err
+	}
+	return conn.Flush()
+}
+
 func (m *Manager) migrateVmChecks(vmInfo proto.VmInfo) error {
 	switch vmInfo.State {
 	case proto.StateStopped:
@@ -1493,6 +1524,123 @@ func (m *Manager) notifyVmMetadataRequest(ipAddr net.IP, path string) {
 	}
 }
 
+func (m *Manager) patchVmImage(conn *srpc.Conn,
+	request proto.PatchVmImageRequest) error {
+	client, img, imageName, err := m.getImage(request.ImageName,
+		request.ImageTimeout)
+	if err != nil {
+		return nil
+	}
+	var objectsGetter objectserver.ObjectsGetter
+	if m.objectCache == nil {
+		objectClient := objclient.AttachObjectClient(client)
+		defer objectClient.Close()
+		objectsGetter = objectClient
+	} else {
+		objectsGetter = m.objectCache
+	}
+	if img.Filter == nil {
+		return fmt.Errorf("%s contains no filter", imageName)
+	}
+	img.FileSystem.InodeToFilenamesTable()
+	img.FileSystem.FilenameToInodeTable()
+	img.FileSystem.HashToInodesTable()
+	img.FileSystem.BuildEntryMap()
+	vm, err := m.getVmLockAndAuth(request.IpAddress, true,
+		conn.GetAuthInformation(), nil)
+	if err != nil {
+		return nil
+	}
+	defer vm.mutex.Unlock()
+	if vm.State != proto.StateStopped {
+		return errors.New("VM is not stopped")
+	}
+	rootDir, err := ioutil.TempDir(vm.dirname, "root")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(rootDir)
+	loopDevice, err := fsutil.LoopbackSetup(vm.VolumeLocations[0].Filename)
+	if err != nil {
+		return err
+	}
+	defer fsutil.LoopbackDelete(loopDevice)
+	vm.logger.Debugf(0, "mounting: %s onto: %s\n", loopDevice, rootDir)
+	err = syscall.Mount(loopDevice+"p1", rootDir, "ext4", 0, "")
+	if err != nil {
+		return err
+	}
+	defer syscall.Unmount(rootDir, 0)
+	if err := sendVmPatchImageMessage(conn, "scanning old root"); err != nil {
+		return err
+	}
+	fs, err := scanner.ScanFileSystem(rootDir, nil, img.Filter, nil, nil, nil)
+	if err != nil {
+		return err
+	}
+	if err := fs.FileSystem.RebuildInodePointers(); err != nil {
+		return err
+	}
+	fs.FileSystem.BuildEntryMap()
+	subObj := domlib.Sub{FileSystem: &fs.FileSystem}
+	fetchMap, _ := domlib.BuildMissingLists(subObj, img, false, true,
+		vm.logger)
+	objectsToFetch := objectcache.ObjectMapToCache(fetchMap)
+	objectsDir := filepath.Join(rootDir, ".subd", "objects")
+	defer os.RemoveAll(objectsDir)
+	startTime := time.Now()
+	objectsReader, err := objectsGetter.GetObjects(objectsToFetch)
+	if err != nil {
+		return err
+	}
+	defer objectsReader.Close()
+	msg := fmt.Sprintf("fetching(%s) %d objects",
+		imageName, len(objectsToFetch))
+	if err := sendVmPatchImageMessage(conn, msg); err != nil {
+		return err
+	}
+	vm.logger.Debugln(0, msg)
+	for _, hashVal := range objectsToFetch {
+		length, reader, err := objectsReader.NextObject()
+		if err != nil {
+			vm.logger.Println(err)
+			return err
+		}
+		err = readOne(objectsDir, hashVal, length, reader)
+		reader.Close()
+		if err != nil {
+			vm.logger.Println(err)
+			return err
+		}
+	}
+	msg = fmt.Sprintf("fetched(%s) %d objects in %s",
+		imageName, len(objectsToFetch), format.Duration(time.Since(startTime)))
+	if err := sendVmPatchImageMessage(conn, msg); err != nil {
+		return err
+	}
+	vm.logger.Debugln(0, msg)
+	subObj.ObjectCache = append(subObj.ObjectCache, objectsToFetch...)
+	var subRequest subproto.UpdateRequest
+	if domlib.BuildUpdateRequest(subObj, img, &subRequest, false, true,
+		debuglogger.New(vm.logger)) {
+		return errors.New("failed building update: missing computed files")
+	}
+	subRequest.Triggers = nil
+	if err := sendVmPatchImageMessage(conn, "starting update"); err != nil {
+		return err
+	}
+	vm.logger.Debugf(0, "update(%s) starting\n", imageName)
+	startTime = time.Now()
+	_, _, err = sublib.Update(subRequest, rootDir, objectsDir, nil, nil, nil,
+		vm.logger)
+	if err != nil {
+		return err
+	}
+	vm.ImageName = imageName
+	vm.writeAndSendInfo()
+	return nil
+}
+
 func (m *Manager) prepareVmForMigration(ipAddr net.IP,
 	authInfoP *srpc.AuthInformation, accessToken []byte, enable bool) error {
 	authInfo := *authInfoP
@@ -1608,7 +1756,7 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn,
 		if err := sendUpdate(conn, "getting image"); err != nil {
 			return err
 		}
-		client, fs, imageName, err := m.getImage(request.ImageName,
+		client, img, imageName, err := m.getImage(request.ImageName,
 			request.ImageTimeout)
 		if err != nil {
 			return sendError(conn, err)
@@ -1624,7 +1772,7 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn,
 			RootLabel:        vm.rootLabel(),
 			RoundupPower:     request.RoundupPower,
 		}
-		err = m.writeRaw(vm.VolumeLocations[0], ".new", client, fs,
+		err = m.writeRaw(vm.VolumeLocations[0], ".new", client, img.FileSystem,
 			writeRawOptions, request.SkipBootloader)
 		if err != nil {
 			return sendError(conn, err)

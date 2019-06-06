@@ -262,6 +262,11 @@ func (m *Manager) NotifyVmMetadataRequest(ipAddr net.IP, path string) {
 	m.notifyVmMetadataRequest(ipAddr, path)
 }
 
+func (m *Manager) PatchVmImage(conn *srpc.Conn,
+	request proto.PatchVmImageRequest) error {
+	return m.patchVmImage(conn, request)
+}
+
 func (m *Manager) PrepareVmForMigration(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, accessToken []byte, enable bool) error {
 	return m.prepareVmForMigration(ipAddr, authInfo, accessToken, enable)
