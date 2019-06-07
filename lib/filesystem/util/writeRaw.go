@@ -451,6 +451,23 @@ func (bootInfo *BootInfoType) writeGrubTemplate(filename string) error {
 	return file.Close()
 }
 
+func (bootInfo *BootInfoType) writeBootloaderConfig(rootDir string,
+	logger log.Logger) error {
+	grubConfigFile := filepath.Join(rootDir, "boot", "grub", "grub.cfg")
+	_, err := lookPath("", "grub-install")
+	if err != nil {
+		_, err = lookPath("", "grub2-install")
+		if err != nil {
+			return fmt.Errorf("cannot find GRUB installer: %s", err)
+		}
+		grubConfigFile = filepath.Join(rootDir, "boot", "grub2", "grub.cfg")
+	}
+	if err := bootInfo.writeGrubConfig(grubConfigFile); err != nil {
+		return err
+	}
+	return bootInfo.writeGrubTemplate(grubConfigFile + ".template")
+}
+
 func writeFstabEntry(writer io.Writer,
 	source, mountPoint, fileSystemType, flags string,
 	dumpFrequency, checkOrder uint) error {

@@ -87,6 +87,11 @@ func Unpack(fs *filesystem.FileSystem, objectsGetter objectserver.ObjectsGetter,
 	return unpack(fs, objectsGetter, rootDir, logger)
 }
 
+func (bootInfo *BootInfoType) WriteBootloaderConfig(rootDir string,
+	logger log.Logger) error {
+	return bootInfo.writeBootloaderConfig(rootDir, logger)
+}
+
 func WriteFstabEntry(writer io.Writer,
 	source, mountPoint, fileSystemType, flags string,
 	dumpFrequency, checkOrder uint) error {
