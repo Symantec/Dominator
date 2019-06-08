@@ -104,6 +104,41 @@ func createTapDevice(bridge string) (*os.File, error) {
 	return tapFile, nil
 }
 
+func extractKernel(volume volumeType, extension string,
+	objectsGetter objectserver.ObjectsGetter, fs *filesystem.FileSystem,
+	bootInfo *util.BootInfoType) error {
+	dirent := bootInfo.KernelImageDirent
+	if dirent == nil {
+		return errors.New("no kernel image found")
+	}
+	inode, ok := dirent.Inode().(*filesystem.RegularInode)
+	if !ok {
+		return errors.New("kernel image is not a regular file")
+	}
+	inode.Size = 0
+	filename := filepath.Join(volume.DirectoryToCleanup, "kernel"+extension)
+	_, err := objectserver.LinkObject(filename, objectsGetter, inode.Hash)
+	if err != nil {
+		return err
+	}
+	dirent = bootInfo.InitrdImageDirent
+	if dirent != nil {
+		inode, ok := dirent.Inode().(*filesystem.RegularInode)
+		if !ok {
+			return errors.New("initrd image is not a regular file")
+		}
+		inode.Size = 0
+		filename := filepath.Join(volume.DirectoryToCleanup,
+			"initrd"+extension)
+		_, err = objectserver.LinkObject(filename, objectsGetter,
+			inode.Hash)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func maybeDrainAll(conn *srpc.Conn, request proto.CreateVmRequest) error {
 	if err := maybeDrainImage(conn, request.ImageDataSize); err != nil {
 		return err
@@ -1549,11 +1584,16 @@ func (m *Manager) patchVmImage(conn *srpc.Conn,
 	vm, err := m.getVmLockAndAuth(request.IpAddress, true,
 		conn.GetAuthInformation(), nil)
 	if err != nil {
-		return nil
+		return err
 	}
 	defer vm.mutex.Unlock()
 	if vm.State != proto.StateStopped {
 		return errors.New("VM is not stopped")
+	}
+	bootInfo, err := util.GetBootInfo(img.FileSystem, vm.rootLabel(),
+		"net.ifnames=0")
+	if err != nil {
+		return err
 	}
 	rootDir, err := ioutil.TempDir(vm.dirname, "root")
 	if err != nil {
@@ -1582,6 +1622,18 @@ func (m *Manager) patchVmImage(conn *srpc.Conn,
 		return err
 	}
 	fs.FileSystem.BuildEntryMap()
+	_, err = os.Stat(
+		filepath.Join(vm.VolumeLocations[0].DirectoryToCleanup, "kernel"))
+	writeBootloaderConfig := false
+	if err == nil { // Bootloader is skipped.
+		err := extractKernel(vm.VolumeLocations[0], "", objectsGetter,
+			img.FileSystem, bootInfo)
+		if err != nil {
+			return err
+		}
+	} else { // Requires a bootloader.
+		writeBootloaderConfig = true
+	}
 	subObj := domlib.Sub{FileSystem: &fs.FileSystem}
 	fetchMap, _ := domlib.BuildMissingLists(subObj, img, false, true,
 		vm.logger)
@@ -1635,6 +1687,14 @@ func (m *Manager) patchVmImage(conn *srpc.Conn,
 		vm.logger)
 	if err != nil {
 		return err
+	}
+	_, err = os.Stat(
+		filepath.Join(vm.VolumeLocations[0].DirectoryToCleanup, "kernel"))
+	if writeBootloaderConfig {
+		err := bootInfo.WriteBootloaderConfig(rootDir, vm.logger)
+		if err != nil {
+			return err
+		}
 	}
 	vm.ImageName = imageName
 	vm.writeAndSendInfo()
@@ -2092,34 +2152,9 @@ func (m *Manager) writeRaw(volume volumeType, extension string,
 		if err != nil {
 			return err
 		}
-		dirent := bootInfo.KernelImageDirent
-		if dirent == nil {
-			return errors.New("no kernel image found")
-		}
-		inode, ok := dirent.Inode().(*filesystem.RegularInode)
-		if !ok {
-			return errors.New("kernel image is not a regular file")
-		}
-		inode.Size = 0
-		filename := filepath.Join(volume.DirectoryToCleanup, "kernel"+extension)
-		_, err = objectserver.LinkObject(filename, objectsGetter, inode.Hash)
+		err = extractKernel(volume, extension, objectsGetter, fs, bootInfo)
 		if err != nil {
 			return err
-		}
-		dirent = bootInfo.InitrdImageDirent
-		if dirent != nil {
-			inode, ok := dirent.Inode().(*filesystem.RegularInode)
-			if !ok {
-				return errors.New("initrd image is not a regular file")
-			}
-			inode.Size = 0
-			filename := filepath.Join(volume.DirectoryToCleanup,
-				"initrd"+extension)
-			_, err = objectserver.LinkObject(filename, objectsGetter,
-				inode.Hash)
-			if err != nil {
-				return err
-			}
 		}
 	} else {
 		writeRawOptions.InstallBootloader = true
