@@ -1595,12 +1595,23 @@ func (m *Manager) patchVmImage(conn *srpc.Conn,
 	if err != nil {
 		return err
 	}
+	rootFilename := vm.VolumeLocations[0].Filename
+	tmpRootFilename := rootFilename + ".new"
+	if err := sendVmPatchImageMessage(conn, "backing up root"); err != nil {
+		return err
+	}
+	err = fsutil.CopyFile(tmpRootFilename, rootFilename,
+		fsutil.PrivateFilePerms)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmpRootFilename)
 	rootDir, err := ioutil.TempDir(vm.dirname, "root")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(rootDir)
-	loopDevice, err := fsutil.LoopbackSetup(vm.VolumeLocations[0].Filename)
+	loopDevice, err := fsutil.LoopbackSetup(tmpRootFilename)
 	if err != nil {
 		return err
 	}
@@ -1611,7 +1622,7 @@ func (m *Manager) patchVmImage(conn *srpc.Conn,
 		return err
 	}
 	defer syscall.Unmount(rootDir, 0)
-	if err := sendVmPatchImageMessage(conn, "scanning old root"); err != nil {
+	if err := sendVmPatchImageMessage(conn, "scanning root"); err != nil {
 		return err
 	}
 	fs, err := scanner.ScanFileSystem(rootDir, nil, img.Filter, nil, nil, nil)
@@ -1622,11 +1633,15 @@ func (m *Manager) patchVmImage(conn *srpc.Conn,
 		return err
 	}
 	fs.FileSystem.BuildEntryMap()
-	_, err = os.Stat(
-		filepath.Join(vm.VolumeLocations[0].DirectoryToCleanup, "kernel"))
+	initrdFilename := vm.getInitrdPath()
+	tmpInitrdFilename := initrdFilename + ".new"
+	defer os.Remove(tmpInitrdFilename)
+	kernelFilename := vm.getKernelPath()
+	tmpKernelFilename := kernelFilename + ".new"
+	defer os.Remove(tmpKernelFilename)
 	writeBootloaderConfig := false
-	if err == nil { // Bootloader is skipped.
-		err := extractKernel(vm.VolumeLocations[0], "", objectsGetter,
+	if _, err := os.Stat(vm.getKernelPath()); err == nil { // No bootloader.
+		err := extractKernel(vm.VolumeLocations[0], ".new", objectsGetter,
 			img.FileSystem, bootInfo)
 		if err != nil {
 			return err
@@ -1696,6 +1711,18 @@ func (m *Manager) patchVmImage(conn *srpc.Conn,
 			return err
 		}
 	}
+	oldRootFilename := rootFilename + ".old"
+	if err := os.Rename(rootFilename, oldRootFilename); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpRootFilename, rootFilename); err != nil {
+		os.Rename(oldRootFilename, rootFilename)
+		return err
+	}
+	os.Rename(initrdFilename, initrdFilename+".old")
+	os.Rename(tmpInitrdFilename, initrdFilename)
+	os.Rename(kernelFilename, kernelFilename+".old")
+	os.Rename(tmpKernelFilename, kernelFilename)
 	vm.ImageName = imageName
 	vm.writeAndSendInfo()
 	return nil
