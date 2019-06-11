@@ -11,26 +11,37 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
+	"syscall"
 	"time"
 
+	domlib "github.com/Symantec/Dominator/dom/lib"
 	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
 	imclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/errors"
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filesystem/scanner"
 	"github.com/Symantec/Dominator/lib/filesystem/util"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/json"
+	"github.com/Symantec/Dominator/lib/log/debuglogger"
 	"github.com/Symantec/Dominator/lib/log/prefixlogger"
 	"github.com/Symantec/Dominator/lib/mbr"
 	libnet "github.com/Symantec/Dominator/lib/net"
+	"github.com/Symantec/Dominator/lib/objectcache"
 	"github.com/Symantec/Dominator/lib/objectserver"
 	objclient "github.com/Symantec/Dominator/lib/objectserver/client"
 	"github.com/Symantec/Dominator/lib/rsync"
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/tags"
 	"github.com/Symantec/Dominator/lib/verstr"
+	"github.com/Symantec/Dominator/lib/wsyscall"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	subproto "github.com/Symantec/Dominator/proto/sub"
+	sublib "github.com/Symantec/Dominator/sub/lib"
 )
 
 const (
@@ -94,6 +105,41 @@ func createTapDevice(bridge string) (*os.File, error) {
 	return tapFile, nil
 }
 
+func extractKernel(volume volumeType, extension string,
+	objectsGetter objectserver.ObjectsGetter, fs *filesystem.FileSystem,
+	bootInfo *util.BootInfoType) error {
+	dirent := bootInfo.KernelImageDirent
+	if dirent == nil {
+		return errors.New("no kernel image found")
+	}
+	inode, ok := dirent.Inode().(*filesystem.RegularInode)
+	if !ok {
+		return errors.New("kernel image is not a regular file")
+	}
+	inode.Size = 0
+	filename := filepath.Join(volume.DirectoryToCleanup, "kernel"+extension)
+	_, err := objectserver.LinkObject(filename, objectsGetter, inode.Hash)
+	if err != nil {
+		return err
+	}
+	dirent = bootInfo.InitrdImageDirent
+	if dirent != nil {
+		inode, ok := dirent.Inode().(*filesystem.RegularInode)
+		if !ok {
+			return errors.New("initrd image is not a regular file")
+		}
+		inode.Size = 0
+		filename := filepath.Join(volume.DirectoryToCleanup,
+			"initrd"+extension)
+		_, err = objectserver.LinkObject(filename, objectsGetter,
+			inode.Hash)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func maybeDrainAll(conn *srpc.Conn, request proto.CreateVmRequest) error {
 	if err := maybeDrainImage(conn, request.ImageDataSize); err != nil {
 		return err
@@ -134,6 +180,16 @@ func readData(firstByte byte, moreBytes <-chan byte) []byte {
 			return buffer
 		}
 	}
+}
+
+func readOne(objectsDir string, hashVal hash.Hash, length uint64,
+	reader io.Reader) error {
+	filename := filepath.Join(objectsDir, objectcache.HashToFilename(hashVal))
+	dirname := filepath.Dir(filename)
+	if err := os.MkdirAll(dirname, dirPerms); err != nil {
+		return err
+	}
+	return fsutil.CopyToFile(filename, fsutil.PrivateFilePerms, reader, length)
 }
 
 func setVolumeSize(filename string, size uint64) error {
@@ -234,7 +290,7 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest,
 			Tags:               req.Tags,
 		},
 		manager:          m,
-		dirname:          path.Join(m.StateDir, "VMs", ipAddress),
+		dirname:          filepath.Join(m.StateDir, "VMs", ipAddress),
 		ipAddress:        ipAddress,
 		logger:           prefixlogger.New(ipAddress+": ", m.Logger),
 		metadataChannels: make(map[chan<- string]struct{}),
@@ -494,7 +550,8 @@ func (m *Manager) copyVm(conn *srpc.Conn, request proto.CopyVmRequest) error {
 			return err
 		}
 	}
-	err = migratevmUserData(hypervisor, path.Join(vm.dirname, "user-data.raw"),
+	err = migratevmUserData(hypervisor,
+		filepath.Join(vm.dirname, "user-data.raw"),
 		request.IpAddress, accessToken)
 	if err != nil {
 		return err
@@ -567,12 +624,13 @@ func (m *Manager) createVm(conn *srpc.Conn) error {
 		if err := sendUpdate(conn, "getting image"); err != nil {
 			return err
 		}
-		client, fs, imageName, err := m.getImage(request.ImageName,
+		client, img, imageName, err := m.getImage(request.ImageName,
 			request.ImageTimeout)
 		if err != nil {
 			return sendError(conn, err)
 		}
 		defer client.Close()
+		fs := img.FileSystem
 		vm.ImageName = imageName
 		size := computeSize(request.MinimumFreeBytes, request.RoundupPower,
 			fs.EstimateUsage(0))
@@ -631,7 +689,7 @@ func (m *Manager) createVm(conn *srpc.Conn) error {
 		return sendError(conn, errors.New("no image specified"))
 	}
 	if request.UserDataSize > 0 {
-		filename := path.Join(vm.dirname, "user-data.raw")
+		filename := filepath.Join(vm.dirname, "user-data.raw")
 		err := copyData(filename, conn, request.UserDataSize, privateFilePerms)
 		if err != nil {
 			return sendError(conn, err)
@@ -779,7 +837,7 @@ func (m *Manager) discardVmOldUserData(ipAddr net.IP,
 		return err
 	}
 	defer vm.mutex.Unlock()
-	return os.Remove(path.Join(vm.dirname, "user-data.old"))
+	return os.Remove(filepath.Join(vm.dirname, "user-data.old"))
 }
 
 func (m *Manager) discardVmSnapshot(ipAddr net.IP,
@@ -793,7 +851,7 @@ func (m *Manager) discardVmSnapshot(ipAddr net.IP,
 }
 
 func (m *Manager) getImage(searchName string, imageTimeout time.Duration) (
-	*srpc.Client, *filesystem.FileSystem, string, error) {
+	*srpc.Client, *image.Image, string, error) {
 	client, err := srpc.DialHTTP("tcp", m.ImageServerAddress, 0)
 	if err != nil {
 		return nil, nil, "",
@@ -823,7 +881,7 @@ func (m *Manager) getImage(searchName string, imageTimeout time.Duration) (
 		}
 		img.FileSystem.RebuildInodePointers()
 		doClose = false
-		return client, img.FileSystem, imageName, nil
+		return client, img, imageName, nil
 	}
 	img, err := imclient.GetImageWithTimeout(client, searchName, imageTimeout)
 	if err != nil {
@@ -832,9 +890,11 @@ func (m *Manager) getImage(searchName string, imageTimeout time.Duration) (
 	if img == nil {
 		return nil, nil, "", errors.New("timeout getting image")
 	}
-	img.FileSystem.RebuildInodePointers()
+	if err := img.FileSystem.RebuildInodePointers(); err != nil {
+		return nil, nil, "", err
+	}
 	doClose = false
-	return client, img.FileSystem, searchName, nil
+	return client, img, searchName, nil
 }
 
 func (m *Manager) getNumVMs() (uint, uint) {
@@ -930,7 +990,7 @@ func (m *Manager) getVmBootLog(ipAddr net.IP) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	filename := path.Join(vm.dirname, "bootlog")
+	filename := filepath.Join(vm.dirname, "bootlog")
 	vm.mutex.RUnlock()
 	return os.Open(filename)
 }
@@ -950,7 +1010,7 @@ func (m *Manager) getVmUserData(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	if err != nil {
 		return nil, 0, err
 	}
-	filename := path.Join(vm.dirname, "user-data.raw")
+	filename := filepath.Join(vm.dirname, "user-data.raw")
 	vm.mutex.RUnlock()
 	if file, err := os.Open(filename); err != nil {
 		return nil, 0, err
@@ -1008,7 +1068,7 @@ func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 	}
 	volumes := make([]proto.Volume, 0, len(request.VolumeFilenames))
 	for index, filename := range request.VolumeFilenames {
-		dirname := path.Dir(path.Dir(path.Dir(filename)))
+		dirname := filepath.Dir(filepath.Dir(filepath.Dir(filename)))
 		if _, ok := volumeDirectories[dirname]; !ok {
 			return fmt.Errorf("%s not in a volume directory", filename)
 		}
@@ -1035,7 +1095,7 @@ func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 	vm := &vmInfoType{
 		VmInfo:           request.VmInfo,
 		manager:          m,
-		dirname:          path.Join(m.StateDir, "VMs", ipAddress),
+		dirname:          filepath.Join(m.StateDir, "VMs", ipAddress),
 		ipAddress:        ipAddress,
 		ownerUsers:       map[string]struct{}{authInfo.Username: {}},
 		logger:           prefixlogger.New(ipAddress+": ", m.Logger),
@@ -1073,16 +1133,17 @@ func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 		return err
 	}
 	for index, sourceFilename := range request.VolumeFilenames {
-		dirname := path.Join(path.Dir(path.Dir(path.Dir(sourceFilename))),
+		dirname := filepath.Join(filepath.Dir(filepath.Dir(
+			filepath.Dir(sourceFilename))),
 			ipAddress)
 		if err := os.MkdirAll(dirname, dirPerms); err != nil {
 			return err
 		}
 		var destFilename string
 		if index == 0 {
-			destFilename = path.Join(dirname, "root")
+			destFilename = filepath.Join(dirname, "root")
 		} else {
-			destFilename = path.Join(dirname,
+			destFilename = filepath.Join(dirname,
 				fmt.Sprintf("secondary-volume.%d", index-1))
 		}
 		if err := os.Link(sourceFilename, destFilename); err != nil {
@@ -1182,7 +1243,7 @@ func (m *Manager) migrateVm(conn *srpc.Conn) error {
 		VmInfo:           vmInfo,
 		VolumeLocations:  make([]volumeType, 0, len(volumeDirectories)),
 		manager:          m,
-		dirname:          path.Join(m.StateDir, "VMs", ipAddress),
+		dirname:          filepath.Join(m.StateDir, "VMs", ipAddress),
 		doNotWriteOrSend: true,
 		ipAddress:        ipAddress,
 		logger:           prefixlogger.New(ipAddress+": ", m.Logger),
@@ -1208,15 +1269,15 @@ func (m *Manager) migrateVm(conn *srpc.Conn) error {
 		return err
 	}
 	for index, _dirname := range volumeDirectories {
-		dirname := path.Join(_dirname, ipAddress)
+		dirname := filepath.Join(_dirname, ipAddress)
 		if err := os.MkdirAll(dirname, dirPerms); err != nil {
 			return err
 		}
 		var filename string
 		if index == 0 {
-			filename = path.Join(dirname, "root")
+			filename = filepath.Join(dirname, "root")
 		} else {
-			filename = path.Join(dirname,
+			filename = filepath.Join(dirname,
 				fmt.Sprintf("secondary-volume.%d", index-1))
 		}
 		vm.VolumeLocations = append(vm.VolumeLocations, volumeType{
@@ -1264,7 +1325,8 @@ func (m *Manager) migrateVm(conn *srpc.Conn) error {
 			return err
 		}
 	}
-	err = migratevmUserData(hypervisor, path.Join(vm.dirname, "user-data.raw"),
+	err = migratevmUserData(hypervisor,
+		filepath.Join(vm.dirname, "user-data.raw"),
 		request.IpAddress, accessToken)
 	if err != nil {
 		return err
@@ -1326,6 +1388,14 @@ func sendVmCopyMessage(conn *srpc.Conn, message string) error {
 
 func sendVmMigrationMessage(conn *srpc.Conn, message string) error {
 	request := proto.MigrateVmResponse{ProgressMessage: message}
+	if err := conn.Encode(request); err != nil {
+		return err
+	}
+	return conn.Flush()
+}
+
+func sendVmPatchImageMessage(conn *srpc.Conn, message string) error {
+	request := proto.PatchVmImageResponse{ProgressMessage: message}
 	if err := conn.Encode(request); err != nil {
 		return err
 	}
@@ -1490,6 +1560,175 @@ func (m *Manager) notifyVmMetadataRequest(ipAddr net.IP, path string) {
 	}
 }
 
+func (m *Manager) patchVmImage(conn *srpc.Conn,
+	request proto.PatchVmImageRequest) error {
+	client, img, imageName, err := m.getImage(request.ImageName,
+		request.ImageTimeout)
+	if err != nil {
+		return nil
+	}
+	var objectsGetter objectserver.ObjectsGetter
+	if m.objectCache == nil {
+		objectClient := objclient.AttachObjectClient(client)
+		defer objectClient.Close()
+		objectsGetter = objectClient
+	} else {
+		objectsGetter = m.objectCache
+	}
+	if img.Filter == nil {
+		return fmt.Errorf("%s contains no filter", imageName)
+	}
+	img.FileSystem.InodeToFilenamesTable()
+	img.FileSystem.FilenameToInodeTable()
+	img.FileSystem.HashToInodesTable()
+	img.FileSystem.BuildEntryMap()
+	vm, err := m.getVmLockAndAuth(request.IpAddress, true,
+		conn.GetAuthInformation(), nil)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if vm.State != proto.StateStopped {
+		return errors.New("VM is not stopped")
+	}
+	bootInfo, err := util.GetBootInfo(img.FileSystem, vm.rootLabel(),
+		"net.ifnames=0")
+	if err != nil {
+		return err
+	}
+	rootFilename := vm.VolumeLocations[0].Filename
+	tmpRootFilename := rootFilename + ".new"
+	if err := sendVmPatchImageMessage(conn, "backing up root"); err != nil {
+		return err
+	}
+	err = fsutil.CopyFile(tmpRootFilename, rootFilename,
+		fsutil.PrivateFilePerms)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmpRootFilename)
+	rootDir, err := ioutil.TempDir(vm.dirname, "root")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(rootDir)
+	loopDevice, err := fsutil.LoopbackSetup(tmpRootFilename)
+	if err != nil {
+		return err
+	}
+	defer fsutil.LoopbackDelete(loopDevice)
+	vm.logger.Debugf(0, "mounting: %s onto: %s\n", loopDevice, rootDir)
+	err = wsyscall.Mount(loopDevice+"p1", rootDir, "ext4", 0, "")
+	if err != nil {
+		return err
+	}
+	defer syscall.Unmount(rootDir, 0)
+	if err := sendVmPatchImageMessage(conn, "scanning root"); err != nil {
+		return err
+	}
+	fs, err := scanner.ScanFileSystem(rootDir, nil, img.Filter, nil, nil, nil)
+	if err != nil {
+		return err
+	}
+	if err := fs.FileSystem.RebuildInodePointers(); err != nil {
+		return err
+	}
+	fs.FileSystem.BuildEntryMap()
+	initrdFilename := vm.getInitrdPath()
+	tmpInitrdFilename := initrdFilename + ".new"
+	defer os.Remove(tmpInitrdFilename)
+	kernelFilename := vm.getKernelPath()
+	tmpKernelFilename := kernelFilename + ".new"
+	defer os.Remove(tmpKernelFilename)
+	writeBootloaderConfig := false
+	if _, err := os.Stat(vm.getKernelPath()); err == nil { // No bootloader.
+		err := extractKernel(vm.VolumeLocations[0], ".new", objectsGetter,
+			img.FileSystem, bootInfo)
+		if err != nil {
+			return err
+		}
+	} else { // Requires a bootloader.
+		writeBootloaderConfig = true
+	}
+	subObj := domlib.Sub{FileSystem: &fs.FileSystem}
+	fetchMap, _ := domlib.BuildMissingLists(subObj, img, false, true,
+		vm.logger)
+	objectsToFetch := objectcache.ObjectMapToCache(fetchMap)
+	objectsDir := filepath.Join(rootDir, ".subd", "objects")
+	defer os.RemoveAll(objectsDir)
+	startTime := time.Now()
+	objectsReader, err := objectsGetter.GetObjects(objectsToFetch)
+	if err != nil {
+		return err
+	}
+	defer objectsReader.Close()
+	msg := fmt.Sprintf("fetching(%s) %d objects",
+		imageName, len(objectsToFetch))
+	if err := sendVmPatchImageMessage(conn, msg); err != nil {
+		return err
+	}
+	vm.logger.Debugln(0, msg)
+	for _, hashVal := range objectsToFetch {
+		length, reader, err := objectsReader.NextObject()
+		if err != nil {
+			vm.logger.Println(err)
+			return err
+		}
+		err = readOne(objectsDir, hashVal, length, reader)
+		reader.Close()
+		if err != nil {
+			vm.logger.Println(err)
+			return err
+		}
+	}
+	msg = fmt.Sprintf("fetched(%s) %d objects in %s",
+		imageName, len(objectsToFetch), format.Duration(time.Since(startTime)))
+	if err := sendVmPatchImageMessage(conn, msg); err != nil {
+		return err
+	}
+	vm.logger.Debugln(0, msg)
+	subObj.ObjectCache = append(subObj.ObjectCache, objectsToFetch...)
+	var subRequest subproto.UpdateRequest
+	if domlib.BuildUpdateRequest(subObj, img, &subRequest, false, true,
+		debuglogger.New(vm.logger)) {
+		return errors.New("failed building update: missing computed files")
+	}
+	subRequest.Triggers = nil
+	if err := sendVmPatchImageMessage(conn, "starting update"); err != nil {
+		return err
+	}
+	vm.logger.Debugf(0, "update(%s) starting\n", imageName)
+	startTime = time.Now()
+	_, _, err = sublib.Update(subRequest, rootDir, objectsDir, nil, nil, nil,
+		vm.logger)
+	if err != nil {
+		return err
+	}
+	_, err = os.Stat(
+		filepath.Join(vm.VolumeLocations[0].DirectoryToCleanup, "kernel"))
+	if writeBootloaderConfig {
+		err := bootInfo.WriteBootloaderConfig(rootDir, vm.logger)
+		if err != nil {
+			return err
+		}
+	}
+	oldRootFilename := rootFilename + ".old"
+	if err := os.Rename(rootFilename, oldRootFilename); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpRootFilename, rootFilename); err != nil {
+		os.Rename(oldRootFilename, rootFilename)
+		return err
+	}
+	os.Rename(initrdFilename, initrdFilename+".old")
+	os.Rename(tmpInitrdFilename, initrdFilename)
+	os.Rename(kernelFilename, kernelFilename+".old")
+	os.Rename(tmpKernelFilename, kernelFilename)
+	vm.ImageName = imageName
+	vm.writeAndSendInfo()
+	return nil
+}
+
 func (m *Manager) prepareVmForMigration(ipAddr net.IP,
 	authInfoP *srpc.AuthInformation, accessToken []byte, enable bool) error {
 	authInfo := *authInfoP
@@ -1605,7 +1844,7 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn,
 		if err := sendUpdate(conn, "getting image"); err != nil {
 			return err
 		}
-		client, fs, imageName, err := m.getImage(request.ImageName,
+		client, img, imageName, err := m.getImage(request.ImageName,
 			request.ImageTimeout)
 		if err != nil {
 			return sendError(conn, err)
@@ -1621,7 +1860,7 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn,
 			RootLabel:        vm.rootLabel(),
 			RoundupPower:     request.RoundupPower,
 		}
-		err = m.writeRaw(vm.VolumeLocations[0], ".new", client, fs,
+		err = m.writeRaw(vm.VolumeLocations[0], ".new", client, img.FileSystem,
 			writeRawOptions, request.SkipBootloader)
 		if err != nil {
 			return sendError(conn, err)
@@ -1705,7 +1944,7 @@ func (m *Manager) replaceVmUserData(ipAddr net.IP, reader io.Reader,
 		return err
 	}
 	defer vm.mutex.Unlock()
-	filename := path.Join(vm.dirname, "user-data.raw")
+	filename := filepath.Join(vm.dirname, "user-data.raw")
 	oldFilename := filename + ".old"
 	newFilename := filename + ".new"
 	err = fsutil.CopyToFile(newFilename, privateFilePerms, reader, size)
@@ -1781,7 +2020,7 @@ func (m *Manager) restoreVmUserData(ipAddr net.IP,
 		return err
 	}
 	defer vm.mutex.Unlock()
-	filename := path.Join(vm.dirname, "user-data.raw")
+	filename := filepath.Join(vm.dirname, "user-data.raw")
 	oldFilename := filename + ".old"
 	return os.Rename(oldFilename, filename)
 }
@@ -1941,33 +2180,9 @@ func (m *Manager) writeRaw(volume volumeType, extension string,
 		if err != nil {
 			return err
 		}
-		dirent := bootInfo.KernelImageDirent
-		if dirent == nil {
-			return errors.New("no kernel image found")
-		}
-		inode, ok := dirent.Inode().(*filesystem.RegularInode)
-		if !ok {
-			return errors.New("kernel image is not a regular file")
-		}
-		inode.Size = 0
-		filename := path.Join(volume.DirectoryToCleanup, "kernel"+extension)
-		_, err = objectserver.LinkObject(filename, objectsGetter, inode.Hash)
+		err = extractKernel(volume, extension, objectsGetter, fs, bootInfo)
 		if err != nil {
 			return err
-		}
-		dirent = bootInfo.InitrdImageDirent
-		if dirent != nil {
-			inode, ok := dirent.Inode().(*filesystem.RegularInode)
-			if !ok {
-				return errors.New("initrd image is not a regular file")
-			}
-			inode.Size = 0
-			filename := path.Join(volume.DirectoryToCleanup, "initrd"+extension)
-			_, err = objectserver.LinkObject(filename, objectsGetter,
-				inode.Hash)
-			if err != nil {
-				return err
-			}
 		}
 	} else {
 		writeRawOptions.InstallBootloader = true
@@ -1988,20 +2203,21 @@ func (vm *vmInfoType) autoDestroy() {
 }
 
 func (vm *vmInfoType) changeIpAddress(ipAddress string) error {
-	dirname := path.Join(vm.manager.StateDir, "VMs", ipAddress)
+	dirname := filepath.Join(vm.manager.StateDir, "VMs", ipAddress)
 	if err := os.Rename(vm.dirname, dirname); err != nil {
 		return err
 	}
 	vm.dirname = dirname
 	for index, volume := range vm.VolumeLocations {
-		parent := path.Dir(volume.DirectoryToCleanup)
-		dirname := path.Join(parent, ipAddress)
+		parent := filepath.Dir(volume.DirectoryToCleanup)
+		dirname := filepath.Join(parent, ipAddress)
 		if err := os.Rename(volume.DirectoryToCleanup, dirname); err != nil {
 			return err
 		}
 		vm.VolumeLocations[index] = volumeType{
 			DirectoryToCleanup: dirname,
-			Filename:           path.Join(dirname, path.Base(volume.Filename)),
+			Filename: filepath.Join(dirname,
+				filepath.Base(volume.Filename)),
 		}
 	}
 	vm.logger.Printf("changing to new address: %s\n", ipAddress)
@@ -2161,11 +2377,11 @@ func (vm *vmInfoType) getActiveKernelPath() string {
 }
 
 func (vm *vmInfoType) getInitrdPath() string {
-	return path.Join(vm.VolumeLocations[0].DirectoryToCleanup, "initrd")
+	return filepath.Join(vm.VolumeLocations[0].DirectoryToCleanup, "initrd")
 }
 
 func (vm *vmInfoType) getKernelPath() string {
-	return path.Join(vm.VolumeLocations[0].DirectoryToCleanup, "kernel")
+	return filepath.Join(vm.VolumeLocations[0].DirectoryToCleanup, "kernel")
 }
 
 func (vm *vmInfoType) kill() {
@@ -2266,7 +2482,7 @@ func (vm *vmInfoType) rootLabel() string {
 }
 
 func (vm *vmInfoType) serialManager() {
-	bootlogFile, err := os.OpenFile(path.Join(vm.dirname, bootlogFilename),
+	bootlogFile, err := os.OpenFile(filepath.Join(vm.dirname, bootlogFilename),
 		os.O_CREATE|os.O_WRONLY|os.O_APPEND, fsutil.PublicFilePerms)
 	if err != nil {
 		vm.logger.Printf("error opening bootlog file: %s\n", err)
@@ -2274,7 +2490,7 @@ func (vm *vmInfoType) serialManager() {
 	}
 	defer bootlogFile.Close()
 	serialSock, err := net.Dial("unix",
-		path.Join(vm.dirname, serialSockFilename))
+		filepath.Join(vm.dirname, serialSockFilename))
 	if err != nil {
 		vm.logger.Printf("error connecting to console: %s\n", err)
 		return
@@ -2328,21 +2544,22 @@ func (vm *vmInfoType) setupVolumes(rootSize uint64,
 	if err != nil {
 		return err
 	}
-	volumeDirectory := path.Join(volumeDirectories[0], vm.ipAddress)
+	volumeDirectory := filepath.Join(volumeDirectories[0], vm.ipAddress)
 	os.RemoveAll(volumeDirectory)
 	if err := os.MkdirAll(volumeDirectory, dirPerms); err != nil {
 		return err
 	}
-	filename := path.Join(volumeDirectory, "root")
+	filename := filepath.Join(volumeDirectory, "root")
 	vm.VolumeLocations = append(vm.VolumeLocations,
 		volumeType{volumeDirectory, filename})
 	for index := range secondaryVolumes {
-		volumeDirectory := path.Join(volumeDirectories[index+1], vm.ipAddress)
+		volumeDirectory := filepath.Join(volumeDirectories[index+1],
+			vm.ipAddress)
 		os.RemoveAll(volumeDirectory)
 		if err := os.MkdirAll(volumeDirectory, dirPerms); err != nil {
 			return err
 		}
-		filename := path.Join(volumeDirectory,
+		filename := filepath.Join(volumeDirectory,
 			fmt.Sprintf("secondary-volume.%d", index))
 		vm.VolumeLocations = append(vm.VolumeLocations,
 			volumeType{volumeDirectory, filename})
@@ -2353,7 +2570,7 @@ func (vm *vmInfoType) setupVolumes(rootSize uint64,
 // This may grab the VM lock.
 func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration,
 	haveManagerLock bool) (bool, error) {
-	vm.monitorSockname = path.Join(vm.dirname, "monitor.sock")
+	vm.monitorSockname = filepath.Join(vm.dirname, "monitor.sock")
 	vm.logger.Debugln(1, "startManaging() starting")
 	switch vm.State {
 	case proto.StateStarting:
@@ -2506,7 +2723,7 @@ func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 		"-m", fmt.Sprintf("%dM", vm.MemoryInMiB),
 		"-smp", fmt.Sprintf("cpus=%d", nCpus),
 		"-serial",
-		"unix:"+path.Join(vm.dirname, serialSockFilename)+",server,nowait",
+		"unix:"+filepath.Join(vm.dirname, serialSockFilename)+",server,nowait",
 		"-chroot", "/tmp",
 		"-runas", vm.manager.Username,
 		"-qmp", "unix:"+vm.monitorSockname+",server,nowait",
@@ -2540,7 +2757,7 @@ func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 			"-drive", "file="+volume.Filename+",format="+volumeFormat.String()+
 				",if=virtio")
 	}
-	os.Remove(path.Join(vm.dirname, "bootlog"))
+	os.Remove(filepath.Join(vm.dirname, "bootlog"))
 	cmd.ExtraFiles = tapFiles // Start at fd=3 for QEMU.
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("error starting QEMU: %s: %s", err, output)
@@ -2561,6 +2778,6 @@ func (vm *vmInfoType) writeAndSendInfo() {
 }
 
 func (vm *vmInfoType) writeInfo() error {
-	filename := path.Join(vm.dirname, "info.json")
+	filename := filepath.Join(vm.dirname, "info.json")
 	return json.WriteToFile(filename, publicFilePerms, "    ", vm)
 }

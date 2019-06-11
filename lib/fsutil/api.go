@@ -60,6 +60,12 @@ func CopyTreeWithCopyFunc(destDir, sourceDir string,
 	return copyTree(destDir, sourceDir, copyFunc)
 }
 
+// Fallocate will allocate blocks for the file named filename, up to size
+// specified in bytes.
+func Fallocate(filename string, size uint64) error {
+	return fallocate(filename, size)
+}
+
 // ForceLink creates newname as a hard link to the oldname file. It first
 // attempts to link using os.Link. If the first attempt fails due to
 // a permission error, it blindly calls MakeMutable and then retries. If the
@@ -67,12 +73,6 @@ func CopyTreeWithCopyFunc(destDir, sourceDir string,
 // retries.
 func ForceLink(oldname, newname string) error {
 	return forceLink(oldname, newname)
-}
-
-// Fallocate will allocate blocks for the file named filename, up to size
-// specified in bytes.
-func Fallocate(filename string, size uint64) error {
-	return fallocate(filename, size)
 }
 
 // ForceRemove removes the named file or directory. It first attempts to remove
@@ -101,6 +101,18 @@ func ForceRename(oldpath, newpath string) error {
 // beginning with '#') are skipped.
 func LoadLines(filename string) ([]string, error) {
 	return loadLines(filename)
+}
+
+// LoopbackDelete will disassociate (delete) a loopback block device from its
+// backing file. The name of the block device is returned.
+func LoopbackDelete(loopDevice string) error {
+	return loopbackDelete(loopDevice)
+}
+
+// LoopbackSetup will associate a loopback block device with a regular file
+// named filename. The name of the block device is returned.
+func LoopbackSetup(filename string) (string, error) {
+	return loopbackSetup(filename)
 }
 
 // MakeMutable attempts to remove the "immutable" and "append-only" ext2

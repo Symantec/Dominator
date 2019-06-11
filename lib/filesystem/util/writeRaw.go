@@ -451,6 +451,23 @@ func (bootInfo *BootInfoType) writeGrubTemplate(filename string) error {
 	return file.Close()
 }
 
+func (bootInfo *BootInfoType) writeBootloaderConfig(rootDir string,
+	logger log.Logger) error {
+	grubConfigFile := filepath.Join(rootDir, "boot", "grub", "grub.cfg")
+	_, err := lookPath("", "grub-install")
+	if err != nil {
+		_, err = lookPath("", "grub2-install")
+		if err != nil {
+			return fmt.Errorf("cannot find GRUB installer: %s", err)
+		}
+		grubConfigFile = filepath.Join(rootDir, "boot", "grub2", "grub.cfg")
+	}
+	if err := bootInfo.writeGrubConfig(grubConfigFile); err != nil {
+		return err
+	}
+	return bootInfo.writeGrubTemplate(grubConfigFile + ".template")
+}
+
 func writeFstabEntry(writer io.Writer,
 	source, mountPoint, fileSystemType, flags string,
 	dumpFrequency, checkOrder uint) error {
@@ -505,16 +522,11 @@ func writeToFile(fs *filesystem.FileSystem,
 	if err := mbr.WriteDefault(tmpFilename, tableType); err != nil {
 		return err
 	}
-	cmd := exec.Command("losetup", "-fP", "--show", tmpFilename)
-	output, err := cmd.CombinedOutput()
+	loopDevice, err := fsutil.LoopbackSetup(tmpFilename)
 	if err != nil {
-		return fmt.Errorf("%s: %s", err, output)
+		return err
 	}
-	if output[len(output)-1] == '\n' {
-		output = output[0 : len(output)-1]
-	}
-	loopDevice := string(output)
-	defer exec.Command("losetup", "-d", loopDevice).Run()
+	defer fsutil.LoopbackDelete(loopDevice)
 	err = makeAndWriteRoot(fs, objectsGetter, loopDevice, loopDevice+"p1",
 		options, logger)
 	if options.AllocateBlocks { // mkfs discards blocks, so do this after.
