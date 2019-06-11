@@ -38,6 +38,7 @@ import (
 	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/tags"
 	"github.com/Symantec/Dominator/lib/verstr"
+	"github.com/Symantec/Dominator/lib/wsyscall"
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 	subproto "github.com/Symantec/Dominator/proto/sub"
 	sublib "github.com/Symantec/Dominator/sub/lib"
@@ -1617,7 +1618,7 @@ func (m *Manager) patchVmImage(conn *srpc.Conn,
 	}
 	defer fsutil.LoopbackDelete(loopDevice)
 	vm.logger.Debugf(0, "mounting: %s onto: %s\n", loopDevice, rootDir)
-	err = syscall.Mount(loopDevice+"p1", rootDir, "ext4", 0, "")
+	err = wsyscall.Mount(loopDevice+"p1", rootDir, "ext4", 0, "")
 	if err != nil {
 		return err
 	}
