@@ -47,6 +47,9 @@ Some of the sub-commands available are:
 - **list-locations**: list locations within the specified top location
 - **list-vms**: list the IP addresses for all VMs
 - **migrate-vm*: migrate a VM to another Hypervisor
+- **patch-vm-image**: patch the root image for a VM. Files listed in the image
+                      filter are not changed. The old root image is saved. The
+                      VM must not be running
 - **probe-vm-port**: probe (from its *Hypervisor*) a TCP port for a VM
 - **replace-vm-image**: replace the root image for a VM. The old root image is
                         saved. The VM must not be running

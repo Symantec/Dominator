@@ -120,6 +120,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  list-locations [TopLocation]")
 	fmt.Fprintln(os.Stderr, "  list-vms")
 	fmt.Fprintln(os.Stderr, "  migrate-vm IPaddr")
+	fmt.Fprintln(os.Stderr, "  patch-vm-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  probe-vm-port IPaddr")
 	fmt.Fprintln(os.Stderr, "  replace-vm-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  replace-vm-user-data IPaddr")
@@ -165,6 +166,7 @@ var subcommands = []subcommand{
 	{"list-locations", 0, 1, listLocationsSubcommand},
 	{"list-vms", 0, 0, listVMsSubcommand},
 	{"migrate-vm", 1, 1, migrateVmSubcommand},
+	{"patch-vm-image", 1, 1, patchVmImageSubcommand},
 	{"probe-vm-port", 1, 1, probeVmPortSubcommand},
 	{"replace-vm-image", 1, 1, replaceVmImageSubcommand},
 	{"replace-vm-user-data", 1, 1, replaceVmUserDataSubcommand},
