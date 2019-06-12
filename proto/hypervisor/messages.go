@@ -280,6 +280,16 @@ type ListVolumeDirectoriesResponse struct {
 	Error       string
 }
 
+type LocalVolume struct {
+	DirectoryToCleanup string
+	Filename           string
+}
+
+type LocalVmInfo struct {
+	VolumeLocations []LocalVolume
+	VmInfo
+}
+
 type MigrateVmRequest struct {
 	AccessToken      []byte
 	DhcpTimeout      time.Duration
