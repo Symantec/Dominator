@@ -76,13 +76,7 @@ type vmInfoType struct {
 	serialInput                io.Writer
 	serialOutput               chan<- byte
 	stoppedNotifier            chan<- struct{}
-	VolumeLocations            []volumeType
-	proto.VmInfo
-}
-
-type volumeType struct {
-	DirectoryToCleanup string
-	Filename           string
+	proto.LocalVmInfo
 }
 
 func New(startOptions StartOptions) (*Manager, error) {

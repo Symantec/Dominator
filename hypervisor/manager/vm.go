@@ -105,7 +105,7 @@ func createTapDevice(bridge string) (*os.File, error) {
 	return tapFile, nil
 }
 
-func extractKernel(volume volumeType, extension string,
+func extractKernel(volume proto.LocalVolume, extension string,
 	objectsGetter objectserver.ObjectsGetter, fs *filesystem.FileSystem,
 	bootInfo *util.BootInfoType) error {
 	dirent := bootInfo.KernelImageDirent
@@ -273,21 +273,23 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest,
 		ipAddress = address.IpAddress.String()
 	}
 	vm := &vmInfoType{
-		VmInfo: proto.VmInfo{
-			Address:            address,
-			DestroyProtection:  req.DestroyProtection,
-			Hostname:           req.Hostname,
-			ImageName:          req.ImageName,
-			ImageURL:           req.ImageURL,
-			MemoryInMiB:        req.MemoryInMiB,
-			MilliCPUs:          req.MilliCPUs,
-			OwnerGroups:        req.OwnerGroups,
-			SpreadVolumes:      req.SpreadVolumes,
-			SecondaryAddresses: secondaryAddresses,
-			SecondarySubnetIDs: req.SecondarySubnetIDs,
-			State:              proto.StateStarting,
-			SubnetId:           subnetId,
-			Tags:               req.Tags,
+		LocalVmInfo: proto.LocalVmInfo{
+			VmInfo: proto.VmInfo{
+				Address:            address,
+				DestroyProtection:  req.DestroyProtection,
+				Hostname:           req.Hostname,
+				ImageName:          req.ImageName,
+				ImageURL:           req.ImageURL,
+				MemoryInMiB:        req.MemoryInMiB,
+				MilliCPUs:          req.MilliCPUs,
+				OwnerGroups:        req.OwnerGroups,
+				SpreadVolumes:      req.SpreadVolumes,
+				SecondaryAddresses: secondaryAddresses,
+				SecondarySubnetIDs: req.SecondarySubnetIDs,
+				State:              proto.StateStarting,
+				SubnetId:           subnetId,
+				Tags:               req.Tags,
+			},
 		},
 		manager:          m,
 		dirname:          filepath.Join(m.StateDir, "VMs", ipAddress),
@@ -764,7 +766,7 @@ func (m *Manager) deleteVmVolume(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		return err
 	}
 	os.Remove(vm.VolumeLocations[volumeIndex].DirectoryToCleanup)
-	volumeLocations := make([]volumeType, 0, len(vm.VolumeLocations)-1)
+	volumeLocations := make([]proto.LocalVolume, 0, len(vm.VolumeLocations)-1)
 	volumes := make([]proto.Volume, 0, len(vm.VolumeLocations)-1)
 	for index, volume := range vm.VolumeLocations {
 		if uint(index) != volumeIndex {
@@ -1093,7 +1095,9 @@ func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 	}
 	ipAddress := request.Address.IpAddress.String()
 	vm := &vmInfoType{
-		VmInfo:           request.VmInfo,
+		LocalVmInfo: proto.LocalVmInfo{
+			VmInfo: request.VmInfo,
+		},
 		manager:          m,
 		dirname:          filepath.Join(m.StateDir, "VMs", ipAddress),
 		ipAddress:        ipAddress,
@@ -1149,7 +1153,7 @@ func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 		if err := os.Link(sourceFilename, destFilename); err != nil {
 			return err
 		}
-		vm.VolumeLocations = append(vm.VolumeLocations, volumeType{
+		vm.VolumeLocations = append(vm.VolumeLocations, proto.LocalVolume{
 			dirname, destFilename})
 	}
 	m.vms[ipAddress] = vm
@@ -1240,8 +1244,11 @@ func (m *Manager) migrateVm(conn *srpc.Conn) error {
 		return err
 	}
 	vm := &vmInfoType{
-		VmInfo:           vmInfo,
-		VolumeLocations:  make([]volumeType, 0, len(volumeDirectories)),
+		LocalVmInfo: proto.LocalVmInfo{
+			VmInfo: vmInfo,
+			VolumeLocations: make([]proto.LocalVolume, 0,
+				len(volumeDirectories)),
+		},
 		manager:          m,
 		dirname:          filepath.Join(m.StateDir, "VMs", ipAddress),
 		doNotWriteOrSend: true,
@@ -1280,7 +1287,7 @@ func (m *Manager) migrateVm(conn *srpc.Conn) error {
 			filename = filepath.Join(dirname,
 				fmt.Sprintf("secondary-volume.%d", index-1))
 		}
-		vm.VolumeLocations = append(vm.VolumeLocations, volumeType{
+		vm.VolumeLocations = append(vm.VolumeLocations, proto.LocalVolume{
 			DirectoryToCleanup: dirname,
 			Filename:           filename,
 		})
@@ -2163,7 +2170,7 @@ func (m *Manager) unregisterVmMetadataNotifier(ipAddr net.IP,
 	return nil
 }
 
-func (m *Manager) writeRaw(volume volumeType, extension string,
+func (m *Manager) writeRaw(volume proto.LocalVolume, extension string,
 	client *srpc.Client, fs *filesystem.FileSystem,
 	writeRawOptions util.WriteRawOptions, skipBootloader bool) error {
 	var objectsGetter objectserver.ObjectsGetter
@@ -2214,7 +2221,7 @@ func (vm *vmInfoType) changeIpAddress(ipAddress string) error {
 		if err := os.Rename(volume.DirectoryToCleanup, dirname); err != nil {
 			return err
 		}
-		vm.VolumeLocations[index] = volumeType{
+		vm.VolumeLocations[index] = proto.LocalVolume{
 			DirectoryToCleanup: dirname,
 			Filename: filepath.Join(dirname,
 				filepath.Base(volume.Filename)),
@@ -2551,7 +2558,7 @@ func (vm *vmInfoType) setupVolumes(rootSize uint64,
 	}
 	filename := filepath.Join(volumeDirectory, "root")
 	vm.VolumeLocations = append(vm.VolumeLocations,
-		volumeType{volumeDirectory, filename})
+		proto.LocalVolume{volumeDirectory, filename})
 	for index := range secondaryVolumes {
 		volumeDirectory := filepath.Join(volumeDirectories[index+1],
 			vm.ipAddress)
@@ -2562,7 +2569,7 @@ func (vm *vmInfoType) setupVolumes(rootSize uint64,
 		filename := filepath.Join(volumeDirectory,
 			fmt.Sprintf("secondary-volume.%d", index))
 		vm.VolumeLocations = append(vm.VolumeLocations,
-			volumeType{volumeDirectory, filename})
+			proto.LocalVolume{volumeDirectory, filename})
 	}
 	return nil
 }
