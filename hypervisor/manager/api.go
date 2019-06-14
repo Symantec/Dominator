@@ -29,7 +29,7 @@ type DhcpServer interface {
 
 type Manager struct {
 	StartOptions
-	importCookie      []byte
+	rootCookie        []byte
 	memTotalInMiB     uint64
 	numCPU            int
 	serialNumber      string

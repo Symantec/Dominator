@@ -137,7 +137,7 @@ func importVirshVm(macAddr, domainName string, logger log.DebugLogger) error {
 		OwnerUsers:  ownerUsers,
 		Tags:        tags,
 	}}
-	request.VerificationCookie, err = readImportCookie(logger)
+	request.VerificationCookie, err = readRootCookie(logger)
 	if err != nil {
 		return err
 	}

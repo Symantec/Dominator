@@ -1059,7 +1059,7 @@ func (m *Manager) getVmVolume(conn *srpc.Conn) error {
 
 func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 	request proto.ImportLocalVmRequest) error {
-	if !bytes.Equal(m.importCookie, request.VerificationCookie) {
+	if !bytes.Equal(m.rootCookie, request.VerificationCookie) {
 		return fmt.Errorf("bad verification cookie: you are not root")
 	}
 	request.VmInfo.OwnerUsers = []string{authInfo.Username}

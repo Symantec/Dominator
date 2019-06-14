@@ -99,7 +99,7 @@ func importLocalVm(infoFile, rootVolume string, logger log.DebugLogger) error {
 
 func importLocalVmInfo(vmInfo proto.VmInfo, rootVolume string,
 	logger log.DebugLogger) error {
-	importCookie, err := readImportCookie(logger)
+	rootCookie, err := readRootCookie(logger)
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func importLocalVmInfo(vmInfo proto.VmInfo, rootVolume string,
 		}
 	}
 	request := proto.ImportLocalVmRequest{
-		VerificationCookie: importCookie,
+		VerificationCookie: rootCookie,
 		VmInfo:             vmInfo,
 		VolumeFilenames:    []string{rootFilename},
 	}
@@ -168,8 +168,9 @@ func listVolumeDirectories(client *srpc.Client) ([]string, error) {
 	return reply.Directories, nil
 }
 
-func readImportCookie(logger log.DebugLogger) ([]byte, error) {
-	importCookie, err := ioutil.ReadFile("/var/lib/hypervisor/import-cookie")
+func readRootCookie(logger log.DebugLogger) ([]byte, error) {
+	// TODO(rgooch): Add an RPC to get the filename.
+	rootCookie, err := ioutil.ReadFile("/var/lib/hypervisor/root-cookie")
 	if err != nil && os.IsPermission(err) {
 		// Try again with sudo(8).
 		args := make([]string, 0, len(os.Args)+1)
@@ -193,5 +194,5 @@ func readImportCookie(logger log.DebugLogger) ([]byte, error) {
 		return nil, err
 	}
 	logger.Debugln(0, "have cookie")
-	return importCookie, nil
+	return rootCookie, nil
 }
