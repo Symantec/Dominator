@@ -15,6 +15,7 @@ const (
 	StateStopped       = 4
 	StateDestroying    = 5
 	StateMigrating     = 6
+	StateExporting     = 7
 
 	VolumeFormatRaw   = 0
 	VolumeFormatQCOW2 = 1
@@ -192,6 +193,16 @@ type DiscardVmSnapshotRequest struct {
 
 type DiscardVmSnapshotResponse struct {
 	Error string
+}
+
+type ExportLocalVmRequest struct {
+	IpAddress          net.IP
+	VerificationCookie []byte `json:",omitempty"`
+}
+
+type ExportLocalVmResponse struct {
+	Error  string
+	VmInfo LocalVmInfo
 }
 
 // The GetUpdates() RPC is fully streamed.
