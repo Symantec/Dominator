@@ -297,8 +297,8 @@ type LocalVolume struct {
 }
 
 type LocalVmInfo struct {
-	VolumeLocations []LocalVolume
 	VmInfo
+	VolumeLocations []LocalVolume
 }
 
 type MigrateVmRequest struct {
