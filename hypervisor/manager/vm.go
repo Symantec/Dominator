@@ -798,7 +798,8 @@ func (m *Manager) destroyVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		vm.commandChannel <- "quit"
 	case proto.StateStopping:
 		return errors.New("VM is stopping")
-	case proto.StateStopped, proto.StateFailedToStart, proto.StateMigrating:
+	case proto.StateStopped, proto.StateFailedToStart, proto.StateMigrating,
+		proto.StateExporting:
 		vm.delete()
 	case proto.StateDestroying:
 		return errors.New("VM is already destroying")
@@ -850,6 +851,31 @@ func (m *Manager) discardVmSnapshot(ipAddr net.IP,
 	}
 	defer vm.mutex.Unlock()
 	return vm.discardSnapshot()
+}
+
+func (m *Manager) exportLocalVm(authInfo *srpc.AuthInformation,
+	request proto.ExportLocalVmRequest) (*proto.ExportLocalVmInfo, error) {
+	if !bytes.Equal(m.rootCookie, request.VerificationCookie) {
+		return nil, fmt.Errorf("bad verification cookie: you are not root")
+	}
+	vm, err := m.getVmLockAndAuth(request.IpAddress, true, authInfo, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer vm.mutex.Unlock()
+	if vm.State != proto.StateStopped {
+		return nil, errors.New("VM is not stopped")
+	}
+	bridges, _, err := vm.getBridgesAndOptions(false)
+	if err != nil {
+		return nil, err
+	}
+	vm.setState(proto.StateExporting)
+	vmInfo := proto.ExportLocalVmInfo{
+		Bridges:     bridges,
+		LocalVmInfo: vm.LocalVmInfo,
+	}
+	return &vmInfo, nil
 }
 
 func (m *Manager) getImage(searchName string, imageTimeout time.Duration) (
@@ -1756,13 +1782,13 @@ func (m *Manager) prepareVmForMigration(ipAddr net.IP,
 		// claims on addresses.
 		vm.Uncommitted = true
 		vm.setState(proto.StateMigrating)
-		if err := m.unregisterAddress(vm.Address); err != nil {
+		if err := m.unregisterAddress(vm.Address, true); err != nil {
 			vm.Uncommitted = false
 			vm.setState(proto.StateStopped)
 			return err
 		}
 		for _, address := range vm.SecondaryAddresses {
-			if err := m.unregisterAddress(address); err != nil {
+			if err := m.unregisterAddress(address, true); err != nil {
 				vm.logger.Printf("error unregistering address: %s\n",
 					address.IpAddress)
 				vm.Uncommitted = false
@@ -2102,7 +2128,7 @@ func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		return false, errors.New("VM is running")
 	case proto.StateStopping:
 		return false, errors.New("VM is stopping")
-	case proto.StateStopped, proto.StateFailedToStart:
+	case proto.StateStopped, proto.StateFailedToStart, proto.StateExporting:
 		vm.setState(proto.StateStarting)
 		vm.mutex.Unlock()
 		doUnlock = false
@@ -2153,6 +2179,8 @@ func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		return errors.New("VM is destroying")
 	case proto.StateMigrating:
 		return errors.New("VM is migrating")
+	case proto.StateExporting:
+		return errors.New("VM is exporting")
 	default:
 		return errors.New("unknown state: " + vm.State.String())
 	}
@@ -2326,7 +2354,15 @@ func (vm *vmInfoType) delete() {
 	delete(vm.manager.vms, vm.ipAddress)
 	vm.manager.sendVmInfo(vm.ipAddress, nil)
 	var err error
-	if !vm.Uncommitted {
+	if vm.State == proto.StateExporting {
+		err = vm.manager.unregisterAddress(vm.Address, false)
+		for _, address := range vm.SecondaryAddresses {
+			err := vm.manager.unregisterAddress(address, false)
+			if err != nil {
+				vm.manager.Logger.Println(err)
+			}
+		}
+	} else if !vm.Uncommitted {
 		err = vm.manager.releaseAddressInPoolWithLock(vm.Address)
 		for _, address := range vm.SecondaryAddresses {
 			err := vm.manager.releaseAddressInPoolWithLock(address)
@@ -2476,6 +2512,8 @@ func (vm *vmInfoType) processMonitorResponses(monitorSock net.Conn) {
 		vm.delete()
 		return
 	case proto.StateMigrating:
+		return
+	case proto.StateExporting:
 		return
 	default:
 		vm.logger.Println("unknown state: " + vm.State.String())

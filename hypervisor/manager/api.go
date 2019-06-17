@@ -177,6 +177,11 @@ func (m *Manager) DiscardVmSnapshot(ipAddr net.IP,
 	return m.discardVmSnapshot(ipAddr, authInfo)
 }
 
+func (m *Manager) ExportLocalVm(authInfo *srpc.AuthInformation,
+	request proto.ExportLocalVmRequest) (*proto.ExportLocalVmInfo, error) {
+	return m.exportLocalVm(authInfo, request)
+}
+
 func (m *Manager) GetHealthStatus() string {
 	return m.getHealthStatus()
 }

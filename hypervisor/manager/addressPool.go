@@ -288,10 +288,12 @@ func (m *Manager) removeExcessAddressesFromPool(maxFree map[string]uint) error {
 	return nil
 }
 
-func (m *Manager) unregisterAddress(address proto.Address) error {
+func (m *Manager) unregisterAddress(address proto.Address, lock bool) error {
 	found := false
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
+	if lock {
+		m.mutex.Lock()
+		defer m.mutex.Unlock()
+	}
 	addresses := make([]proto.Address, 0, len(m.addressPool.Registered)-1)
 	for _, addr := range m.addressPool.Registered {
 		if address.Equal(&addr) {
