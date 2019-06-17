@@ -195,6 +195,11 @@ type DiscardVmSnapshotResponse struct {
 	Error string
 }
 
+type ExportLocalVmInfo struct {
+	Bridges []string
+	LocalVmInfo
+}
+
 type ExportLocalVmRequest struct {
 	IpAddress          net.IP
 	VerificationCookie []byte `json:",omitempty"`
@@ -202,7 +207,7 @@ type ExportLocalVmRequest struct {
 
 type ExportLocalVmResponse struct {
 	Error  string
-	VmInfo LocalVmInfo
+	VmInfo ExportLocalVmInfo
 }
 
 // The GetUpdates() RPC is fully streamed.
