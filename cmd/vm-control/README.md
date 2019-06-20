@@ -35,6 +35,8 @@ Some of the sub-commands available are:
 - **discard-vm-old-image**: discard the previous root image for a VM
 - **discard-vm-old-user-data**: discard the previous user data for a VM
 - **discard-vm-snapshot**: discard the previous snapshot for a VM
+- **export-local-vm**: export a local VM to an importing tool. This is primarily
+                       for debugging
 - **get-vm-info**: get and show the information for a VM
 - **get-vm-user-data**: get (copy) the user data for a VM
 - **get-vm-volume**: get (copy) a specified VM volume
