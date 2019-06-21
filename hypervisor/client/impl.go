@@ -75,6 +75,23 @@ func destroyVm(client *srpc.Client, ipAddr net.IP, accessToken []byte) error {
 	return errors.New(reply.Error)
 }
 
+func exportLocalVm(client *srpc.Client, ipAddr net.IP,
+	verificationCookie []byte) (proto.ExportLocalVmInfo, error) {
+	request := proto.ExportLocalVmRequest{
+		IpAddress:          ipAddr,
+		VerificationCookie: verificationCookie,
+	}
+	var reply proto.ExportLocalVmResponse
+	err := client.RequestReply("Hypervisor.ExportLocalVm", request, &reply)
+	if err != nil {
+		return proto.ExportLocalVmInfo{}, err
+	}
+	if err := errors.New(reply.Error); err != nil {
+		return proto.ExportLocalVmInfo{}, err
+	}
+	return reply.VmInfo, nil
+}
+
 func getVmInfo(client *srpc.Client, ipAddr net.IP) (proto.VmInfo, error) {
 	request := proto.GetVmInfoRequest{IpAddress: ipAddr}
 	var reply proto.GetVmInfoResponse

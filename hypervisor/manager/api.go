@@ -29,7 +29,7 @@ type DhcpServer interface {
 
 type Manager struct {
 	StartOptions
-	importCookie      []byte
+	rootCookie        []byte
 	memTotalInMiB     uint64
 	numCPU            int
 	serialNumber      string
@@ -76,13 +76,7 @@ type vmInfoType struct {
 	serialInput                io.Writer
 	serialOutput               chan<- byte
 	stoppedNotifier            chan<- struct{}
-	VolumeLocations            []volumeType
-	proto.VmInfo
-}
-
-type volumeType struct {
-	DirectoryToCleanup string
-	Filename           string
+	proto.LocalVmInfo
 }
 
 func New(startOptions StartOptions) (*Manager, error) {
@@ -181,6 +175,11 @@ func (m *Manager) DiscardVmOldUserData(ipAddr net.IP,
 func (m *Manager) DiscardVmSnapshot(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
 	return m.discardVmSnapshot(ipAddr, authInfo)
+}
+
+func (m *Manager) ExportLocalVm(authInfo *srpc.AuthInformation,
+	request proto.ExportLocalVmRequest) (*proto.ExportLocalVmInfo, error) {
+	return m.exportLocalVm(authInfo, request)
 }
 
 func (m *Manager) GetHealthStatus() string {

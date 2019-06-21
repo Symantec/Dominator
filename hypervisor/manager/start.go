@@ -35,18 +35,18 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	importCookie := make([]byte, 32)
-	if _, err := rand.Read(importCookie); err != nil {
+	rootCookie := make([]byte, 32)
+	if _, err := rand.Read(rootCookie); err != nil {
 		return nil, err
 	}
 	err = fsutil.CopyToFile(filepath.Join(startOptions.StateDir,
-		"import-cookie"), privateFilePerms, bytes.NewReader(importCookie), 0)
+		"root-cookie"), privateFilePerms, bytes.NewReader(rootCookie), 0)
 	if err != nil {
 		return nil, err
 	}
 	manager := &Manager{
 		StartOptions:      startOptions,
-		importCookie:      importCookie,
+		rootCookie:        rootCookie,
 		memTotalInMiB:     memInfo.Total >> 20,
 		notifiers:         make(map[<-chan proto.Update]chan<- proto.Update),
 		numCPU:            runtime.NumCPU(),

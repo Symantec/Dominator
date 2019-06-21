@@ -17,6 +17,7 @@ var (
 		StateStopped:       "stopped",
 		StateDestroying:    "destroying",
 		StateMigrating:     "migrating",
+		StateExporting:     "exporting",
 	}
 	textToState map[string]State
 

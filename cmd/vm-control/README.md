@@ -35,6 +35,11 @@ Some of the sub-commands available are:
 - **discard-vm-old-image**: discard the previous root image for a VM
 - **discard-vm-old-user-data**: discard the previous user data for a VM
 - **discard-vm-snapshot**: discard the previous snapshot for a VM
+- **export-local-vm**: export a local VM to an importing tool. This is primarily
+                       for debugging
+- **export-virsh-vm**: export VM to a local virsh VM. The specified FQDN will
+                       be used to specify the new virsh domain name. The VM
+                       must first be stopped. The exported virsh VM is started
 - **get-vm-info**: get and show the information for a VM
 - **get-vm-user-data**: get (copy) the user data for a VM
 - **get-vm-volume**: get (copy) a specified VM volume
@@ -101,3 +106,33 @@ match the libvirt *domain name*.
              recommended
   - `abandon`: the VM is deleted from the *Hypervisor* and will need to be
                manually started with the `virsh` command
+
+## Exporting VMs to virsh (libvirt)
+A local VM on the *Hypervisor* may be exported to a libvirt VM. Once the libvirt
+VM is *committed* the original VM is removed from the database and is fully
+"owned" by libvirt. Exporting a VM requires root access on the *Hypervisor* (the
+*vm-control* tool will use the `sudo` command if needed).
+
+There are a few simple steps that should be followed to export a VM. In the
+example below, the hostname (DNS entry) of the VM to be exported is
+`jump.prod.company.com`. The IP address of the VM may also be used. In either
+case, the hostname or IP address provided will become the new libvirt *domain
+name*.
+- set up a DHCP server
+- add the IP and MAC addresses of the VM being exported to the DHCP server
+  configuration. Alternatively, you can log into the VM prior to exporting it
+  and reconfigure it to use a static network configuration
+- if a *Fleet Manager* is being used, the IP address must be added to the
+  `ReservedIPs` list in the topology, so as to prevent re-use of the IP address
+  when creating new VMs
+- run `vm-control export-virsh-vm jump.prod.company.com`
+- you will be prompted if a DHCP server entry has been configured
+- wait for the VM to start and log in and check that it is functioning properly
+- respond to the `commit/defer/abandon` prompt:
+  - `commit`: the VM is removed from the *Hypervisor* database
+  - `defer`: the new libvirt VM is left running. It may later be committed (and
+             the `vm-control destroy-vm` command should be used to
+             remove it from the *Hypervisor* database). Deferring is not
+             recommended
+  - `abandon`: the new libvirt VM is deleted from the libvirt database and the
+               original VM will be started

@@ -105,7 +105,7 @@ func createTapDevice(bridge string) (*os.File, error) {
 	return tapFile, nil
 }
 
-func extractKernel(volume volumeType, extension string,
+func extractKernel(volume proto.LocalVolume, extension string,
 	objectsGetter objectserver.ObjectsGetter, fs *filesystem.FileSystem,
 	bootInfo *util.BootInfoType) error {
 	dirent := bootInfo.KernelImageDirent
@@ -273,21 +273,23 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest,
 		ipAddress = address.IpAddress.String()
 	}
 	vm := &vmInfoType{
-		VmInfo: proto.VmInfo{
-			Address:            address,
-			DestroyProtection:  req.DestroyProtection,
-			Hostname:           req.Hostname,
-			ImageName:          req.ImageName,
-			ImageURL:           req.ImageURL,
-			MemoryInMiB:        req.MemoryInMiB,
-			MilliCPUs:          req.MilliCPUs,
-			OwnerGroups:        req.OwnerGroups,
-			SpreadVolumes:      req.SpreadVolumes,
-			SecondaryAddresses: secondaryAddresses,
-			SecondarySubnetIDs: req.SecondarySubnetIDs,
-			State:              proto.StateStarting,
-			SubnetId:           subnetId,
-			Tags:               req.Tags,
+		LocalVmInfo: proto.LocalVmInfo{
+			VmInfo: proto.VmInfo{
+				Address:            address,
+				DestroyProtection:  req.DestroyProtection,
+				Hostname:           req.Hostname,
+				ImageName:          req.ImageName,
+				ImageURL:           req.ImageURL,
+				MemoryInMiB:        req.MemoryInMiB,
+				MilliCPUs:          req.MilliCPUs,
+				OwnerGroups:        req.OwnerGroups,
+				SpreadVolumes:      req.SpreadVolumes,
+				SecondaryAddresses: secondaryAddresses,
+				SecondarySubnetIDs: req.SecondarySubnetIDs,
+				State:              proto.StateStarting,
+				SubnetId:           subnetId,
+				Tags:               req.Tags,
+			},
 		},
 		manager:          m,
 		dirname:          filepath.Join(m.StateDir, "VMs", ipAddress),
@@ -764,7 +766,7 @@ func (m *Manager) deleteVmVolume(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		return err
 	}
 	os.Remove(vm.VolumeLocations[volumeIndex].DirectoryToCleanup)
-	volumeLocations := make([]volumeType, 0, len(vm.VolumeLocations)-1)
+	volumeLocations := make([]proto.LocalVolume, 0, len(vm.VolumeLocations)-1)
 	volumes := make([]proto.Volume, 0, len(vm.VolumeLocations)-1)
 	for index, volume := range vm.VolumeLocations {
 		if uint(index) != volumeIndex {
@@ -796,7 +798,8 @@ func (m *Manager) destroyVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		vm.commandChannel <- "quit"
 	case proto.StateStopping:
 		return errors.New("VM is stopping")
-	case proto.StateStopped, proto.StateFailedToStart, proto.StateMigrating:
+	case proto.StateStopped, proto.StateFailedToStart, proto.StateMigrating,
+		proto.StateExporting:
 		vm.delete()
 	case proto.StateDestroying:
 		return errors.New("VM is already destroying")
@@ -848,6 +851,31 @@ func (m *Manager) discardVmSnapshot(ipAddr net.IP,
 	}
 	defer vm.mutex.Unlock()
 	return vm.discardSnapshot()
+}
+
+func (m *Manager) exportLocalVm(authInfo *srpc.AuthInformation,
+	request proto.ExportLocalVmRequest) (*proto.ExportLocalVmInfo, error) {
+	if !bytes.Equal(m.rootCookie, request.VerificationCookie) {
+		return nil, fmt.Errorf("bad verification cookie: you are not root")
+	}
+	vm, err := m.getVmLockAndAuth(request.IpAddress, true, authInfo, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer vm.mutex.Unlock()
+	if vm.State != proto.StateStopped {
+		return nil, errors.New("VM is not stopped")
+	}
+	bridges, _, err := vm.getBridgesAndOptions(false)
+	if err != nil {
+		return nil, err
+	}
+	vm.setState(proto.StateExporting)
+	vmInfo := proto.ExportLocalVmInfo{
+		Bridges:     bridges,
+		LocalVmInfo: vm.LocalVmInfo,
+	}
+	return &vmInfo, nil
 }
 
 func (m *Manager) getImage(searchName string, imageTimeout time.Duration) (
@@ -1057,7 +1085,7 @@ func (m *Manager) getVmVolume(conn *srpc.Conn) error {
 
 func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 	request proto.ImportLocalVmRequest) error {
-	if !bytes.Equal(m.importCookie, request.VerificationCookie) {
+	if !bytes.Equal(m.rootCookie, request.VerificationCookie) {
 		return fmt.Errorf("bad verification cookie: you are not root")
 	}
 	request.VmInfo.OwnerUsers = []string{authInfo.Username}
@@ -1093,7 +1121,9 @@ func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 	}
 	ipAddress := request.Address.IpAddress.String()
 	vm := &vmInfoType{
-		VmInfo:           request.VmInfo,
+		LocalVmInfo: proto.LocalVmInfo{
+			VmInfo: request.VmInfo,
+		},
 		manager:          m,
 		dirname:          filepath.Join(m.StateDir, "VMs", ipAddress),
 		ipAddress:        ipAddress,
@@ -1149,7 +1179,7 @@ func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 		if err := os.Link(sourceFilename, destFilename); err != nil {
 			return err
 		}
-		vm.VolumeLocations = append(vm.VolumeLocations, volumeType{
+		vm.VolumeLocations = append(vm.VolumeLocations, proto.LocalVolume{
 			dirname, destFilename})
 	}
 	m.vms[ipAddress] = vm
@@ -1240,8 +1270,11 @@ func (m *Manager) migrateVm(conn *srpc.Conn) error {
 		return err
 	}
 	vm := &vmInfoType{
-		VmInfo:           vmInfo,
-		VolumeLocations:  make([]volumeType, 0, len(volumeDirectories)),
+		LocalVmInfo: proto.LocalVmInfo{
+			VmInfo: vmInfo,
+			VolumeLocations: make([]proto.LocalVolume, 0,
+				len(volumeDirectories)),
+		},
 		manager:          m,
 		dirname:          filepath.Join(m.StateDir, "VMs", ipAddress),
 		doNotWriteOrSend: true,
@@ -1280,7 +1313,7 @@ func (m *Manager) migrateVm(conn *srpc.Conn) error {
 			filename = filepath.Join(dirname,
 				fmt.Sprintf("secondary-volume.%d", index-1))
 		}
-		vm.VolumeLocations = append(vm.VolumeLocations, volumeType{
+		vm.VolumeLocations = append(vm.VolumeLocations, proto.LocalVolume{
 			DirectoryToCleanup: dirname,
 			Filename:           filename,
 		})
@@ -1749,13 +1782,13 @@ func (m *Manager) prepareVmForMigration(ipAddr net.IP,
 		// claims on addresses.
 		vm.Uncommitted = true
 		vm.setState(proto.StateMigrating)
-		if err := m.unregisterAddress(vm.Address); err != nil {
+		if err := m.unregisterAddress(vm.Address, true); err != nil {
 			vm.Uncommitted = false
 			vm.setState(proto.StateStopped)
 			return err
 		}
 		for _, address := range vm.SecondaryAddresses {
-			if err := m.unregisterAddress(address); err != nil {
+			if err := m.unregisterAddress(address, true); err != nil {
 				vm.logger.Printf("error unregistering address: %s\n",
 					address.IpAddress)
 				vm.Uncommitted = false
@@ -2095,7 +2128,7 @@ func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		return false, errors.New("VM is running")
 	case proto.StateStopping:
 		return false, errors.New("VM is stopping")
-	case proto.StateStopped, proto.StateFailedToStart:
+	case proto.StateStopped, proto.StateFailedToStart, proto.StateExporting:
 		vm.setState(proto.StateStarting)
 		vm.mutex.Unlock()
 		doUnlock = false
@@ -2146,6 +2179,8 @@ func (m *Manager) stopVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		return errors.New("VM is destroying")
 	case proto.StateMigrating:
 		return errors.New("VM is migrating")
+	case proto.StateExporting:
+		return errors.New("VM is exporting")
 	default:
 		return errors.New("unknown state: " + vm.State.String())
 	}
@@ -2163,7 +2198,7 @@ func (m *Manager) unregisterVmMetadataNotifier(ipAddr net.IP,
 	return nil
 }
 
-func (m *Manager) writeRaw(volume volumeType, extension string,
+func (m *Manager) writeRaw(volume proto.LocalVolume, extension string,
 	client *srpc.Client, fs *filesystem.FileSystem,
 	writeRawOptions util.WriteRawOptions, skipBootloader bool) error {
 	var objectsGetter objectserver.ObjectsGetter
@@ -2214,7 +2249,7 @@ func (vm *vmInfoType) changeIpAddress(ipAddress string) error {
 		if err := os.Rename(volume.DirectoryToCleanup, dirname); err != nil {
 			return err
 		}
-		vm.VolumeLocations[index] = volumeType{
+		vm.VolumeLocations[index] = proto.LocalVolume{
 			DirectoryToCleanup: dirname,
 			Filename: filepath.Join(dirname,
 				filepath.Base(volume.Filename)),
@@ -2319,7 +2354,15 @@ func (vm *vmInfoType) delete() {
 	delete(vm.manager.vms, vm.ipAddress)
 	vm.manager.sendVmInfo(vm.ipAddress, nil)
 	var err error
-	if !vm.Uncommitted {
+	if vm.State == proto.StateExporting {
+		err = vm.manager.unregisterAddress(vm.Address, false)
+		for _, address := range vm.SecondaryAddresses {
+			err := vm.manager.unregisterAddress(address, false)
+			if err != nil {
+				vm.manager.Logger.Println(err)
+			}
+		}
+	} else if !vm.Uncommitted {
 		err = vm.manager.releaseAddressInPoolWithLock(vm.Address)
 		for _, address := range vm.SecondaryAddresses {
 			err := vm.manager.releaseAddressInPoolWithLock(address)
@@ -2470,6 +2513,8 @@ func (vm *vmInfoType) processMonitorResponses(monitorSock net.Conn) {
 		return
 	case proto.StateMigrating:
 		return
+	case proto.StateExporting:
+		return
 	default:
 		vm.logger.Println("unknown state: " + vm.State.String())
 	}
@@ -2551,7 +2596,7 @@ func (vm *vmInfoType) setupVolumes(rootSize uint64,
 	}
 	filename := filepath.Join(volumeDirectory, "root")
 	vm.VolumeLocations = append(vm.VolumeLocations,
-		volumeType{volumeDirectory, filename})
+		proto.LocalVolume{volumeDirectory, filename})
 	for index := range secondaryVolumes {
 		volumeDirectory := filepath.Join(volumeDirectories[index+1],
 			vm.ipAddress)
@@ -2562,7 +2607,7 @@ func (vm *vmInfoType) setupVolumes(rootSize uint64,
 		filename := filepath.Join(volumeDirectory,
 			fmt.Sprintf("secondary-volume.%d", index))
 		vm.VolumeLocations = append(vm.VolumeLocations,
-			volumeType{volumeDirectory, filename})
+			proto.LocalVolume{volumeDirectory, filename})
 	}
 	return nil
 }

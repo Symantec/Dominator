@@ -15,6 +15,7 @@ const (
 	StateStopped       = 4
 	StateDestroying    = 5
 	StateMigrating     = 6
+	StateExporting     = 7
 
 	VolumeFormatRaw   = 0
 	VolumeFormatQCOW2 = 1
@@ -194,6 +195,21 @@ type DiscardVmSnapshotResponse struct {
 	Error string
 }
 
+type ExportLocalVmInfo struct {
+	Bridges []string
+	LocalVmInfo
+}
+
+type ExportLocalVmRequest struct {
+	IpAddress          net.IP
+	VerificationCookie []byte `json:",omitempty"`
+}
+
+type ExportLocalVmResponse struct {
+	Error  string
+	VmInfo ExportLocalVmInfo
+}
+
 // The GetUpdates() RPC is fully streamed.
 // The client may or may not send GetUpdateRequest messages to the server.
 // The server sends a stream of Update messages.
@@ -278,6 +294,16 @@ type ListVolumeDirectoriesRequest struct{}
 type ListVolumeDirectoriesResponse struct {
 	Directories []string
 	Error       string
+}
+
+type LocalVolume struct {
+	DirectoryToCleanup string
+	Filename           string
+}
+
+type LocalVmInfo struct {
+	VmInfo
+	VolumeLocations []LocalVolume
 }
 
 type MigrateVmRequest struct {

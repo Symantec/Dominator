@@ -26,6 +26,11 @@ func DestroyVm(client *srpc.Client, ipAddr net.IP, accessToken []byte) error {
 	return destroyVm(client, ipAddr, accessToken)
 }
 
+func ExportLocalVm(client *srpc.Client, ipAddr net.IP,
+	verificationCookie []byte) (proto.ExportLocalVmInfo, error) {
+	return exportLocalVm(client, ipAddr, verificationCookie)
+}
+
 func GetVmInfo(client *srpc.Client, ipAddr net.IP) (proto.VmInfo, error) {
 	return getVmInfo(client, ipAddr)
 }

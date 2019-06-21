@@ -42,6 +42,10 @@ var (
 		"Time to wait before timing out on image fetch")
 	imageURL = flag.String("imageURL", "",
 		"Name of URL of image to boot with")
+	localVmCreate = flag.String("localVmCreate", "",
+		"Command to make local VM when exporting. The VM name is given as the argument. The VM JSON is available on stdin")
+	localVmDestroy = flag.String("localVmDestroy", "",
+		"Command to destroy local VM when exporting. The VM name is given as the argument")
 	location = flag.String("location", "",
 		"Location to search for hypervisors")
 	memory       flagutil.Size
@@ -111,6 +115,8 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  discard-vm-old-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  discard-vm-old-user-data IPaddr")
 	fmt.Fprintln(os.Stderr, "  discard-vm-snapshot IPaddr")
+	fmt.Fprintln(os.Stderr, "  export-local-vm IPaddr")
+	fmt.Fprintln(os.Stderr, "  export-virsh-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  get-vm-info IPaddr")
 	fmt.Fprintln(os.Stderr, "  get-vm-user-data IPaddr")
 	fmt.Fprintln(os.Stderr, "  get-vm-volume IPaddr")
@@ -157,6 +163,8 @@ var subcommands = []subcommand{
 	{"discard-vm-old-image", 1, 1, discardVmOldImageSubcommand},
 	{"discard-vm-old-user-data", 1, 1, discardVmOldUserDataSubcommand},
 	{"discard-vm-snapshot", 1, 1, discardVmSnapshotSubcommand},
+	{"export-local-vm", 1, 1, exportLocalVmSubcommand},
+	{"export-virsh-vm", 1, 1, exportVirshVmSubcommand},
 	{"get-vm-info", 1, 1, getVmInfoSubcommand},
 	{"get-vm-user-data", 1, 1, getVmUserDataSubcommand},
 	{"get-vm-volume", 1, 1, getVmVolumeSubcommand},

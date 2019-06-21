@@ -18,19 +18,32 @@ import (
 	proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
+type bridgeType struct {
+	Bridge string `xml:"bridge,attr"`
+}
+
+type cpuType struct {
+	Mode string `xml:"mode,attr"`
+}
+
 type devicesInfo struct {
-	Interfaces []interfaceType `xml:"interface"`
-	Volumes    []volumeType    `xml:"disk"`
+	Volumes     []volumeType    `xml:"disk"`
+	Interfaces  []interfaceType `xml:"interface"`
+	SerialPorts []serialType    `xml:"serial"`
 }
 
 type driverType struct {
-	Name string `xml:"name,attr"`
-	Type string `xml:"type,attr"`
+	Name  string `xml:"name,attr"`
+	Type  string `xml:"type,attr"`
+	Cache string `xml:"cache,attr"`
+	Io    string `xml:"io,attr"`
 }
 
 type interfaceType struct {
-	Mac  macType `xml:"mac"`
-	Type string  `xml:"type,attr"`
+	Mac    macType    `xml:"mac"`
+	Model  modelType  `xml:"model"`
+	Source bridgeType `xml:"source"`
+	Type   string     `xml:"type,attr"`
 }
 
 type macType struct {
@@ -42,8 +55,36 @@ type memoryInfo struct {
 	Unit  string `xml:"unit,attr"`
 }
 
+type modelType struct {
+	Type string `xml:"type,attr"`
+}
+
+type osInfo struct {
+	Type osTypeInfo `xml:"type"`
+}
+
+type osTypeInfo struct {
+	Arch    string `xml:"arch,attr"`
+	Machine string `xml:"machine,attr"`
+	Value   string `xml:",chardata"`
+}
+
+type serialType struct {
+	Source serialSourceType `xml:"source"`
+	Type   string           `xml:"type,attr"`
+}
+
+type serialSourceType struct {
+	Path string `xml:"path,attr"`
+}
+
 type sourceType struct {
 	File string `xml:"file,attr"`
+}
+
+type targetType struct {
+	Device string `xml:"dev,attr"`
+	Bus    string `xml:"bus,attr"`
 }
 
 type vCpuInfo struct {
@@ -52,9 +93,13 @@ type vCpuInfo struct {
 }
 
 type virshInfoType struct {
+	XMLName xml.Name    `xml:"domain"`
+	Cpu     cpuType     `xml:"cpu"`
 	Devices devicesInfo `xml:"devices"`
 	Memory  memoryInfo  `xml:"memory"`
 	Name    string      `xml:"name"`
+	Os      osInfo      `xml:"os"`
+	Type    string      `xml:"type,attr"`
 	VCpu    vCpuInfo    `xml:"vcpu"`
 }
 
@@ -62,6 +107,7 @@ type volumeType struct {
 	Device string     `xml:"device,attr"`
 	Driver driverType `xml:"driver"`
 	Source sourceType `xml:"source"`
+	Target targetType `xml:"target"`
 	Type   string     `xml:"type,attr"`
 }
 
@@ -137,7 +183,7 @@ func importVirshVm(macAddr, domainName string, logger log.DebugLogger) error {
 		OwnerUsers:  ownerUsers,
 		Tags:        tags,
 	}}
-	request.VerificationCookie, err = readImportCookie(logger)
+	request.VerificationCookie, err = readRootCookie(logger)
 	if err != nil {
 		return err
 	}
