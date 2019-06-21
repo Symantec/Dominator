@@ -116,6 +116,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  discard-vm-old-user-data IPaddr")
 	fmt.Fprintln(os.Stderr, "  discard-vm-snapshot IPaddr")
 	fmt.Fprintln(os.Stderr, "  export-local-vm IPaddr")
+	fmt.Fprintln(os.Stderr, "  export-virsh-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  get-vm-info IPaddr")
 	fmt.Fprintln(os.Stderr, "  get-vm-user-data IPaddr")
 	fmt.Fprintln(os.Stderr, "  get-vm-volume IPaddr")
@@ -163,6 +164,7 @@ var subcommands = []subcommand{
 	{"discard-vm-old-user-data", 1, 1, discardVmOldUserDataSubcommand},
 	{"discard-vm-snapshot", 1, 1, discardVmSnapshotSubcommand},
 	{"export-local-vm", 1, 1, exportLocalVmSubcommand},
+	{"export-virsh-vm", 1, 1, exportVirshVmSubcommand},
 	{"get-vm-info", 1, 1, getVmInfoSubcommand},
 	{"get-vm-user-data", 1, 1, getVmUserDataSubcommand},
 	{"get-vm-volume", 1, 1, getVmVolumeSubcommand},
