@@ -1,6 +1,7 @@
 package unpacker
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -138,6 +139,7 @@ func (stream *streamManagerState) unpack(imageName string,
 		stream.unpacker.logger)
 	_, _, err = sublib.Update(request, mountPoint, objectsDir, nil, nil, nil,
 		stream.unpacker.logger)
+	writeImageName(imageName, mountPoint)
 	streamInfo.status = unpackproto.StatusStreamMounted
 	stream.unpacker.logger.Printf("Update(%s) completed in %s\n",
 		imageName, format.Duration(time.Since(startTime)))
@@ -285,4 +287,15 @@ func readOne(objectsDir string, hashVal hash.Hash, length uint64,
 		return err
 	}
 	return fsutil.CopyToFile(filename, filePerms, reader, length)
+}
+
+func writeImageName(imageName, mountPoint string) {
+	dirname := filepath.Join(mountPoint, "var", "log")
+	if err := os.MkdirAll(dirname, fsutil.DirPerms); err != nil {
+		return
+	}
+	buffer := &bytes.Buffer{}
+	fmt.Fprintln(buffer, imageName)
+	fsutil.CopyToFile(filepath.Join(dirname, "unpacked-image"),
+		fsutil.PublicFilePerms, buffer, 0)
 }
