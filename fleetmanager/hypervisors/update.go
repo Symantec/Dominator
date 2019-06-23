@@ -378,8 +378,8 @@ func (m *Manager) manageHypervisorLoop(h *hypervisorType, hostname string) {
 	for _, vmIpAddr := range vmList {
 		pVmInfo, err := m.storer.ReadVm(h.machine.HostIpAddress, vmIpAddr)
 		if err != nil {
-			h.logger.Printf("error reading VM: %s, not managing hypervisor: %s",
-				vmIpAddr, err)
+			h.logger.Printf("error reading VM: %s: %s", vmIpAddr, err)
+			continue
 		}
 		vmInfo := &vmInfoType{vmIpAddr, *pVmInfo, h}
 		h.vms[vmIpAddr] = vmInfo
