@@ -373,7 +373,7 @@ The *planned* image is only pushed if the *active* image is the same as the *req
 Fast, Secure re-Imaging
 -----------------------
 
-This section posits a [***Birther***](https://docs.google.com/document/d/1y7rPTuG145fdPhqaCdLu_03D1dC1UTRzyEq61ygIQeg/pub) system which is designed to leverage the **Dominator** to deploy images. This system is not implemented, so this section is currently a guide to how it would work.
+This section posits a [**Birther**](../MachineBirthing/README.md) system which is designed to leverage the **Dominator** to deploy images. This system is not implemented, so this section is currently a guide to how it would work.
 
 When a machine is re-provisioned for a different purpose, it may be wise to *re-image* it (wipe the file-system and re-install). This is typically done by sending a machine back to the **Birther** which already takes care of creating file-systems and installing the OS image. This is an expensive operation as it requires fetching the full OS image across the network.
 
@@ -410,7 +410,7 @@ As stated earlier, a single **Dominator** system and a single **Image Server** s
 
 -   SSD storage with 500 MB/s write throughput
 
-In this environment, it would be possible to perform a complete system upgrade (such as when [**birthing**](https://docs.google.com/document/d/1y7rPTuG145fdPhqaCdLu_03D1dC1UTRzyEq61ygIQeg/pub) a machine) for a single machine in 2 seconds. When birthing many machines, the limiting factor is downloading the system image, as this is the largest component of network traffic. Thus, 3,600 machine per hour can be birthed *without any peer-to-peer enhancements*, with the limiting factor being bandwidth out of the **Image Server**.
+In this environment, it would be possible to perform a complete system upgrade (such as when [**birthing**](../MachineBirthing/README.md) a machine) for a single machine in 2 seconds. When birthing many machines, the limiting factor is downloading the system image, as this is the largest component of network traffic. Thus, 3,600 machine per hour can be birthed *without any peer-to-peer enhancements*, with the limiting factor being bandwidth out of the **Image Server**.
 
 A typical “large” system image upgrade changes less than 10% of the files on the system, which would require less than 100 MB of network traffic to each **sub**, which can be transferred in 0.1 seconds at maximum network speed. For such a change, 10 machines per second could be upgraded, which would be 1,000 seconds (under 17 minutes) for an upgrade of all 10,000 machines in the cluster. Again, this is *without any peer-to-peer enhancements*.
 
@@ -441,7 +441,7 @@ Polling speed is optimised since each **sub** stores a generation count of the f
 Birthing Machines
 =================
 
-The **Dominator** system may be used to optimise the birthing of machines. The [***Birther***](https://docs.google.com/document/d/1y7rPTuG145fdPhqaCdLu_03D1dC1UTRzyEq61ygIQeg/pub) system would install a minimal payload on a machine (**subd** and an appropriate certificate authority file), start up **subd**, add the machine to the **MDB** and wait for the **Dominator** to install the system image, which will complete the birthing process. [***Birthing***](https://docs.google.com/document/d/1y7rPTuG145fdPhqaCdLu_03D1dC1UTRzyEq61ygIQeg/pub) machines is the subject of a separate document.
+The **Dominator** system may be used to optimise the birthing of machines. The [**Birther**](../MachineBirthing/README.md) system would install a minimal payload on a machine (**subd** and an appropriate certificate authority file), start up **subd**, add the machine to the **MDB** and wait for the **Dominator** to install the system image, which will complete the birthing process. [**Birthing**](../MachineBirthing/README.md) machines is the subject of a separate document.
 
 Auditing, Compliance Enforcement and Intrusion Detection
 ========================================================
