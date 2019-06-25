@@ -200,17 +200,31 @@ func (w *ChecksumWriter) WriteChecksum() error {
 	return w.writeChecksum()
 }
 
+// RenamingWriter is similar to a writable os.File, except that it attempts to
+// ensure data integrity. A temporary file is used for writing, which is
+// renamed during the Close method and an fsync(2) is attempted.
 type RenamingWriter struct {
 	*os.File
 	filename string
 	abort    bool
 }
 
+// CreateRenamingWriter will create a temporary file for writing and will rename
+// the temporary file to filename in the Close method if there are no write
+// errors.
 func CreateRenamingWriter(filename string, perm os.FileMode) (
 	*RenamingWriter, error) {
 	return createRenamingWriter(filename, perm)
 }
 
+// Abort will prevent file renaming during a subsequent Close method call.
+func (w *RenamingWriter) Abort() {
+	w.abort = true
+}
+
+// Close may attempt to fsync(2) the contents of the temporary file (if fsync(2)
+// has not been called recently) and will then close and rename the temporary
+// file if there were no Write errors or a call to the Abort method.
 func (w *RenamingWriter) Close() error {
 	if err := recover(); err != nil {
 		w.abort = true

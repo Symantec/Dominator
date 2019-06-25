@@ -79,6 +79,7 @@ func (s *Storer) writeVm(hypervisor net.IP, ipAddr string,
 			defer writer.Close()
 			encoder := gob.NewEncoder(writer)
 			if err := encoder.Encode(vmInfo); err != nil {
+				writer.Abort()
 				return err
 			}
 			return writer.Close()
