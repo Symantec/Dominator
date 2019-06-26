@@ -1,7 +1,7 @@
 # Getting Started
 How to get started with the **Dominator**. For a more in-depth understanding of
 the system, please read the
-[design document](https://docs.google.com/document/d/1fiDFY9T0mc5zMcFqPvmQcD90T4WQr8wpiMTHVDjTkOE/pub).
+[design document](../design-docs/Dominator/README.md).
 
 ## Overview
 The **Dominator** is a system for pushing machine images (kernel, operating

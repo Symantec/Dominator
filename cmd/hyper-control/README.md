@@ -73,8 +73,9 @@ physical machines. This requires that information about machines and subnets is
 recorded in the topology (usually in Git), which is obtained from the
 [Fleet Manager](../fleet-manager/README.md). *Hypervisors* may be installed by
 PXE booting an installer, booting from a custom ISO image or installing over a
-running system. Please read the [Machine Birthing design document](https://docs.google.com/document/d/1y7rPTuG145fdPhqaCdLu_03D1dC1UTRzyEq61ygIQeg/pub) which
-describes the principles of installing physical machines.
+running system. Please read the
+[Machine Birthing design document](../../design-docs/MachineBirthing/README.md)
+which describes the principles of installing physical machines.
 
 ### Network (PXE) Installation
 This is the most common method of installing. If there is at least one working
