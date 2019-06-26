@@ -65,8 +65,9 @@ type ListHypervisorLocationsResponse struct {
 }
 
 type ListHypervisorsInLocationRequest struct {
-	Location string
-	SubnetId string
+	IncludeUnhealthy bool
+	Location         string
+	SubnetId         string
 }
 
 type ListHypervisorsInLocationResponse struct {
