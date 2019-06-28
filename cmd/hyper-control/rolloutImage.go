@@ -93,7 +93,8 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 		fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum))
 	defer fleetManagerClientResource.ScheduleClose()
 	logger.Debugln(0, "finding good Hypervisors")
-	hypervisorAddresses, err := listGoodHypervisors(fleetManagerClientResource)
+	hypervisorAddresses, err := listConnectedHypervisors(
+		fleetManagerClientResource)
 	if err != nil {
 		return err
 	}
@@ -246,19 +247,22 @@ func getTagsForHypervisors(clientResource *srpc.ClientResource) (
 	return tagsForHypervisors, nil
 }
 
-func listGoodHypervisors(clientResource *srpc.ClientResource) (
+func listConnectedHypervisors(clientResource *srpc.ClientResource) (
 	[]string, error) {
-	return listGoodHypervisorsInLocation(clientResource, *location)
+	return listConnectedHypervisorsInLocation(clientResource, *location)
 }
 
-func listGoodHypervisorsInLocation(clientResource *srpc.ClientResource,
+func listConnectedHypervisorsInLocation(clientResource *srpc.ClientResource,
 	location string) ([]string, error) {
 	client, err := clientResource.GetHTTP(nil, 0)
 	if err != nil {
 		return nil, err
 	}
 	defer client.Put()
-	request := fm_proto.ListHypervisorsInLocationRequest{Location: location}
+	request := fm_proto.ListHypervisorsInLocationRequest{
+		IncludeUnhealthy: true,
+		Location:         location,
+	}
 	var reply fm_proto.ListHypervisorsInLocationResponse
 	err = client.RequestReply("FleetManager.ListHypervisorsInLocation",
 		request, &reply)
