@@ -236,7 +236,7 @@ func netbootHost(hostname string, logger log.DebugLogger) error {
 		hypervisorAddresses = append(hypervisorAddresses,
 			fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum))
 	} else {
-		hypervisorAddresses, err = listGoodHypervisorsInLocation(fmCR,
+		hypervisorAddresses, err = listConnectedHypervisorsInLocation(fmCR,
 			info.Location)
 		if err != nil {
 			return err
