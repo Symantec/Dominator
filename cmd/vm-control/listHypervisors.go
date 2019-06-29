@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/Symantec/Dominator/lib/errors"
@@ -25,8 +26,9 @@ func listHypervisors(logger log.DebugLogger) error {
 	}
 	defer client.Close()
 	request := proto.ListHypervisorsInLocationRequest{
-		Location: *location,
-		SubnetId: *subnetId,
+		IncludeUnhealthy: *includeUnhealthy,
+		Location:         *location,
+		SubnetId:         *subnetId,
 	}
 	var reply proto.ListHypervisorsInLocationResponse
 	err = client.RequestReply("FleetManager.ListHypervisorsInLocation",
@@ -37,8 +39,12 @@ func listHypervisors(logger log.DebugLogger) error {
 	if err := errors.New(reply.Error); err != nil {
 		return err
 	}
+	hypervisors := make([]string, 0, len(reply.HypervisorAddresses))
 	for _, address := range reply.HypervisorAddresses {
-		hypervisor := strings.Split(address, ":")[0]
+		hypervisors = append(hypervisors, strings.Split(address, ":")[0])
+	}
+	sort.Strings(hypervisors)
+	for _, hypervisor := range hypervisors {
 		if _, err := fmt.Println(hypervisor); err != nil {
 			return err
 		}
