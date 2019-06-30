@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Symantec/Dominator/lib/filter"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/mbr"
 	"github.com/Symantec/Dominator/lib/objectserver"
@@ -36,6 +37,10 @@ type ComputedFilesData struct {
 // should be followed by a call to dest.RebuildInodePointers().
 func CopyMtimes(source, dest *filesystem.FileSystem) {
 	copyMtimes(source, dest)
+}
+
+func DeletedFilteredFiles(rootDir string, filt *filter.Filter) error {
+	return deletedFilteredFiles(rootDir, filt)
 }
 
 func GetBootInfo(fs *filesystem.FileSystem, rootLabel string,
