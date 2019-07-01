@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/json"
@@ -17,7 +18,8 @@ import (
 )
 
 func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
-	rootDir string, buildLog buildLogger) (manifestType, error) {
+	rootDir string, applyFilter bool,
+	buildLog buildLogger) (manifestType, error) {
 	manifestFile := path.Join(manifestDir, "manifest")
 	var manifestConfig manifestConfigType
 	if err := json.ReadFromFile(manifestFile, &manifestConfig); err != nil {
@@ -34,6 +36,12 @@ func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
 	if err := processManifest(manifestDir, rootDir, buildLog); err != nil {
 		return manifestType{},
 			errors.New("error processing manifest: " + err.Error())
+	}
+	if applyFilter {
+		err := util.DeletedFilteredFiles(rootDir, manifestConfig.Filter)
+		if err != nil {
+			return manifestType{}, err
+		}
 	}
 	fmt.Fprintf(buildLog, "Processed manifest in %s\n",
 		format.Duration(time.Since(startTime)))

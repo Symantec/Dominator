@@ -163,3 +163,10 @@ func BuildTreeFromManifest(client *srpc.Client, manifestDir string,
 func ProcessManifest(manifestDir, rootDir string, buildLog io.Writer) error {
 	return processManifest(manifestDir, rootDir, buildLog)
 }
+
+func UnpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
+	rootDir string, buildLog buildLogger) error {
+	_, err := unpackImageAndProcessManifest(client, manifestDir, rootDir, true,
+		buildLog)
+	return err
+}

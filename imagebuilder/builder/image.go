@@ -222,7 +222,7 @@ func buildImageFromManifest(client *srpc.Client, manifestDir string,
 	defer os.RemoveAll(rootDir)
 	fmt.Fprintf(buildLog, "Created image working directory: %s\n", rootDir)
 	manifest, err := unpackImageAndProcessManifest(client, manifestDir,
-		rootDir, buildLog)
+		rootDir, false, buildLog)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +274,7 @@ func buildTreeFromManifest(client *srpc.Client, manifestDir string,
 	if err != nil {
 		return "", err
 	}
-	_, err = unpackImageAndProcessManifest(client, manifestDir, rootDir,
+	_, err = unpackImageAndProcessManifest(client, manifestDir, rootDir, true,
 		buildLog)
 	if err != nil {
 		os.RemoveAll(rootDir)
