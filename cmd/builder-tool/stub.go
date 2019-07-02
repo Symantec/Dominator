@@ -13,14 +13,18 @@ func notAvailable() {
 	os.Exit(1)
 }
 
-func buildFromManifestSubcommand(args []string, logger log.Logger) {
+func buildFromManifestSubcommand(args []string, logger log.DebugLogger) {
 	notAvailable()
 }
 
-func buildTreeFromManifestSubcommand(args []string, logger log.Logger) {
+func buildRawFromManifestSubcommand(args []string, logger log.DebugLogger) {
 	notAvailable()
 }
 
-func processManifestSubcommand(args []string, logger log.Logger) {
+func buildTreeFromManifestSubcommand(args []string, logger log.DebugLogger) {
+	notAvailable()
+}
+
+func processManifestSubcommand(args []string, logger log.DebugLogger) {
 	notAvailable()
 }

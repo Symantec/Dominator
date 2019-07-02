@@ -16,7 +16,7 @@ import (
 
 const filePerms = syscall.S_IRUSR | syscall.S_IRGRP | syscall.S_IROTH
 
-func buildFromManifestSubcommand(args []string, logger log.Logger) {
+func buildFromManifestSubcommand(args []string, logger log.DebugLogger) {
 	srpcClient := getImageServerClient()
 	buildLog := &bytes.Buffer{}
 	name, err := builder.BuildImageFromManifest(srpcClient, args[0], args[1],
@@ -30,7 +30,7 @@ func buildFromManifestSubcommand(args []string, logger log.Logger) {
 	os.Exit(0)
 }
 
-func buildTreeFromManifestSubcommand(args []string, logger log.Logger) {
+func buildTreeFromManifestSubcommand(args []string, logger log.DebugLogger) {
 	srpcClient := getImageServerClient()
 	buildLog := &bytes.Buffer{}
 	rootDir, err := builder.BuildTreeFromManifest(srpcClient, args[0], buildLog,
@@ -50,7 +50,7 @@ func buildTreeFromManifestSubcommand(args []string, logger log.Logger) {
 	os.Exit(0)
 }
 
-func processManifestSubcommand(args []string, logger log.Logger) {
+func processManifestSubcommand(args []string, logger log.DebugLogger) {
 	buildLog := &bytes.Buffer{}
 	if err := builder.ProcessManifest(args[0], args[1], buildLog); err != nil {
 		fmt.Fprintf(os.Stderr, "Error processing manifest: %s\n", err)
