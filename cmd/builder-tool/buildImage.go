@@ -16,7 +16,7 @@ import (
 	proto "github.com/Symantec/Dominator/proto/imaginator"
 )
 
-func buildImageSubcommand(args []string, logger log.Logger) {
+func buildImageSubcommand(args []string, logger log.DebugLogger) {
 	if err := buildImage(args, logger); err != nil {
 		fmt.Fprintf(os.Stderr, "Error building image: %s\n", err)
 		os.Exit(1)

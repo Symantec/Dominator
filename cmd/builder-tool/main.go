@@ -8,6 +8,7 @@ import (
 
 	"github.com/Symantec/Dominator/lib/constants"
 	"github.com/Symantec/Dominator/lib/flags/loadflags"
+	"github.com/Symantec/Dominator/lib/flagutil"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/log/cmdlogger"
 	"github.com/Symantec/Dominator/lib/srpc"
@@ -33,9 +34,14 @@ var (
 		"Port number of image server")
 	maxSourceAge = flag.Duration("maxSourceAge", time.Hour,
 		"Maximum age of a source image before it is rebuilt")
+	rawSize flagutil.Size
 
 	minimumExpiration = 5 * time.Minute
 )
+
+func init() {
+	flag.Var(&rawSize, "rawSize", "Size of RAW file to create")
+}
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr,
@@ -45,11 +51,12 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  build-from-manifest manifestDir [stream-name]")
 	fmt.Fprintln(os.Stderr, "  build-image stream-name [git-branch]")
+	fmt.Fprintln(os.Stderr, "  build-raw-from-manifest manifestDir rawFile")
 	fmt.Fprintln(os.Stderr, "  build-tree-from-manifest manifestDir")
 	fmt.Fprintln(os.Stderr, "  process-manifest manifestDir rootDir")
 }
 
-type commandFunc func([]string, log.Logger)
+type commandFunc func([]string, log.DebugLogger)
 
 type subcommand struct {
 	command string
@@ -61,6 +68,7 @@ type subcommand struct {
 var subcommands = []subcommand{
 	{"build-from-manifest", 2, 2, buildFromManifestSubcommand},
 	{"build-image", 1, 2, buildImageSubcommand},
+	{"build-raw-from-manifest", 2, 2, buildRawFromManifestSubcommand},
 	{"build-tree-from-manifest", 1, 1, buildTreeFromManifestSubcommand},
 	{"process-manifest", 2, 2, processManifestSubcommand},
 }
