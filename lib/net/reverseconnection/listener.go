@@ -25,6 +25,7 @@ const (
 
 var (
 	errorNotFound = errors.New("HTTP method not found")
+	errorLoopback = errors.New("loopback address")
 )
 
 func getIp4Address(conn net.Conn) (ip4Address, error) {
@@ -44,6 +45,9 @@ func getIp4AddressFromAddress(address string) (ip4Address, error) {
 	ip := net.ParseIP(address)
 	if ip == nil {
 		return ip4Address{}, errors.New("failed to parse: " + address)
+	}
+	if ip.IsLoopback() {
+		return ip4Address{}, errorLoopback
 	}
 	ip = ip.To4()
 	if ip == nil {
@@ -76,16 +80,18 @@ func sleep(minInterval, maxInterval time.Duration) {
 	time.Sleep(minInterval + jit)
 }
 
-func (conn *Conn) close() error {
+func (conn *listenerConn) Close() error {
 	if ip, err := getIp4Address(conn); err != nil {
-		conn.listener.logger.Println(err)
+		if err != errorLoopback {
+			conn.listener.logger.Println(err)
+		}
 	} else {
 		conn.listener.forget(conn.RemoteAddr().String(), ip)
 	}
 	return conn.TCPConn.Close()
 }
 
-func (l *Listener) accept() (*Conn, error) {
+func (l *Listener) accept() (*listenerConn, error) {
 	if l.closed {
 		return nil, errors.New("listener is closed")
 	}
@@ -122,7 +128,8 @@ func (l *Listener) listen(acceptChannel chan<- acceptEvent) {
 			continue
 		}
 		l.remember(conn)
-		acceptChannel <- acceptEvent{&Conn{TCPConn: tcpConn, listener: l}, err}
+		acceptChannel <- acceptEvent{
+			&listenerConn{TCPConn: tcpConn, listener: l}, err}
 	}
 }
 
@@ -277,7 +284,8 @@ func (l *Listener) connect(network, serverAddress string, timeout time.Duration,
 	}
 	logger.Println("remote has consumed, injecting to local listener")
 	l.remember(rawConn)
-	l.acceptChannel <- acceptEvent{&Conn{TCPConn: tcpConn, listener: l}, nil}
+	l.acceptChannel <- acceptEvent{
+		&listenerConn{TCPConn: tcpConn, listener: l}, nil}
 	rawConn = nil // Prevent Close on return.
 	return &message, nil
 }

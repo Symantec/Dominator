@@ -11,11 +11,11 @@ import (
 )
 
 type acceptEvent struct {
-	conn  *Conn
+	conn  *listenerConn
 	error error
 }
 
-type Conn struct {
+type listenerConn struct {
 	libnet.TCPConn
 	listener *Listener
 }
@@ -48,10 +48,6 @@ type ReverseListenerConfig struct {
 	ServerAddress   string        // Address of the remote server.
 	MinimumInterval time.Duration // Minimum interval to request connections.
 	MaximumInterval time.Duration // Maximum interval to request connections.
-}
-
-func (conn *Conn) Close() error {
-	return conn.close()
 }
 
 // Listen creates a listener which may be used to accept incoming connections.

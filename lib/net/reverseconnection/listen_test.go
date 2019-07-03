@@ -150,7 +150,8 @@ func TestInjectAccept(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fakeListener.acceptChannel <- acceptEvent{&Conn{TCPConn: slaveConn}, nil}
+	fakeListener.acceptChannel <- acceptEvent{
+		&listenerConn{TCPConn: slaveConn}, nil}
 	if err := testHttpConnection(masterConn, logger); err != nil {
 		t.Fatal(err)
 	}
@@ -208,9 +209,10 @@ func TestListenAndHttpServe(t *testing.T) {
 func TestReverseListenTcp(t *testing.T) {
 	tLogger := testlogger.New(t)
 	// Set up slave.
-	slaveLogger := prefixlogger.New("slave: ", tLogger)
-	slaveListener, slavePortNumber := createTestListener(slaveLogger)
-	slaveAddress := fmt.Sprintf("localhost:%d", slavePortNumber)
+	slaveListener, slavePortNumber := createTestListener(
+		prefixlogger.New("slave: ", tLogger))
+	slaveAddress := fmt.Sprintf("127.0.0.1:%d", slavePortNumber)
+	t.Logf("slaveAddress: %s", slaveAddress)
 	// Set up master
 	masterLogger := prefixlogger.New("master: ", tLogger)
 	masterListener, masterPortNumber := createTestRealListener(masterLogger)
@@ -218,7 +220,15 @@ func TestReverseListenTcp(t *testing.T) {
 	go http.Serve(masterListener, masterMux)
 	dialer := NewDialer(nil, masterMux, 0, 0, masterLogger)
 	// Make slave connect back to master.
-	slaveLogger.Print("making slave connect to master")
+	loopbackIP := [4]byte{127, 0, 0, 1}
+	if slaveListener.connectionMap[loopbackIP] > 0 {
+		t.Fatalf("slave listener already has %d connections",
+			slaveListener.connectionMap[loopbackIP])
+	}
+	if dialer.connectionMap[slaveAddress] != nil {
+		t.Fatal("master dialer already has a connection")
+	}
+	t.Log("making slave connect to master")
 	go slaveListener.connectLoop(ReverseListenerConfig{
 		Network:         "tcp",
 		ServerAddress:   fmt.Sprintf("127.0.0.1:%d", masterPortNumber),
@@ -226,25 +236,44 @@ func TestReverseListenTcp(t *testing.T) {
 	},
 		"127.0.0.1")
 	time.Sleep(time.Millisecond * 5)
-	masterLogger.Print("making and testing connection")
+	if slaveListener.connectionMap[loopbackIP] > 0 {
+		t.Fatalf(
+			"slave listener has %d loopback connections, expected none",
+			slaveListener.connectionMap[loopbackIP])
+	}
+	if dialer.connectionMap[slaveAddress] == nil {
+		t.Fatalf("master dialer does not have a connection yet")
+	}
+	time.Sleep(time.Millisecond * 5)
+	t.Log("making and testing connection")
 	masterConn, err := dialer.Dial("tcp", slaveAddress)
 	if err != nil {
-		masterLogger.Fatal(err)
+		t.Fatal(err)
+	}
+	if dialer.connectionMap[slaveAddress] != nil {
+		t.Fatal("master dialer still has a connection")
 	}
 	slaveConn, err := slaveListener.Accept()
 	if err != nil {
-		slaveLogger.Fatal(err)
+		t.Fatal(err)
 	}
-	if _, ok := slaveConn.(libnet.TCPConn); !ok {
-		slaveLogger.Fatalf("non-TCP connection: %T", slaveConn)
+	if _, ok := slaveConn.(*listenerConn); !ok {
+		t.Fatalf("not a *listenerConn connection: %T", slaveConn)
+	}
+	if slaveListener.connectionMap[loopbackIP] != 0 {
+		t.Fatalf("slave listener has %d connections, expected 0",
+			slaveListener.connectionMap[loopbackIP])
+	}
+	if dialer.connectionMap[slaveAddress] != nil {
+		t.Fatal("master dialer still has a connection")
 	}
 	go func() {
 		if _, err := io.Copy(slaveConn, slaveConn); err != nil {
-			slaveLogger.Println(err)
+			t.Log(err)
 		}
 	}()
 	if err := testEcho(masterConn); err != nil {
-		masterLogger.Fatal(err)
+		t.Fatal(err)
 	}
 }
 
