@@ -96,7 +96,7 @@ func testWatchFile(t *testing.T, dirname string) {
 	if err := os.Rename(pathWillBeRenamed, pathExistsLater); err != nil {
 		t.Fatal(err)
 	}
-	rc, err = watchTimeout(ch, time.Millisecond*10)
+	rc, err = watchTimeout(ch, time.Millisecond*50)
 	if err != nil {
 		t.Fatal(err)
 	} else {
