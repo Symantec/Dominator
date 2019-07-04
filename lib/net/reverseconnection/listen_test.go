@@ -235,7 +235,7 @@ func TestReverseListenTcp(t *testing.T) {
 		MinimumInterval: time.Millisecond,
 	},
 		"127.0.0.1")
-	time.Sleep(time.Millisecond * 5)
+	time.Sleep(time.Millisecond * 50)
 	if slaveListener.connectionMap[loopbackIP] > 0 {
 		t.Fatalf(
 			"slave listener has %d loopback connections, expected none",
@@ -244,7 +244,7 @@ func TestReverseListenTcp(t *testing.T) {
 	if dialer.connectionMap[slaveAddress] == nil {
 		t.Fatalf("master dialer does not have a connection yet")
 	}
-	time.Sleep(time.Millisecond * 5)
+	time.Sleep(time.Millisecond * 50)
 	t.Log("making and testing connection")
 	masterConn, err := dialer.Dial("tcp", slaveAddress)
 	if err != nil {
@@ -300,7 +300,7 @@ func TestReverseListenHttp(t *testing.T) {
 		MinimumInterval: time.Millisecond,
 	},
 		"127.0.0.1")
-	time.Sleep(time.Millisecond * 5)
+	time.Sleep(time.Millisecond * 50)
 	masterLogger.Print("making and testing connection")
 	err := makeAndTestHttpConnection(dialer, slavePortNumber, masterLogger)
 	if err != nil {
