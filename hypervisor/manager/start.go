@@ -111,15 +111,25 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 	for _, addr := range manager.addressPool.Free {
 		freeIPs[addr.IpAddress.String()] = struct{}{}
 	}
+	secondaryIPs := make(map[string]struct{})
+	for _, vm := range manager.vms {
+		for _, addr := range vm.SecondaryAddresses {
+			secondaryIPs[addr.IpAddress.String()] = struct{}{}
+		}
+	}
 	for _, addr := range manager.addressPool.Registered {
 		ipAddr := addr.IpAddress.String()
 		if _, ok := freeIPs[ipAddr]; ok {
 			continue
 		}
-		if _, ok := manager.vms[ipAddr]; !ok {
-			manager.Logger.Printf("%s shown as used but no corresponding VM\n",
-				ipAddr)
+		if _, ok := manager.vms[ipAddr]; ok {
+			continue
 		}
+		if _, ok := secondaryIPs[ipAddr]; ok {
+			continue
+		}
+		manager.Logger.Printf("%s shown as used but no corresponding VM\n",
+			ipAddr)
 	}
 	if len(manager.volumeDirectories) < 1 {
 		manager.volumeDirectories, err = getVolumeDirectories()
