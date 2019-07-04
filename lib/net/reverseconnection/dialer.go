@@ -106,9 +106,13 @@ func (d *Dialer) lookup(address string) net.Conn {
 }
 
 func (d *Dialer) connectHandler(w http.ResponseWriter, req *http.Request) {
+	d.logger.Debugf(1, "%s request from remote: %s\n",
+		req.Method, req.RemoteAddr)
 	if req.Method != "CONNECT" {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		d.logger.Debugf(0, "rejecting method=%s from remote: %s\n",
+			req.Method, req.RemoteAddr)
 		return
 	}
 	hijacker, ok := w.(http.Hijacker)
@@ -118,11 +122,23 @@ func (d *Dialer) connectHandler(w http.ResponseWriter, req *http.Request) {
 		d.logger.Println("not a hijacker ", req.RemoteAddr)
 		return
 	}
+	d.connectionMapLock.Lock()
+	if conn, ok := d.connectionMap[req.RemoteAddr]; ok {
+		// We have nothing to detect if the remote closed, so assume the remote
+		// is retrying and close the old (unused) connection.
+		delete(d.connectionMap, req.RemoteAddr)
+		d.connectionMapLock.Unlock()
+		conn.Close()
+		d.logger.Debugf(0, "closed unused duplicate remote: %s\n",
+			req.RemoteAddr)
+	} else {
+		d.connectionMapLock.Unlock()
+	}
 	conn, _, err := hijacker.Hijack()
 	if err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusInternalServerError)
-		d.logger.Println("rpc hijacking ", req.RemoteAddr, ": ", err.Error())
+		d.logger.Printf("rpc hijacking %s: %s\n", req.RemoteAddr, err)
 		return
 	}
 	defer func() {
@@ -130,14 +146,6 @@ func (d *Dialer) connectHandler(w http.ResponseWriter, req *http.Request) {
 			conn.Close()
 		}
 	}()
-	d.connectionMapLock.Lock()
-	_, ok = d.connectionMap[req.RemoteAddr]
-	d.connectionMapLock.Unlock()
-	if ok {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusAlreadyReported)
-		return
-	}
 	_, err = io.WriteString(conn, "HTTP/1.0 "+connectString+"\n\n")
 	if err != nil {
 		d.logger.Println("error writing connect message: ", err.Error())
@@ -153,11 +161,14 @@ func (d *Dialer) connectHandler(w http.ResponseWriter, req *http.Request) {
 		d.logger.Printf("error writing ReverseDialerMessage: %s\n", err)
 		return
 	}
-	// Ensure we don't write anything else until the other end has drained it's
+	// Ensure we don't write anything else until the other end has drained its
 	// buffer.
 	buffer := make([]byte, 1)
+	d.logger.Debugf(1, "waiting for sync byte from remote: %s\n",
+		req.RemoteAddr)
 	if _, err := conn.Read(buffer); err != nil {
-		d.logger.Printf("error reading sync byte: %s\n", err)
+		d.logger.Printf("error reading sync byte from: %s: %s\n",
+			req.RemoteAddr, err)
 		return
 	}
 	if d.add(req.RemoteAddr, conn) {
