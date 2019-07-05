@@ -1085,6 +1085,23 @@ func (m *Manager) getVmVolume(conn *srpc.Conn) error {
 
 func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 	request proto.ImportLocalVmRequest) error {
+	requestedIpAddrs := make(map[string]struct{},
+		1+len(request.SecondaryAddresses))
+	requestedMacAddrs := make(map[string]struct{},
+		1+len(request.SecondaryAddresses))
+	requestedIpAddrs[request.Address.IpAddress.String()] = struct{}{}
+	requestedMacAddrs[request.Address.MacAddress] = struct{}{}
+	for _, addr := range request.SecondaryAddresses {
+		ipAddr := addr.IpAddress.String()
+		if _, ok := requestedIpAddrs[ipAddr]; ok {
+			return fmt.Errorf("duplicate address: %s", ipAddr)
+		}
+		requestedIpAddrs[ipAddr] = struct{}{}
+		if _, ok := requestedMacAddrs[addr.MacAddress]; ok {
+			return fmt.Errorf("duplicate address: %s", addr.MacAddress)
+		}
+		requestedIpAddrs[addr.MacAddress] = struct{}{}
+	}
 	if !bytes.Equal(m.rootCookie, request.VerificationCookie) {
 		return fmt.Errorf("bad verification cookie: you are not root")
 	}
@@ -1138,9 +1155,12 @@ func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 		return fmt.Errorf("%s already exists", ipAddress)
 	}
 	for _, poolAddress := range m.addressPool.Registered {
-		if poolAddress.IpAddress.Equal(request.Address.IpAddress) ||
-			poolAddress.MacAddress == request.Address.MacAddress {
-			return fmt.Errorf("%s is in address pool", ipAddress)
+		ipAddr := poolAddress.IpAddress.String()
+		if _, ok := requestedIpAddrs[ipAddr]; ok {
+			return fmt.Errorf("%s is in address pool", ipAddr)
+		}
+		if _, ok := requestedMacAddrs[poolAddress.MacAddress]; ok {
+			return fmt.Errorf("%s is in address pool", poolAddress.MacAddress)
 		}
 	}
 	subnetId := m.getMatchingSubnet(request.Address.IpAddress)
@@ -1148,6 +1168,15 @@ func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 		return fmt.Errorf("no matching subnet for: %s\n", ipAddress)
 	}
 	vm.VmInfo.SubnetId = subnetId
+	vm.VmInfo.SecondarySubnetIDs = nil
+	for _, addr := range request.SecondaryAddresses {
+		subnetId := m.getMatchingSubnet(addr.IpAddress)
+		if subnetId == "" {
+			return fmt.Errorf("no matching subnet for: %s\n", addr.IpAddress)
+		}
+		vm.VmInfo.SecondarySubnetIDs = append(vm.VmInfo.SecondarySubnetIDs,
+			subnetId)
+	}
 	defer func() {
 		if vm == nil {
 			return
