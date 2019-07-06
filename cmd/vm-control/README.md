@@ -83,9 +83,8 @@ Most operations only require a certificate that proves *identity*. The
 issuing these certificates.
 
 ## Importing virsh (libvirt) VMs
-A libvirt VM may be imported into the *Hypervisor*. This is only supported for
-simple VMs with a single network interface and IP address. Once the VM is
-*committed* it is removed from the libvirt database and is fully "owned" by the
+A libvirt VM may be imported into the *Hypervisor*. Once the VM is *committed*
+it is removed from the libvirt database and is fully "owned" by the
 *Hypervisor*. Importing a VM requires root access on the *Hypervisor* (the
 *vm-control* tool will use the `sudo` command if needed).
 
@@ -93,7 +92,8 @@ There are a few simple steps that should be followed to import a VM. In the
 example below, the MAC address of the VM to be imported is `52:54:de:ad:be:ef`
 and the hostname (DNS entry) is `jump.prod.company.com`. The IP address of the
 VM may also be used. In either case, the hostname or IP address provided must
-match the libvirt *domain name*.
+match the libvirt *domain name*. If the VM has multiple network interfaces, the
+MAC and IP address/FQDN for each interface must be provided in pairs.
 - log into the VM and determine its MAC address
 - run `vm-control import-virsh-vm 52:54:de:ad:be:ef jump.prod.company.com`
 - enter `shutdown` at the prompt
