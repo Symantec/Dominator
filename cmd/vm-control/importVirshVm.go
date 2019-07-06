@@ -112,7 +112,29 @@ type volumeType struct {
 }
 
 func importVirshVmSubcommand(args []string, logger log.DebugLogger) error {
-	if err := importVirshVm(args[0], args[1], logger); err != nil {
+	macAddr := args[0]
+	domainName := args[1]
+	args = args[2:]
+	if len(args)%2 != 0 {
+		return fmt.Errorf("missing IP address for MAC: %s", args[len(args)-1])
+	}
+	sAddrs := make([]proto.Address, 0, len(args)/2)
+	for index := 0; index < len(args); index += 2 {
+		ipAddr := args[index+1]
+		ipList, err := net.LookupIP(ipAddr)
+		if err != nil {
+			return err
+		}
+		if len(ipList) != 1 {
+			return fmt.Errorf("number of IPs for %s: %d != 1",
+				ipAddr, len(ipList))
+		}
+		sAddrs = append(sAddrs, proto.Address{
+			IpAddress:  ipList[0],
+			MacAddress: args[index],
+		})
+	}
+	if err := importVirshVm(macAddr, domainName, sAddrs, logger); err != nil {
 		return fmt.Errorf("Error importing VM: %s", err)
 	}
 	return nil
@@ -165,7 +187,8 @@ func getDomainState(domainName string) (string, error) {
 	return strings.TrimSpace(string(stdout)), nil
 }
 
-func importVirshVm(macAddr, domainName string, logger log.DebugLogger) error {
+func importVirshVm(macAddr, domainName string, sAddrs []proto.Address,
+	logger log.DebugLogger) error {
 	ipList, err := net.LookupIP(domainName)
 	if err != nil {
 		return err
@@ -183,7 +206,7 @@ func importVirshVm(macAddr, domainName string, logger log.DebugLogger) error {
 		OwnerUsers:  ownerUsers,
 		Tags:        tags,
 	}}
-	request.VerificationCookie, err = readRootCookie(logger)
+	verificationCookie, err := readRootCookie(logger)
 	if err != nil {
 		return err
 	}
@@ -211,17 +234,27 @@ func importVirshVm(macAddr, domainName string, logger log.DebugLogger) error {
 	if err := xml.Unmarshal(stdout, &virshInfo); err != nil {
 		return err
 	}
+	json.WriteWithIndent(os.Stdout, "    ", virshInfo)
+	if numIf := len(virshInfo.Devices.Interfaces); numIf != len(sAddrs)+1 {
+		return fmt.Errorf("number of interfaces %d != %d",
+			numIf, len(sAddrs)+1)
+	}
 	if macAddr != virshInfo.Devices.Interfaces[0].Mac.Address {
 		return fmt.Errorf("MAC address specified: %s != virsh data: %s",
 			macAddr, virshInfo.Devices.Interfaces[0].Mac.Address)
 	}
-	json.WriteWithIndent(os.Stdout, "    ", virshInfo)
-	if numIf := len(virshInfo.Devices.Interfaces); numIf != 1 {
-		return fmt.Errorf("number of interfaces %d != 1", numIf)
-	}
 	request.VmInfo.Address = proto.Address{
 		IpAddress:  ipList[0],
 		MacAddress: virshInfo.Devices.Interfaces[0].Mac.Address,
+	}
+	for index, sAddr := range sAddrs {
+		if sAddr.MacAddress !=
+			virshInfo.Devices.Interfaces[index+1].Mac.Address {
+			return fmt.Errorf("MAC address specified: %s != virsh data: %s",
+				sAddr.MacAddress,
+				virshInfo.Devices.Interfaces[index+1].Mac.Address)
+		}
+		request.SecondaryAddresses = append(request.SecondaryAddresses, sAddr)
 	}
 	switch virshInfo.Memory.Unit {
 	case "KiB":
@@ -278,9 +311,8 @@ func importVirshVm(macAddr, domainName string, logger log.DebugLogger) error {
 		request.VmInfo.Volumes = append(request.VmInfo.Volumes,
 			proto.Volume{Format: volumeFormat})
 	}
-	requestWithoutSecrets := request
-	requestWithoutSecrets.VerificationCookie = nil
-	json.WriteWithIndent(os.Stdout, "    ", requestWithoutSecrets)
+	json.WriteWithIndent(os.Stdout, "    ", request)
+	request.VerificationCookie = verificationCookie
 	var reply proto.GetVmInfoResponse
 	logger.Debugln(0, "issuing import RPC")
 	err = client.RequestReply("Hypervisor.ImportLocalVm", request, &reply)
