@@ -53,6 +53,9 @@ func (t *srpcType) getImageNow(
 	img := *originalImage
 	if request.IgnoreFilesystem {
 		img.FileSystem = nil
+	} else if request.IgnoreFilesystemIfExpiring &&
+		!originalImage.ExpiresAt.IsZero() {
+		img.FileSystem = nil
 	}
 	return &img
 }
