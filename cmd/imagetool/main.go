@@ -99,6 +99,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  estimate-usage      name")
 	fmt.Fprintln(os.Stderr, "  find-latest-image   directory")
 	fmt.Fprintln(os.Stderr, "  get                 name directory")
+	fmt.Fprintln(os.Stderr, "  get-archive-data    name outfile")
 	fmt.Fprintln(os.Stderr, "  list")
 	fmt.Fprintln(os.Stderr, "  listdirs")
 	fmt.Fprintln(os.Stderr, "  listunrefobj")
@@ -148,6 +149,7 @@ var subcommands = []subcommand{
 	{"estimate-usage", 1, 1, estimateImageUsageSubcommand},
 	{"find-latest-image", 1, 1, findLatestImageSubcommand},
 	{"get", 2, 2, getImageSubcommand},
+	{"get-archive-data", 2, 2, getImageArchiveDataSubcommand},
 	{"list", 0, 0, listImagesSubcommand},
 	{"listdirs", 0, 0, listDirectoriesSubcommand},
 	{"listunrefobj", 0, 0, listUnreferencedObjectsSubcommand},
