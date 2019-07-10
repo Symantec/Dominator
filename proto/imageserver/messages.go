@@ -14,6 +14,15 @@ type AddImageRequest struct {
 
 type AddImageResponse struct{}
 
+type ChangeImageExpirationRequest struct {
+	ExpiresAt time.Time
+	ImageName string
+}
+
+type ChangeImageExpirationResponse struct {
+	Error string
+}
+
 type ChangeOwnerRequest struct {
 	DirectoryName string
 	OwnerGroup    string
@@ -58,6 +67,15 @@ type FindLatestImageRequest struct {
 type FindLatestImageResponse struct {
 	ImageName string
 	Error     string
+}
+
+type GetImageExpirationRequest struct {
+	ImageName string
+}
+
+type GetImageExpirationResponse struct {
+	Error     string
+	ExpiresAt time.Time
 }
 
 type GetImageRequest struct {
