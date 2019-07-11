@@ -77,8 +77,7 @@ This is an agent that runs on each physical node. It has the following responsib
 -   Object Cache which caches some commonly-used objects in the [**Dominator**](../Dominator/README.md) ecosystem images. This optional cache improves the performance of creating and updating VMs using these images
 
 A diagram is shown below:
-
-<img src="media/image1.png" width="624" height="468" />
+![Hypervisor image](../pictures/Hypervisor.svg)
 
 Configuration of the Hypervisor is minimal: the directory to store saved state and the location of an optional [imageserver](https://github.com/Symantec/Dominator/blob/master/cmd/imageserver/README.md) from where images may be fetched from. Requests to launch VMs are made directly to the Hypervisor by the vm-control utility (or API); The Fleet Manager is not involved in this transaction, although it may (optionally) be used to easily find a Hypervisor with available capacity.
 
@@ -149,8 +148,7 @@ When a VM is created, an optional automated snapshot (backup) schedule may be sp
 As discussed above, the Fleet Manager is not essential to either the health of VMs nor for management of VMs, but it is very convenient for the latter. A highly available service using round-robin DNS may be implemented by running multiple Fleet Manager instances, with only one configured to manage the Hypervisors (updating address pools and subnets) and the rest only providing directory services. For each Fleet Manager instance, the IP address is stored in a DNS A record for the Fleet Manager FQDN (i.e. fleet-manager.company.com). Clients such as the vm-control utility or a web browser will automatically connect to a working instance. No load balancer is required, instead the tool/web browser will time out a connection attempt to an unresponsive Fleet Manager instance and try another instance listed in the DNS record.
 
 A diagram is shown below:
-
-<img src="media/image2.png" width="624" height="468" />
+![SmallStack Components image](../pictures/SmallStackComponents.svg)
 
 ### The vm-control utility/API
 
