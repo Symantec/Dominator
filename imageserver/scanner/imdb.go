@@ -83,6 +83,29 @@ func (imdb *ImageDataBase) addImage(image *image.Image, name string,
 	}
 }
 
+func (imdb *ImageDataBase) changeImageExpiration(name string,
+	expiresAt time.Time) (bool, error) {
+	imdb.Lock()
+	defer imdb.Unlock()
+	if img, ok := imdb.imageMap[name]; !ok {
+		return false, errors.New("image not found")
+	} else if img.ExpiresAt.IsZero() {
+		return false, errors.New("image does not expire")
+	} else if expiresAt.IsZero() {
+		img.ExpiresAt = expiresAt
+		imdb.addNotifiers.sendPlain(name, "add", imdb.logger)
+		return true, nil
+	} else if expiresAt.Before(img.ExpiresAt) {
+		return false, errors.New("cannot shorten expiration time")
+	} else if expiresAt.After(img.ExpiresAt) {
+		img.ExpiresAt = expiresAt
+		imdb.addNotifiers.sendPlain(name, "add", imdb.logger)
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
 // This must be called with the lock held.
 func (imdb *ImageDataBase) checkDirectoryPermissions(dirname string,
 	username *string) error {

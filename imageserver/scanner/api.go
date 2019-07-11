@@ -4,6 +4,7 @@ import (
 	"flag"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/image"
@@ -57,6 +58,11 @@ func LoadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 func (imdb *ImageDataBase) AddImage(image *image.Image, name string,
 	username *string) error {
 	return imdb.addImage(image, name, username)
+}
+
+func (imdb *ImageDataBase) ChangeImageExpiration(name string,
+	expiresAt time.Time) (bool, error) {
+	return imdb.changeImageExpiration(name, expiresAt)
 }
 
 func (imdb *ImageDataBase) CheckDirectory(name string) bool {
