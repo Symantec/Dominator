@@ -16,6 +16,11 @@ func AddImageTrusted(client *srpc.Client, name string, img *image.Image) error {
 	return addImageTrusted(client, name, img)
 }
 
+func ChangeImageExpiration(client *srpc.Client, name string,
+	expiresAt time.Time) error {
+	return changeImageExpiration(client, name, expiresAt)
+}
+
 func CheckDirectory(client *srpc.Client, name string) (bool, error) {
 	return checkDirectory(client, name)
 }
@@ -44,6 +49,10 @@ func FindLatestImage(client *srpc.Client, dirname string,
 
 func GetImage(client *srpc.Client, name string) (*image.Image, error) {
 	return getImage(client, name, 0)
+}
+
+func GetImageExpiration(client *srpc.Client, name string) (time.Time, error) {
+	return getImageExpiration(client, name)
 }
 
 func GetImageWithTimeout(client *srpc.Client, name string,
