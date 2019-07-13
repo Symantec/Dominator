@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
@@ -125,12 +126,41 @@ func (t *srpcType) deleteMissingImages(imagesToKeep map[string]struct{}) {
 	}
 }
 
+func (t *srpcType) extendImageExpiration(name string,
+	img *image.Image) (bool, error) {
+	timeout := time.Second * 60
+	client, err := t.imageserverResource.GetHTTP(nil, timeout)
+	if err != nil {
+		return false, err
+	}
+	defer client.Put()
+	expiresAt, err := imageclient.GetImageExpiration(client, name)
+	if err != nil {
+		if err == io.EOF {
+			client.Close()
+		}
+		return false, err
+	}
+	return t.imageDataBase.ChangeImageExpiration(name, expiresAt)
+}
+
 func (t *srpcType) addImage(name string) error {
 	timeout := time.Second * 60
-	if t.imageDataBase.CheckImage(name) || t.checkImageBeingInjected(name) {
+	if t.checkImageBeingInjected(name) {
 		return nil
 	}
 	logger := prefixlogger.New(fmt.Sprintf("Replicator(%s): ", name), t.logger)
+	if img := t.imageDataBase.GetImage(name); img != nil {
+		if img.ExpiresAt.IsZero() {
+			return nil
+		}
+		if changed, err := t.extendImageExpiration(name, img); err != nil {
+			logger.Println(err)
+		} else if changed {
+			logger.Println("extended expiration time")
+		}
+		return nil
+	}
 	logger.Println("add image")
 	client, err := t.imageserverResource.GetHTTP(nil, timeout)
 	if err != nil {
