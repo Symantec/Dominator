@@ -76,6 +76,7 @@ func (m *Manager) manager(imageInterestChannel <-chan map[string]struct{},
 		case name := <-imageExpireChannel:
 			m.Lock()
 			delete(m.imagesByName, name)
+			m.missingImages[name] = nil // Try to get it again (expire extended)
 			m.Unlock()
 			m.rebuildDeDuper()
 		case <-timer.C:
