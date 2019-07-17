@@ -82,6 +82,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  adds   name subname filterfile triggerfile")
 	fmt.Fprintln(os.Stderr, "  addrep name baseimage layerimage...")
 	fmt.Fprintln(os.Stderr, "  bulk-addrep layerimage...")
+	fmt.Fprintln(os.Stderr, "  change-image-expiration name")
 	fmt.Fprintln(os.Stderr, "  check  name")
 	fmt.Fprintln(os.Stderr, "  check-directory dirname")
 	fmt.Fprintln(os.Stderr, "  chown  dirname ownerGroup")
@@ -100,6 +101,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  find-latest-image   directory")
 	fmt.Fprintln(os.Stderr, "  get                 name directory")
 	fmt.Fprintln(os.Stderr, "  get-archive-data    name outfile")
+	fmt.Fprintln(os.Stderr, "  get-image-expiration name")
 	fmt.Fprintln(os.Stderr, "  list")
 	fmt.Fprintln(os.Stderr, "  listdirs")
 	fmt.Fprintln(os.Stderr, "  listunrefobj")
@@ -139,6 +141,7 @@ var subcommands = []subcommand{
 	{"addi", 4, 4, addImageimageSubcommand},
 	{"addrep", 3, -1, addReplaceImageSubcommand},
 	{"bulk-addrep", 1, -1, bulkAddReplaceImagesSubcommand},
+	{"change-image-expiration", 1, 1, changeImageExpirationSubcommand},
 	{"check", 1, 1, checkImageSubcommand},
 	{"check-directory", 1, 1, checkDirectorySubcommand},
 	{"chown", 2, 2, chownDirectorySubcommand},
@@ -150,6 +153,7 @@ var subcommands = []subcommand{
 	{"find-latest-image", 1, 1, findLatestImageSubcommand},
 	{"get", 2, 2, getImageSubcommand},
 	{"get-archive-data", 2, 2, getImageArchiveDataSubcommand},
+	{"get-image-expiration", 1, 1, getImageExpirationSubcommand},
 	{"list", 0, 0, listImagesSubcommand},
 	{"listdirs", 0, 0, listDirectoriesSubcommand},
 	{"listunrefobj", 0, 0, listUnreferencedObjectsSubcommand},
