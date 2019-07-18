@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"os"
 	"os/exec"
@@ -56,6 +57,29 @@ func rolloutImageSubcommand(args []string, logger log.DebugLogger) error {
 	return nil
 }
 
+func extendImageLifetime(imageServerClientResource *srpc.ClientResource,
+	imageName string, expiresAt time.Time, numGroup0, numGroup1 int,
+	logger log.DebugLogger) error {
+	if expiresAt.IsZero() {
+		return nil
+	}
+	numSteps := math.Sqrt(float64(numGroup0*2)) +
+		math.Sqrt(float64(numGroup1*2))
+	predictedTime := time.Minute * 5 * time.Duration(numSteps)
+	if time.Until(expiresAt) >= predictedTime {
+		return nil
+	}
+	newExpiration := time.Now().Add(predictedTime)
+	logger.Debugf(0, "extending image lifetime by %s\n",
+		format.Duration(time.Until(newExpiration)))
+	client, err := imageServerClientResource.GetHTTP(nil, 0)
+	if err != nil {
+		return err
+	}
+	defer client.Put()
+	return imageclient.ChangeImageExpiration(client, imageName, newExpiration)
+}
+
 func gitCommand(repositoryDirectory string, command ...string) ([]byte, error) {
 	cmd := exec.Command("git", command...)
 	cmd.Dir = repositoryDirectory
@@ -84,10 +108,12 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 		}
 	}
 	logger.Debugln(0, "checking image")
-	if foundImage, err := checkImage(imageName); err != nil {
+	imageServerClientResource := srpc.NewClientResource("tcp",
+		fmt.Sprintf("%s:%d", *imageServerHostname, *imageServerPortNum))
+	defer imageServerClientResource.ScheduleClose()
+	expiresAt, err := checkImage(imageServerClientResource, imageName)
+	if err != nil {
 		return err
-	} else if !foundImage {
-		return fmt.Errorf("image: %s not found", imageName)
 	}
 	fleetManagerClientResource := srpc.NewClientResource("tcp",
 		fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum))
@@ -138,6 +164,11 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 		cpuSharer)
 	logger.Debugf(0, "%d unused, %d used Hypervisors\n",
 		len(unusedHypervisors), len(usedHypervisors))
+	err = extendImageLifetime(imageServerClientResource, imageName, expiresAt,
+		len(unusedHypervisors), len(usedHypervisors), logger)
+	if err != nil {
+		return err
+	}
 	logger.Debugln(0, "upgrading unused Hypervisors")
 	err = upgradeOneThenAll(fleetManagerClientResource, imageName,
 		unusedHypervisors, cpuSharer, uint(len(unusedHypervisors)))
@@ -155,6 +186,10 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 	logger.Debugln(0, "upgrading used Hypervisors")
 	err = upgradeOneThenAll(fleetManagerClientResource, imageName,
 		usedHypervisors, cpuSharer, numConcurrent)
+	if err != nil {
+		return err
+	}
+	err = releaseImage(imageServerClientResource, imageName, expiresAt, logger)
 	if err != nil {
 		return err
 	}
@@ -196,15 +231,22 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 	return nil
 }
 
-func checkImage(imageName string) (bool, error) {
-	clientName := fmt.Sprintf("%s:%d",
-		*imageServerHostname, *imageServerPortNum)
-	client, err := srpc.DialHTTP("tcp", clientName, 0)
+func checkImage(imageServerClientResource *srpc.ClientResource,
+	imageName string) (time.Time, error) {
+	client, err := imageServerClientResource.GetHTTP(nil, 0)
 	if err != nil {
-		return false, err
+		return time.Time{}, err
 	}
-	defer client.Close()
-	return imageclient.CheckImage(client, imageName)
+	defer client.Put()
+	expiresAt, err := imageclient.GetImageExpiration(client, imageName)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if expiresAt.IsZero() {
+		return expiresAt, nil
+	}
+	return expiresAt,
+		imageclient.ChangeImageExpiration(client, imageName, expiresAt)
 }
 
 func closeHypervisors(hypervisors []*hypervisorType) {
@@ -316,6 +358,20 @@ func markUnusedHypervisors(hypervisors []*hypervisorType,
 		}
 	}
 	return unusedHypervisors, usedHypervisors
+}
+
+func releaseImage(imageServerClientResource *srpc.ClientResource,
+	imageName string, expiresAt time.Time, logger log.DebugLogger) error {
+	if expiresAt.IsZero() {
+		return nil
+	}
+	logger.Debugln(0, "releasing image")
+	client, err := imageServerClientResource.GetHTTP(nil, 0)
+	if err != nil {
+		return err
+	}
+	defer client.Put()
+	return imageclient.ChangeImageExpiration(client, imageName, time.Time{})
 }
 
 func setupHypervisor(hostname string, imageName string, tgs tags.Tags,
