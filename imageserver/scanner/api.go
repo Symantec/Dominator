@@ -10,6 +10,7 @@ import (
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectserver"
+	"github.com/Symantec/Dominator/lib/srpc"
 	"github.com/Symantec/Dominator/lib/stringutil"
 )
 
@@ -56,13 +57,13 @@ func LoadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,
 }
 
 func (imdb *ImageDataBase) AddImage(image *image.Image, name string,
-	username *string) error {
-	return imdb.addImage(image, name, username)
+	authInfo *srpc.AuthInformation) error {
+	return imdb.addImage(image, name, authInfo)
 }
 
 func (imdb *ImageDataBase) ChangeImageExpiration(name string,
-	expiresAt time.Time) (bool, error) {
-	return imdb.changeImageExpiration(name, expiresAt)
+	expiresAt time.Time, authInfo *srpc.AuthInformation) (bool, error) {
+	return imdb.changeImageExpiration(name, expiresAt, authInfo)
 }
 
 func (imdb *ImageDataBase) CheckDirectory(name string) bool {
@@ -85,8 +86,9 @@ func (imdb *ImageDataBase) CountImages() uint {
 	return imdb.countImages()
 }
 
-func (imdb *ImageDataBase) DeleteImage(name string, username *string) error {
-	return imdb.deleteImage(name, username)
+func (imdb *ImageDataBase) DeleteImage(name string,
+	authInfo *srpc.AuthInformation) error {
+	return imdb.deleteImage(name, authInfo)
 }
 
 // DeleteUnreferencedObjects will delete some or all unreferenced objects.
@@ -134,8 +136,9 @@ func (imdb *ImageDataBase) ListUnreferencedObjects() map[hash.Hash]uint64 {
 	return imdb.listUnreferencedObjects()
 }
 
-func (imdb *ImageDataBase) MakeDirectory(dirname, username string) error {
-	return imdb.makeDirectory(image.Directory{Name: dirname}, username, true)
+func (imdb *ImageDataBase) MakeDirectory(dirname string,
+	authInfo *srpc.AuthInformation) error {
+	return imdb.makeDirectory(image.Directory{Name: dirname}, authInfo, true)
 }
 
 func (imdb *ImageDataBase) ObjectServer() objectserver.ObjectServer {
@@ -168,7 +171,7 @@ func (imdb *ImageDataBase) UnregisterMakeDirectoryNotifier(
 }
 
 func (imdb *ImageDataBase) UpdateDirectory(directory image.Directory) error {
-	return imdb.makeDirectory(directory, "", false)
+	return imdb.makeDirectory(directory, nil, false)
 }
 
 func (imdb *ImageDataBase) WriteHtml(writer io.Writer) {

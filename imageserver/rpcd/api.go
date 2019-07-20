@@ -61,6 +61,7 @@ func Setup(imdb *scanner.ImageDataBase, replicationMaster string,
 	}
 	srpc.RegisterNameWithOptions("ImageServer", srpcObj, srpc.ReceiverOptions{
 		PublicMethods: []string{
+			"ChangeImageExpiration",
 			"CheckDirectory",
 			"CheckImage",
 			"FindLatestImage",

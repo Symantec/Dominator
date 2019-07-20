@@ -141,7 +141,8 @@ func (t *srpcType) extendImageExpiration(name string,
 		}
 		return false, err
 	}
-	return t.imageDataBase.ChangeImageExpiration(name, expiresAt)
+	return t.imageDataBase.ChangeImageExpiration(name, expiresAt,
+		&srpc.AuthInformation{HaveMethodAccess: true})
 }
 
 func (t *srpcType) addImage(name string) error {
@@ -195,7 +196,9 @@ func (t *srpcType) addImage(name string) error {
 			client.Close()
 			return err
 		}
-		if err := t.imageDataBase.AddImage(img, name, nil); err != nil {
+		err := t.imageDataBase.AddImage(img, name,
+			&srpc.AuthInformation{HaveMethodAccess: true})
+		if err != nil {
 			return err
 		}
 		return nil

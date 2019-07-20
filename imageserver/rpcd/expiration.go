@@ -14,7 +14,7 @@ func (t *srpcType) ChangeImageExpiration(conn *srpc.Conn,
 		return nil
 	}
 	_, err := t.imageDataBase.ChangeImageExpiration(
-		request.ImageName, request.ExpiresAt)
+		request.ImageName, request.ExpiresAt, conn.GetAuthInformation())
 	reply.Error = errors.ErrorToString(err)
 	return nil
 }

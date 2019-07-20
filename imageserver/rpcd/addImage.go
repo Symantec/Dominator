@@ -45,7 +45,8 @@ func (t *srpcType) AddImageTrusted(conn *srpc.Conn,
 	} else {
 		t.logger.Printf("AddImage(%s) by %s\n", request.ImageName, username)
 	}
-	return t.imageDataBase.AddImage(request.Image, request.ImageName, &username)
+	return t.imageDataBase.AddImage(request.Image, request.ImageName,
+		conn.GetAuthInformation())
 }
 
 func (t *srpcType) injectImage(conn *srpc.Conn,
