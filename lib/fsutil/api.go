@@ -97,6 +97,11 @@ func ForceRename(oldpath, newpath string) error {
 	return forceRename(oldpath, newpath)
 }
 
+// FsyncFile will call file.Sync if it has not been called recently. This
+// attempts to reduce the performance problems of fsync(2) by potentially
+// sacrificing some file-system consistency.
+func FsyncFile(file *os.File) error { return fsyncFile(file) }
+
 // LoadLines will open a file and read lines from it. Comment lines (i.e. lines
 // beginning with '#') are skipped.
 func LoadLines(filename string) ([]string, error) {
