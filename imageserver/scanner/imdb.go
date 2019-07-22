@@ -98,12 +98,18 @@ func (imdb *ImageDataBase) changeImageExpiration(name string,
 	} else if img.ExpiresAt.IsZero() {
 		return false, errors.New("image does not expire")
 	} else if expiresAt.IsZero() {
+		if err := imdb.writeNewExpiration(name, img, expiresAt); err != nil {
+			return false, err
+		}
 		img.ExpiresAt = expiresAt
 		imdb.addNotifiers.sendPlain(name, "add", imdb.logger)
 		return true, nil
 	} else if expiresAt.Before(img.ExpiresAt) {
 		return false, errors.New("cannot shorten expiration time")
 	} else if expiresAt.After(img.ExpiresAt) {
+		if err := imdb.writeNewExpiration(name, img, expiresAt); err != nil {
+			return false, err
+		}
 		img.ExpiresAt = expiresAt
 		imdb.addNotifiers.sendPlain(name, "add", imdb.logger)
 		return true, nil
@@ -452,6 +458,37 @@ func (imdb *ImageDataBase) unregisterMakeDirectoryNotifier(
 	imdb.Lock()
 	defer imdb.Unlock()
 	delete(imdb.mkdirNotifiers, channel)
+}
+
+// This must be called with the lock held.
+func (imdb *ImageDataBase) writeNewExpiration(name string,
+	oldImage *image.Image, expiresAt time.Time) error {
+	img := *oldImage
+	img.ExpiresAt = expiresAt
+	filename := filepath.Join(imdb.baseDir, name)
+	tmpFilename := filename + "~"
+	file, err := os.OpenFile(tmpFilename, os.O_CREATE|os.O_RDWR|os.O_EXCL,
+		filePerms)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	defer os.Remove(tmpFilename)
+	w := bufio.NewWriter(file)
+	defer w.Flush()
+	writer := fsutil.NewChecksumWriter(w)
+	encoder := gob.NewEncoder(writer)
+	if err := encoder.Encode(img); err != nil {
+		return err
+	}
+	if err := writer.WriteChecksum(); err != nil {
+		return err
+	}
+	if err := w.Flush(); err != nil {
+		return err
+	}
+	fsutil.FsyncFile(file)
+	return os.Rename(tmpFilename, filename)
 }
 
 func (n notifiers) sendPlain(name string, operation string,
