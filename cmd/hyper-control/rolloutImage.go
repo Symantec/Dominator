@@ -57,19 +57,24 @@ func rolloutImageSubcommand(args []string, logger log.DebugLogger) error {
 	return nil
 }
 
+func checkCertificates(predictedDuration time.Duration) error {
+	predictedFinish := time.Now().Add(predictedDuration)
+	if srpc.GetEarliestClientCertExpiration().Before(predictedFinish) {
+		return fmt.Errorf("a certificate expires before: %s", predictedFinish)
+	}
+	return nil
+}
+
 func extendImageLifetime(imageServerClientResource *srpc.ClientResource,
-	imageName string, expiresAt time.Time, numGroup0, numGroup1 int,
+	imageName string, expiresAt time.Time, predictedDuration time.Duration,
 	logger log.DebugLogger) error {
 	if expiresAt.IsZero() {
 		return nil
 	}
-	numSteps := math.Sqrt(float64(numGroup0*2)) +
-		math.Sqrt(float64(numGroup1*2))
-	predictedTime := time.Minute * 5 * time.Duration(numSteps)
-	if time.Until(expiresAt) >= predictedTime {
+	if time.Until(expiresAt) >= predictedDuration {
 		return nil
 	}
-	newExpiration := time.Now().Add(predictedTime)
+	newExpiration := time.Now().Add(predictedDuration)
 	logger.Debugf(0, "extending image lifetime by %s\n",
 		format.Duration(time.Until(newExpiration)))
 	client, err := imageServerClientResource.GetHTTP(nil, 0)
@@ -164,8 +169,14 @@ func rolloutImage(imageName string, logger log.DebugLogger) error {
 		cpuSharer)
 	logger.Debugf(0, "%d unused, %d used Hypervisors\n",
 		len(unusedHypervisors), len(usedHypervisors))
+	numSteps := math.Sqrt(float64(len(unusedHypervisors)*2)) +
+		math.Sqrt(float64(len(usedHypervisors)*2))
+	predictedDuration := time.Minute * 5 * time.Duration(numSteps)
+	if err := checkCertificates(predictedDuration); err != nil {
+		return err
+	}
 	err = extendImageLifetime(imageServerClientResource, imageName, expiresAt,
-		len(unusedHypervisors), len(usedHypervisors), logger)
+		predictedDuration, logger)
 	if err != nil {
 		return err
 	}
