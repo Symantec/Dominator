@@ -95,8 +95,9 @@ func (t *srpcType) getUpdates(conn *srpc.Conn,
 				continue
 			}
 			t.logger.Printf("Replicator(%s): delete image\n", imageUpdate.Name)
-			if err := t.imageDataBase.DeleteImage(imageUpdate.Name,
-				nil); err != nil {
+			err := t.imageDataBase.DeleteImage(imageUpdate.Name,
+				&srpc.AuthInformation{HaveMethodAccess: true})
+			if err != nil {
 				return err
 			}
 		case imageserver.OperationMakeDirectory:
@@ -120,7 +121,9 @@ func (t *srpcType) deleteMissingImages(imagesToKeep map[string]struct{}) {
 	}
 	for _, imageName := range missingImages {
 		t.logger.Printf("Replicator(%s): delete missing image\n", imageName)
-		if err := t.imageDataBase.DeleteImage(imageName, nil); err != nil {
+		err := t.imageDataBase.DeleteImage(imageName,
+			&srpc.AuthInformation{HaveMethodAccess: true})
+		if err != nil {
 			t.logger.Println(err)
 		}
 	}
