@@ -118,6 +118,37 @@ func (imdb *ImageDataBase) changeImageExpiration(name string,
 	}
 }
 
+// This must be called with the lock held.
+func (imdb *ImageDataBase) checkChown(dirname, ownerGroup string,
+	authInfo *srpc.AuthInformation) error {
+	if authInfo == nil {
+		return errNoAuthInfo
+	}
+	if authInfo.HaveMethodAccess {
+		return nil
+	}
+	// If owner of parent, any group can be set.
+	parentDirname := filepath.Dir(dirname)
+	if directoryMetadata, ok := imdb.directoryMap[parentDirname]; ok {
+		if directoryMetadata.OwnerGroup != "" {
+			if _, ok := authInfo.GroupList[directoryMetadata.OwnerGroup]; ok {
+				return nil
+			}
+		}
+	}
+	if _, ok := authInfo.GroupList[ownerGroup]; !ok {
+		return fmt.Errorf("no membership of %s group", ownerGroup)
+	}
+	if directoryMetadata, ok := imdb.directoryMap[dirname]; !ok {
+		return fmt.Errorf("no metadata for: \"%s\"", dirname)
+	} else if directoryMetadata.OwnerGroup != "" {
+		if _, ok := authInfo.GroupList[directoryMetadata.OwnerGroup]; ok {
+			return nil
+		}
+	}
+	return errNoAccess
+}
+
 func (imdb *ImageDataBase) checkDirectory(name string) bool {
 	imdb.RLock()
 	defer imdb.RUnlock()
@@ -152,17 +183,19 @@ func (imdb *ImageDataBase) checkPermissions(imageName string,
 	return errNoAccess
 }
 
-func (imdb *ImageDataBase) chownDirectory(dirname, ownerGroup string) error {
+func (imdb *ImageDataBase) chownDirectory(dirname, ownerGroup string,
+	authInfo *srpc.AuthInformation) error {
 	dirname = filepath.Clean(dirname)
-	imdb.RLock()
+	imdb.Lock()
+	defer imdb.Unlock()
 	directoryMetadata, ok := imdb.directoryMap[dirname]
-	imdb.RUnlock()
 	if !ok {
 		return fmt.Errorf("no metadata for: \"%s\"", dirname)
 	}
+	if err := imdb.checkChown(dirname, ownerGroup, authInfo); err != nil {
+		return err
+	}
 	directoryMetadata.OwnerGroup = ownerGroup
-	imdb.Lock()
-	defer imdb.Unlock()
 	return imdb.updateDirectoryMetadata(
 		image.Directory{Name: dirname, Metadata: directoryMetadata})
 }

@@ -74,8 +74,9 @@ func (imdb *ImageDataBase) CheckImage(name string) bool {
 	return imdb.checkImage(name)
 }
 
-func (imdb *ImageDataBase) ChownDirectory(dirname, ownerGroup string) error {
-	return imdb.chownDirectory(dirname, ownerGroup)
+func (imdb *ImageDataBase) ChownDirectory(dirname, ownerGroup string,
+	authInfo *srpc.AuthInformation) error {
+	return imdb.chownDirectory(dirname, ownerGroup, authInfo)
 }
 
 func (imdb *ImageDataBase) CountDirectories() uint {
