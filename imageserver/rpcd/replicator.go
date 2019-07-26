@@ -6,7 +6,6 @@ import (
 	"io"
 	"time"
 
-	imgclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
@@ -24,7 +23,7 @@ func (t *srpcType) replicator(finishedReplication chan<- struct{}) {
 		nextSleepStopTime = time.Now().Add(timeout)
 		if client, err := srpc.DialHTTP("tcp", t.replicationMaster,
 			timeout); err != nil {
-			t.logger.Printf("Error dialling: %s %s\n", t.replicationMaster, err)
+			t.logger.Printf("Error dialing: %s %s\n", t.replicationMaster, err)
 		} else {
 			if conn, err := client.Call(
 				"ImageServer.GetImageUpdates"); err != nil {
@@ -138,11 +137,20 @@ func (t *srpcType) addImage(name string) error {
 		return err
 	}
 	defer client.Put()
-	img, err := imgclient.GetImage(client, name)
+	request := imageserver.GetImageRequest{
+		ImageName: name,
+		Timeout:   timeout,
+	}
+	if t.archiveMode && !*archiveExpiringImages {
+		request.IgnoreFilesystemIfExpiring = true
+	}
+	var reply imageserver.GetImageResponse
+	err = client.RequestReply("ImageServer.GetImage", request, &reply)
 	if err != nil {
 		client.Close()
 		return err
 	}
+	img := reply.Image
 	if img == nil {
 		return errors.New(name + ": not found")
 	}

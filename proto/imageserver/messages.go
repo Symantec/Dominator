@@ -61,9 +61,10 @@ type FindLatestImageResponse struct {
 }
 
 type GetImageRequest struct {
-	ImageName        string
-	IgnoreFilesystem bool
-	Timeout          time.Duration
+	ImageName                  string
+	IgnoreFilesystem           bool
+	IgnoreFilesystemIfExpiring bool
+	Timeout                    time.Duration
 }
 
 type GetImageResponse struct {
