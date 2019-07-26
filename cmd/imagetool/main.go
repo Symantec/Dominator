@@ -79,9 +79,10 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  add    name imagefile filterfile triggerfile")
 	fmt.Fprintln(os.Stderr, "  addi   name imagename filterfile triggerfile")
-	fmt.Fprintln(os.Stderr, "  adds   name subname filterfile triggerfile")
 	fmt.Fprintln(os.Stderr, "  addrep name baseimage layerimage...")
+	fmt.Fprintln(os.Stderr, "  adds   name subname filterfile triggerfile")
 	fmt.Fprintln(os.Stderr, "  bulk-addrep layerimage...")
+	fmt.Fprintln(os.Stderr, "  change-image-expiration name")
 	fmt.Fprintln(os.Stderr, "  check  name")
 	fmt.Fprintln(os.Stderr, "  check-directory dirname")
 	fmt.Fprintln(os.Stderr, "  chown  dirname ownerGroup")
@@ -100,10 +101,10 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  find-latest-image   directory")
 	fmt.Fprintln(os.Stderr, "  get                 name directory")
 	fmt.Fprintln(os.Stderr, "  get-archive-data    name outfile")
+	fmt.Fprintln(os.Stderr, "  get-image-expiration name")
 	fmt.Fprintln(os.Stderr, "  list")
 	fmt.Fprintln(os.Stderr, "  listdirs")
 	fmt.Fprintln(os.Stderr, "  listunrefobj")
-	fmt.Fprintln(os.Stderr, "  list-latest-image   directory")
 	fmt.Fprintln(os.Stderr, "  make-raw-image      name rawfile")
 	fmt.Fprintln(os.Stderr, "  match-triggers      name triggers-file")
 	fmt.Fprintln(os.Stderr, "  merge-filters       filter-file...")
@@ -135,10 +136,11 @@ type subcommand struct {
 
 var subcommands = []subcommand{
 	{"add", 4, 4, addImagefileSubcommand},
-	{"adds", 4, 4, addImagesubSubcommand},
 	{"addi", 4, 4, addImageimageSubcommand},
 	{"addrep", 3, -1, addReplaceImageSubcommand},
+	{"adds", 4, 4, addImagesubSubcommand},
 	{"bulk-addrep", 1, -1, bulkAddReplaceImagesSubcommand},
+	{"change-image-expiration", 1, 1, changeImageExpirationSubcommand},
 	{"check", 1, 1, checkImageSubcommand},
 	{"check-directory", 1, 1, checkDirectorySubcommand},
 	{"chown", 2, 2, chownDirectorySubcommand},
@@ -150,10 +152,10 @@ var subcommands = []subcommand{
 	{"find-latest-image", 1, 1, findLatestImageSubcommand},
 	{"get", 2, 2, getImageSubcommand},
 	{"get-archive-data", 2, 2, getImageArchiveDataSubcommand},
+	{"get-image-expiration", 1, 1, getImageExpirationSubcommand},
 	{"list", 0, 0, listImagesSubcommand},
 	{"listdirs", 0, 0, listDirectoriesSubcommand},
 	{"listunrefobj", 0, 0, listUnreferencedObjectsSubcommand},
-	{"list-latest-image", 1, 1, listLatestImageSubcommand},
 	{"make-raw-image", 2, 2, makeRawImageSubcommand},
 	{"match-triggers", 2, 2, matchTriggersSubcommand},
 	{"merge-filters", 1, -1, mergeFiltersSubcommand},

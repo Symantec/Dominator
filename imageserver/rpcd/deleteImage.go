@@ -22,5 +22,6 @@ func (t *srpcType) DeleteImage(conn *srpc.Conn,
 	} else {
 		t.logger.Printf("DeleteImage(%s) by %s\n", request.ImageName, username)
 	}
-	return t.imageDataBase.DeleteImage(request.ImageName, &username)
+	return t.imageDataBase.DeleteImage(request.ImageName,
+		conn.GetAuthInformation())
 }

@@ -188,6 +188,23 @@ func doHTTPConnect(conn net.Conn, path string) error {
 	return nil
 }
 
+func getEarliestClientCertExpiration() time.Time {
+	var earliest time.Time
+	if clientTlsConfig == nil {
+		return earliest
+	}
+	for _, cert := range clientTlsConfig.Certificates {
+		if cert.Leaf != nil && !cert.Leaf.NotAfter.IsZero() {
+			if earliest.IsZero() {
+				earliest = cert.Leaf.NotAfter
+			} else if cert.Leaf.NotAfter.Before(earliest) {
+				earliest = cert.Leaf.NotAfter
+			}
+		}
+	}
+	return earliest
+}
+
 func newClient(rawConn, dataConn net.Conn, isEncrypted bool,
 	makeCoder coderMaker) *Client {
 	clientMetricsMutex.Lock()

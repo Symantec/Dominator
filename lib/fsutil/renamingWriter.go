@@ -20,9 +20,6 @@ func createRenamingWriter(filename string, perm os.FileMode) (
 	return writer, nil
 }
 
-// fsyncFile will call file.Sync if it has not been called recently. This
-// attempts to reduce the performance problems of fsync(2) by potentially
-// sacrificing some file-system consistency.
 func fsyncFile(file *os.File) error {
 	select {
 	case fsyncSemaphore <- struct{}{}:

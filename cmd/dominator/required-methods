@@ -1,4 +1,5 @@
 FileGenerator.Connect
 ImageServer.GetImage
+ImageServer.GetImageExpiration
 ObjectServer.AddObjects
 Subd.*

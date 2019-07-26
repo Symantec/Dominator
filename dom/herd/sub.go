@@ -292,6 +292,11 @@ func (sub *Sub) poll(srpcClient *srpc.Client, previousStatus subStatus) {
 	haveImage := false
 	if sub.requiredImage == nil {
 		request.ShortPollOnly = true
+		// Ensure a full poll when the image becomes available later. This will
+		// cover the special case when an image expiration is extended, which
+		// leads to the sub showing "image not ready" until the next generation
+		// increment.
+		sub.generationCount = 0
 	} else {
 		haveImage = true
 	}

@@ -23,5 +23,5 @@ func (t *srpcType) ChownDirectory(conn *srpc.Conn,
 	t.logger.Printf("ChownDirectory(%s) to: \"%s\" by %s\n",
 		request.DirectoryName, request.OwnerGroup, username)
 	return t.imageDataBase.ChownDirectory(request.DirectoryName,
-		request.OwnerGroup)
+		request.OwnerGroup, conn.GetAuthInformation())
 }

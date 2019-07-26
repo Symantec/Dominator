@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/log"
@@ -94,8 +95,9 @@ func (t *srpcType) getUpdates(conn *srpc.Conn,
 				continue
 			}
 			t.logger.Printf("Replicator(%s): delete image\n", imageUpdate.Name)
-			if err := t.imageDataBase.DeleteImage(imageUpdate.Name,
-				nil); err != nil {
+			err := t.imageDataBase.DeleteImage(imageUpdate.Name,
+				&srpc.AuthInformation{HaveMethodAccess: true})
+			if err != nil {
 				return err
 			}
 		case imageserver.OperationMakeDirectory:
@@ -119,18 +121,50 @@ func (t *srpcType) deleteMissingImages(imagesToKeep map[string]struct{}) {
 	}
 	for _, imageName := range missingImages {
 		t.logger.Printf("Replicator(%s): delete missing image\n", imageName)
-		if err := t.imageDataBase.DeleteImage(imageName, nil); err != nil {
+		err := t.imageDataBase.DeleteImage(imageName,
+			&srpc.AuthInformation{HaveMethodAccess: true})
+		if err != nil {
 			t.logger.Println(err)
 		}
 	}
 }
 
+func (t *srpcType) extendImageExpiration(name string,
+	img *image.Image) (bool, error) {
+	timeout := time.Second * 60
+	client, err := t.imageserverResource.GetHTTP(nil, timeout)
+	if err != nil {
+		return false, err
+	}
+	defer client.Put()
+	expiresAt, err := imageclient.GetImageExpiration(client, name)
+	if err != nil {
+		if err == io.EOF {
+			client.Close()
+		}
+		return false, err
+	}
+	return t.imageDataBase.ChangeImageExpiration(name, expiresAt,
+		&srpc.AuthInformation{HaveMethodAccess: true})
+}
+
 func (t *srpcType) addImage(name string) error {
 	timeout := time.Second * 60
-	if t.imageDataBase.CheckImage(name) || t.checkImageBeingInjected(name) {
+	if t.checkImageBeingInjected(name) {
 		return nil
 	}
 	logger := prefixlogger.New(fmt.Sprintf("Replicator(%s): ", name), t.logger)
+	if img := t.imageDataBase.GetImage(name); img != nil {
+		if img.ExpiresAt.IsZero() {
+			return nil
+		}
+		if changed, err := t.extendImageExpiration(name, img); err != nil {
+			logger.Println(err)
+		} else if changed {
+			logger.Println("extended expiration time")
+		}
+		return nil
+	}
 	logger.Println("add image")
 	client, err := t.imageserverResource.GetHTTP(nil, timeout)
 	if err != nil {
@@ -165,7 +199,9 @@ func (t *srpcType) addImage(name string) error {
 			client.Close()
 			return err
 		}
-		if err := t.imageDataBase.AddImage(img, name, nil); err != nil {
+		err := t.imageDataBase.AddImage(img, name,
+			&srpc.AuthInformation{HaveMethodAccess: true})
+		if err != nil {
 			return err
 		}
 		return nil

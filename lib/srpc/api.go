@@ -84,6 +84,13 @@ func CheckTlsRequired() bool {
 	return tlsRequired
 }
 
+// GetEarliestClientCertExpiration returns the earliest expiration time of any
+// certificate registered with RegisterClientTlsConfig. The zero value is
+// returned if there are no certificates with an expiration time.
+func GetEarliestClientCertExpiration() time.Time {
+	return getEarliestClientCertExpiration()
+}
+
 // LoadCertificates loads zero or more X509 certificates from directory. Each
 // certificate must be stored in a pair of PEM-encoded files, with the private
 // key in a file with extension '.key' and the corresponding public key
