@@ -2819,7 +2819,9 @@ func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 	cmd.Args = append(cmd.Args, netOptions...)
 	if vm.manager.ShowVgaConsole {
 		cmd.Args = append(cmd.Args, "-vga", "std")
-	} else {
+	} else if vm.getActiveKernelPath() == "" { // Have a bootloader.
+		cmd.Args = append(cmd.Args, "-display", "none", "-vga", "std")
+	} else { // No bootloader: go minimalist.
 		cmd.Args = append(cmd.Args, "-nographic")
 	}
 	for index, volume := range vm.VolumeLocations {
