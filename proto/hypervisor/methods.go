@@ -216,6 +216,12 @@ func (left *VmInfo) Equal(right *VmInfo) bool {
 	if !left.Address.Equal(&right.Address) {
 		return false
 	}
+	if left.ConsoleType != right.ConsoleType {
+		return false
+	}
+	if left.DestroyProtection != right.DestroyProtection {
+		return false
+	}
 	if left.Hostname != right.Hostname {
 		return false
 	}
