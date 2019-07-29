@@ -8,6 +8,10 @@ import (
 )
 
 const (
+	ConsoleNone  = 0
+	ConsoleDummy = 1
+	ConsoleVNC   = 2
+
 	StateStarting      = 0
 	StateRunning       = 1
 	StateFailedToStart = 2
@@ -61,6 +65,15 @@ type ChangeOwnersResponse struct {
 	Error string
 }
 
+type ChangeVmConsoleTypeRequest struct {
+	ConsoleType ConsoleType
+	IpAddress   net.IP
+}
+
+type ChangeVmConsoleTypeResponse struct {
+	Error string
+}
+
 type ChangeVmDestroyProtectionRequest struct {
 	DestroyProtection bool
 	IpAddress         net.IP
@@ -96,6 +109,17 @@ type CommitImportedVmResponse struct {
 	Error string
 }
 
+// The ConnectToVmConsole RPC is fully streamed. After the request/response,
+// the connection/client is hijacked and each side of the connection will send
+// a stream of bytes.
+type ConnectToVmConsoleRequest struct {
+	IpAddress net.IP
+}
+
+type ConnectToVmConsoleResponse struct {
+	Error string
+}
+
 // The ConnectToVmSerialPort RPC is fully streamed. After the request/response,
 // the connection/client is hijacked and each side of the connection will send
 // a stream of bytes.
@@ -107,6 +131,8 @@ type ConnectToVmSerialPortRequest struct {
 type ConnectToVmSerialPortResponse struct {
 	Error string
 }
+
+type ConsoleType uint
 
 type CopyVmRequest struct {
 	AccessToken      []byte
@@ -489,10 +515,11 @@ type UpdateSubnetsResponse struct {
 
 type VmInfo struct {
 	Address            Address
-	DestroyProtection  bool   `json:",omitempty"`
-	Hostname           string `json:",omitempty"`
-	ImageName          string `json:",omitempty"`
-	ImageURL           string `json:",omitempty"`
+	ConsoleType        ConsoleType `json:",omitempty"`
+	DestroyProtection  bool        `json:",omitempty"`
+	Hostname           string      `json:",omitempty"`
+	ImageName          string      `json:",omitempty"`
+	ImageURL           string      `json:",omitempty"`
 	MemoryInMiB        uint64
 	MilliCPUs          uint
 	OwnerGroups        []string `json:",omitempty"`
