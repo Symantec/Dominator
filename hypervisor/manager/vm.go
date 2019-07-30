@@ -212,6 +212,9 @@ func (m *Manager) acknowledgeVm(ipAddr net.IP,
 
 func (m *Manager) allocateVm(req proto.CreateVmRequest,
 	authInfo *srpc.AuthInformation) (*vmInfoType, error) {
+	if err := req.ConsoleType.CheckValid(); err != nil {
+		return nil, err
+	}
 	if req.MemoryInMiB < 1 {
 		return nil, errors.New("no memory specified")
 	}
@@ -276,6 +279,7 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest,
 		LocalVmInfo: proto.LocalVmInfo{
 			VmInfo: proto.VmInfo{
 				Address:            address,
+				ConsoleType:        req.ConsoleType,
 				DestroyProtection:  req.DestroyProtection,
 				Hostname:           req.Hostname,
 				ImageName:          req.ImageName,
@@ -324,6 +328,24 @@ func (m *Manager) becomePrimaryVmOwner(ipAddr net.IP,
 	for _, user := range ownerUsers {
 		vm.ownerUsers[user] = struct{}{}
 	}
+	vm.writeAndSendInfo()
+	return nil
+}
+
+func (m *Manager) changeVmConsoleType(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, consoleType proto.ConsoleType) error {
+	if err := consoleType.CheckValid(); err != nil {
+		return err
+	}
+	vm, err := m.getVmLockAndAuth(ipAddr, true, authInfo, nil)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if vm.State != proto.StateStopped {
+		return errors.New("VM is not stopped")
+	}
+	vm.ConsoleType = consoleType
 	vm.writeAndSendInfo()
 	return nil
 }
@@ -401,6 +423,26 @@ func (m *Manager) commitImportedVm(ipAddr net.IP,
 	vm.Uncommitted = false
 	vm.writeAndSendInfo()
 	return nil
+}
+
+func (m *Manager) connectToVmConsole(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) (net.Conn, error) {
+	vm, err := m.getVmLockAndAuth(ipAddr, true, authInfo, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer vm.mutex.Unlock()
+	if vm.State != proto.StateRunning {
+		return nil, errors.New("VM is not running")
+	}
+	if vm.ConsoleType != proto.ConsoleVNC {
+		return nil, errors.New("VNC console is not enabled")
+	}
+	console, err := net.Dial("unix", filepath.Join(vm.dirname, "vnc"))
+	if err != nil {
+		return nil, err
+	}
+	return console, nil
 }
 
 func (m *Manager) connectToVmSerialPort(ipAddr net.IP,
@@ -2819,10 +2861,17 @@ func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 	cmd.Args = append(cmd.Args, netOptions...)
 	if vm.manager.ShowVgaConsole {
 		cmd.Args = append(cmd.Args, "-vga", "std")
-	} else if vm.getActiveKernelPath() == "" { // Have a bootloader.
-		cmd.Args = append(cmd.Args, "-display", "none", "-vga", "std")
-	} else { // No bootloader: go minimalist.
-		cmd.Args = append(cmd.Args, "-nographic")
+	} else {
+		switch vm.ConsoleType {
+		case proto.ConsoleNone:
+			cmd.Args = append(cmd.Args, "-nographic")
+		case proto.ConsoleDummy:
+			cmd.Args = append(cmd.Args, "-display", "none", "-vga", "std")
+		case proto.ConsoleVNC:
+			cmd.Args = append(cmd.Args,
+				"-display", "vnc=unix:"+filepath.Join(vm.dirname, "vnc"),
+				"-vga", "std")
+		}
 	}
 	for index, volume := range vm.VolumeLocations {
 		var volumeFormat proto.VolumeFormat
