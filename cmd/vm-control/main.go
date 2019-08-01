@@ -15,11 +15,13 @@ import (
 	"github.com/Symantec/Dominator/lib/net/rrdialer"
 	"github.com/Symantec/Dominator/lib/srpc/setupclient"
 	"github.com/Symantec/Dominator/lib/tags"
+	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 )
 
 var (
 	adjacentVM = flag.String("adjacentVM", "",
 		"IP address of VM adjacent (same Hypervisor) to VM being created")
+	consoleType       hyper_proto.ConsoleType
 	destroyProtection = flag.Bool("destroyProtection", false,
 		"If true, do not destroy running VM")
 	dhcpTimeout = flag.Duration("dhcpTimeout", time.Minute,
@@ -75,8 +77,10 @@ var (
 		"If true, trace metadata calls until interrupted")
 	userDataFile = flag.String("userDataFile", "",
 		"Name file containing user-data accessible from the metadata server")
-	vmHostname     = flag.String("vmHostname", "", "Hostname for VM")
-	vmTags         tags.Tags
+	vmHostname = flag.String("vmHostname", "", "Hostname for VM")
+	vmTags     tags.Tags
+	vncViewer  = flag.String("vncViewer", defaultVncViewer,
+		"Path to VNC viewer")
 	volumeFilename = flag.String("volumeFilename", "",
 		"Name of file to write volume data to")
 	volumeIndex = flag.Uint("volumeIndex", 0,
@@ -87,6 +91,8 @@ var (
 )
 
 func init() {
+	flag.Var(&consoleType, "consoleType",
+		"type of graphical console (default none)")
 	flag.Var(&memory, "memory", "memory (default 1GiB)")
 	flag.Var(&minFreeBytes, "minFreeBytes",
 		"minimum number of free bytes in root volume")
@@ -106,9 +112,11 @@ func printUsage() {
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  become-primary-vm-owner IPaddr")
+	fmt.Fprintln(os.Stderr, "  change-vm-console-type IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-destroy-protection IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-owner-users IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-tags IPaddr")
+	fmt.Fprintln(os.Stderr, "  connect-to-vm-console IPaddr")
 	fmt.Fprintln(os.Stderr, "  connect-to-vm-serial-port IPaddr")
 	fmt.Fprintln(os.Stderr, "  copy-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  create-vm")
@@ -154,9 +162,11 @@ type subcommand struct {
 
 var subcommands = []subcommand{
 	{"become-primary-vm-owner", 1, 1, becomePrimaryVmOwnerSubcommand},
+	{"change-vm-console-type", 1, 1, changeVmConsoleTypeSubcommand},
 	{"change-vm-destroy-protection", 1, 1, changeVmDestroyProtectionSubcommand},
 	{"change-vm-owner-users", 1, 1, changeVmOwnerUsersSubcommand},
 	{"change-vm-tags", 1, 1, changeVmTagsSubcommand},
+	{"connect-to-vm-console", 1, 1, connectToVmConsoleSubcommand},
 	{"connect-to-vm-serial-port", 1, 1, connectToVmSerialPortSubcommand},
 	{"copy-vm", 1, 1, copyVmSubcommand},
 	{"create-vm", 0, 0, createVmSubcommand},

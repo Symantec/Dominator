@@ -49,7 +49,7 @@ func connectToVmSerialPortOnHypervisor(hypervisor string, ipAddr net.IP,
 	if err := conn.Flush(); err != nil {
 		return err
 	}
-	var response proto.ChangeVmTagsResponse
+	var response proto.ConnectToVmSerialPortResponse
 	if err := conn.Decode(&response); err != nil {
 		return err
 	}
