@@ -101,6 +101,11 @@ func (m *Manager) ChangeOwners(ownerGroups, ownerUsers []string) error {
 	return m.changeOwners(ownerGroups, ownerUsers)
 }
 
+func (m *Manager) ChangeVmConsoleType(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, consoleType proto.ConsoleType) error {
+	return m.changeVmConsoleType(ipAddr, authInfo, consoleType)
+}
+
 func (m *Manager) ChangeVmDestroyProtection(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, destroyProtection bool) error {
 	return m.changeVmDestroyProtection(ipAddr, authInfo, destroyProtection)
@@ -131,6 +136,11 @@ func (m *Manager) CloseUpdateChannel(channel <-chan proto.Update) {
 func (m *Manager) CommitImportedVm(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
 	return m.commitImportedVm(ipAddr, authInfo)
+}
+
+func (m *Manager) ConnectToVmConsole(ipAddr net.IP,
+	authInfo *srpc.AuthInformation) (net.Conn, error) {
+	return m.connectToVmConsole(ipAddr, authInfo)
 }
 
 func (m *Manager) ConnectToVmSerialPort(ipAddr net.IP,

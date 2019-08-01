@@ -5,10 +5,18 @@ import (
 	"net"
 )
 
+const consoleTypeUnknown = "UNKNOWN ConsoleType"
 const stateUnknown = "UNKNOWN State"
 const volumeFormatUnknown = "UNKNOWN VolumeFormat"
 
 var (
+	consoleTypeToText = map[ConsoleType]string{
+		ConsoleNone:  "none",
+		ConsoleDummy: "dummy",
+		ConsoleVNC:   "vnc",
+	}
+	textToConsoleType map[string]ConsoleType
+
 	stateToText = map[State]string{
 		StateStarting:      "starting",
 		StateRunning:       "running",
@@ -29,6 +37,10 @@ var (
 )
 
 func init() {
+	textToConsoleType = make(map[string]ConsoleType, len(consoleTypeToText))
+	for consoleType, text := range consoleTypeToText {
+		textToConsoleType[text] = consoleType
+	}
 	textToState = make(map[string]State, len(stateToText))
 	for state, text := range stateToText {
 		textToState[text] = state
@@ -78,6 +90,49 @@ func stringSlicesEqual(left, right []string) bool {
 		}
 	}
 	return true
+}
+
+func (consoleType *ConsoleType) CheckValid() error {
+	if _, ok := consoleTypeToText[*consoleType]; !ok {
+		return errors.New(consoleTypeUnknown)
+	} else {
+		return nil
+	}
+}
+
+func (consoleType ConsoleType) MarshalText() ([]byte, error) {
+	if text := consoleType.String(); text == consoleTypeUnknown {
+		return nil, errors.New(text)
+	} else {
+		return []byte(text), nil
+	}
+}
+
+func (consoleType *ConsoleType) Set(value string) error {
+	if val, ok := textToConsoleType[value]; !ok {
+		return errors.New(consoleTypeUnknown)
+	} else {
+		*consoleType = val
+		return nil
+	}
+}
+
+func (consoleType ConsoleType) String() string {
+	if str, ok := consoleTypeToText[consoleType]; !ok {
+		return consoleTypeUnknown
+	} else {
+		return str
+	}
+}
+
+func (consoleType *ConsoleType) UnmarshalText(text []byte) error {
+	txt := string(text)
+	if val, ok := textToConsoleType[txt]; ok {
+		*consoleType = val
+		return nil
+	} else {
+		return errors.New("unknown ConsoleType: " + txt)
+	}
 }
 
 func (state State) MarshalText() ([]byte, error) {
@@ -159,6 +214,12 @@ func (subnet *Subnet) Shrink() {
 
 func (left *VmInfo) Equal(right *VmInfo) bool {
 	if !left.Address.Equal(&right.Address) {
+		return false
+	}
+	if left.ConsoleType != right.ConsoleType {
+		return false
+	}
+	if left.DestroyProtection != right.DestroyProtection {
 		return false
 	}
 	if left.Hostname != right.Hostname {

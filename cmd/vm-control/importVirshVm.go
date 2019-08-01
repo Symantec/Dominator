@@ -201,6 +201,7 @@ func importVirshVm(macAddr, domainName string, sAddrs []proto.Address,
 		tags["Name"] = domainName
 	}
 	request := proto.ImportLocalVmRequest{VmInfo: proto.VmInfo{
+		ConsoleType: consoleType,
 		Hostname:    domainName,
 		OwnerGroups: ownerGroups,
 		OwnerUsers:  ownerUsers,

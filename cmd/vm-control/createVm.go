@@ -100,6 +100,7 @@ func createVm(logger log.DebugLogger) error {
 
 func createVmInfoFromFlags() hyper_proto.VmInfo {
 	return hyper_proto.VmInfo{
+		ConsoleType:        consoleType,
 		DestroyProtection:  *destroyProtection,
 		Hostname:           *vmHostname,
 		MemoryInMiB:        uint64(memory >> 20),

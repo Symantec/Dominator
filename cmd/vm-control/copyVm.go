@@ -73,6 +73,7 @@ func copyVmFromHypervisor(sourceHypervisorAddress string, vmIP net.IP,
 		return err
 	}
 	vmInfo := createVmInfoFromFlags()
+	vmInfo.ConsoleType = sourceVmInfo.ConsoleType
 	vmInfo.DestroyProtection = vmInfo.DestroyProtection ||
 		sourceVmInfo.DestroyProtection
 	if vmInfo.Hostname == "" {
