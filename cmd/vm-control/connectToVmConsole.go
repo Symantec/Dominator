@@ -75,7 +75,7 @@ func connectToVmConsoleOnHypervisor(hypervisor string, ipAddr net.IP,
 		if err := cmd.Start(); err != nil {
 			logger.Println(err)
 		} else {
-			fmt.Fprintf(os.Stderr, "Listening on port %d for VNC connection\n",
+			fmt.Fprintf(os.Stderr, "Listening on port %s for VNC connection\n",
 				port)
 		}
 	}
