@@ -517,6 +517,7 @@ type VmInfo struct {
 	Address            Address
 	ConsoleType        ConsoleType `json:",omitempty"`
 	DestroyProtection  bool        `json:",omitempty"`
+	DisableVirtIO      bool        `json:",omitempty"`
 	Hostname           string      `json:",omitempty"`
 	ImageName          string      `json:",omitempty"`
 	ImageURL           string      `json:",omitempty"`
