@@ -281,6 +281,7 @@ func (m *Manager) allocateVm(req proto.CreateVmRequest,
 				Address:            address,
 				ConsoleType:        req.ConsoleType,
 				DestroyProtection:  req.DestroyProtection,
+				DisableVirtIO:      req.DisableVirtIO,
 				Hostname:           req.Hostname,
 				ImageName:          req.ImageName,
 				ImageURL:           req.ImageURL,
@@ -2782,6 +2783,10 @@ func (vm *vmInfoType) getBridgesAndOptions(haveManagerLock bool) (
 		subnetIDs = append(subnetIDs, subnetId)
 	}
 	var bridges, options []string
+	deviceDriver := "virtio-net-pci"
+	if vm.DisableVirtIO {
+		deviceDriver = "e1000"
+	}
 	for index, address := range addresses {
 		subnet, ok := vm.manager.subnets[subnetIDs[index]]
 		if !ok {
@@ -2802,8 +2807,8 @@ func (vm *vmInfoType) getBridgesAndOptions(haveManagerLock bool) (
 		options = append(options,
 			"-netdev", fmt.Sprintf("tap,id=net%d,fd=%d%s",
 				index, index+3, vlanOption),
-			"-device", fmt.Sprintf("virtio-net-pci,netdev=net%d,mac=%s",
-				index, address.MacAddress))
+			"-device", fmt.Sprintf("%s,netdev=net%d,mac=%s",
+				deviceDriver, index, address.MacAddress))
 	}
 	return bridges, options, nil
 }
@@ -2873,6 +2878,10 @@ func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 				"-vga", "std")
 		}
 	}
+	var interfaceDriver string
+	if !vm.DisableVirtIO {
+		interfaceDriver = ",if=virtio"
+	}
 	for index, volume := range vm.VolumeLocations {
 		var volumeFormat proto.VolumeFormat
 		if index < len(vm.Volumes) {
@@ -2880,7 +2889,7 @@ func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 		}
 		cmd.Args = append(cmd.Args,
 			"-drive", "file="+volume.Filename+",format="+volumeFormat.String()+
-				",if=virtio")
+				interfaceDriver)
 	}
 	os.Remove(filepath.Join(vm.dirname, "bootlog"))
 	cmd.ExtraFiles = tapFiles // Start at fd=3 for QEMU.
