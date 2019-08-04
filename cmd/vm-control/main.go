@@ -24,6 +24,8 @@ var (
 	consoleType       hyper_proto.ConsoleType
 	destroyProtection = flag.Bool("destroyProtection", false,
 		"If true, do not destroy running VM")
+	disableVirtIO = flag.Bool("disableVirtIO", false,
+		"If true, disable virtio drivers, reducing I/O performance")
 	dhcpTimeout = flag.Duration("dhcpTimeout", time.Minute,
 		"Time to wait before timing out on DHCP request from VM")
 	fleetManagerHostname = flag.String("fleetManagerHostname", "",
