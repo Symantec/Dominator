@@ -39,6 +39,21 @@
 	    ],
 	    "PackagerType": "deb"
 	},
+	"bootstrap/Debian-10": {
+	    "BootstrapCommand": [
+		"debootstrap",
+		"--arch=amd64",
+		"buster",
+		"$dir",
+		"http://mirror.company.com/debian"
+	    ],
+	    "FilterLines": [
+		"/etc/hostname",
+		"/etc/machine-id",
+		"/var/log/.*"
+	    ],
+	    "PackagerType": "deb"
+	},
         "bootstrap/Ubuntu-14.04": {
 	    "BootstrapCommand": [
 		"debootstrap",
