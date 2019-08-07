@@ -34,8 +34,8 @@ var (
 	imageServerPortNum = flag.Uint("imageServerPortNum",
 		constants.ImageServerPortNumber,
 		"Port number of image server")
-	mdbFile = flag.String("mdbFile", "mdb",
-		"File to read MDB data from, relative to stateDir (default format is JSON)")
+	mdbFile = flag.String("mdbFile", constants.DefaultMdbFile,
+		"File to read MDB data from")
 	minInterval = flag.Uint("minInterval", 1,
 		"Minimum interval between loops (in seconds)")
 	objectsDir = flag.String("objectsDir", "objects",
@@ -116,7 +116,7 @@ func main() {
 		os.Exit(1)
 	}
 	interval := time.Duration(*minInterval) * time.Second
-	mdbChannel := mdbd.StartMdbDaemon(path.Join(*stateDir, *mdbFile), logger)
+	mdbChannel := mdbd.StartMdbDaemon(*mdbFile, logger)
 	objectServer, err := newObjectServer(path.Join(*stateDir, *objectsDir),
 		logger)
 	if err != nil {
