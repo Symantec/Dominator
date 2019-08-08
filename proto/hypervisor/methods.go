@@ -51,7 +51,7 @@ func init() {
 	}
 }
 
-func shrinkIP(netIP net.IP) net.IP {
+func ShrinkIP(netIP net.IP) net.IP {
 	switch len(netIP) {
 	case 4:
 		return netIP
@@ -77,7 +77,7 @@ func (left *Address) Equal(right *Address) bool {
 }
 
 func (address *Address) Shrink() {
-	address.IpAddress = shrinkIP(address.IpAddress)
+	address.IpAddress = ShrinkIP(address.IpAddress)
 }
 
 func stringSlicesEqual(left, right []string) bool {
@@ -205,10 +205,10 @@ func IpListsEqual(left, right []net.IP) bool {
 }
 
 func (subnet *Subnet) Shrink() {
-	subnet.IpGateway = shrinkIP(subnet.IpGateway)
-	subnet.IpMask = shrinkIP(subnet.IpMask)
+	subnet.IpGateway = ShrinkIP(subnet.IpGateway)
+	subnet.IpMask = ShrinkIP(subnet.IpMask)
 	for index, ipAddr := range subnet.DomainNameServers {
-		subnet.DomainNameServers[index] = shrinkIP(ipAddr)
+		subnet.DomainNameServers[index] = ShrinkIP(ipAddr)
 	}
 }
 
