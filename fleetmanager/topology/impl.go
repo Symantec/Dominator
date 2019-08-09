@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/log"
+	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 )
@@ -146,6 +147,8 @@ func watchLoopLocal(topologyDir string, checkInterval time.Duration,
 
 func (subnet *Subnet) shrink() {
 	subnet.Subnet.Shrink()
+	subnet.FirstAutoIP = hyper_proto.ShrinkIP(subnet.FirstAutoIP)
+	subnet.LastAutoIP = hyper_proto.ShrinkIP(subnet.LastAutoIP)
 	for index, ip := range subnet.ReservedIPs {
 		if len(ip) == 16 {
 			ip = ip.To4()
