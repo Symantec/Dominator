@@ -51,7 +51,7 @@ func (m *Manager) checkIpReserved(tSubnet *topology.Subnet, ip net.IP) bool {
 		return true
 	}
 	ipAddr := ip.String()
-	if _, ok := tSubnet.GetReservedIpSet()[ipAddr]; ok {
+	if tSubnet.CheckIfIpIsReserved(ipAddr) {
 		return true
 	}
 	if _, ok := m.allocatingIPs[ipAddr]; ok {
@@ -115,18 +115,27 @@ func (m *Manager) invertIP(input net.IP) net.IP {
 
 func (m *Manager) makeSubnet(tSubnet *topology.Subnet) *subnetType {
 	networkIp := tSubnet.IpGateway.Mask(net.IPMask(tSubnet.IpMask))
-	startIp := copyIp(networkIp)
-	incrementIp(startIp)
-	stopIp := make(net.IP, len(networkIp))
-	for index, value := range m.invertIP(tSubnet.IpMask) {
-		stopIp[index] = networkIp[index] | value
+	var startIp, stopIp net.IP
+	if len(tSubnet.FirstAutoIP) > 0 {
+		startIp = tSubnet.FirstAutoIP
+	} else {
+		startIp = copyIp(networkIp)
+		incrementIp(startIp)
 	}
-	nextIp := copyIp(startIp)
+	if len(tSubnet.LastAutoIP) > 0 {
+		stopIp = tSubnet.LastAutoIP
+		incrementIp(stopIp)
+	} else {
+		stopIp = make(net.IP, len(networkIp))
+		for index, value := range m.invertIP(tSubnet.IpMask) {
+			stopIp[index] = networkIp[index] | value
+		}
+	}
 	return &subnetType{
 		subnet:  tSubnet,
 		startIp: startIp,
 		stopIp:  stopIp,
-		nextIp:  nextIp,
+		nextIp:  copyIp(startIp),
 	}
 }
 
