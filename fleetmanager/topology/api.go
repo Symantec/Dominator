@@ -49,10 +49,6 @@ func (s *Subnet) CheckIfIpIsReserved(ipAddr string) bool {
 	return ok
 }
 
-func (s *Subnet) GetReservedIpSet() map[string]struct{} {
-	return s.reservedIpAddrs
-}
-
 func (subnet *Subnet) Shrink() {
 	subnet.shrink()
 }
