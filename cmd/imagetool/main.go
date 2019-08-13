@@ -101,6 +101,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  find-latest-image   directory")
 	fmt.Fprintln(os.Stderr, "  get                 name directory")
 	fmt.Fprintln(os.Stderr, "  get-archive-data    name outfile")
+	fmt.Fprintln(os.Stderr, "  get-file-in-image   name imageFile [outfile]")
 	fmt.Fprintln(os.Stderr, "  get-image-expiration name")
 	fmt.Fprintln(os.Stderr, "  list")
 	fmt.Fprintln(os.Stderr, "  listdirs")
@@ -152,6 +153,7 @@ var subcommands = []subcommand{
 	{"find-latest-image", 1, 1, findLatestImageSubcommand},
 	{"get", 2, 2, getImageSubcommand},
 	{"get-archive-data", 2, 2, getImageArchiveDataSubcommand},
+	{"get-file-in-image", 2, 3, getFileInImageSubcommand},
 	{"get-image-expiration", 1, 1, getImageExpirationSubcommand},
 	{"list", 0, 0, listImagesSubcommand},
 	{"listdirs", 0, 0, listDirectoriesSubcommand},
