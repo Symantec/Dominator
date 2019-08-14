@@ -133,6 +133,18 @@ func masterConfiguration(url string) (*masterConfigurationType, error) {
 	return &configuration, nil
 }
 
+func (b *Builder) delayMakeRequiredDirectories(abortNotifier <-chan struct{}) {
+	timer := time.NewTimer(time.Second * 5)
+	select {
+	case <-abortNotifier:
+		if !timer.Stop() {
+			<-timer.C
+		}
+	case <-timer.C:
+		b.makeRequiredDirectories()
+	}
+}
+
 func (b *Builder) makeRequiredDirectories() error {
 	imageServer, err := srpc.DialHTTP("tcp", b.imageServerAddress, 0)
 	if err != nil {
@@ -192,11 +204,18 @@ func (b *Builder) updateImageStreams(
 }
 
 func (b *Builder) watchConfigLoop(configChannel <-chan interface{}) {
+	firstLoadNotifier := make(chan struct{})
+	go b.delayMakeRequiredDirectories(firstLoadNotifier)
 	for rawConfig := range configChannel {
 		imageStreamsConfig, ok := rawConfig.(*imageStreamsConfigurationType)
 		if !ok {
 			b.logger.Printf("received unknown type over config channel")
 			continue
+		}
+		if firstLoadNotifier != nil {
+			firstLoadNotifier <- struct{}{}
+			close(firstLoadNotifier)
+			firstLoadNotifier = nil
 		}
 		b.logger.Println("received new image streams configuration")
 		b.updateImageStreams(imageStreamsConfig)
