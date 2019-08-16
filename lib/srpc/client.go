@@ -80,6 +80,23 @@ func dial(network, address string, dialer Dialer) (net.Conn, error) {
 
 func dialHTTP(network, address string, tlsConfig *tls.Config,
 	dialer Dialer) (*Client, error) {
+	if *srpcProxy == "" {
+		return dialHTTPDirect(network, address, tlsConfig, dialer)
+	}
+	var err error
+	if d, ok := dialer.(*net.Dialer); ok {
+		dialer, err = newProxyDialer(*srpcProxy, d)
+	} else {
+		dialer, err = newProxyDialer(*srpcProxy, &net.Dialer{})
+	}
+	if err != nil {
+		return nil, err
+	}
+	return dialHTTPDirect(network, address, tlsConfig, dialer)
+}
+
+func dialHTTPDirect(network, address string, tlsConfig *tls.Config,
+	dialer Dialer) (*Client, error) {
 	insecureEndpoints := []endpointType{
 		{&gobCoder{}, rpcPath, false},
 		{&jsonCoder{}, jsonRpcPath, false},

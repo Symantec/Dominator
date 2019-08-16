@@ -287,15 +287,8 @@ type Client struct {
 // listening on the HTTP SRPC path. If timeout is zero or less, the underlying
 // OS timeout is used (typically 3 minutes for TCP).
 func DialHTTP(network, address string, timeout time.Duration) (*Client, error) {
-	netDialer := &net.Dialer{Timeout: timeout}
-	if *srpcProxy != "" {
-		dialer, err := newProxyDialer(*srpcProxy, netDialer)
-		if err != nil {
-			return nil, err
-		}
-		return dialHTTP(network, address, clientTlsConfig, dialer)
-	}
-	return dialHTTP(network, address, clientTlsConfig, netDialer)
+	return dialHTTP(network, address, clientTlsConfig,
+		&net.Dialer{Timeout: timeout})
 }
 
 // DialHTTPWithDialer is similar to DialHTTP except that the dialer is used to
