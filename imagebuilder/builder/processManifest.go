@@ -37,7 +37,7 @@ func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
 		return manifestType{},
 			errors.New("error processing manifest: " + err.Error())
 	}
-	if applyFilter {
+	if applyFilter && manifestConfig.Filter != nil {
 		err := util.DeletedFilteredFiles(rootDir, manifestConfig.Filter)
 		if err != nil {
 			return manifestType{}, err
