@@ -19,7 +19,7 @@ import (
 
 func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
 	rootDir string, applyFilter bool,
-	buildLog buildLogger) (manifestType, error) {
+	buildLog io.Writer) (manifestType, error) {
 	manifestFile := path.Join(manifestDir, "manifest")
 	var manifestConfig manifestConfigType
 	if err := json.ReadFromFile(manifestFile, &manifestConfig); err != nil {
