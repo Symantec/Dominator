@@ -19,6 +19,8 @@ const (
 	AssignedOIDBase        = "1.3.6.1.4.1.9586.100.7"
 	PermittedMethodListOID = AssignedOIDBase + ".1"
 	GroupListOID           = AssignedOIDBase + ".2"
+
+	DefaultMdbFile = "/var/lib/mdbd/mdb.json"
 )
 
 var RequiredPaths = map[string]rune{

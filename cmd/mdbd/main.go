@@ -25,12 +25,11 @@ var (
 		"Interval between fetches from the MDB source, in seconds")
 	hostnameRegex = flag.String("hostnameRegex", ".*",
 		"A regular expression to match the desired hostnames")
-	mdbFile = flag.String("mdbFile", "/var/lib/Dominator/mdb",
+	mdbFile = flag.String("mdbFile", constants.DefaultMdbFile,
 		"Name of file to write filtered MDB data to")
 	portNum = flag.Uint("portNum", constants.SimpleMdbServerPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
-	sourcesFile = flag.String("sourcesFile",
-		"/var/lib/Dominator/mdb.sources.list",
+	sourcesFile = flag.String("sourcesFile", "/var/lib/mdbd/mdb.sources.list",
 		"Name of file list of driver url pairs")
 	pidfile = flag.String("pidfile", "", "Name of file to write my PID to")
 )
