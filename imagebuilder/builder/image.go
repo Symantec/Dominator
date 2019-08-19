@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	stdlog "log"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -51,8 +52,6 @@ func (stream *imageStreamType) getManifest(b *Builder, streamName string,
 		"IMAGE_STREAM": streamName,
 	},
 		variables)
-	fmt.Fprintf(buildLog, "Cloning repository: %s branch: %s\n",
-		stream.ManifestUrl, gitBranch)
 	manifestRoot, err := makeTempDirectory("",
 		strings.Replace(streamName, "/", "_", -1)+".manifest")
 	if err != nil {
@@ -66,6 +65,26 @@ func (stream *imageStreamType) getManifest(b *Builder, streamName string,
 	}()
 	manifestDirectory := os.Expand(stream.ManifestDirectory, variableFunc)
 	manifestUrl := os.Expand(stream.ManifestUrl, variableFunc)
+	if parsedUrl, err := url.Parse(manifestUrl); err == nil {
+		if parsedUrl.Scheme == "dir" {
+			if parsedUrl.Path[0] != '/' {
+				return "", fmt.Errorf("missing leading slash: %s",
+					parsedUrl.Path)
+			}
+			if gitBranch != "master" {
+				return "", fmt.Errorf("branch: %s is not master", gitBranch)
+			}
+			sourceTree := filepath.Join(parsedUrl.Path, manifestDirectory)
+			fmt.Fprintf(buildLog, "Copying manifest tree: %s\n", sourceTree)
+			if err := fsutil.CopyTree(manifestRoot, sourceTree); err != nil {
+				return "", fmt.Errorf("error copying manifest: %s", err)
+			}
+			doCleanup = false
+			return manifestRoot, nil
+		}
+	}
+	fmt.Fprintf(buildLog, "Cloning repository: %s branch: %s\n",
+		stream.ManifestUrl, gitBranch)
 	err = runCommand(buildLog, "", "git", "init", manifestRoot)
 	if err != nil {
 		return "", err
