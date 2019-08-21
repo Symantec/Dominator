@@ -89,6 +89,9 @@ func mount(source string, target string, fstype string, flags uintptr,
 	if flags&MS_BIND != 0 {
 		linuxFlags |= syscall.MS_BIND
 	}
+	if flags&MS_RDONLY != 0 {
+		linuxFlags |= syscall.MS_RDONLY
+	}
 	return syscall.Mount(source, target, fstype, linuxFlags, data)
 }
 
