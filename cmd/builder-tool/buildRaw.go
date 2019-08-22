@@ -79,7 +79,7 @@ func buildRawFromManifest(manifestDir, rawFilename string,
 	}
 	defer syscall.Unmount(rootDir, 0)
 	err = builder.UnpackImageAndProcessManifest(srpcClient, manifestDir,
-		rootDir, buildLog)
+		rootDir, bindMounts, buildLog)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error processing manifest: %s\n", err)
 		io.Copy(os.Stderr, buildLog)
