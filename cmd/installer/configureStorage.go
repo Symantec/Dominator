@@ -11,7 +11,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -81,15 +80,14 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 	if err != nil {
 		return err
 	}
-	rootDevice := drives[0].devpath +
-		strconv.FormatInt(int64(rootPartition), 10)
+	rootDevice := partitionName(drives[0].devpath, rootPartition)
 	img, client, err := getImage(logger)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 	if img == nil {
-		logger.Println("no image, skipping paritioning")
+		logger.Println("no image specified, skipping paritioning")
 		return nil
 	} else {
 		if err := img.FileSystem.RebuildInodePointers(); err != nil {
@@ -155,7 +153,7 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 			continue
 		}
 		err := makeAndMount(
-			drives[0].devpath+strconv.FormatInt(int64(index+1), 10),
+			partitionName(drives[0].devpath, index+1),
 			partition.MountPoint, "ext4", fstab, checkCount, logger)
 		if err != nil {
 			return err
@@ -164,10 +162,10 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 	}
 	for index, drive := range drives {
 		var device string
-		if index == 0 {
-			device = drives[0].devpath +
-				strconv.FormatInt(int64(len(layout.BootDriveLayout)+1), 10)
-		} else {
+		if index == 0 { // The boot device is partitioned.
+			device = partitionName(drives[0].devpath,
+				len(layout.BootDriveLayout)+1)
+		} else { // Extra drives are used whole.
 			device = drive.devpath
 		}
 		err := makeAndMount(device,
@@ -243,7 +241,7 @@ func getImage(logger log.DebugLogger) (*image.Image, *srpc.Client, error) {
 		return nil, nil, err
 	}
 	if !isDir {
-		streamName = path.Dir(streamName)
+		streamName = filepath.Dir(streamName)
 		isDir, err = imageclient.CheckDirectory(client, streamName)
 		if err != nil {
 			client.Close()
@@ -252,7 +250,7 @@ func getImage(logger log.DebugLogger) (*image.Image, *srpc.Client, error) {
 	}
 	if !isDir {
 		client.Close()
-		return nil, nil, fmt.Errorf("no image found")
+		return nil, nil, fmt.Errorf("%s is not a directory", streamName)
 	}
 	imageName, err = imageclient.FindLatestImage(client, streamName, false)
 	if err != nil {
@@ -261,7 +259,8 @@ func getImage(logger log.DebugLogger) (*image.Image, *srpc.Client, error) {
 	}
 	if imageName == "" {
 		client.Close()
-		return nil, nil, fmt.Errorf("no image found")
+		return nil, nil, fmt.Errorf("no image found in: %s on: %s",
+			streamName, imageServerAddress)
 	}
 	if img, err := imageclient.GetImage(client, imageName); err != nil {
 		client.Close()
@@ -430,6 +429,16 @@ func mount(source string, target string, fstype string,
 		return err
 	}
 	return syscall.Mount(source, target, fstype, 0, "")
+}
+
+func partitionName(devpath string, partitionNumber int) string {
+	leafName := filepath.Base(devpath)
+	if strings.HasPrefix(leafName, "hd") ||
+		strings.HasPrefix(leafName, "sd") {
+		return devpath + strconv.FormatInt(int64(partitionNumber), 10)
+	} else {
+		return devpath + "p" + strconv.FormatInt(int64(partitionNumber), 10)
+	}
 }
 
 func readInt(filename string) (uint64, error) {
