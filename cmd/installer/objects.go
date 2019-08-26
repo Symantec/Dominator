@@ -21,7 +21,8 @@ import (
 )
 
 type objectsCache struct {
-	objects map[hash.Hash]uint64
+	bytesScanned uint64
+	objects      map[hash.Hash]uint64
 }
 
 type objectsReader struct {
@@ -70,12 +71,16 @@ func createObjectsCache(requiredObjects map[hash.Hash]uint64,
 			return nil, err
 		}
 		logger.Debugln(0, "scanning root")
+		cache.bytesScanned = 0
 		startTime := time.Now()
 		if err := cache.scanRoot(requiredObjects); err != nil {
 			return nil, err
 		}
 		duration := time.Since(startTime)
-		logger.Debugf(0, "scanned root in %s\n", format.Duration(duration))
+		logger.Debugf(0, "scanned root %s in %s (%s/s)\n",
+			format.FormatBytes(cache.bytesScanned), format.Duration(duration),
+			format.FormatBytes(
+				uint64(float64(cache.bytesScanned)/duration.Seconds())))
 	} else if !fi.IsDir() {
 		return nil,
 			fmt.Errorf("%s exists but is not a directory", *objectsDirectory)
@@ -128,9 +133,10 @@ func (cache *objectsCache) downloadMissing(requiredObjects map[hash.Hash]uint64,
 		}
 	}
 	duration := time.Since(startTime)
-	logger.Debugf(0, "downloaded %d objects (%s) in %s\n",
+	logger.Debugf(0, "downloaded %d objects (%s) in %s (%s/s)\n",
 		len(missingObjects), format.FormatBytes(totalBytes),
-		format.Duration(duration))
+		format.Duration(duration),
+		format.FormatBytes(uint64(float64(totalBytes)/duration.Seconds())))
 	return nil
 }
 
@@ -142,6 +148,7 @@ func (cache *objectsCache) findAndScanUntrusted(
 	}
 	defer syscall.Unmount(*mountPoint, 0)
 	logger.Debugln(0, "scanning old root")
+	cache.bytesScanned = 0
 	startTime := time.Now()
 	foundObjects := make(map[hash.Hash]uint64)
 	err := cache.scanTree(*mountPoint, true, requiredObjects, foundObjects)
@@ -156,6 +163,10 @@ func (cache *objectsCache) findAndScanUntrusted(
 		foundBytes += size
 	}
 	duration := time.Since(startTime)
+	logger.Debugf(0, "scanned old root %s in %s (%s/s)\n",
+		format.FormatBytes(cache.bytesScanned), format.Duration(duration),
+		format.FormatBytes(
+			uint64(float64(cache.bytesScanned)/duration.Seconds())))
 	logger.Debugf(0, "found %d/%d objects (%s/%s) in old file-system in %s\n",
 		len(foundObjects), len(requiredObjects),
 		format.FormatBytes(foundBytes), format.FormatBytes(requiredBytes),
@@ -199,6 +210,7 @@ func (cache *objectsCache) handleFile(filename string, copy bool,
 	} else if size < 1 {
 		return nil
 	} else {
+		cache.bytesScanned += size
 		if _, ok := cache.objects[hashVal]; ok {
 			return nil
 		}
