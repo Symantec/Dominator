@@ -73,8 +73,11 @@ func run(name, chroot string, logger log.DebugLogger, args ...string) error {
 	} else {
 		logger.Debugf(0, "running: %s %s\n", name, strings.Join(args, " "))
 	}
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("error running: %s: %s", name, output)
+	} else {
+		return nil
+	}
 }
 
 func (wc *writeCloser) Close() error {

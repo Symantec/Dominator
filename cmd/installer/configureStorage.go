@@ -16,10 +16,12 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	imageclient "github.com/Symantec/Dominator/imageserver/client"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filesystem/util"
+	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/json"
@@ -37,12 +39,15 @@ const (
 		syscall.S_IROTH | syscall.S_IXOTH
 	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP |
 		syscall.S_IROTH
+	cryptTab = "/etc/crypttab"
+	keyFile  = "/etc/crypt.key"
 )
 
 type driveType struct {
-	devpath string
-	name    string
-	size    uint64 // Bytes
+	discarded bool
+	devpath   string
+	name      string
+	size      uint64 // Bytes
 }
 
 func init() {
@@ -81,6 +86,10 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 		return err
 	}
 	rootDevice := partitionName(drives[0].devpath, rootPartition)
+	randomKey, err := getRandomKey(16, logger)
+	if err != nil {
+		return err
+	}
 	img, client, err := getImage(logger)
 	if err != nil {
 		return err
@@ -110,14 +119,30 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 	if err := installTmpRoot(img.FileSystem, objGetter, logger); err != nil {
 		return err
 	}
-	// Attempt to discard blocks on SSDs.
-	for _, drive := range drives {
-		run("blkdiscard", *tmpRoot, logger, drive.devpath)
-	}
-	// Partition boot device.
-	err = eraseStart(drives[0].devpath, logger)
+	err = run("modprobe", *tmpRoot, logger, "-a", "algif_skcipher", "dm_crypt")
 	if err != nil {
 		return err
+	}
+	err = ioutil.WriteFile(filepath.Join(*tmpRoot, keyFile), randomKey,
+		fsutil.PrivateFilePerms)
+	if err != nil {
+		return err
+	}
+	for index := range randomKey { // Scrub key.
+		randomKey[index] = 0
+	}
+	// Attempt to discard blocks on SSDs.
+	for _, drive := range drives {
+		if run("blkdiscard", *tmpRoot, logger, drive.devpath) == nil {
+			drive.discarded = true
+		}
+	}
+	// Partition boot device.
+	if !drives[0].discarded {
+		err = eraseStart(drives[0].devpath, logger)
+		if err != nil {
+			return err
+		}
 	}
 	args := []string{"-s", "-a", "cylinder", drives[0].devpath,
 		"mklabel", "msdos"}
@@ -143,7 +168,8 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 	}
 	// Make and mount file-systems.
 	fstab := &bytes.Buffer{}
-	err = makeAndMount(rootDevice, "/", "ext4", fstab, 1, logger)
+	err = drives[0].makeAndMount(rootDevice, "/", "ext4", false, fstab, 1,
+		logger)
 	if err != nil {
 		return err
 	}
@@ -152,9 +178,9 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 		if partition.MountPoint == "/" {
 			continue
 		}
-		err := makeAndMount(
+		err := drives[0].makeAndMount(
 			partitionName(drives[0].devpath, index+1),
-			partition.MountPoint, "ext4", fstab, checkCount, logger)
+			partition.MountPoint, "ext4", false, fstab, checkCount, logger)
 		if err != nil {
 			return err
 		}
@@ -166,11 +192,12 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 			device = partitionName(drives[0].devpath,
 				len(layout.BootDriveLayout)+1)
 		} else { // Extra drives are used whole.
+			checkCount = 2
 			device = drive.devpath
 		}
-		err := makeAndMount(device,
+		err := drive.makeAndMount(device,
 			layout.ExtraMountPointsBasename+strconv.FormatInt(int64(index), 10),
-			"ext4", fstab, checkCount, logger)
+			"ext4", true, fstab, checkCount, logger)
 		if err != nil {
 			return err
 		}
@@ -181,6 +208,16 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 	}
 	err = ioutil.WriteFile(filepath.Join(*mountPoint, "etc", "fstab"),
 		fstab.Bytes(), filePerms)
+	if err != nil {
+		return err
+	}
+	err = fsutil.CopyFile(filepath.Join(*mountPoint, keyFile),
+		filepath.Join(*tmpRoot, keyFile), fsutil.PrivateFilePerms)
+	if err != nil {
+		return err
+	}
+	err = fsutil.CopyFile(filepath.Join(*mountPoint, cryptTab),
+		filepath.Join(*tmpRoot, cryptTab), fsutil.PrivateFilePerms)
 	if err != nil {
 		return err
 	}
@@ -226,12 +263,18 @@ func getImage(logger log.DebugLogger) (*image.Image, *srpc.Client, error) {
 		return nil, nil, err
 	}
 	imageServerAddress := strings.TrimSpace(string(data))
-	client, err := srpc.DialHTTP("tcp", imageServerAddress, 0)
+	logger.Printf("dialing imageserver: %s\n", imageServerAddress)
+	startTime := time.Now()
+	client, err := srpc.DialHTTP("tcp", imageServerAddress, time.Second*15)
 	if err != nil {
 		return nil, nil, err
 	}
+	logger.Printf("dialed imageserver after: %s\n",
+		format.Duration(time.Since(startTime)))
+	startTime = time.Now()
 	if img, _ := imageclient.GetImage(client, imageName); img != nil {
-		logger.Debugf(0, "got image: %s\n", imageName)
+		logger.Debugf(0, "got image: %s in %s\n",
+			imageName, format.Duration(time.Since(startTime)))
 		return img, client, nil
 	}
 	streamName := imageName
@@ -262,12 +305,33 @@ func getImage(logger log.DebugLogger) (*image.Image, *srpc.Client, error) {
 		return nil, nil, fmt.Errorf("no image found in: %s on: %s",
 			streamName, imageServerAddress)
 	}
+	startTime = time.Now()
 	if img, err := imageclient.GetImage(client, imageName); err != nil {
 		client.Close()
 		return nil, nil, err
 	} else {
-		logger.Debugf(0, "got image: %s\n", imageName)
+		logger.Debugf(0, "got image: %s in %s\n",
+			imageName, format.Duration(time.Since(startTime)))
 		return img, client, nil
+	}
+}
+
+func getRandomKey(numBytes uint, logger log.DebugLogger) ([]byte, error) {
+	logger.Printf("reading %d bytes from /dev/urandom\n", numBytes)
+	startTime := time.Now()
+	if file, err := os.Open("/dev/urandom"); err != nil {
+		return nil, err
+	} else {
+		defer file.Close()
+		buffer := make([]byte, numBytes)
+		if nRead, err := file.Read(buffer); err != nil {
+			return nil, err
+		} else if nRead < len(buffer) {
+			return nil, fmt.Errorf("read: %d random bytes", nRead)
+		}
+		logger.Printf("read %d bytes of random data after %s\n",
+			numBytes, format.Duration(time.Since(startTime)))
+		return buffer, nil
 	}
 }
 
@@ -346,7 +410,7 @@ func installTmpRoot(fileSystem *filesystem.FileSystem,
 	return nil
 }
 
-func listDrives(logger log.DebugLogger) ([]driveType, error) {
+func listDrives(logger log.DebugLogger) ([]*driveType, error) {
 	basedir := filepath.Join(*sysfsDirectory, "class", "block")
 	file, err := os.Open(basedir)
 	if err != nil {
@@ -358,7 +422,7 @@ func listDrives(logger log.DebugLogger) ([]driveType, error) {
 		return nil, err
 	}
 	sort.Strings(names)
-	var drives []driveType
+	var drives []*driveType
 	for _, name := range names {
 		dirname := filepath.Join(basedir, name)
 		if _, err := os.Stat(filepath.Join(dirname, "partition")); err == nil {
@@ -383,7 +447,7 @@ func listDrives(logger log.DebugLogger) ([]driveType, error) {
 		} else {
 			logger.Debugf(1, "found: %s %d GiB (%d GB)\n",
 				name, val>>21, val<<9/1000000000)
-			drives = append(drives, driveType{
+			drives = append(drives, &driveType{
 				devpath: filepath.Join("/dev", name),
 				name:    name,
 				size:    val << 9,
@@ -394,27 +458,6 @@ func listDrives(logger log.DebugLogger) ([]driveType, error) {
 		return nil, fmt.Errorf("no drives found")
 	}
 	return drives, nil
-}
-
-func makeAndMount(device, target, fstype string, fstab io.Writer,
-	checkOrder uint, logger log.DebugLogger) error {
-	label := target
-	if label == "/" {
-		label = "rootfs"
-	}
-	if err := makeFileSystem(device, label, logger); err != nil {
-		return err
-	}
-	util.WriteFstabEntry(fstab, "LABEL="+label, target, fstype, "", 0,
-		checkOrder)
-	return mount(device, filepath.Join(*mountPoint, target), fstype, logger)
-}
-
-func makeFileSystem(device, label string, logger log.DebugLogger) error {
-	if err := eraseStart(device, logger); err != nil {
-		return err
-	}
-	return run("mkfs.ext4", *tmpRoot, logger, "-L", label, device)
 }
 
 func mount(source string, target string, fstype string,
@@ -494,4 +537,80 @@ func unmountStorage(logger log.DebugLogger) error {
 		return errors.New("did not find main mount point to unmount")
 	}
 	return nil
+}
+
+func (drive driveType) cryptSetup(device string, logger log.DebugLogger) error {
+	err := run("cryptsetup", *tmpRoot, logger, "--verbose",
+		"--key-file", keyFile,
+		"--cipher", "aes-xts-plain64", "--key-size", "512",
+		"--hash", "sha512", "--iter-time", "5000", "--use-urandom",
+		"luksFormat", device)
+	if err != nil {
+		return err
+	}
+	var options string
+	if drive.discarded {
+		options = "discard"
+		err = run("cryptsetup", *tmpRoot, logger, "open", "--type", "luks",
+			"--allow-discards",
+			"--key-file", keyFile, device, filepath.Base(device))
+	} else {
+		err = run("cryptsetup", *tmpRoot, logger, "open", "--type", "luks",
+			"--key-file", keyFile, device, filepath.Base(device))
+	}
+	if err != nil {
+		return err
+	}
+	file, err := os.OpenFile(filepath.Join(*tmpRoot, cryptTab),
+		os.O_WRONLY|os.O_APPEND, fsutil.PublicFilePerms)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = fmt.Fprintf(file, "%-15s %-23s %-15s %s\n",
+		filepath.Base(device), device, keyFile, options)
+	if err != nil {
+		return err
+	}
+	return file.Close()
+}
+
+func (drive driveType) makeAndMount(device, target, fstype string, data bool,
+	fstab io.Writer, checkOrder uint,
+	logger log.DebugLogger) error {
+	label := target
+	if label == "/" {
+		label = "rootfs"
+	} else {
+		if err := drive.cryptSetup(device, logger); err != nil {
+			return err
+		}
+		device = filepath.Join("/dev/mapper", filepath.Base(device))
+	}
+	if err := drive.makeFileSystem(device, label, data, logger); err != nil {
+		return err
+	}
+	var fsFlags string
+	if drive.discarded {
+		fsFlags = "discard"
+	}
+	util.WriteFstabEntry(fstab, "LABEL="+label, target, fstype, fsFlags, 0,
+		checkOrder)
+	return mount(device, filepath.Join(*mountPoint, target), fstype, logger)
+}
+
+func (drive driveType) makeFileSystem(device, label string, data bool,
+	logger log.DebugLogger) error {
+	if !drive.discarded {
+		if err := eraseStart(device, logger); err != nil {
+			return err
+		}
+	}
+	if data {
+		return run("mkfs.ext4", *tmpRoot, logger, "-i", "1048576", "-L", label,
+			"-E", "lazy_itable_init=0,lazy_journal_init=0", device)
+	} else {
+		return run("mkfs.ext4", *tmpRoot, logger, "-L", label,
+			"-E", "lazy_itable_init=0,lazy_journal_init=0", device)
+	}
 }
