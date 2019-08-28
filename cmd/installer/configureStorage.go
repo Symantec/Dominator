@@ -15,10 +15,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	imageclient "github.com/Symantec/Dominator/imageserver/client"
+	"github.com/Symantec/Dominator/lib/concurrent"
+	"github.com/Symantec/Dominator/lib/cpusharer"
 	"github.com/Symantec/Dominator/lib/filesystem"
 	"github.com/Symantec/Dominator/lib/filesystem/util"
 	"github.com/Symantec/Dominator/lib/format"
@@ -39,8 +42,7 @@ const (
 		syscall.S_IROTH | syscall.S_IXOTH
 	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP |
 		syscall.S_IROTH
-	cryptTab = "/etc/crypttab"
-	keyFile  = "/etc/crypt.key"
+	keyFile = "/etc/crypt.key"
 )
 
 type driveType struct {
@@ -57,8 +59,94 @@ func init() {
 	gob.Register(&filesystem.DirectoryInode{})
 }
 
+func configureBootDrive(cpuSharer cpusharer.CpuSharer, drive *driveType,
+	layout installer_proto.StorageLayout, bootPartition int, img *image.Image,
+	objGetter objectserver.ObjectsGetter, logger log.DebugLogger) error {
+	startTime := time.Now()
+	if run("blkdiscard", *tmpRoot, logger, drive.devpath) == nil {
+		drive.discarded = true
+		logger.Printf("discarded %s in %s\n",
+			drive.devpath, format.Duration(time.Since(startTime)))
+	} else {
+		if err := eraseStart(drive.devpath, logger); err != nil {
+			return err
+		}
+	}
+	args := []string{"-s", "-a", "cylinder", drive.devpath, "mklabel", "msdos"}
+	unitSize := uint64(1 << 20)
+	unitSuffix := "MiB"
+	offsetInUnits := uint64(1)
+	for _, partition := range layout.BootDriveLayout {
+		sizeInUnits := partition.MinimumFreeBytes / unitSize
+		if sizeInUnits*unitSize < partition.MinimumFreeBytes {
+			sizeInUnits++
+		}
+		args = append(args, "mkpart", "primary", "ext2",
+			strconv.FormatUint(offsetInUnits, 10)+unitSuffix,
+			strconv.FormatUint(offsetInUnits+sizeInUnits, 10)+unitSuffix)
+		offsetInUnits += sizeInUnits
+	}
+	args = append(args, "mkpart", "primary", "ext2",
+		strconv.FormatUint(offsetInUnits, 10)+unitSuffix, "100%")
+	args = append(args,
+		"set", strconv.FormatInt(int64(bootPartition), 10), "boot", "on")
+	if err := run("parted", *tmpRoot, logger, args...); err != nil {
+		return err
+	}
+	// Prepare all file-systems concurrently, make them serially.
+	concurrentState := concurrent.NewState(uint(
+		len(layout.BootDriveLayout) + 1))
+	var mkfsMutex sync.Mutex
+	for index, partition := range layout.BootDriveLayout {
+		device := partitionName(drive.devpath, index+1)
+		partition := partition
+		err := concurrentState.GoRun(func() error {
+			return drive.makeFileSystem(cpuSharer, device, partition.MountPoint,
+				"ext4", &mkfsMutex, false, logger)
+		})
+		if err != nil {
+			return err
+		}
+	}
+	concurrentState.GoRun(func() error {
+		device := partitionName(drive.devpath, len(layout.BootDriveLayout)+1)
+		return drive.makeFileSystem(cpuSharer, device,
+			layout.ExtraMountPointsBasename+"0", "ext4", &mkfsMutex, true,
+			logger)
+	})
+	if err := concurrentState.Reap(); err != nil {
+		return err
+	}
+	// Mount all file-systems, except the data file-system.
+	for index, partition := range layout.BootDriveLayout {
+		device := partitionName(drive.devpath, index+1)
+		err := mount(remapDevice(device, partition.MountPoint),
+			filepath.Join(*mountPoint, partition.MountPoint), "ext4", logger)
+		if err != nil {
+			return err
+		}
+	}
+	return installRoot(drive.devpath, img.FileSystem, objGetter, logger)
+}
+
+func configureDataDrive(cpuSharer cpusharer.CpuSharer, drive *driveType,
+	index int, layout installer_proto.StorageLayout,
+	logger log.DebugLogger) error {
+	startTime := time.Now()
+	if run("blkdiscard", *tmpRoot, logger, drive.devpath) == nil {
+		drive.discarded = true
+		logger.Printf("discarded %s in %s\n",
+			drive.devpath, format.Duration(time.Since(startTime)))
+	}
+	dataMountPoint := layout.ExtraMountPointsBasename + strconv.FormatInt(
+		int64(index), 10)
+	return drive.makeFileSystem(cpuSharer, drive.devpath, dataMountPoint,
+		"ext4", nil, true, logger)
+}
+
 func configureStorage(config fm_proto.GetMachineInfoResponse,
 	logger log.DebugLogger) error {
+	startTime := time.Now()
 	var layout installer_proto.StorageLayout
 	err := json.ReadFromFile(filepath.Join(*tftpDirectory,
 		"storage-layout.json"),
@@ -131,83 +219,68 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 	for index := range randomKey { // Scrub key.
 		randomKey[index] = 0
 	}
-	// Attempt to discard blocks on SSDs.
-	for _, drive := range drives {
-		if run("blkdiscard", *tmpRoot, logger, drive.devpath) == nil {
-			drive.discarded = true
-		}
-	}
-	// Partition boot device.
-	if !drives[0].discarded {
-		err = eraseStart(drives[0].devpath, logger)
-		if err != nil {
-			return err
-		}
-	}
-	args := []string{"-s", "-a", "cylinder", drives[0].devpath,
-		"mklabel", "msdos"}
-	unitSize := uint64(1 << 20)
-	unitSuffix := "MiB"
-	offsetInUnits := uint64(1)
-	for _, partition := range layout.BootDriveLayout {
-		sizeInUnits := partition.MinimumFreeBytes / unitSize
-		if sizeInUnits*unitSize < partition.MinimumFreeBytes {
-			sizeInUnits++
-		}
-		args = append(args, "mkpart", "primary", "ext2",
-			strconv.FormatUint(offsetInUnits, 10)+unitSuffix,
-			strconv.FormatUint(offsetInUnits+sizeInUnits, 10)+unitSuffix)
-		offsetInUnits += sizeInUnits
-	}
-	args = append(args, "mkpart", "primary", "ext2",
-		strconv.FormatUint(offsetInUnits, 10)+unitSuffix, "100%")
-	args = append(args,
-		"set", strconv.FormatInt(int64(bootPartition), 10), "boot", "on")
-	if err := run("parted", *tmpRoot, logger, args...); err != nil {
-		return err
-	}
-	// Make and mount file-systems.
-	fstab := &bytes.Buffer{}
-	err = drives[0].makeAndMount(rootDevice, "/", "ext4", false, fstab, 1,
-		logger)
+	// Configure all drives concurrently, making file-systems.
+	// Use concurrent package because of it's reaping cabability.
+	// Use cpusharer package to limit CPU intensive operations.
+	concurrentState := concurrent.NewState(uint(len(drives)))
+	cpuSharer := cpusharer.NewFifoCpuSharer()
+	err = concurrentState.GoRun(func() error {
+		return configureBootDrive(cpuSharer, drives[0], layout, bootPartition,
+			img, objGetter, logger)
+	})
 	if err != nil {
+		return concurrentState.Reap()
+	}
+	for index, drive := range drives[1:] {
+		drive := drive
+		index := index + 1
+		err := concurrentState.GoRun(func() error {
+			return configureDataDrive(cpuSharer, drive, index, layout, logger)
+		})
+		if err != nil {
+			break
+		}
+	}
+	if err := concurrentState.Reap(); err != nil {
 		return err
 	}
-	checkCount := uint(2)
+	// Make table entries for the boot device file-systems, except data FS.
+	fsTab := &bytes.Buffer{}
+	cryptTab := &bytes.Buffer{}
 	for index, partition := range layout.BootDriveLayout {
-		if partition.MountPoint == "/" {
-			continue
-		}
-		err := drives[0].makeAndMount(
-			partitionName(drives[0].devpath, index+1),
-			partition.MountPoint, "ext4", false, fstab, checkCount, logger)
+		device := partitionName(drives[0].devpath, index+1)
+		err = drives[0].writeDeviceEntries(device, partition.MountPoint, "ext4",
+			fsTab, cryptTab, uint(index+1))
 		if err != nil {
 			return err
 		}
-		checkCount++
 	}
+	// Make table entries for data file-systems.
 	for index, drive := range drives {
+		checkCount := uint(2)
 		var device string
 		if index == 0 { // The boot device is partitioned.
+			checkCount = uint(len(layout.BootDriveLayout) + 1)
 			device = partitionName(drives[0].devpath,
 				len(layout.BootDriveLayout)+1)
 		} else { // Extra drives are used whole.
-			checkCount = 2
 			device = drive.devpath
 		}
-		err := drive.makeAndMount(device,
-			layout.ExtraMountPointsBasename+strconv.FormatInt(int64(index), 10),
-			"ext4", true, fstab, checkCount, logger)
+		dataMountPoint := layout.ExtraMountPointsBasename + strconv.FormatInt(
+			int64(index), 10)
+		err = drive.writeDeviceEntries(device, dataMountPoint, "ext4", fsTab,
+			cryptTab, checkCount)
 		if err != nil {
 			return err
 		}
 	}
-	err = installRoot(drives[0].devpath, img.FileSystem, objGetter, logger)
+	err = ioutil.WriteFile(filepath.Join(*mountPoint, "etc", "fstab"),
+		fsTab.Bytes(), fsutil.PublicFilePerms)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(filepath.Join(*mountPoint, "etc", "fstab"),
-		fstab.Bytes(), filePerms)
+	err = ioutil.WriteFile(filepath.Join(*mountPoint, "/etc", "crypttab"),
+		cryptTab.Bytes(), fsutil.PublicFilePerms)
 	if err != nil {
 		return err
 	}
@@ -216,18 +289,15 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 	if err != nil {
 		return err
 	}
-	err = fsutil.CopyFile(filepath.Join(*mountPoint, cryptTab),
-		filepath.Join(*tmpRoot, cryptTab), fsutil.PrivateFilePerms)
-	if err != nil {
-		return err
-	}
 	logdir := filepath.Join(*mountPoint, "var", "log", "installer")
-	if err := os.MkdirAll(logdir, dirPerms); err != nil {
+	if err := os.MkdirAll(logdir, fsutil.DirPerms); err != nil {
 		return err
 	}
 	if err := fsutil.CopyTree(logdir, *tftpDirectory); err != nil {
 		return err
 	}
+	logger.Printf("configureStorage() took %s\n",
+		format.Duration(time.Since(startTime)))
 	return nil
 }
 
@@ -378,7 +448,7 @@ func installTmpRoot(fileSystem *filesystem.FileSystem,
 		return nil
 	}
 	logger.Debugln(0, "unpacking tmproot")
-	if err := os.MkdirAll(*tmpRoot, dirPerms); err != nil {
+	if err := os.MkdirAll(*tmpRoot, fsutil.DirPerms); err != nil {
 		return err
 	}
 	syscall.Unmount(filepath.Join(*tmpRoot, "sys"), 0)
@@ -468,7 +538,7 @@ func mount(source string, target string, fstype string,
 		return nil
 	}
 	logger.Debugf(0, "mount %s on %s type=%s\n", source, target, fstype)
-	if err := os.MkdirAll(target, dirPerms); err != nil {
+	if err := os.MkdirAll(target, fsutil.DirPerms); err != nil {
 		return err
 	}
 	return syscall.Mount(source, target, fstype, 0, "")
@@ -497,6 +567,14 @@ func readInt(filename string) (uint64, error) {
 		} else {
 			return value, nil
 		}
+	}
+}
+
+func remapDevice(device, target string) string {
+	if target == "/" {
+		return device
+	} else {
+		return filepath.Join("/dev/mapper", filepath.Base(device))
 	}
 }
 
@@ -539,7 +617,11 @@ func unmountStorage(logger log.DebugLogger) error {
 	return nil
 }
 
-func (drive driveType) cryptSetup(device string, logger log.DebugLogger) error {
+func (drive driveType) cryptSetup(cpuSharer cpusharer.CpuSharer, device string,
+	logger log.DebugLogger) error {
+	cpuSharer.GrabCpu()
+	defer cpuSharer.ReleaseCpu()
+	startTime := time.Now()
 	err := run("cryptsetup", *tmpRoot, logger, "--verbose",
 		"--key-file", keyFile,
 		"--cipher", "aes-xts-plain64", "--key-size", "512",
@@ -548,9 +630,10 @@ func (drive driveType) cryptSetup(device string, logger log.DebugLogger) error {
 	if err != nil {
 		return err
 	}
-	var options string
+	logger.Printf("formatted encrypted device %s in %s\n",
+		device, time.Since(startTime))
+	startTime = time.Now()
 	if drive.discarded {
-		options = "discard"
 		err = run("cryptsetup", *tmpRoot, logger, "open", "--type", "luks",
 			"--allow-discards",
 			"--key-file", keyFile, device, filepath.Base(device))
@@ -561,56 +644,71 @@ func (drive driveType) cryptSetup(device string, logger log.DebugLogger) error {
 	if err != nil {
 		return err
 	}
-	file, err := os.OpenFile(filepath.Join(*tmpRoot, cryptTab),
-		os.O_WRONLY|os.O_APPEND, fsutil.PublicFilePerms)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	_, err = fmt.Fprintf(file, "%-15s %-23s %-15s %s\n",
-		filepath.Base(device), device, keyFile, options)
-	if err != nil {
-		return err
-	}
-	return file.Close()
+	logger.Printf("opened encrypted device %s in %s\n",
+		device, time.Since(startTime))
+	return nil
 }
 
-func (drive driveType) makeAndMount(device, target, fstype string, data bool,
-	fstab io.Writer, checkOrder uint,
+func (drive driveType) makeFileSystem(cpuSharer cpusharer.CpuSharer,
+	device, target, fstype string, mkfsMutex *sync.Mutex, data bool,
 	logger log.DebugLogger) error {
 	label := target
 	if label == "/" {
 		label = "rootfs"
 	} else {
-		if err := drive.cryptSetup(device, logger); err != nil {
+		if err := drive.cryptSetup(cpuSharer, device, logger); err != nil {
 			return err
 		}
 		device = filepath.Join("/dev/mapper", filepath.Base(device))
 	}
-	if err := drive.makeFileSystem(device, label, data, logger); err != nil {
-		return err
-	}
-	var fsFlags string
-	if drive.discarded {
-		fsFlags = "discard"
-	}
-	util.WriteFstabEntry(fstab, "LABEL="+label, target, fstype, fsFlags, 0,
-		checkOrder)
-	return mount(device, filepath.Join(*mountPoint, target), fstype, logger)
-}
-
-func (drive driveType) makeFileSystem(device, label string, data bool,
-	logger log.DebugLogger) error {
 	if !drive.discarded {
 		if err := eraseStart(device, logger); err != nil {
 			return err
 		}
 	}
+	var err error
+	if mkfsMutex != nil {
+		mkfsMutex.Lock()
+	}
+	startTime := time.Now()
 	if data {
-		return run("mkfs.ext4", *tmpRoot, logger, "-i", "1048576", "-L", label,
+		err = run("mkfs.ext4", *tmpRoot, logger, "-i", "1048576", "-L", label,
 			"-E", "lazy_itable_init=0,lazy_journal_init=0", device)
 	} else {
-		return run("mkfs.ext4", *tmpRoot, logger, "-L", label,
+		err = run("mkfs.ext4", *tmpRoot, logger, "-L", label,
 			"-E", "lazy_itable_init=0,lazy_journal_init=0", device)
 	}
+	if mkfsMutex != nil {
+		mkfsMutex.Unlock()
+	}
+	if err != nil {
+		return err
+	}
+	logger.Printf("made file-system on %s in %s\n",
+		device, time.Since(startTime))
+	return nil
+}
+
+func (drive driveType) writeDeviceEntries(device, target, fstype string,
+	fsTab, cryptTab io.Writer, checkOrder uint) error {
+	label := target
+	if label == "/" {
+		label = "rootfs"
+	} else {
+		var options string
+		if drive.discarded {
+			options = "discard"
+		}
+		_, err := fmt.Fprintf(cryptTab, "%-15s %-23s %-15s %s\n",
+			filepath.Base(device), device, keyFile, options)
+		if err != nil {
+			return err
+		}
+	}
+	var fsFlags string
+	if drive.discarded {
+		fsFlags = "discard"
+	}
+	return util.WriteFstabEntry(fsTab, "LABEL="+label, target, fstype, fsFlags,
+		0, checkOrder)
 }
