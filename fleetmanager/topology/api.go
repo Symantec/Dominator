@@ -38,12 +38,15 @@ type ownersType struct {
 
 type Subnet struct {
 	hyper_proto.Subnet
+	FirstAutoIP     net.IP              `json:",omitempty"`
+	LastAutoIP      net.IP              `json:",omitempty"`
 	ReservedIPs     []net.IP            `json:",omitempty"`
 	reservedIpAddrs map[string]struct{} // Key: IP address.
 }
 
-func (s *Subnet) GetReservedIpSet() map[string]struct{} {
-	return s.reservedIpAddrs
+func (s *Subnet) CheckIfIpIsReserved(ipAddr string) bool {
+	_, ok := s.reservedIpAddrs[ipAddr]
+	return ok
 }
 
 func (subnet *Subnet) Shrink() {
