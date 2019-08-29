@@ -8,6 +8,7 @@ import (
 	stdlog "log"
 	"os"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
@@ -22,6 +23,10 @@ import (
 )
 
 const logfile = "/var/log/installer/latest"
+
+type flusher interface {
+	Flush() error
+}
 
 var (
 	dryRun = flag.Bool("dryRun", ifUnprivileged(),
@@ -47,13 +52,15 @@ var (
 		"Mount point for temporary (tmpfs) root file-system")
 )
 
-func copyLogs() error {
+func copyLogs(logFlusher flusher) error {
+	logFlusher.Flush()
 	logdir := filepath.Join(*mountPoint, "var", "log", "installer")
-	return fsutil.CopyFile(filepath.Join(logdir, "log"), logfile, filePerms)
+	return fsutil.CopyFile(filepath.Join(logdir, "log"), logfile,
+		fsutil.PublicFilePerms)
 }
 
 func createLogger() (*logbuf.LogBuffer, log.DebugLogger) {
-	os.MkdirAll("/var/log/installer", dirPerms)
+	os.MkdirAll("/var/log/installer", fsutil.DirPerms)
 	options := logbuf.GetStandardOptions()
 	options.AlsoLogToStderr = true
 	logBuffer := logbuf.NewWithOptions(options)
@@ -69,7 +76,7 @@ func ifUnprivileged() bool {
 	return false
 }
 
-func install(logger log.DebugLogger) error {
+func install(logFlusher flusher, logger log.DebugLogger) error {
 	machineInfo, interfaces, err := configureLocalNetwork(logger)
 	if err != nil {
 		return err
@@ -85,15 +92,44 @@ func install(logger log.DebugLogger) error {
 			return err
 		}
 	}
-	if err := copyLogs(); err != nil {
+	if err := copyLogs(logFlusher); err != nil {
 		return fmt.Errorf("error copying logs: %s", err)
 	}
-	syscall.Sync()
-	time.Sleep(time.Second)
 	if err := unmountStorage(logger); err != nil {
 		return fmt.Errorf("error unmounting: %s", err)
 	}
 	return nil
+}
+
+func printAndWait(initialTimeoutString, waitTimeoutString string,
+	waitGroup *sync.WaitGroup, logger log.Logger) {
+	initialTimeout, _ := time.ParseDuration(initialTimeoutString)
+	if initialTimeout < time.Second {
+		initialTimeout = time.Second
+		initialTimeoutString = "1s"
+	}
+	logger.Printf("waiting %s before rebooting\n", initialTimeoutString)
+	time.Sleep(initialTimeout - time.Second)
+	waitChannel := make(chan struct{})
+	go func() {
+		waitGroup.Wait()
+		waitChannel <- struct{}{}
+	}()
+	timer := time.NewTimer(time.Second)
+	select {
+	case <-timer.C:
+	case <-waitChannel:
+		return
+	}
+	logger.Printf(
+		"waiting %s for remote shells to terminate before rebooting\n",
+		waitTimeoutString)
+	waitTimeout, _ := time.ParseDuration(waitTimeoutString)
+	timer.Reset(waitTimeout)
+	select {
+	case <-timer.C:
+	case <-waitChannel:
+	}
 }
 
 func main() {
@@ -110,18 +146,17 @@ func main() {
 	if err := setupserver.SetupTls(); err != nil {
 		logger.Println(err)
 	}
-	if newLogger, err := startServer(*portNum, logger); err != nil {
+	waitGroup := &sync.WaitGroup{}
+	if newLogger, err := startServer(*portNum, waitGroup, logger); err != nil {
 		logger.Printf("cannot start server: %s\n", err)
 	} else {
 		logger = newLogger
 	}
-	if err := install(logger); err != nil {
+	if err := install(logBuffer, logger); err != nil {
 		logger.Println(err)
-		logger.Println("waiting 5m before rebooting")
-		time.Sleep(time.Minute * 5)
+		printAndWait("5m", "1h", waitGroup, logger)
 	} else {
-		logger.Println("waiting 5s before rebooting")
-		time.Sleep(time.Second * 5)
+		printAndWait("5s", "5m", waitGroup, logger)
 	}
 	syscall.Sync()
 	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART); err != nil {

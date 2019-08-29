@@ -30,14 +30,15 @@ type state struct {
 }
 
 type srpcType struct {
-	logger      log.DebugLogger
-	mutex       sync.RWMutex
-	connections map[*srpc.Conn]struct{}
+	remoteShellWaitGroup *sync.WaitGroup
+	logger               log.DebugLogger
+	mutex                sync.RWMutex
+	connections          map[*srpc.Conn]struct{}
 }
 
 var htmlWriters []HtmlWriter
 
-func startServer(portNum uint,
+func startServer(portNum uint, remoteShellWaitGroup *sync.WaitGroup,
 	logger log.DebugLogger) (log.DebugLogger, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", portNum))
 	if err != nil {
@@ -46,8 +47,9 @@ func startServer(portNum uint,
 	myState := state{logger}
 	html.HandleFunc("/", myState.statusHandler)
 	srpcObj := &srpcType{
-		logger:      logger,
-		connections: make(map[*srpc.Conn]struct{}),
+		remoteShellWaitGroup: remoteShellWaitGroup,
+		logger:               logger,
+		connections:          make(map[*srpc.Conn]struct{}),
 	}
 	if err := srpc.RegisterName("Installer", srpcObj); err != nil {
 		logger.Printf("error registering SRPC receiver: %s\n", err)
@@ -96,6 +98,8 @@ func (s state) writeDashboard(writer io.Writer) {
 
 func (t *srpcType) Shell(conn *srpc.Conn) error {
 	t.logger.Println("starting shell on SRPC connection")
+	t.remoteShellWaitGroup.Add(1)
+	defer t.remoteShellWaitGroup.Done()
 	pty, tty, err := openPty()
 	if err != nil {
 		return err

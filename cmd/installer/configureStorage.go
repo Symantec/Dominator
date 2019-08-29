@@ -38,10 +38,6 @@ import (
 )
 
 const (
-	dirPerms = syscall.S_IRWXU | syscall.S_IRGRP | syscall.S_IXGRP |
-		syscall.S_IROTH | syscall.S_IXOTH
-	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP |
-		syscall.S_IROTH
 	keyFile = "/etc/crypt.key"
 )
 
@@ -67,7 +63,7 @@ func configureBootDrive(cpuSharer cpusharer.CpuSharer, drive *driveType,
 		drive.discarded = true
 		logger.Printf("discarded %s in %s\n",
 			drive.devpath, format.Duration(time.Since(startTime)))
-	} else {
+	} else { // Erase old partition.
 		if err := eraseStart(drive.devpath, logger); err != nil {
 			return err
 		}
@@ -579,6 +575,8 @@ func remapDevice(device, target string) string {
 }
 
 func unmountStorage(logger log.DebugLogger) error {
+	syscall.Sync()
+	time.Sleep(time.Millisecond * 100)
 	file, err := os.Open("/proc/mounts")
 	if err != nil {
 		return err
@@ -614,6 +612,7 @@ func unmountStorage(logger log.DebugLogger) error {
 	if !unmountedMainMountPoint {
 		return errors.New("did not find main mount point to unmount")
 	}
+	syscall.Sync()
 	return nil
 }
 
@@ -653,15 +652,19 @@ func (drive driveType) makeFileSystem(cpuSharer cpusharer.CpuSharer,
 	device, target, fstype string, mkfsMutex *sync.Mutex, data bool,
 	logger log.DebugLogger) error {
 	label := target
+	erase := true
 	if label == "/" {
 		label = "rootfs"
+		if drive.discarded {
+			erase = false
+		}
 	} else {
 		if err := drive.cryptSetup(cpuSharer, device, logger); err != nil {
 			return err
 		}
 		device = filepath.Join("/dev/mapper", filepath.Base(device))
 	}
-	if !drive.discarded {
+	if erase {
 		if err := eraseStart(device, logger); err != nil {
 			return err
 		}
