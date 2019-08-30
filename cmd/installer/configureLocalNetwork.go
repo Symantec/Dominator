@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	libnet "github.com/Symantec/Dominator/lib/net"
@@ -147,7 +148,7 @@ func loadTftpFiles(tftpServer net.IP, logger log.DebugLogger) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(*tftpDirectory, dirPerms); err != nil {
+	if err := os.MkdirAll(*tftpDirectory, fsutil.DirPerms); err != nil {
 		return err
 	}
 	for _, name := range tftpFiles {

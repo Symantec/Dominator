@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/log"
 	libnet "github.com/Symantec/Dominator/lib/net"
 	"github.com/Symantec/Dominator/lib/net/configurator"
@@ -31,7 +32,7 @@ func configureNetwork(machineInfo fm_proto.GetMachineInfoResponse,
 	interfaces map[string]net.Interface, logger log.DebugLogger) error {
 	hostname := strings.Split(machineInfo.Machine.Hostname, ".")[0]
 	err := ioutil.WriteFile(filepath.Join(*mountPoint, "etc", "hostname"),
-		[]byte(hostname+"\n"), filePerms)
+		[]byte(hostname+"\n"), fsutil.PublicFilePerms)
 	if err != nil {
 		return err
 	}

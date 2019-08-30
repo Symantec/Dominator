@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Symantec/Dominator/lib/fsutil"
 	"github.com/Symantec/Dominator/lib/hash"
 	"github.com/Symantec/Dominator/lib/log"
 	"github.com/Symantec/Dominator/lib/objectcache"
@@ -187,7 +188,7 @@ func (cache *objectsCache) getNextObject(hashVal hash.Hash,
 	}
 	hashName := filepath.Join(*objectsDirectory,
 		objectcache.HashToFilename(hashVal))
-	if err := os.MkdirAll(filepath.Dir(hashName), dirPerms); err != nil {
+	if err := os.MkdirAll(filepath.Dir(hashName), fsutil.DirPerms); err != nil {
 		return err
 	}
 	defer reader.Close()
@@ -223,7 +224,8 @@ func (cache *objectsCache) handleFile(filename string, copy bool,
 		}
 		hashName := filepath.Join(*objectsDirectory,
 			objectcache.HashToFilename(hashVal))
-		if err := os.MkdirAll(filepath.Dir(hashName), dirPerms); err != nil {
+		err := os.MkdirAll(filepath.Dir(hashName), fsutil.DirPerms)
+		if err != nil {
 			return err
 		}
 		if copy {
@@ -281,7 +283,7 @@ func (cache *objectsCache) scanCache(topDir, subpath string) error {
 
 func (cache *objectsCache) scanRoot(
 	requiredObjects map[hash.Hash]uint64) error {
-	if err := os.Mkdir(*objectsDirectory, dirPerms); err != nil {
+	if err := os.Mkdir(*objectsDirectory, fsutil.DirPerms); err != nil {
 		return err
 	}
 	err := wsyscall.Mount("none", *objectsDirectory, "tmpfs", 0, "")
