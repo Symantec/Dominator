@@ -16,4 +16,5 @@ type StorageLayout struct {
 	BootDriveLayout          []Partition `json:",omitempty"`
 	ExtraMountPointsBasename string      `json:",omitempty"`
 	Encrypt                  bool        `json:",omitempty"`
+	UseKexec                 bool        `json:",omitempty"`
 }
