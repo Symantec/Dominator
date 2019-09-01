@@ -48,11 +48,38 @@ type driveType struct {
 	size      uint64 // Bytes
 }
 
+type kexecRebooter struct {
+	util.BootInfoType
+	logger log.DebugLogger
+}
+
 func init() {
 	gob.Register(&filesystem.RegularInode{})
 	gob.Register(&filesystem.SymlinkInode{})
 	gob.Register(&filesystem.SpecialInode{})
 	gob.Register(&filesystem.DirectoryInode{})
+}
+
+func closeEncryptedVolumes(logger log.DebugLogger) error {
+	if file, err := os.Open("/dev/mapper"); err != nil {
+		return err
+	} else {
+		defer file.Close()
+		if names, err := file.Readdirnames(-1); err != nil {
+			return err
+		} else {
+			for _, name := range names {
+				if name == "control" {
+					continue
+				}
+				err := run("cryptsetup", *tmpRoot, logger, "close", name)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}
 }
 
 func configureBootDrive(cpuSharer cpusharer.CpuSharer, drive *driveType,
@@ -141,14 +168,14 @@ func configureDataDrive(cpuSharer cpusharer.CpuSharer, drive *driveType,
 }
 
 func configureStorage(config fm_proto.GetMachineInfoResponse,
-	logger log.DebugLogger) error {
+	logger log.DebugLogger) (Rebooter, error) {
 	startTime := time.Now()
 	var layout installer_proto.StorageLayout
 	err := json.ReadFromFile(filepath.Join(*tftpDirectory,
 		"storage-layout.json"),
 		&layout)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var bootPartition, rootPartition int
 	for index, partition := range layout.BootDriveLayout {
@@ -160,31 +187,31 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 		}
 	}
 	if rootPartition < 1 {
-		return fmt.Errorf("no root partition specified in layout")
+		return nil, fmt.Errorf("no root partition specified in layout")
 	}
 	if bootPartition < 1 {
 		bootPartition = rootPartition
 	}
 	drives, err := listDrives(logger)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	rootDevice := partitionName(drives[0].devpath, rootPartition)
 	randomKey, err := getRandomKey(16, logger)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	img, client, err := getImage(logger)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer client.Close()
 	if img == nil {
 		logger.Println("no image specified, skipping paritioning")
-		return nil
+		return nil, nil
 	} else {
 		if err := img.FileSystem.RebuildInodePointers(); err != nil {
-			return err
+			return nil, err
 		}
 		imageSize := img.FileSystem.EstimateUsage(0)
 		if layout.BootDriveLayout[rootPartition-1].MinimumFreeBytes <
@@ -193,24 +220,35 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 		}
 		layout.BootDriveLayout[rootPartition-1].MinimumFreeBytes += imageSize
 	}
+	var rebooter Rebooter
+	if layout.UseKexec {
+		bootInfo, err := util.GetBootInfo(img.FileSystem, "rootfs", "")
+		if err != nil {
+			return nil, err
+		}
+		rebooter = kexecRebooter{
+			BootInfoType: *bootInfo,
+			logger:       logger,
+		}
+	}
 	objClient := objectclient.AttachObjectClient(client)
 	defer objClient.Close()
 	objGetter, err := createObjectsCache(img.FileSystem.GetObjects(), objClient,
 		rootDevice, logger)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := installTmpRoot(img.FileSystem, objGetter, logger); err != nil {
-		return err
+		return nil, err
 	}
 	err = run("modprobe", *tmpRoot, logger, "-a", "algif_skcipher", "dm_crypt")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = ioutil.WriteFile(filepath.Join(*tmpRoot, keyFile), randomKey,
 		fsutil.PrivateFilePerms)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for index := range randomKey { // Scrub key.
 		randomKey[index] = 0
@@ -225,7 +263,7 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 			img, objGetter, logger)
 	})
 	if err != nil {
-		return concurrentState.Reap()
+		return nil, concurrentState.Reap()
 	}
 	for index, drive := range drives[1:] {
 		drive := drive
@@ -238,7 +276,7 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 		}
 	}
 	if err := concurrentState.Reap(); err != nil {
-		return err
+		return nil, err
 	}
 	// Make table entries for the boot device file-systems, except data FS.
 	fsTab := &bytes.Buffer{}
@@ -248,7 +286,7 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 		err = drives[0].writeDeviceEntries(device, partition.MountPoint, "ext4",
 			fsTab, cryptTab, uint(index+1))
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	// Make table entries for data file-systems.
@@ -267,34 +305,44 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 		err = drive.writeDeviceEntries(device, dataMountPoint, "ext4", fsTab,
 			cryptTab, checkCount)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	err = ioutil.WriteFile(filepath.Join(*mountPoint, "etc", "fstab"),
 		fsTab.Bytes(), fsutil.PublicFilePerms)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = ioutil.WriteFile(filepath.Join(*mountPoint, "/etc", "crypttab"),
 		cryptTab.Bytes(), fsutil.PublicFilePerms)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	// Copy key file and scrub temporary copy.
+	tmpKeyFile := filepath.Join(*tmpRoot, keyFile)
 	err = fsutil.CopyFile(filepath.Join(*mountPoint, keyFile),
-		filepath.Join(*tmpRoot, keyFile), fsutil.PrivateFilePerms)
+		tmpKeyFile, fsutil.PrivateFilePerms)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	if file, err := os.OpenFile(tmpKeyFile, os.O_WRONLY, 0); err != nil {
+		return nil, err
+	} else {
+		defer file.Close()
+		if _, err := file.Write(randomKey); err != nil {
+			return nil, err
+		}
 	}
 	logdir := filepath.Join(*mountPoint, "var", "log", "installer")
 	if err := os.MkdirAll(logdir, fsutil.DirPerms); err != nil {
-		return err
+		return nil, err
 	}
 	if err := fsutil.CopyTree(logdir, *tftpDirectory); err != nil {
-		return err
+		return nil, err
 	}
 	logger.Printf("configureStorage() took %s\n",
 		format.Duration(time.Since(startTime)))
-	return nil
+	return rebooter, nil
 }
 
 func eraseStart(device string, logger log.DebugLogger) error {
@@ -600,6 +648,11 @@ func unmountStorage(logger log.DebugLogger) error {
 	unmountedMainMountPoint := false
 	for index := len(mountPoints) - 1; index >= 0; index-- {
 		mntPoint := mountPoints[index]
+		if mntPoint == *mountPoint {
+			if err := closeEncryptedVolumes(logger); err != nil {
+				return err
+			}
+		}
 		if err := syscall.Unmount(mntPoint, 0); err != nil {
 			return fmt.Errorf("error unmounting: %s: %s", mntPoint, err)
 		} else {
@@ -714,4 +767,17 @@ func (drive driveType) writeDeviceEntries(device, target, fstype string,
 	}
 	return util.WriteFstabEntry(fsTab, "LABEL="+label, target, fstype, fsFlags,
 		0, checkOrder)
+}
+
+func (rebooter kexecRebooter) Reboot() error {
+	return run("kexec", *tmpRoot, rebooter.logger,
+		"-l", rebooter.KernelImageFile,
+		"--append="+rebooter.KernelOptions,
+		"--console-serial", "--serial-baud=115200",
+		"--initrd="+rebooter.InitrdImageFile,
+		"-f")
+}
+
+func (rebooter kexecRebooter) String() string {
+	return "kexec"
 }

@@ -28,6 +28,11 @@ type flusher interface {
 	Flush() error
 }
 
+type Rebooter interface {
+	Reboot() error
+	String() string
+}
+
 var (
 	dryRun = flag.Bool("dryRun", ifUnprivileged(),
 		"If true, do not make changes")
@@ -76,39 +81,43 @@ func ifUnprivileged() bool {
 	return false
 }
 
-func install(logFlusher flusher, logger log.DebugLogger) error {
+func install(logFlusher flusher, logger log.DebugLogger) (Rebooter, error) {
+	var rebooter Rebooter
 	machineInfo, interfaces, err := configureLocalNetwork(logger)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
 	if !*skipStorage {
-		if err := configureStorage(*machineInfo, logger); err != nil {
-			return err
+		rebooter, err = configureStorage(*machineInfo, logger)
+		if err != nil {
+			return nil, err
 		}
 	}
 	if !*skipNetwork {
 		err := configureNetwork(*machineInfo, interfaces, logger)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if err := copyLogs(logFlusher); err != nil {
-		return fmt.Errorf("error copying logs: %s", err)
+		return nil, fmt.Errorf("error copying logs: %s", err)
 	}
 	if err := unmountStorage(logger); err != nil {
-		return fmt.Errorf("error unmounting: %s", err)
+		return nil, fmt.Errorf("error unmounting: %s", err)
 	}
-	return nil
+	return rebooter, nil
 }
 
 func printAndWait(initialTimeoutString, waitTimeoutString string,
-	waitGroup *sync.WaitGroup, logger log.Logger) {
+	waitGroup *sync.WaitGroup, rebooterName string, logger log.Logger) {
 	initialTimeout, _ := time.ParseDuration(initialTimeoutString)
 	if initialTimeout < time.Second {
 		initialTimeout = time.Second
 		initialTimeoutString = "1s"
 	}
-	logger.Printf("waiting %s before rebooting\n", initialTimeoutString)
+	logger.Printf("waiting %s before rebooting with %s rebooter\n",
+		initialTimeoutString, rebooterName)
 	time.Sleep(initialTimeout - time.Second)
 	waitChannel := make(chan struct{})
 	go func() {
@@ -152,13 +161,25 @@ func main() {
 	} else {
 		logger = newLogger
 	}
-	if err := install(logBuffer, logger); err != nil {
+	rebooter, err := install(logBuffer, logger)
+	rebooterName := "default"
+	if rebooter != nil {
+		rebooterName = rebooter.String()
+	}
+	if err != nil {
 		logger.Println(err)
-		printAndWait("5m", "1h", waitGroup, logger)
+		printAndWait("5m", "1h", waitGroup, rebooterName, logger)
 	} else {
-		printAndWait("5s", "5m", waitGroup, logger)
+		printAndWait("5s", "5m", waitGroup, rebooterName, logger)
 	}
 	syscall.Sync()
+	if rebooter != nil {
+		if err := rebooter.Reboot(); err != nil {
+			logger.Printf("error calling %s rebooter: %s\n", rebooterName, err)
+			logger.Println("falling back to default rebooter after 5 minutes")
+			time.Sleep(time.Minute * 5)
+		}
+	}
 	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART); err != nil {
 		logger.Fatalf("error rebooting: %s\n", err)
 	}
