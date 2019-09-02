@@ -209,10 +209,11 @@ func makeDefaultStorageLayout() installer_proto.StorageLayout {
 			},
 			{
 				MountPoint:       "/var/log",
-				MinimumFreeBytes: 256 << 20,
+				MinimumFreeBytes: 512 << 20,
 			},
 		},
 		ExtraMountPointsBasename: "/data/",
+		UseKexec:                 *useKexec,
 	}
 }
 

@@ -54,6 +54,8 @@ var (
 		"Name of file containing storage layout for installing machine")
 	topologyDir = flag.String("topologyDir", "",
 		"Name of local topology directory in Git repository")
+	useKexec = flag.Bool("useKexec", false,
+		"If true, use kexec to reboot into newly installed OS")
 
 	rrDialer *rrdialer.Dialer
 )
