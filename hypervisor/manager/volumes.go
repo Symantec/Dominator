@@ -24,6 +24,23 @@ type mountInfo struct {
 	size       uint64
 }
 
+func demapDevice(device string) (string, error) {
+	sysDir := filepath.Join(sysClassBlock, filepath.Base(device), "slaves")
+	if file, err := os.Open(sysDir); err != nil {
+		return device, nil
+	} else {
+		defer file.Close()
+		names, err := file.Readdirnames(-1)
+		if err != nil {
+			return "", err
+		}
+		if len(names) != 1 {
+			return "", fmt.Errorf("%s has %d entries", len(names))
+		}
+		return filepath.Join("/dev", names[0]), nil
+	}
+}
+
 func getFreeSpace(dirname string, freeSpaceTable map[string]uint64) (
 	uint64, error) {
 	if freeSpace, ok := freeSpaceTable[dirname]; ok {
@@ -64,10 +81,17 @@ func getMounts() (map[string]string, error) {
 		if !strings.HasPrefix(device, "/dev/") {
 			continue
 		}
+		if device == "/dev/root" { // Ignore this dumb shit.
+			continue
+		}
 		if target, err := filepath.EvalSymlinks(device); err != nil {
 			return nil, err
 		} else {
 			device = target
+		}
+		device, err = demapDevice(device)
+		if err != nil {
+			return nil, err
 		}
 		device = device[5:]
 		if _, ok := mounts[device]; !ok { // Pick the first mount point.
@@ -88,9 +112,6 @@ func getVolumeDirectories() ([]string, error) {
 	var mountPointsToUse []string
 	biggestMounts := make(map[string]mountInfo)
 	for device, mountPoint := range mounts {
-		if device == "root" { // Ignore this dumb shit.
-			continue
-		}
 		sysDir := filepath.Join(sysClassBlock, device)
 		linkTarget, err := os.Readlink(sysDir)
 		if err != nil {
