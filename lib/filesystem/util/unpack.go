@@ -21,7 +21,7 @@ const (
 	filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
 )
 
-func createFile(filename string) error {
+func createEmptyFile(filename string) error {
 	if file, err := os.Create(filename); err != nil {
 		return err
 	} else {
@@ -161,7 +161,7 @@ func writeInode(inode filesystem.GenericInode, filename string) error {
 	switch inode := inode.(type) {
 	case *filesystem.RegularInode:
 		if inode.Size < 1 {
-			if err := createFile(filename); err != nil {
+			if err := createEmptyFile(filename); err != nil {
 				return err
 			}
 		}
@@ -169,7 +169,7 @@ func writeInode(inode filesystem.GenericInode, filename string) error {
 			return err
 		}
 	case *filesystem.ComputedRegularInode:
-		if err := createFile(filename); err != nil {
+		if err := createEmptyFile(filename); err != nil {
 			return err
 		}
 		tmpInode := &filesystem.RegularInode{
@@ -245,19 +245,18 @@ func link(oldname, newname string, inode filesystem.GenericInode) error {
 			if err != nil {
 				return err
 			}
+			defer reader.Close()
 			writer, err := os.Create(newname)
 			if err != nil {
 				return err
 			}
+			defer writer.Close()
 			if _, err := io.Copy(writer, reader); err != nil {
 				return err
 			}
 		}
 	}
 	if err := writeInode(inode, newname); err != nil {
-		return err
-	}
-	if err := os.Remove(oldname); err != nil {
 		return err
 	}
 	return nil
