@@ -43,13 +43,13 @@ func (netconf *NetworkConfig) addBondedInterface(name string, ipAddr net.IP,
 		})
 }
 
-func (netconf *NetworkConfig) addNormalInterface(name string, ipAddr net.IP,
-	subnet *hyper_proto.Subnet) {
+func (netconf *NetworkConfig) addNormalInterface(iface net.Interface,
+	ipAddr net.IP, subnet *hyper_proto.Subnet) {
 	netconf.normalInterfaces = append(netconf.normalInterfaces,
 		normalInterfaceType{
-			name:   name,
-			ipAddr: ipAddr,
-			subnet: subnet,
+			netInterface: iface,
+			ipAddr:       ipAddr,
+			subnet:       subnet,
 		})
 }
 
@@ -95,8 +95,7 @@ func compute(machineInfo fm_proto.GetMachineInfoResponse,
 		}
 		usedSubnets[subnet] = struct{}{}
 		normalInterfaceIndex++
-		netconf.addNormalInterface(iface.Name, networkEntry.HostIpAddress,
-			subnet)
+		netconf.addNormalInterface(iface, networkEntry.HostIpAddress, subnet)
 		delete(interfaces, iface.Name)
 		if subnet == preferredSubnet {
 			netconf.DefaultSubnet = subnet

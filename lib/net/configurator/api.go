@@ -10,15 +10,15 @@ import (
 )
 
 type bondedInterfaceType struct {
-	name   string // Physical interface name.
+	name   string // "bond0.VlanId" interface name.
 	ipAddr net.IP
 	subnet *hyper_proto.Subnet
 }
 
 type normalInterfaceType struct {
-	name   string // Physical interface name.
-	ipAddr net.IP
-	subnet *hyper_proto.Subnet
+	ipAddr       net.IP
+	netInterface net.Interface
+	subnet       *hyper_proto.Subnet
 }
 
 type NetworkConfig struct {

@@ -21,12 +21,21 @@ func (netconf *NetworkConfig) printDebian(writer io.Writer) error {
 	fmt.Fprintln(writer, "iface lo inet loopback")
 	for _, iface := range netconf.normalInterfaces {
 		fmt.Fprintln(writer)
-		fmt.Fprintf(writer, "auto %s\n", iface.name)
-		fmt.Fprintf(writer, "iface %s inet static\n", iface.name)
-		fmt.Fprintf(writer, "\taddress %s\n", iface.ipAddr)
-		fmt.Fprintf(writer, "\tnetmask %s\n", iface.subnet.IpMask)
+		name := iface.netInterface.Name
+		if iface.subnet.Manage {
+			name = fmt.Sprintf("br%d", iface.subnet.VlanId)
+		}
+		fmt.Fprintf(writer, "auto %s\n", name)
+		fmt.Fprintf(writer, "iface %s inet static\n", name)
+		fmt.Fprintf(writer, "\taddress      %s\n", iface.ipAddr)
+		fmt.Fprintf(writer, "\tnetmask      %s\n", iface.subnet.IpMask)
 		if iface.subnet.IpGateway.Equal(netconf.DefaultSubnet.IpGateway) {
-			fmt.Fprintf(writer, "\tgateway %s\n", iface.subnet.IpGateway)
+			fmt.Fprintf(writer, "\tgateway      %s\n", iface.subnet.IpGateway)
+		}
+		if iface.subnet.Manage {
+			fmt.Fprintf(writer, "\thwaddress    %s\n",
+				iface.netInterface.HardwareAddr)
+			fmt.Fprintf(writer, "\tbridge_ports %s\n", iface.netInterface.Name)
 		}
 	}
 	if len(netconf.bondSlaves) > 0 {
