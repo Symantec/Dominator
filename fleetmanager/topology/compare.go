@@ -42,6 +42,9 @@ func (left *Directory) equal(right *Directory) bool {
 			return false
 		}
 	}
+	if !left.Tags.Equal(right.Tags) {
+		return false
+	}
 	return true
 }
 
