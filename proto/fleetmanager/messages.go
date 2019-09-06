@@ -108,4 +108,5 @@ type NetworkEntry struct {
 	Hostname       string       `json:",omitempty"`
 	HostIpAddress  net.IP       `json:",omitempty"`
 	HostMacAddress HardwareAddr `json:",omitempty"`
+	SubnetId       string       `json:",omitempty"`
 }

@@ -84,6 +84,9 @@ func (left *NetworkEntry) Equal(right *NetworkEntry) bool {
 	if left.HostMacAddress.String() != right.HostMacAddress.String() {
 		return false
 	}
+	if left.SubnetId != right.SubnetId {
+		return false
+	}
 	return true
 }
 
