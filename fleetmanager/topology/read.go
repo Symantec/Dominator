@@ -173,22 +173,39 @@ func (state *commonStateType) addMacAddress(macAddr proto.HardwareAddr) error {
 	return nil
 }
 
-func (state *commonStateType) addMachine(machine *proto.Machine) error {
-	if err := state.addNetworkEntry(machine.NetworkEntry); err != nil {
+func (state *commonStateType) addMachine(machine *proto.Machine,
+	subnets map[string]*Subnet) error {
+	if err := state.addNetworkEntry(machine.NetworkEntry, subnets); err != nil {
 		return err
 	}
-	if err := state.addNetworkEntry(machine.IPMI); err != nil {
+	if err := state.addNetworkEntry(machine.IPMI, nil); err != nil {
 		return err
 	}
 	for _, entry := range machine.SecondaryNetworkEntries {
-		if err := state.addNetworkEntry(entry); err != nil {
+		if err := state.addNetworkEntry(entry, subnets); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (state *commonStateType) addNetworkEntry(entry proto.NetworkEntry) error {
+func (state *commonStateType) addNetworkEntry(entry proto.NetworkEntry,
+	subnets map[string]*Subnet) error {
+	if entry.SubnetId != "" {
+		if _, ok := subnets[entry.SubnetId]; !ok {
+			return fmt.Errorf("unknown subnetId: %s", entry.SubnetId)
+		}
+		if entry.Hostname != "" {
+			return fmt.Errorf(
+				"cannot specify SubnetId(%s) and Hostname(%s) together",
+				entry.SubnetId, entry.Hostname)
+		}
+		if len(entry.HostIpAddress) > 0 {
+			return fmt.Errorf(
+				"cannot specify SubnetId(%s) and HostIpAddress(%s) together",
+				entry.SubnetId, entry.HostIpAddress)
+		}
+	}
 	if err := state.addHostname(entry.Hostname); err != nil {
 		return err
 	}
@@ -402,7 +419,8 @@ func (t *Topology) loadMachines(directory *Directory, dirname string,
 		return err
 	}
 	for _, machine := range directory.Machines {
-		if err := commonState.addMachine(machine); err != nil {
+		err := commonState.addMachine(machine, directory.subnetIdToSubnet)
+		if err != nil {
 			return fmt.Errorf("error adding: %s: %s", machine.Hostname, err)
 		}
 		t.machineParents[machine.Hostname] = directory
