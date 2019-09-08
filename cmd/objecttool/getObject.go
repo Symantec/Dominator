@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"syscall"
 
@@ -40,6 +41,11 @@ func getObject(objSrv objectserver.ObjectServer, hashVal hash.Hash,
 		return err
 	}
 	defer reader.Close()
-	filename := fmt.Sprintf("%s.%x", baseOutputFilename, hashVal)
-	return fsutil.CopyToFile(filename, filePerms, reader, size)
+	if baseOutputFilename == "-" {
+		_, err := io.Copy(os.Stdout, reader)
+		return err
+	} else {
+		filename := fmt.Sprintf("%s.%x", baseOutputFilename, hashVal)
+		return fsutil.CopyToFile(filename, filePerms, reader, size)
+	}
 }
