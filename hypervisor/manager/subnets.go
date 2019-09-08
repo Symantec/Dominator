@@ -69,6 +69,20 @@ func getHypervisorSubnet() (proto.Subnet, error) {
 	}, nil
 }
 
+func (m *Manager) getBridgeForSubnet(subnet proto.Subnet) (
+	string, string, error) {
+	mapName := fmt.Sprintf("br@%s", subnet.Id)
+	if _, ok := m.BridgeMap[mapName]; ok {
+		return mapName, "", nil
+	} else if bridge, ok := m.VlanIdToBridge[subnet.VlanId]; ok {
+		return bridge, "", nil
+	} else if bridge, ok = m.VlanIdToBridge[0]; ok {
+		return bridge, fmt.Sprintf(",vlan=%d", subnet.VlanId), nil
+	} else {
+		return "", "", fmt.Errorf("no usable bridge")
+	}
+}
+
 // This must be called with the lock held.
 func (m *Manager) getMatchingSubnet(ipAddr net.IP) string {
 	if len(ipAddr) > 0 {

@@ -47,6 +47,7 @@ type Manager struct {
 }
 
 type StartOptions struct {
+	BridgeMap          map[string]net.Interface // Key: interface name.
 	DhcpServer         DhcpServer
 	ImageServerAddress string
 	Logger             log.DebugLogger

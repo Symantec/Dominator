@@ -2793,17 +2793,11 @@ func (vm *vmInfoType) getBridgesAndOptions(haveManagerLock bool) (
 			return nil, nil,
 				fmt.Errorf("subnet: %s not found", subnetIDs[index])
 		}
-		var vlanOption string
-		if bridge, ok := vm.manager.VlanIdToBridge[subnet.VlanId]; !ok {
-			if bridge, ok = vm.manager.VlanIdToBridge[0]; !ok {
-				return nil, nil, fmt.Errorf("no usable bridge")
-			} else {
-				bridges = append(bridges, bridge)
-				vlanOption = fmt.Sprintf(",vlan=%d", subnet.VlanId)
-			}
-		} else {
-			bridges = append(bridges, bridge)
+		bridge, vlanOption, err := vm.manager.getBridgeForSubnet(subnet)
+		if err != nil {
+			return nil, nil, err
 		}
+		bridges = append(bridges, bridge)
 		options = append(options,
 			"-netdev", fmt.Sprintf("tap,id=net%d,fd=%d%s",
 				index, index+3, vlanOption),
