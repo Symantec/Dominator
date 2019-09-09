@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"syscall"
 
 	"github.com/Symantec/Dominator/hypervisor/dhcpd"
@@ -113,11 +114,12 @@ func main() {
 	if err := os.MkdirAll(*stateDir, dirPerms); err != nil {
 		logger.Fatalf("Cannot create state directory: %s\n", err)
 	}
-	bridges, err := net.ListBridges()
+	bridges, bridgeMap, err := net.ListBroadcastInterfaces(
+		net.InterfaceTypeBridge, logger)
 	if err != nil {
 		logger.Fatalf("Cannot list bridges: %s\n", err)
 	}
-	bridgeNames := make([]string, 0, len(bridges))
+	dhcpInterfaces := make([]string, 0, len(bridges))
 	vlanIdToBridge := make(map[uint]string)
 	for _, bridge := range bridges {
 		if vlanId, err := net.GetBridgeVlanId(bridge.Name); err != nil {
@@ -128,13 +130,15 @@ func main() {
 				bridge.Name)
 		} else {
 			if *dhcpServerOnBridgesOnly {
-				bridgeNames = append(bridgeNames, bridge.Name)
+				dhcpInterfaces = append(dhcpInterfaces, bridge.Name)
 			}
-			vlanIdToBridge[uint(vlanId)] = bridge.Name
-			logger.Printf("Bridge: %s, VLAN Id: %d\n", bridge.Name, vlanId)
+			if !strings.HasPrefix(bridge.Name, "br@") {
+				vlanIdToBridge[uint(vlanId)] = bridge.Name
+				logger.Printf("Bridge: %s, VLAN Id: %d\n", bridge.Name, vlanId)
+			}
 		}
 	}
-	dhcpServer, err := dhcpd.New(bridgeNames, logger)
+	dhcpServer, err := dhcpd.New(dhcpInterfaces, logger)
 	if err != nil {
 		logger.Fatalf("Cannot start DHCP server: %s\n", err)
 	}
@@ -149,8 +153,9 @@ func main() {
 		logger.Fatalf("Cannot start tftpboot server: %s\n", err)
 	}
 	managerObj, err := manager.New(manager.StartOptions{
-		ImageServerAddress: imageServerAddress,
+		BridgeMap:          bridgeMap,
 		DhcpServer:         dhcpServer,
+		ImageServerAddress: imageServerAddress,
 		Logger:             logger,
 		ObjectCacheBytes:   uint64(objectCacheSize),
 		ShowVgaConsole:     *showVGA,
