@@ -15,6 +15,11 @@ type bondedInterfaceType struct {
 	subnet *hyper_proto.Subnet
 }
 
+type bridgeOnlyInterfaceType struct {
+	netInterface net.Interface
+	subnetId     string
+}
+
 type normalInterfaceType struct {
 	ipAddr       net.IP
 	netInterface net.Interface
@@ -22,11 +27,13 @@ type normalInterfaceType struct {
 }
 
 type NetworkConfig struct {
-	bondedInterfaces []bondedInterfaceType
-	bridges          []uint
-	DefaultSubnet    *hyper_proto.Subnet
-	normalInterfaces []normalInterfaceType
-	bondSlaves       []string // New interface name.
+	bondedInterfaces     []bondedInterfaceType
+	bridges              []uint
+	bridgeOnlyInterfaces []bridgeOnlyInterfaceType
+	DefaultSubnet        *hyper_proto.Subnet
+	normalInterfaces     []normalInterfaceType
+	bondSlaves           []string
+	vlanRawDevice        string
 }
 
 func FindMatchingSubnet(subnets []*hyper_proto.Subnet,

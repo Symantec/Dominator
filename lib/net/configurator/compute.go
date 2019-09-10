@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strings"
 
 	"github.com/Symantec/Dominator/lib/log"
 	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
@@ -16,6 +17,16 @@ func findMatchingSubnet(subnets []*hyper_proto.Subnet,
 		subnetMask := net.IPMask(subnet.IpMask)
 		subnetAddr := subnet.IpGateway.Mask(subnetMask)
 		if ipAddr.Mask(subnetMask).Equal(subnetAddr) {
+			return subnet
+		}
+	}
+	return nil
+}
+
+func findSubnet(subnets []*hyper_proto.Subnet,
+	subnetId string) *hyper_proto.Subnet {
+	for _, subnet := range subnets {
+		if subnet.Id == subnetId {
 			return subnet
 		}
 	}
@@ -40,6 +51,15 @@ func (netconf *NetworkConfig) addBondedInterface(name string, ipAddr net.IP,
 			name:   name,
 			ipAddr: ipAddr,
 			subnet: subnet,
+		})
+}
+
+func (netconf *NetworkConfig) addBridgeOnlyInterface(iface net.Interface,
+	subnetId string) {
+	netconf.bridgeOnlyInterfaces = append(netconf.bridgeOnlyInterfaces,
+		bridgeOnlyInterfaceType{
+			netInterface: iface,
+			subnetId:     subnetId,
 		})
 }
 
@@ -74,6 +94,35 @@ func compute(machineInfo fm_proto.GetMachineInfoResponse,
 	usedSubnets := make(map[*hyper_proto.Subnet]struct{})
 	for _, networkEntry := range networkEntries {
 		if len(networkEntry.HostIpAddress) < 1 {
+			if len(networkEntry.HostMacAddress) < 1 ||
+				networkEntry.SubnetId == "" {
+				continue
+			}
+			iface, ok := hwAddrToInterface[networkEntry.HostMacAddress.String()]
+			if !ok {
+				return nil, fmt.Errorf("MAC address: %s not found",
+					networkEntry.HostMacAddress)
+			}
+			subnet := findSubnet(machineInfo.Subnets, networkEntry.SubnetId)
+			if subnet == nil {
+				return nil,
+					fmt.Errorf("subnetId: %s not found", networkEntry.SubnetId)
+			}
+			if !subnet.Manage {
+				return nil,
+					fmt.Errorf("subnetId: %s is not managed", subnet.Id)
+			}
+			if len(subnet.Id) >= 10 {
+				return nil,
+					fmt.Errorf("subnetId: %s is over 9 characters", subnet.Id)
+			}
+			if strings.ContainsAny(subnet.Id, "/.") {
+				return nil,
+					fmt.Errorf("subnetId: %s contains '/' or '.'", subnet.Id)
+			}
+			usedSubnets[subnet] = struct{}{}
+			netconf.addBridgeOnlyInterface(iface, networkEntry.SubnetId)
+			delete(interfaces, iface.Name)
 			continue
 		}
 		if len(networkEntry.HostMacAddress) < 1 {
@@ -105,6 +154,10 @@ func compute(machineInfo fm_proto.GetMachineInfoResponse,
 	}
 	for name := range interfaces {
 		netconf.bondSlaves = append(netconf.bondSlaves, name)
+		netconf.vlanRawDevice = name
+	}
+	if len(interfaces) > 1 {
+		netconf.vlanRawDevice = "bond0"
 	}
 	sort.Strings(netconf.bondSlaves)
 	if len(interfaces) > 0 {
@@ -117,7 +170,8 @@ func compute(machineInfo fm_proto.GetMachineInfoResponse,
 				continue
 			}
 			usedSubnets[subnet] = struct{}{}
-			entryName := fmt.Sprintf("bond0.%d", subnet.VlanId)
+			entryName := fmt.Sprintf("%s.%d",
+				netconf.vlanRawDevice, subnet.VlanId)
 			netconf.addBondedInterface(entryName, networkEntry.HostIpAddress,
 				subnet)
 			if subnet == preferredSubnet {
@@ -130,7 +184,9 @@ func compute(machineInfo fm_proto.GetMachineInfoResponse,
 			if _, ok := usedSubnets[subnet]; ok {
 				continue
 			}
-			netconf.bridges = append(netconf.bridges, subnet.VlanId)
+			if subnet.VlanId > 0 {
+				netconf.bridges = append(netconf.bridges, subnet.VlanId)
+			}
 		}
 	}
 	return netconf, nil

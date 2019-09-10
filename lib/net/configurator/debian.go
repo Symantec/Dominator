@@ -38,39 +38,53 @@ func (netconf *NetworkConfig) printDebian(writer io.Writer) error {
 			fmt.Fprintf(writer, "\tbridge_ports %s\n", iface.netInterface.Name)
 		}
 	}
-	if len(netconf.bondSlaves) > 0 {
+	for _, iface := range netconf.bridgeOnlyInterfaces {
 		fmt.Fprintln(writer)
-		fmt.Fprintln(writer, "auto bond0")
-		fmt.Fprintln(writer, "iface bond0 inet manual")
-		fmt.Fprintln(writer, "\tup ip link set bond0 mtu 9000")
-		fmt.Fprintln(writer, "\tbond-mode 802.3ad")
-		fmt.Fprintln(writer, "\tbond-xmit_hash_policy 1")
-		fmt.Fprint(writer, "\tslaves")
-		for _, name := range netconf.bondSlaves {
-			fmt.Fprint(writer, " ", name)
-		}
-		fmt.Fprintln(writer)
+		name := fmt.Sprintf("br@%s", iface.subnetId)
+		fmt.Fprintf(writer, "auto %s\n", name)
+		fmt.Fprintf(writer, "iface %s inet manual\n", name)
+		fmt.Fprintf(writer, "\thwaddress    %s\n",
+			iface.netInterface.HardwareAddr)
+		fmt.Fprintf(writer, "\tbridge_ports %s\n", iface.netInterface.Name)
 	}
-	for _, iface := range netconf.bondedInterfaces {
+	if netconf.vlanRawDevice != "" {
 		fmt.Fprintln(writer)
-		fmt.Fprintf(writer, "auto %s\n", iface.name)
-		fmt.Fprintf(writer, "iface %s inet static\n", iface.name)
-		fmt.Fprintln(writer, "\tvlan-raw-device bond0")
-		fmt.Fprintf(writer, "\taddress %s\n", iface.ipAddr)
-		fmt.Fprintf(writer, "\tnetmask %s\n", iface.subnet.IpMask)
-		if iface.subnet.IpGateway.Equal(netconf.DefaultSubnet.IpGateway) {
-			fmt.Fprintf(writer, "\tgateway %s\n", iface.subnet.IpGateway)
+		fmt.Fprintf(writer, "auto %s\n", netconf.vlanRawDevice)
+		fmt.Fprintf(writer, "iface %s inet manual\n", netconf.vlanRawDevice)
+		if len(netconf.bondSlaves) > 1 {
+			fmt.Fprintf(writer, "\tup ip link set %s mtu 9000\n",
+				netconf.vlanRawDevice)
+			fmt.Fprintln(writer, "\tbond-mode 802.3ad")
+			fmt.Fprintln(writer, "\tbond-xmit_hash_policy 1")
+			fmt.Fprint(writer, "\tslaves")
+			for _, name := range netconf.bondSlaves {
+				fmt.Fprint(writer, " ", name)
+			}
+			fmt.Fprintln(writer)
 		}
-	}
-	for _, vlanId := range netconf.bridges {
-		fmt.Fprintln(writer)
-		fmt.Fprintf(writer, "auto bond0.%d\n", vlanId)
-		fmt.Fprintf(writer, "iface bond0.%d inet manual\n", vlanId)
-		fmt.Fprintln(writer, "\tvlan-raw-device bond0")
-		fmt.Fprintln(writer)
-		fmt.Fprintf(writer, "auto br%d\n", vlanId)
-		fmt.Fprintf(writer, "iface br%d inet manual\n", vlanId)
-		fmt.Fprintf(writer, "\tbridge_ports bond0.%d\n", vlanId)
+		for _, iface := range netconf.bondedInterfaces {
+			fmt.Fprintln(writer)
+			fmt.Fprintf(writer, "auto %s\n", iface.name)
+			fmt.Fprintf(writer, "iface %s inet static\n", iface.name)
+			fmt.Fprintln(writer, "\tvlan-raw-device bond0")
+			fmt.Fprintf(writer, "\taddress %s\n", iface.ipAddr)
+			fmt.Fprintf(writer, "\tnetmask %s\n", iface.subnet.IpMask)
+			if iface.subnet.IpGateway.Equal(netconf.DefaultSubnet.IpGateway) {
+				fmt.Fprintf(writer, "\tgateway %s\n", iface.subnet.IpGateway)
+			}
+		}
+		for _, vlanId := range netconf.bridges {
+			fmt.Fprintln(writer)
+			fmt.Fprintf(writer, "auto %s.%d\n", netconf.vlanRawDevice, vlanId)
+			fmt.Fprintf(writer, "iface %s.%d inet manual\n",
+				netconf.vlanRawDevice, vlanId)
+			fmt.Fprintf(writer, "\tvlan-raw-device %s\n", netconf.vlanRawDevice)
+			fmt.Fprintln(writer)
+			fmt.Fprintf(writer, "auto br%d\n", vlanId)
+			fmt.Fprintf(writer, "iface br%d inet manual\n", vlanId)
+			fmt.Fprintf(writer, "\tbridge_ports %s.%d\n",
+				netconf.vlanRawDevice, vlanId)
+		}
 	}
 	return nil
 }
