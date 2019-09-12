@@ -1,14 +1,24 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"net"
 	"os"
+	"strings"
 
+	"github.com/Symantec/Dominator/lib/json"
 	"github.com/Symantec/Dominator/lib/log"
 	libnet "github.com/Symantec/Dominator/lib/net"
 	"github.com/Symantec/Dominator/lib/net/configurator"
 	"github.com/Symantec/Dominator/lib/srpc"
+	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
 )
+
+type networkInterface struct {
+	HardwareAddr string
+	Name         string
+}
 
 func showNetworkConfigurationSubcommand(args []string,
 	logger log.DebugLogger) error {
@@ -19,39 +29,89 @@ func showNetworkConfigurationSubcommand(args []string,
 	return nil
 }
 
-func getNetworkConfiguration(logger log.DebugLogger) (
-	*configurator.NetworkConfig, error) {
+func getInfoForhost(hostname string) (fm_proto.GetMachineInfoResponse, error) {
 	fmCR := srpc.NewClientResource("tcp",
 		fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum))
 	defer fmCR.ScheduleClose()
-	_, interfaces, err := libnet.ListBroadcastInterfaces(
-		libnet.InterfaceTypeEtherNet, logger)
+	if hostname != "" && hostname != "localhost" {
+		return getInfoForMachine(fmCR, hostname)
+	}
+	if hostname, err := os.Hostname(); err != nil {
+		return fm_proto.GetMachineInfoResponse{}, err
+	} else if info, err := getInfoForMachine(fmCR, hostname); err == nil {
+		return info, nil
+	} else if !strings.Contains(err.Error(), "unknown machine") {
+		return fm_proto.GetMachineInfoResponse{}, err
+	} else if hostname, err := getHostname(); err != nil {
+		return fm_proto.GetMachineInfoResponse{}, err
+	} else {
+		return getInfoForMachine(fmCR, hostname)
+	}
+}
+
+func getNetworkConfiguration(hostname string, logger log.DebugLogger) (
+	*configurator.NetworkConfig, error) {
+	info, err := getInfoForhost(hostname)
 	if err != nil {
 		return nil, err
 	}
-	for name := range interfaces {
-		if libnet.TestCarrier(name) {
-			logger.Debugf(1, "will generate configuration including: %s\n",
-				name)
-		} else {
-			delete(interfaces, name)
+	var interfacesMap map[string]net.Interface
+	if *networkInterfacesFile == "" {
+		if hostname != "" && hostname != "localhost" {
+			return nil, errors.New("no networkInterfacesFile specified")
+		}
+		_, interfacesMap, err = getUpInterfaces(logger)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var networkInterfaces []networkInterface
+		err := json.ReadFromFile(*networkInterfacesFile, &networkInterfaces)
+		if err != nil {
+			return nil, err
+		}
+		interfacesMap = make(map[string]net.Interface, len(networkInterfaces))
+		for _, netInterface := range networkInterfaces {
+			macAddress, err := net.ParseMAC(netInterface.HardwareAddr)
+			if err != nil {
+				return nil, err
+			}
+			interfacesMap[netInterface.Name] = net.Interface{
+				Name:         netInterface.Name,
+				HardwareAddr: macAddress,
+			}
 		}
 	}
-	hostname, err := getHostname()
+	return configurator.Compute(info, interfacesMap, logger)
+}
+
+func getUpInterfaces(logger log.DebugLogger) (
+	[]net.Interface, map[string]net.Interface, error) {
+	interfaceList, interfaceMap, err := libnet.ListBroadcastInterfaces(
+		libnet.InterfaceTypeEtherNet, logger)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	info, err := getInfoForMachine(fmCR, hostname)
-	if err != nil {
-		return nil, err
+	newList := make([]net.Interface, 0, len(interfaceList))
+	for _, iface := range interfaceList {
+		if libnet.TestCarrier(iface.Name) {
+			newList = append(newList, iface)
+			logger.Debugf(1, "will generate configuration including: %s\n",
+				iface.Name)
+		} else {
+			delete(interfaceMap, iface.Name)
+		}
 	}
-	return configurator.Compute(info, interfaces, logger)
+	return newList, interfaceMap, nil
 }
 
 func showNetworkConfiguration(logger log.DebugLogger) error {
-	netconf, err := getNetworkConfiguration(logger)
+	netconf, err := getNetworkConfiguration(*hypervisorHostname, logger)
 	if err != nil {
 		return err
+	}
+	if netconf.DefaultSubnet == nil {
+		return errors.New("no default subnet found")
 	}
 	fmt.Println("=============================================================")
 	fmt.Println("Network configuration:")

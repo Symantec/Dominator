@@ -6,6 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Symantec/Dominator/lib/net/configurator"
 )
 
 func updateNetworkConfigurationSubcommand(args []string,
@@ -18,7 +19,15 @@ func updateNetworkConfigurationSubcommand(args []string,
 }
 
 func updateNetworkConfiguration(logger log.DebugLogger) error {
-	netconf, err := getNetworkConfiguration(logger)
+	_, interfaces, err := getUpInterfaces(logger)
+	if err != nil {
+		return err
+	}
+	info, err := getInfoForhost("")
+	if err != nil {
+		return err
+	}
+	netconf, err := configurator.Compute(info, interfaces, logger)
 	if err != nil {
 		return err
 	}

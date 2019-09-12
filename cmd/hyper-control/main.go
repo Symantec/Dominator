@@ -48,6 +48,8 @@ var (
 		"How long to provide files via TFTP after last DHCP ACK")
 	netbootTimeout = flag.Duration("netbootTimeout", time.Minute,
 		"Time to wait for DHCP ACKs to be sent")
+	networkInterfacesFile = flag.String("networkInterfacesFile", "",
+		"File containing network interfaces for show-network-configuration")
 	numAcknowledgementsToWaitFor = flag.Uint("numAcknowledgementsToWaitFor",
 		2, "Number of DHCP ACKs to wait for")
 	storageLayoutFilename = flag.String("storageLayoutFilename", "",
