@@ -19,7 +19,7 @@ import (
 
 func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
 	rootDir string, applyFilter bool,
-	buildLog buildLogger) (manifestType, error) {
+	buildLog io.Writer) (manifestType, error) {
 	manifestFile := path.Join(manifestDir, "manifest")
 	var manifestConfig manifestConfigType
 	if err := json.ReadFromFile(manifestFile, &manifestConfig); err != nil {
@@ -37,7 +37,7 @@ func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
 		return manifestType{},
 			errors.New("error processing manifest: " + err.Error())
 	}
-	if applyFilter {
+	if applyFilter && manifestConfig.Filter != nil {
 		err := util.DeletedFilteredFiles(rootDir, manifestConfig.Filter)
 		if err != nil {
 			return manifestType{}, err

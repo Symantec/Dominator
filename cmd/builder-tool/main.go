@@ -49,7 +49,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  build-from-manifest manifestDir [stream-name]")
+	fmt.Fprintln(os.Stderr, "  build-from-manifest manifestDir stream-name")
 	fmt.Fprintln(os.Stderr, "  build-image stream-name [git-branch]")
 	fmt.Fprintln(os.Stderr, "  build-raw-from-manifest manifestDir rawFile")
 	fmt.Fprintln(os.Stderr, "  build-tree-from-manifest manifestDir")

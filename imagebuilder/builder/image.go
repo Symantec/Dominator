@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -269,7 +268,7 @@ func buildImageFromManifestAndUpload(client *srpc.Client, manifestDir string,
 }
 
 func buildTreeFromManifest(client *srpc.Client, manifestDir string,
-	buildLog *bytes.Buffer) (string, error) {
+	buildLog io.Writer) (string, error) {
 	rootDir, err := makeTempDirectory("", "tree")
 	if err != nil {
 		return "", err
@@ -327,7 +326,7 @@ func loadTriggers(manifestDir string) (*triggers.Triggers, bool, error) {
 
 func unpackImage(client *srpc.Client, streamName string,
 	maxSourceAge, expiresIn time.Duration, rootDir string,
-	buildLog buildLogger) (*sourceImageInfoType, error) {
+	buildLog io.Writer) (*sourceImageInfoType, error) {
 	imageName, sourceImage, err := getLatestImage(client, streamName, buildLog)
 	if err != nil {
 		return nil, err
