@@ -18,6 +18,7 @@ import (
 type networkInterface struct {
 	HardwareAddr string
 	Name         string
+	Up           bool
 }
 
 func showNetworkConfigurationSubcommand(args []string,
@@ -76,10 +77,14 @@ func getNetworkConfiguration(hostname string, logger log.DebugLogger) (
 			if err != nil {
 				return nil, err
 			}
-			interfacesMap[netInterface.Name] = net.Interface{
+			netIf := net.Interface{
 				Name:         netInterface.Name,
 				HardwareAddr: macAddress,
 			}
+			if netInterface.Up {
+				netIf.Flags = net.FlagUp
+			}
+			interfacesMap[netInterface.Name] = netIf
 		}
 	}
 	return configurator.Compute(info, interfacesMap, logger)
