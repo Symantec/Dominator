@@ -37,7 +37,7 @@ func configureNetwork(machineInfo fm_proto.GetMachineInfoResponse,
 		return err
 	}
 	netconf, err := configurator.Compute(machineInfo,
-		getConnectedInterfaces(interfaces, logger), logger)
+		markConnectedInterfaces(interfaces, logger), logger)
 	if err != nil {
 		return err
 	}
@@ -62,18 +62,22 @@ func configureNetwork(machineInfo fm_proto.GetMachineInfoResponse,
 	return nil
 }
 
-func getConnectedInterfaces(interfaces map[string]net.Interface,
+// Return a new map of interfaces, marking those with a carrier as up and those
+// without a carrier as down.
+func markConnectedInterfaces(interfaces map[string]net.Interface,
 	logger log.DebugLogger) map[string]net.Interface {
-	connectedInterfaces := make(map[string]net.Interface)
+	outputInterfaces := make(map[string]net.Interface)
 	for name, iface := range interfaces {
 		if libnet.TestCarrier(name) {
-			connectedInterfaces[name] = iface
+			iface.Flags |= net.FlagUp
 			logger.Debugf(1, "%s is connected\n", name)
-			continue
+		} else {
+			iface.Flags &= ^net.FlagUp
+			run("ifconfig", "", logger, name, "down")
 		}
-		run("ifconfig", "", logger, name, "down")
+		outputInterfaces[name] = iface
 	}
-	return connectedInterfaces
+	return outputInterfaces
 }
 
 func writeMappings(mappings map[string]string) error {
