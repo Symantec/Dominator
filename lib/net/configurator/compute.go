@@ -152,9 +152,15 @@ func compute(machineInfo fm_proto.GetMachineInfoResponse,
 			netconf.DefaultSubnet = subnet
 		}
 	}
-	for name := range interfaces {
-		netconf.bondSlaves = append(netconf.bondSlaves, name)
-		netconf.vlanRawDevice = name
+	// All remaining interfaces which are marked as up will be used for VLAN
+	// trunk. If there multiple interfaces, they will be bonded.
+	for name, iface := range interfaces {
+		if iface.Flags&net.FlagUp == 0 {
+			delete(interfaces, name)
+		} else {
+			netconf.bondSlaves = append(netconf.bondSlaves, name)
+			netconf.vlanRawDevice = name
+		}
 	}
 	if len(interfaces) > 1 {
 		netconf.vlanRawDevice = "bond0"
