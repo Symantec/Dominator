@@ -3,10 +3,13 @@
 package main
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Symantec/Dominator/lib/fsutil"
@@ -143,6 +146,29 @@ func getConfiguration(interfaces map[string]net.Interface,
 	return &machineInfo, nil
 }
 
+func injectRandomSeed(client *tftp.Client, logger log.DebugLogger) error {
+	randomSeed := &bytes.Buffer{}
+	if wt, err := client.Receive("random-seed", "octet"); err != nil {
+		if strings.Contains(err.Error(), os.ErrNotExist.Error()) {
+			return nil
+		}
+		return err
+	} else if _, err := wt.WriteTo(randomSeed); err != nil {
+		return err
+	}
+	if file, err := os.OpenFile("/dev/urandom", os.O_WRONLY, 0); err != nil {
+		return err
+	} else {
+		defer file.Close()
+		if nCopied, err := io.Copy(file, randomSeed); err != nil {
+			return err
+		} else {
+			logger.Printf("copied %d bytes of random data\n", nCopied)
+		}
+	}
+	return nil
+}
+
 func loadTftpFiles(tftpServer net.IP, logger log.DebugLogger) error {
 	client, err := tftp.NewClient(tftpServer.String() + ":69")
 	if err != nil {
@@ -167,7 +193,7 @@ func loadTftpFiles(tftpServer net.IP, logger log.DebugLogger) error {
 			}
 		}
 	}
-	return nil
+	return injectRandomSeed(client, logger)
 }
 
 func raiseInterfaces(interfaces map[string]net.Interface,
