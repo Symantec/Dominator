@@ -52,6 +52,8 @@ var (
 		"File containing network interfaces for show-network-configuration")
 	numAcknowledgementsToWaitFor = flag.Uint("numAcknowledgementsToWaitFor",
 		2, "Number of DHCP ACKs to wait for")
+	randomSeedBytes = flag.Uint("randomSeedBytes", 0,
+		"Number of bytes of random seed data to inject into installing machine")
 	storageLayoutFilename = flag.String("storageLayoutFilename", "",
 		"Name of file containing storage layout for installing machine")
 	topologyDir = flag.String("topologyDir", "",

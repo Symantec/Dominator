@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -65,7 +66,7 @@ func getHostAddress(networkEntries []fm_proto.NetworkEntry) []hostAddressType {
 }
 
 func getInstallConfig(fmCR *srpc.ClientResource, imageClient *srpc.Client,
-	hostname string,
+	hostname string, addRandomData bool,
 	logger log.DebugLogger) (*fm_proto.GetMachineInfoResponse, []leaseType,
 	map[string][]byte, error) {
 	info, err := getInfoForMachine(fmCR, hostname)
@@ -112,7 +113,8 @@ func getInstallConfig(fmCR *srpc.ClientResource, imageClient *srpc.Client,
 				len(img.FileSystem.InodeTable))
 		}
 	}
-	configFiles, err := makeConfigFiles(info, imageName, networkEntries)
+	configFiles, err := makeConfigFiles(info, imageName, networkEntries,
+		addRandomData)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -142,7 +144,8 @@ func getStorageLayout() (installer_proto.StorageLayout, error) {
 }
 
 func makeConfigFiles(info fm_proto.GetMachineInfoResponse, imageName string,
-	networkEntries []fm_proto.NetworkEntry) (map[string][]byte, error) {
+	networkEntries []fm_proto.NetworkEntry,
+	addRandomData bool) (map[string][]byte, error) {
 	filesMap := make(map[string][]byte, len(netbootFiles)+1)
 	for tftpFilename, localFilename := range netbootFiles {
 		if data, err := ioutil.ReadFile(localFilename); err != nil {
@@ -173,6 +176,13 @@ func makeConfigFiles(info fm_proto.GetMachineInfoResponse, imageName string,
 	}
 	if primarySubnet == nil {
 		return nil, errors.New("no primary subnet found")
+	}
+	if addRandomData && *randomSeedBytes > 0 {
+		randomData := make([]byte, *randomSeedBytes)
+		if _, err := rand.Read(randomData); err != nil {
+			return nil, err
+		}
+		filesMap["random-seed"] = randomData
 	}
 	buffer = new(bytes.Buffer)
 	if primarySubnet.DomainName != "" {
@@ -228,7 +238,7 @@ func netbootHost(hostname string, logger log.DebugLogger) error {
 	}
 	defer imageClient.Close()
 	info, leases, configFiles, err := getInstallConfig(fmCR, imageClient,
-		hostname, logger)
+		hostname, true, logger)
 	if err != nil {
 		return err
 	}

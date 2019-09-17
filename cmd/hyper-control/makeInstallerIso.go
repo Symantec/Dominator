@@ -48,7 +48,7 @@ func makeInstallerDirectory(hostname, rootDir string, logger log.DebugLogger) (
 	}
 	defer imageClient.Close()
 	info, _, configFiles, err := getInstallConfig(fmCR, imageClient, hostname,
-		logger)
+		true, logger)
 	if err != nil {
 		return nil, "", err
 	}

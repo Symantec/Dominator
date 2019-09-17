@@ -49,7 +49,7 @@ func writeNetbootFiles(hostname, dirname string, logger log.DebugLogger) error {
 	}
 	defer imageClient.Close()
 	_, _, configFiles, err := getInstallConfig(fmCR, imageClient, hostname,
-		logger)
+		false, logger)
 	if err != nil {
 		return err
 	}
