@@ -5,6 +5,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/rand"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -431,18 +432,18 @@ func getImage(logger log.DebugLogger) (*image.Image, *srpc.Client, error) {
 }
 
 func getRandomKey(numBytes uint, logger log.DebugLogger) ([]byte, error) {
-	logger.Printf("reading %d bytes from /dev/urandom\n", numBytes)
+	logger.Printf("getting %d random bytes\n", numBytes)
+	timer := time.AfterFunc(time.Second, func() {
+		logger.Println("getting random data is taking too long")
+		logger.Println("mash on the keyboard to add entropy")
+	})
 	startTime := time.Now()
-	if file, err := os.Open("/dev/urandom"); err != nil {
+	buffer := make([]byte, numBytes)
+	_, err := rand.Read(buffer)
+	timer.Stop()
+	if err != nil {
 		return nil, err
 	} else {
-		defer file.Close()
-		buffer := make([]byte, numBytes)
-		if nRead, err := file.Read(buffer); err != nil {
-			return nil, err
-		} else if nRead < len(buffer) {
-			return nil, fmt.Errorf("read: %d random bytes", nRead)
-		}
 		logger.Printf("read %d bytes of random data after %s\n",
 			numBytes, format.Duration(time.Since(startTime)))
 		return buffer, nil
