@@ -236,6 +236,13 @@ type ExportLocalVmResponse struct {
 	VmInfo ExportLocalVmInfo
 }
 
+type GetRootCookiePathRequest struct{}
+
+type GetRootCookiePathResponse struct {
+	Error string
+	Path  string
+}
+
 // The GetUpdates() RPC is fully streamed.
 // The client may or may not send GetUpdateRequest messages to the server.
 // The server sends a stream of Update messages.
