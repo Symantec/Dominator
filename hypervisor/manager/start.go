@@ -39,11 +39,6 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 	if _, err := rand.Read(rootCookie); err != nil {
 		return nil, err
 	}
-	err = fsutil.CopyToFile(filepath.Join(startOptions.StateDir,
-		"root-cookie"), privateFilePerms, bytes.NewReader(rootCookie), 0)
-	if err != nil {
-		return nil, err
-	}
 	manager := &Manager{
 		StartOptions:      startOptions,
 		rootCookie:        rootCookie,
@@ -53,6 +48,11 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 		serialNumber:      readProductSerial(),
 		vms:               make(map[string]*vmInfoType),
 		volumeDirectories: startOptions.VolumeDirectories,
+	}
+	err = fsutil.CopyToFile(manager.GetRootCookiePath(), privateFilePerms,
+		bytes.NewReader(rootCookie), 0)
+	if err != nil {
+		return nil, err
 	}
 	if err := manager.loadSubnets(); err != nil {
 		return nil, err

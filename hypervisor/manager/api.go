@@ -3,6 +3,7 @@ package manager
 import (
 	"io"
 	"net"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -203,6 +204,10 @@ func (m *Manager) GetImageServerAddress() string {
 
 func (m *Manager) GetNumVMs() (uint, uint) {
 	return m.getNumVMs()
+}
+
+func (m *Manager) GetRootCookiePath() string {
+	return filepath.Join(m.StartOptions.StateDir, "root-cookie")
 }
 
 func (m *Manager) GetVmBootLog(ipAddr net.IP) (io.ReadCloser, error) {
