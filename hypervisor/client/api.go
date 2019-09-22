@@ -31,6 +31,10 @@ func ExportLocalVm(client *srpc.Client, ipAddr net.IP,
 	return exportLocalVm(client, ipAddr, verificationCookie)
 }
 
+func GetRootCookiePath(client *srpc.Client) (string, error) {
+	return getRootCookiePath(client)
+}
+
 func GetVmInfo(client *srpc.Client, ipAddr net.IP) (proto.VmInfo, error) {
 	return getVmInfo(client, ipAddr)
 }

@@ -92,6 +92,19 @@ func exportLocalVm(client *srpc.Client, ipAddr net.IP,
 	return reply.VmInfo, nil
 }
 
+func getRootCookiePath(client *srpc.Client) (string, error) {
+	request := proto.GetRootCookiePathRequest{}
+	var reply proto.GetRootCookiePathResponse
+	err := client.RequestReply("Hypervisor.GetRootCookiePath", request, &reply)
+	if err != nil {
+		return "", err
+	}
+	if err := errors.New(reply.Error); err != nil {
+		return "", err
+	}
+	return reply.Path, nil
+}
+
 func getVmInfo(client *srpc.Client, ipAddr net.IP) (proto.VmInfo, error) {
 	request := proto.GetVmInfoRequest{IpAddress: ipAddr}
 	var reply proto.GetVmInfoResponse
