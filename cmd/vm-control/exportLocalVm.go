@@ -68,16 +68,16 @@ func vmExport(vmHostname string, exporter vmExporter,
 	if err != nil {
 		return err
 	}
-	rootCookie, err := readRootCookie(logger)
-	if err != nil {
-		return err
-	}
 	hypervisor := fmt.Sprintf(":%d", *hypervisorPortNum)
 	client, err := srpc.DialHTTP("tcp", hypervisor, 0)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
+	rootCookie, err := readRootCookie(client, logger)
+	if err != nil {
+		return err
+	}
 	if err := hyperclient.StopVm(client, vmIpAddr, nil); err != nil {
 		return err
 	}

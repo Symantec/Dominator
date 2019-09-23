@@ -208,16 +208,16 @@ func importVirshVm(macAddr, domainName string, sAddrs []proto.Address,
 		OwnerUsers:    ownerUsers,
 		Tags:          tags,
 	}}
-	verificationCookie, err := readRootCookie(logger)
-	if err != nil {
-		return err
-	}
 	hypervisor := fmt.Sprintf(":%d", *hypervisorPortNum)
 	client, err := srpc.DialHTTP("tcp", hypervisor, 0)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
+	verificationCookie, err := readRootCookie(client, logger)
+	if err != nil {
+		return err
+	}
 	directories, err := listVolumeDirectories(client)
 	if err != nil {
 		return err
