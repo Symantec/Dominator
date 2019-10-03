@@ -69,7 +69,7 @@ func (b *Builder) rebuildImages(minInterval time.Duration) {
 		sleepUntil = time.Now().Add(minInterval)
 		client, err := srpc.DialHTTP("tcp", b.imageServerAddress, 0)
 		if err != nil {
-			b.logger.Println(err)
+			b.logger.Printf("%s: %s\n", b.imageServerAddress, err)
 			continue
 		}
 		for _, streamName := range b.listStreamsToAutoRebuild() {
