@@ -102,7 +102,8 @@ of *image stream* names and their respective configurations. The configuration
 for an *image stream* is a JSON object with the following fields:
 - `ManifestUrl`: the URL of a Git repository containing the
   		 *[image manifest](../../user-guide/image-manifest.md)* for the
-		 image. Variables specified in the `VARIABLES_FILE` will be
+		 image. The special URL scheme `dir` points to a local directory
+		 tree. Variables specified in the `VARIABLES_FILE` will be
 		 expanded here
 - `ManifestDirectory`: the directory within the Git repository containing the
   		 *[image manifest](../../user-guide/image-manifest.md)* for the
