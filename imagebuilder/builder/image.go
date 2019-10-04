@@ -35,11 +35,17 @@ func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 	}
 	defer os.RemoveAll(manifestDirectory)
 	img, err := buildImageFromManifest(client, manifestDirectory, request,
-		b.bindMounts, buildLog)
+		b.bindMounts, stream, buildLog)
 	if err != nil {
 		return nil, err
 	}
 	return img, nil
+}
+
+func (stream *imageStreamType) getenv() map[string]string {
+	envTable := make(map[string]string, 1)
+	envTable["IMAGE_STREAM"] = stream.name
+	return envTable
 }
 
 func (stream *imageStreamType) getManifest(b *Builder, streamName string,
@@ -213,7 +219,7 @@ func runCommand(buildLog io.Writer, cwd string, args ...string) error {
 
 func buildImageFromManifest(client *srpc.Client, manifestDir string,
 	request proto.BuildImageRequest, bindMounts []string,
-	buildLog buildLogger) (*image.Image, error) {
+	envGetter environmentGetter, buildLog buildLogger) (*image.Image, error) {
 	// First load all the various manifest files (fail early on error).
 	computedFilesList, err := util.LoadComputedFiles(
 		path.Join(manifestDir, "computed-files.json"))
@@ -240,7 +246,7 @@ func buildImageFromManifest(client *srpc.Client, manifestDir string,
 	defer os.RemoveAll(rootDir)
 	fmt.Fprintf(buildLog, "Created image working directory: %s\n", rootDir)
 	manifest, err := unpackImageAndProcessManifest(client, manifestDir,
-		rootDir, bindMounts, false, buildLog)
+		rootDir, bindMounts, false, envGetter, buildLog)
 	if err != nil {
 		return nil, err
 	}
@@ -274,9 +280,10 @@ func buildImageFromManifest(client *srpc.Client, manifestDir string,
 
 func buildImageFromManifestAndUpload(client *srpc.Client, manifestDir string,
 	request proto.BuildImageRequest, bindMounts []string,
+	envGetter environmentGetter,
 	buildLog buildLogger) (*image.Image, string, error) {
 	img, err := buildImageFromManifest(client, manifestDir, request, bindMounts,
-		buildLog)
+		envGetter, buildLog)
 	if err != nil {
 		return nil, "", err
 	}
@@ -288,13 +295,14 @@ func buildImageFromManifestAndUpload(client *srpc.Client, manifestDir string,
 }
 
 func buildTreeFromManifest(client *srpc.Client, manifestDir string,
-	bindMounts []string, buildLog io.Writer) (string, error) {
+	bindMounts []string, envGetter environmentGetter,
+	buildLog io.Writer) (string, error) {
 	rootDir, err := makeTempDirectory("", "tree")
 	if err != nil {
 		return "", err
 	}
 	_, err = unpackImageAndProcessManifest(client, manifestDir, rootDir,
-		bindMounts, true, buildLog)
+		bindMounts, true, envGetter, buildLog)
 	if err != nil {
 		os.RemoveAll(rootDir)
 		return "", err

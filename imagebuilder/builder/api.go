@@ -20,6 +20,10 @@ type buildLogger interface {
 	io.Writer
 }
 
+type environmentGetter interface {
+	getenv() map[string]string
+}
+
 type imageBuilder interface {
 	build(b *Builder, client *srpc.Client, request proto.BuildImageRequest,
 		buildLog buildLogger) (*image.Image, error)
@@ -154,24 +158,24 @@ func BuildImageFromManifest(client *srpc.Client, manifestDir, streamName string,
 			StreamName: streamName,
 			ExpiresIn:  expiresIn,
 		},
-		bindMounts, buildLog)
+		bindMounts, nil, buildLog)
 	return name, err
 }
 
 func BuildTreeFromManifest(client *srpc.Client, manifestDir string,
 	bindMounts []string, buildLog io.Writer,
 	logger log.Logger) (string, error) {
-	return buildTreeFromManifest(client, manifestDir, bindMounts, buildLog)
+	return buildTreeFromManifest(client, manifestDir, bindMounts, nil, buildLog)
 }
 
 func ProcessManifest(manifestDir, rootDir string, bindMounts []string,
 	buildLog io.Writer) error {
-	return processManifest(manifestDir, rootDir, bindMounts, buildLog)
+	return processManifest(manifestDir, rootDir, bindMounts, nil, buildLog)
 }
 
 func UnpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
 	rootDir string, bindMounts []string, buildLog io.Writer) error {
 	_, err := unpackImageAndProcessManifest(client, manifestDir, rootDir,
-		bindMounts, true, buildLog)
+		bindMounts, true, nil, buildLog)
 	return err
 }
