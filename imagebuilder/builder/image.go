@@ -45,6 +45,7 @@ func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 func (stream *imageStreamType) getenv() map[string]string {
 	envTable := make(map[string]string, 1)
 	envTable["IMAGE_STREAM"] = stream.name
+	envTable["IMAGE_STREAM_LEAF_NAME"] = filepath.Base(stream.name)
 	return envTable
 }
 
