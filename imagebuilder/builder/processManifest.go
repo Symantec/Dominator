@@ -97,7 +97,13 @@ func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
 		return manifestType{},
 			errors.New("error reading manifest file: " + err.Error())
 	}
-	sourceImageInfo, err := unpackImage(client, manifestConfig.SourceImage,
+	sourceImageName := manifestConfig.SourceImage
+	if envGetter != nil {
+		sourceImageName = os.Expand(sourceImageName, func(name string) string {
+			return envGetter.getenv()[name]
+		})
+	}
+	sourceImageInfo, err := unpackImage(client, sourceImageName,
 		0, 0, rootDir, buildLog)
 	if err != nil {
 		return manifestType{},

@@ -208,14 +208,17 @@ func (stream *imageStreamType) WriteHtml(writer io.Writer) {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
 	}
-	sourceStream := stream.builder.getHtmlWriter(manifest.SourceImage)
-	if sourceStream == nil {
+	sourceImageName := os.Expand(manifest.SourceImage,
+		func(name string) string {
+			return stream.getenv()[name]
+		})
+	if stream.builder.getHtmlWriter(sourceImageName) == nil {
 		fmt.Fprintf(writer, "SourceImage: <code>%s</code><br>\n",
-			manifest.SourceImage)
+			sourceImageName)
 	} else {
 		fmt.Fprintf(writer,
 			"SourceImage: <a href=\"showImageStream?%s\"><code>%s</code></a><br>\n",
-			manifest.SourceImage, manifest.SourceImage)
+			sourceImageName, sourceImageName)
 	}
 	fmt.Fprintln(writer, "Contents of <code>manifest</code> file:<br>")
 	fmt.Fprintf(writer, "<pre style=\"%s\">\n", codeStyle)

@@ -55,10 +55,7 @@ func (stream *imageStreamType) getManifest(b *Builder, streamName string,
 	if gitBranch == "" {
 		gitBranch = "master"
 	}
-	variableFunc := b.getVariableFunc(map[string]string{
-		"IMAGE_STREAM": streamName,
-	},
-		variables)
+	variableFunc := b.getVariableFunc(stream.getenv(), variables)
 	manifestRoot, err := makeTempDirectory("",
 		strings.Replace(streamName, "/", "_", -1)+".manifest")
 	if err != nil {
