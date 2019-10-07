@@ -35,7 +35,7 @@ func demapDevice(device string) (string, error) {
 			return "", err
 		}
 		if len(names) != 1 {
-			return "", fmt.Errorf("%s has %d entries", len(names))
+			return "", fmt.Errorf("%s has %d entries", device, len(names))
 		}
 		return filepath.Join("/dev", names[0]), nil
 	}
