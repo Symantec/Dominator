@@ -42,6 +42,7 @@ type buildResultType struct {
 }
 
 type masterConfigurationType struct {
+	BindMounts                []string                    `json:",omitempty"`
 	BootstrapStreams          map[string]*bootstrapStream `json:",omitempty"`
 	ImageStreamsCheckInterval uint                        `json:",omitempty"`
 	ImageStreamsToAutoRebuild []string                    `json:",omitempty"`
@@ -94,6 +95,7 @@ type sourceImageInfoType struct {
 }
 
 type Builder struct {
+	bindMounts                []string
 	stateDir                  string
 	imageServerAddress        string
 	logger                    log.Logger
@@ -144,29 +146,32 @@ func (b *Builder) WriteHtml(writer io.Writer) {
 }
 
 func BuildImageFromManifest(client *srpc.Client, manifestDir, streamName string,
-	expiresIn time.Duration, buildLog buildLogger, logger log.Logger) (
+	expiresIn time.Duration, bindMounts []string, buildLog buildLogger,
+	logger log.Logger) (
 	string, error) {
 	_, name, err := buildImageFromManifestAndUpload(client, manifestDir,
 		proto.BuildImageRequest{
 			StreamName: streamName,
 			ExpiresIn:  expiresIn,
 		},
-		buildLog)
+		bindMounts, buildLog)
 	return name, err
 }
 
 func BuildTreeFromManifest(client *srpc.Client, manifestDir string,
-	buildLog io.Writer, logger log.Logger) (string, error) {
-	return buildTreeFromManifest(client, manifestDir, buildLog)
+	bindMounts []string, buildLog io.Writer,
+	logger log.Logger) (string, error) {
+	return buildTreeFromManifest(client, manifestDir, bindMounts, buildLog)
 }
 
-func ProcessManifest(manifestDir, rootDir string, buildLog io.Writer) error {
-	return processManifest(manifestDir, rootDir, buildLog)
+func ProcessManifest(manifestDir, rootDir string, bindMounts []string,
+	buildLog io.Writer) error {
+	return processManifest(manifestDir, rootDir, bindMounts, buildLog)
 }
 
 func UnpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
-	rootDir string, buildLog io.Writer) error {
-	_, err := unpackImageAndProcessManifest(client, manifestDir, rootDir, true,
-		buildLog)
+	rootDir string, bindMounts []string, buildLog io.Writer) error {
+	_, err := unpackImageAndProcessManifest(client, manifestDir, rootDir,
+		bindMounts, true, buildLog)
 	return err
 }

@@ -18,6 +18,7 @@ import (
 var (
 	alwaysShowBuildLog = flag.Bool("alwaysShowBuildLog", false,
 		"If true, show build log even for successful builds")
+	bindMounts         flagutil.StringList
 	imaginatorHostname = flag.String("imaginatorHostname", "localhost",
 		"Hostname of image build server")
 	imaginatorPortNum = flag.Uint("imaginatorPortNum",
@@ -40,6 +41,8 @@ var (
 )
 
 func init() {
+	flag.Var(&bindMounts, "bindMounts",
+		"Comma separated list of directories to bind mount into build workspace")
 	flag.Var(&rawSize, "rawSize", "Size of RAW file to create")
 }
 

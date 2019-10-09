@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -17,10 +17,81 @@ import (
 	"github.com/Symantec/Dominator/lib/verstr"
 )
 
+func deleteDirectories(directoriesToDelete []string) error {
+	for index := len(directoriesToDelete) - 1; index >= 0; index-- {
+		if err := os.Remove(directoriesToDelete[index]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func makeDirectory(directory string, directoriesToDelete []string,
+	directoriesWhichExist map[string]struct{},
+	bindMountDirectories map[string]struct{},
+	buildLog io.Writer) ([]string, error) {
+	if _, ok := directoriesWhichExist[directory]; ok {
+		return directoriesToDelete, nil
+	} else if fi, err := os.Stat(directory); err != nil {
+		if !os.IsNotExist(err) {
+			return directoriesToDelete, err
+		}
+		var err error
+		directoriesToDelete, err = makeDirectory(filepath.Dir(directory),
+			directoriesToDelete, directoriesWhichExist, bindMountDirectories,
+			buildLog)
+		if err != nil {
+			return directoriesToDelete, err
+		}
+		if _, ok := bindMountDirectories[directory]; ok {
+			fmt.Fprintf(buildLog, "Making bind mount point: %s\n", directory)
+		} else {
+			fmt.Fprintf(buildLog,
+				"Making intermediate directory for bind mount: %s\n",
+				directory)
+		}
+		if err := os.Mkdir(directory, fsutil.DirPerms); err != nil {
+			return nil, err
+		}
+		directoriesToDelete = append(directoriesToDelete, directory)
+		directoriesWhichExist[directory] = struct{}{}
+		return directoriesToDelete, nil
+	} else if !fi.IsDir() {
+		return directoriesToDelete,
+			fmt.Errorf("%s is not a directory", directory)
+	} else {
+		directoriesWhichExist[directory] = struct{}{}
+		return directoriesToDelete, nil
+	}
+}
+
+func makeMountPoints(rootDir string, bindMounts []string,
+	buildLog io.Writer) ([]string, error) {
+	var directoriesToDelete []string
+	directoriesWhichExist := make(map[string]struct{})
+	defer deleteDirectories(directoriesToDelete)
+	bindMountDirectories := make(map[string]struct{}, len(bindMounts))
+	for _, bindMount := range bindMounts {
+		bindMountDirectories[filepath.Join(rootDir, bindMount)] = struct{}{}
+	}
+	for _, bindMount := range bindMounts {
+		directory := filepath.Join(rootDir, bindMount)
+		var err error
+		directoriesToDelete, err = makeDirectory(directory, directoriesToDelete,
+			directoriesWhichExist, bindMountDirectories, buildLog)
+		if err != nil {
+			return nil, err
+		}
+	}
+	retval := directoriesToDelete
+	directoriesToDelete = nil // Do not clean up in the defer.
+	return retval, nil
+}
+
 func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
-	rootDir string, applyFilter bool,
+	rootDir string, bindMounts []string, applyFilter bool,
 	buildLog io.Writer) (manifestType, error) {
-	manifestFile := path.Join(manifestDir, "manifest")
+	manifestFile := filepath.Join(manifestDir, "manifest")
 	var manifestConfig manifestConfigType
 	if err := json.ReadFromFile(manifestFile, &manifestConfig); err != nil {
 		return manifestType{},
@@ -33,7 +104,8 @@ func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
 			errors.New("error unpacking image: " + err.Error())
 	}
 	startTime := time.Now()
-	if err := processManifest(manifestDir, rootDir, buildLog); err != nil {
+	err = processManifest(manifestDir, rootDir, bindMounts, buildLog)
+	if err != nil {
 		return manifestType{},
 			errors.New("error processing manifest: " + err.Error())
 	}
@@ -48,10 +120,19 @@ func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
 	return manifestType{manifestConfig.Filter, sourceImageInfo}, nil
 }
 
-func processManifest(manifestDir, rootDir string, buildLog io.Writer) error {
+func processManifest(manifestDir, rootDir string, bindMounts []string,
+	buildLog io.Writer) error {
 	if err := copyFiles(manifestDir, "files", rootDir, buildLog); err != nil {
 		return err
 	}
+	for index, bindMount := range bindMounts {
+		bindMounts[index] = filepath.Clean(bindMount)
+	}
+	directoriesToDelete, err := makeMountPoints(rootDir, bindMounts, buildLog)
+	if err != nil {
+		return err
+	}
+	defer deleteDirectories(directoriesToDelete)
 	// Copy in system /etc/resolv.conf
 	file, err := os.Open("/etc/resolv.conf")
 	if err != nil {
@@ -63,29 +144,33 @@ func processManifest(manifestDir, rootDir string, buildLog io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("error copying in /etc/resolv.conf: %s", err)
 	}
-	packageList, err := fsutil.LoadLines(path.Join(manifestDir, "package-list"))
+	packageList, err := fsutil.LoadLines(filepath.Join(manifestDir,
+		"package-list"))
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return err
 		}
 	}
 	if len(packageList) > 0 {
-		if err := updatePackageDatabase(rootDir, buildLog); err != nil {
+		err := updatePackageDatabase(rootDir, bindMounts, buildLog)
+		if err != nil {
 			return err
 		}
 	}
-	err = runScripts(manifestDir, "pre-install-scripts", rootDir, buildLog)
+	err = runScripts(manifestDir, "pre-install-scripts", rootDir, bindMounts,
+		buildLog)
 	if err != nil {
 		return err
 	}
-	if err := installPackages(packageList, rootDir, buildLog); err != nil {
+	err = installPackages(packageList, rootDir, bindMounts, buildLog)
+	if err != nil {
 		return errors.New("error installing packages: " + err.Error())
 	}
 	err = copyFiles(manifestDir, "post-install-files", rootDir, buildLog)
 	if err != nil {
 		return err
 	}
-	err = runScripts(manifestDir, "scripts", rootDir, buildLog)
+	err = runScripts(manifestDir, "scripts", rootDir, bindMounts, buildLog)
 	if err != nil {
 		return err
 	}
@@ -93,15 +178,18 @@ func processManifest(manifestDir, rootDir string, buildLog io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if err := clean(rootDir, buildLog); err != nil {
+	if err := cleanPackages(rootDir, buildLog); err != nil {
 		return err
 	}
-	return clearResolvConf(buildLog, rootDir)
+	if err := clearResolvConf(buildLog, rootDir); err != nil {
+		return err
+	}
+	return deleteDirectories(directoriesToDelete)
 }
 
 func copyFiles(manifestDir, dirname, rootDir string, buildLog io.Writer) error {
 	startTime := time.Now()
-	sourceDir := path.Join(manifestDir, dirname)
+	sourceDir := filepath.Join(manifestDir, dirname)
 	cf := func(destFilename, sourceFilename string, mode os.FileMode) error {
 		return copyFile(destFilename, sourceFilename, mode, len(manifestDir)+1,
 			buildLog)
@@ -128,7 +216,7 @@ func copyFile(destFilename, sourceFilename string, mode os.FileMode,
 	return fsutil.CopyFile(destFilename, sourceFilename, mode)
 }
 
-func installPackages(packageList []string, rootDir string,
+func installPackages(packageList []string, rootDir string, bindMounts []string,
 	buildLog io.Writer) error {
 	if len(packageList) < 1 { // Nothing to do.
 		fmt.Fprintln(buildLog, "\nNo packages to install")
@@ -136,7 +224,8 @@ func installPackages(packageList []string, rootDir string,
 	}
 	fmt.Fprintln(buildLog, "\nUpgrading packages:")
 	startTime := time.Now()
-	err := runInTarget(nil, buildLog, rootDir, packagerPathname, "upgrade")
+	err := runInTargetWithBindMounts(nil, buildLog, rootDir, bindMounts,
+		packagerPathname, "upgrade")
 	if err != nil {
 		return errors.New("error upgrading: " + err.Error())
 	}
@@ -148,7 +237,8 @@ func installPackages(packageList []string, rootDir string,
 	startTime = time.Now()
 	args := []string{"install"}
 	args = append(args, packageList...)
-	err = runInTarget(nil, buildLog, rootDir, packagerPathname, args...)
+	err = runInTargetWithBindMounts(nil, buildLog, rootDir, bindMounts,
+		packagerPathname, args...)
 	if err != nil {
 		return errors.New("error installing: " + err.Error())
 	}
@@ -157,9 +247,9 @@ func installPackages(packageList []string, rootDir string,
 	return nil
 }
 
-func runScripts(manifestDir, dirname, rootDir string,
+func runScripts(manifestDir, dirname, rootDir string, bindMounts []string,
 	buildLog io.Writer) error {
-	scriptsDir := path.Join(manifestDir, dirname)
+	scriptsDir := filepath.Join(manifestDir, dirname)
 	file, err := os.Open(scriptsDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -180,7 +270,7 @@ func runScripts(manifestDir, dirname, rootDir string,
 	verstr.Sort(names)
 	fmt.Fprintf(buildLog, "\nRunning scripts in: %s\n", dirname)
 	scriptsStartTime := time.Now()
-	tmpDir := path.Join(rootDir, ".scripts")
+	tmpDir := filepath.Join(rootDir, ".scripts")
 	if err := os.Mkdir(tmpDir, dirPerms); err != nil {
 		return err
 	}
@@ -189,8 +279,8 @@ func runScripts(manifestDir, dirname, rootDir string,
 		if len(name) > 0 && name[0] == '.' {
 			continue // Skip hidden paths.
 		}
-		err := fsutil.CopyFile(path.Join(tmpDir, name),
-			path.Join(scriptsDir, name),
+		err := fsutil.CopyFile(filepath.Join(tmpDir, name),
+			filepath.Join(scriptsDir, name),
 			dirPerms)
 		if err != nil {
 			return err
@@ -199,8 +289,8 @@ func runScripts(manifestDir, dirname, rootDir string,
 	for _, name := range names {
 		fmt.Fprintf(buildLog, "Running script: %s\n", name)
 		startTime := time.Now()
-		err := runInTarget(nil, buildLog, rootDir, packagerPathname, "run",
-			path.Join("/.scripts", name))
+		err := runInTargetWithBindMounts(nil, buildLog, rootDir, bindMounts,
+			packagerPathname, "run", filepath.Join("/.scripts", name))
 		if err != nil {
 			return errors.New("error running script: " + name + ": " +
 				err.Error())
@@ -216,10 +306,12 @@ func runScripts(manifestDir, dirname, rootDir string,
 	return nil
 }
 
-func updatePackageDatabase(rootDir string, buildLog io.Writer) error {
+func updatePackageDatabase(rootDir string, bindMounts []string,
+	buildLog io.Writer) error {
 	fmt.Fprintln(buildLog, "\nUpdating package database:")
 	startTime := time.Now()
-	err := runInTarget(nil, buildLog, rootDir, packagerPathname, "update")
+	err := runInTargetWithBindMounts(nil, buildLog, rootDir, bindMounts,
+		packagerPathname, "update")
 	if err != nil {
 		return errors.New("error updating: " + err.Error())
 	}

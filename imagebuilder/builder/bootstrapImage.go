@@ -1,3 +1,5 @@
+// +build go1.10
+
 package builder
 
 import (
@@ -8,7 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"syscall"
@@ -18,6 +20,7 @@ import (
 	"github.com/Symantec/Dominator/lib/format"
 	"github.com/Symantec/Dominator/lib/image"
 	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Symantec/Dominator/lib/wsyscall"
 	proto "github.com/Symantec/Dominator/proto/imaginator"
 )
 
@@ -41,7 +44,7 @@ var environmentToSet = map[string]string{
 	"USER":    "root",
 }
 
-func clean(rootDir string, buildLog io.Writer) error {
+func cleanPackages(rootDir string, buildLog io.Writer) error {
 	fmt.Fprintln(buildLog, "\nCleaning packages:")
 	startTime := time.Now()
 	err := runInTarget(nil, buildLog, rootDir, packagerPathname, "clean")
@@ -99,7 +102,7 @@ func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
 		buildDuration := time.Since(startTime)
 		fmt.Fprintf(buildLog, "\nBuild time: %s\n",
 			format.Duration(buildDuration))
-		if err := clean(rootDir, buildLog); err != nil {
+		if err := cleanPackages(rootDir, buildLog); err != nil {
 			return nil, err
 		}
 		return packImage(client, request, rootDir,
@@ -108,7 +111,7 @@ func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
 }
 
 func (packager *packagerType) writePackageInstaller(rootDir string) error {
-	filename := path.Join(rootDir, packagerPathname)
+	filename := filepath.Join(rootDir, packagerPathname)
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, cmdPerms)
 	if err != nil {
 		return err
@@ -190,6 +193,33 @@ func runInTarget(input io.Reader, output io.Writer, rootDir, prog string,
 		Cloneflags: syscall.CLONE_NEWNS | syscall.CLONE_NEWPID,
 	}
 	return cmd.Run()
+}
+
+func runInTargetWithBindMounts(input io.Reader, output io.Writer,
+	rootDir string, bindMounts []string, prog string, args ...string) error {
+	if len(bindMounts) < 1 {
+		return runInTarget(input, output, rootDir, prog, args...)
+	}
+	errChannel := make(chan error)
+	go func() {
+		err := func() error {
+			if err := wsyscall.UnshareMountNamespace(); err != nil {
+				return err
+			}
+			for _, bindMount := range bindMounts {
+				err := wsyscall.Mount(bindMount,
+					filepath.Join(rootDir, bindMount), "",
+					wsyscall.MS_BIND|wsyscall.MS_RDONLY, "")
+				if err != nil {
+					return fmt.Errorf("error bind mounting: %s: %s",
+						bindMount, err)
+				}
+			}
+			return runInTarget(input, output, rootDir, prog, args...)
+		}()
+		errChannel <- err
+	}()
+	return <-errChannel
 }
 
 func stripVariables(input []string, varsToCopy map[string]struct{}) []string {

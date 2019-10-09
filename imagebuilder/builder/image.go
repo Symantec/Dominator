@@ -35,7 +35,7 @@ func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 	}
 	defer os.RemoveAll(manifestDirectory)
 	img, err := buildImageFromManifest(client, manifestDirectory, request,
-		buildLog)
+		b.bindMounts, buildLog)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func runCommand(buildLog io.Writer, cwd string, args ...string) error {
 }
 
 func buildImageFromManifest(client *srpc.Client, manifestDir string,
-	request proto.BuildImageRequest,
+	request proto.BuildImageRequest, bindMounts []string,
 	buildLog buildLogger) (*image.Image, error) {
 	// First load all the various manifest files (fail early on error).
 	computedFilesList, err := util.LoadComputedFiles(
@@ -240,7 +240,7 @@ func buildImageFromManifest(client *srpc.Client, manifestDir string,
 	defer os.RemoveAll(rootDir)
 	fmt.Fprintf(buildLog, "Created image working directory: %s\n", rootDir)
 	manifest, err := unpackImageAndProcessManifest(client, manifestDir,
-		rootDir, false, buildLog)
+		rootDir, bindMounts, false, buildLog)
 	if err != nil {
 		return nil, err
 	}
@@ -273,9 +273,10 @@ func buildImageFromManifest(client *srpc.Client, manifestDir string,
 }
 
 func buildImageFromManifestAndUpload(client *srpc.Client, manifestDir string,
-	request proto.BuildImageRequest,
+	request proto.BuildImageRequest, bindMounts []string,
 	buildLog buildLogger) (*image.Image, string, error) {
-	img, err := buildImageFromManifest(client, manifestDir, request, buildLog)
+	img, err := buildImageFromManifest(client, manifestDir, request, bindMounts,
+		buildLog)
 	if err != nil {
 		return nil, "", err
 	}
@@ -287,13 +288,13 @@ func buildImageFromManifestAndUpload(client *srpc.Client, manifestDir string,
 }
 
 func buildTreeFromManifest(client *srpc.Client, manifestDir string,
-	buildLog io.Writer) (string, error) {
+	bindMounts []string, buildLog io.Writer) (string, error) {
 	rootDir, err := makeTempDirectory("", "tree")
 	if err != nil {
 		return "", err
 	}
-	_, err = unpackImageAndProcessManifest(client, manifestDir, rootDir, true,
-		buildLog)
+	_, err = unpackImageAndProcessManifest(client, manifestDir, rootDir,
+		bindMounts, true, buildLog)
 	if err != nil {
 		os.RemoveAll(rootDir)
 		return "", err

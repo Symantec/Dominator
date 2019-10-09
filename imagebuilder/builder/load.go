@@ -59,6 +59,7 @@ func load(confUrl, variablesFile, stateDir, imageServerAddress string,
 		variables = make(map[string]string)
 	}
 	b := &Builder{
+		bindMounts:                masterConfiguration.BindMounts,
 		stateDir:                  stateDir,
 		imageServerAddress:        imageServerAddress,
 		logger:                    logger,

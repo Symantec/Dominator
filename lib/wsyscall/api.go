@@ -4,6 +4,7 @@ import "syscall"
 
 const (
 	MS_BIND = 1 << iota
+	MS_RDONLY
 
 	RUSAGE_CHILDREN = iota
 	RUSAGE_SELF

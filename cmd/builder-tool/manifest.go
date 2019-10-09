@@ -26,7 +26,7 @@ func buildFromManifestSubcommand(args []string, logger log.DebugLogger) {
 		fmt.Fprintln(os.Stderr, "Start of build log ==========================")
 	}
 	name, err := builder.BuildImageFromManifest(srpcClient, args[0], args[1],
-		*expiresIn, logWriter, logger)
+		*expiresIn, bindMounts, logWriter, logger)
 	if err != nil {
 		if !*alwaysShowBuildLog {
 			fmt.Fprintln(os.Stderr,
@@ -58,7 +58,7 @@ func buildTreeFromManifestSubcommand(args []string, logger log.DebugLogger) {
 		fmt.Fprintln(os.Stderr, "Start of build log ==========================")
 	}
 	rootDir, err := builder.BuildTreeFromManifest(srpcClient, args[0],
-		logWriter, logger)
+		bindMounts, logWriter, logger)
 	if err != nil {
 		if !*alwaysShowBuildLog {
 			fmt.Fprintln(os.Stderr,
@@ -88,7 +88,8 @@ func processManifestSubcommand(args []string, logger log.DebugLogger) {
 	if *alwaysShowBuildLog {
 		fmt.Fprintln(os.Stderr, "Start of build log ==========================")
 	}
-	if err := builder.ProcessManifest(args[0], args[1], logWriter); err != nil {
+	err := builder.ProcessManifest(args[0], args[1], bindMounts, logWriter)
+	if err != nil {
 		if !*alwaysShowBuildLog {
 			fmt.Fprintln(os.Stderr,
 				"Start of build log ==========================")
