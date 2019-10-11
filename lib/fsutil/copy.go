@@ -82,11 +82,17 @@ func copyTree(destDir, sourceDir string,
 				return err
 			}
 		case syscall.S_IFLNK:
-			target, err := os.Readlink(sourceFilename)
+			sourceTarget, err := os.Readlink(sourceFilename)
 			if err != nil {
 				return errors.New(sourceFilename + ": " + err.Error())
 			}
-			if err := os.Symlink(target, destFilename); err != nil {
+			if destTarget, err := os.Readlink(destFilename); err == nil {
+				if sourceTarget == destTarget {
+					continue
+				}
+			}
+			os.Remove(destFilename)
+			if err := os.Symlink(sourceTarget, destFilename); err != nil {
 				return err
 			}
 		default:
