@@ -1,11 +1,35 @@
 {
   "Streams": {
-    "image-team/base/Ubuntu-14.04": {
-      "ManifestUrl": "https://git.company.com/Prod-team/image-team.git",
+    "base/Debian-10/amd64": {
+      "ManifestUrl": "https://github.com/Cloud-Foundations/image-manifests.git",
+      "ManifestDirectory": "$IMAGE_STREAM_DIRECTORY_NAME"
+    },
+    "base/Debian-10/i386": {
+      "ManifestUrl": "https://github.com/Cloud-Foundations/image-manifests.git",
+      "ManifestDirectory": "$IMAGE_STREAM_DIRECTORY_NAME"
+    },
+    "bootable/Debian-10/amd64": {
+      "ManifestUrl": "https://github.com/Cloud-Foundations/image-manifests.git",
+      "ManifestDirectory": "$IMAGE_STREAM_DIRECTORY_NAME"
+    },
+    "bootable/Debian-10/i386": {
+      "ManifestUrl": "https://github.com/Cloud-Foundations/image-manifests.git",
+      "ManifestDirectory": "$IMAGE_STREAM_DIRECTORY_NAME"
+    },
+    "hypervisor": {
+      "ManifestUrl": "https://github.com/Cloud-Foundations/image-manifests.git",
       "ManifestDirectory": "$IMAGE_STREAM"
     },
-    "image-team/minimal/Ubuntu-14.04": {
-      "ManifestUrl": "https://git.company.com/Prod-team/image-team.git",
+    "local-bootstrap/Debian-10/amd64": {
+      "ManifestUrl": "dir:///n/Dominator/image-manifests",
+      "ManifestDirectory": "$IMAGE_STREAM_DIRECTORY_NAME"
+    },
+    "local-bootstrap/Debian-10/i386": {
+      "ManifestUrl": "dir:///n/Dominator/image-manifests",
+      "ManifestDirectory": "$IMAGE_STREAM_DIRECTORY_NAME"
+    },
+    "installer": {
+      "ManifestUrl": "https://github.com/Cloud-Foundations/image-manifests.git",
       "ManifestDirectory": "$IMAGE_STREAM"
     },
     "dev-team/webapp/widget-app": {
