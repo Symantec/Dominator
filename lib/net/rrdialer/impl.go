@@ -9,7 +9,9 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Symantec/Dominator/lib/json"
@@ -98,6 +100,13 @@ func newDialer(dialer *net.Dialer, cacheDir string,
 	return rrDialer, nil
 }
 
+func makeFilename(dirname, address string) string {
+	if runtime.GOOS == "windows" {
+		address = strings.Replace(address, ":", "_", -1)
+	}
+	return filepath.Join(dirname, address)
+}
+
 func (d *Dialer) loadEndpointHistories(hostAddrs []string,
 	port string) ([]*endpointType, error) {
 	endpoints := make([]*endpointType, 0, len(hostAddrs))
@@ -113,7 +122,7 @@ func (d *Dialer) loadEndpointHistories(hostAddrs []string,
 }
 
 func (d *Dialer) loadEndpointHistory(address string) (*endpointType, error) {
-	filename := filepath.Join(d.dirname, address)
+	filename := makeFilename(d.dirname, address)
 	var endpoint endpointType
 	if err := json.ReadFromFile(filename, &endpoint); err != nil {
 		if !os.IsNotExist(err) {
@@ -252,8 +261,8 @@ func (d *Dialer) recordEvent(endpoint *endpointType, latency float64) {
 	if d.dirname == "" { // When testing.
 		return
 	}
-	filename := filepath.Join(d.dirname, endpoint.address)
-	tmpFilename := filepath.Join(d.dirname, endpoint.address+pid)
+	filename := makeFilename(d.dirname, endpoint.address)
+	tmpFilename := makeFilename(d.dirname, endpoint.address+pid)
 	endpoint.LastUpdate = time.Now()
 	if endpoint.MeanLatency <= 0 {
 		endpoint.MeanLatency = latency
