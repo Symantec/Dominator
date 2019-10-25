@@ -4,8 +4,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 func (t *srpcType) GetVmUserData(conn *srpc.Conn) error {

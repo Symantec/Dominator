@@ -3,11 +3,11 @@ package amipublisher
 import (
 	"time"
 
-	"github.com/Symantec/Dominator/lib/awsutil"
-	"github.com/Symantec/Dominator/lib/concurrent"
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/log"
-	libtags "github.com/Symantec/Dominator/lib/tags"
+	"github.com/Cloud-Foundations/Dominator/lib/awsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/concurrent"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	libtags "github.com/Cloud-Foundations/Dominator/lib/tags"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )

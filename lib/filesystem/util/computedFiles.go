@@ -9,8 +9,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
 )
 
 func spliceComputedFiles(fs *filesystem.FileSystem,

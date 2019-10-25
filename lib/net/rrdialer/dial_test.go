@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/log/testlogger"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/log/testlogger"
 )
 
 var nextPortNumber = 12340

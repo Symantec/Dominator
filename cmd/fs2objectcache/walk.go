@@ -6,7 +6,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/Symantec/Dominator/lib/concurrent"
+	"github.com/Cloud-Foundations/Dominator/lib/concurrent"
 )
 
 type stateType struct {

@@ -5,10 +5,10 @@ import (
 	"net"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/rsync"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/rsync"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 func getVmVolumeSubcommand(args []string, logger log.DebugLogger) error {

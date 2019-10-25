@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
 )
 
 func deletedFilteredFiles(rootDir string, filt *filter.Filter) error {

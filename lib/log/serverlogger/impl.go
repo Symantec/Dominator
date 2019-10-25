@@ -11,11 +11,11 @@ import (
 	"sync"
 	"time"
 
-	liblog "github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/logbuf"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/srpc/serverutil"
-	proto "github.com/Symantec/Dominator/proto/logger"
+	liblog "github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/logbuf"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc/serverutil"
+	proto "github.com/Cloud-Foundations/Dominator/proto/logger"
 )
 
 type loggerMapT struct {

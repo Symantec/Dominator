@@ -1,8 +1,8 @@
 package rpcd
 
 import (
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/objectserver"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/proto/objectserver"
 )
 
 func (t *srpcType) CheckObjects(conn *srpc.Conn,

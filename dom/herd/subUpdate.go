@@ -4,8 +4,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Symantec/Dominator/dom/lib"
-	subproto "github.com/Symantec/Dominator/proto/sub"
+	"github.com/Cloud-Foundations/Dominator/dom/lib"
+	subproto "github.com/Cloud-Foundations/Dominator/proto/sub"
 )
 
 // Returns (idle, missing), idle=true if no update needs to be performed.

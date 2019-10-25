@@ -4,9 +4,9 @@ import (
 	"io"
 	"sync"
 
-	"github.com/Symantec/Dominator/imageunpacker/unpacker"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/imageunpacker/unpacker"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 type srpcType struct {

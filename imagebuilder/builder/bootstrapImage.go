@@ -16,12 +16,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/filter"
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/wsyscall"
-	proto "github.com/Symantec/Dominator/proto/imaginator"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/wsyscall"
+	proto "github.com/Cloud-Foundations/Dominator/proto/imaginator"
 )
 
 const (

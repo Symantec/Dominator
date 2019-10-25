@@ -4,7 +4,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/Symantec/Dominator/lib/filegen"
+	"github.com/Cloud-Foundations/Dominator/lib/filegen"
 )
 
 func registerSourceDirectory(manager *filegen.Manager, baseDir string,

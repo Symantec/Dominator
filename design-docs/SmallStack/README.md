@@ -6,7 +6,7 @@ Richard Gooch
 Abstract
 ========
 
-This paper describes a VM management system for a Private Cloud environment which is simple to configure and deploy, has few dependencies, scales to many thousand physical machines (nodes) with hundreds of VMs per node, is highly reliable and has dynamic IP address allocation. VM create time is as low as one second, which is best in class and approaches container platform performance. This system can integrate closely with the [**Dominator**](https://github.com/Symantec/Dominator) ecosystem which provides [manifest driven image generation](https://github.com/Symantec/Dominator/blob/master/user-guide/image-manifest.md) with the [Imaginator](https://github.com/Symantec/Dominator/blob/master/cmd/imaginator/README.md), high performance image distribution and image-based patching. While you can easily create pets, you also get the tools to farm cattle. By leveraging [Keymaster](https://github.com/Symantec/keymaster), existing organisation/corporate identities may be used for strong authentication (2FA, ephemeral credentials).
+This paper describes a VM management system for a Private Cloud environment which is simple to configure and deploy, has few dependencies, scales to many thousand physical machines (nodes) with hundreds of VMs per node, is highly reliable and has dynamic IP address allocation. VM create time is as low as one second, which is best in class and approaches container platform performance. This system can integrate closely with the [**Dominator**](https://github.com/Cloud-Foundations/Dominator) ecosystem which provides [manifest driven image generation](https://github.com/Cloud-Foundations/Dominator/blob/master/user-guide/image-manifest.md) with the [Imaginator](https://github.com/Cloud-Foundations/Dominator/blob/master/cmd/imaginator/README.md), high performance image distribution and image-based patching. While you can easily create pets, you also get the tools to farm cattle. By leveraging [Keymaster](https://github.com/Symantec/keymaster), existing organisation/corporate identities may be used for strong authentication (2FA, ephemeral credentials).
 
 Background
 ==========
@@ -79,7 +79,7 @@ This is an agent that runs on each physical node. It has the following responsib
 A diagram is shown below:
 ![Hypervisor image](../pictures/Hypervisor.svg)
 
-Configuration of the Hypervisor is minimal: the directory to store saved state and the location of an optional [imageserver](https://github.com/Symantec/Dominator/blob/master/cmd/imageserver/README.md) from where images may be fetched from. Requests to launch VMs are made directly to the Hypervisor by the vm-control utility (or API); The Fleet Manager is not involved in this transaction, although it may (optionally) be used to easily find a Hypervisor with available capacity.
+Configuration of the Hypervisor is minimal: the directory to store saved state and the location of an optional [imageserver](https://github.com/Cloud-Foundations/Dominator/blob/master/cmd/imageserver/README.md) from where images may be fetched from. Requests to launch VMs are made directly to the Hypervisor by the vm-control utility (or API); The Fleet Manager is not involved in this transaction, although it may (optionally) be used to easily find a Hypervisor with available capacity.
 
 The user requests the creation of a VM of a specified size and if the Hypervisor has sufficient capacity, the VM is created and the user is given the IP address of the new VM in the response, otherwise an error is returned.
 
@@ -152,7 +152,7 @@ A diagram is shown below:
 
 ### The vm-control utility/API
 
-The [vm-control](https://github.com/Symantec/Dominator/blob/master/cmd/vm-control/README.md) utility orchestrates the creation, starting, stopping and destruction of VMs. It typically consults the Fleet Manager to obtain the global view of Hypervisors, their physical location (i.e. failure zones), available capacity and the placement of VMs. This global view is used to find the required Hypervisor. If the address of the Hypervisor is provided, then the Fleet Manager is not consulted. Typical VM creation options that are supported are:
+The [vm-control](https://github.com/Cloud-Foundations/Dominator/blob/master/cmd/vm-control/README.md) utility orchestrates the creation, starting, stopping and destruction of VMs. It typically consults the Fleet Manager to obtain the global view of Hypervisors, their physical location (i.e. failure zones), available capacity and the placement of VMs. This global view is used to find the required Hypervisor. If the address of the Hypervisor is provided, then the Fleet Manager is not consulted. Typical VM creation options that are supported are:
 
 -   Create VM of specified size anywhere
 
@@ -202,7 +202,7 @@ Finally, some low level Hypervisor management operations are supported, which al
 
 -   Add a subnet
 
-Please see the [online documentation](https://github.com/Symantec/Dominator/blob/master/cmd/vm-control/README.md) for usage information.
+Please see the [online documentation](https://github.com/Cloud-Foundations/Dominator/blob/master/cmd/vm-control/README.md) for usage information.
 
 Fleet Topology
 --------------
@@ -213,7 +213,7 @@ Rather than pre-defining (hopefully) all potential grouping types or re-writing 
 
 ### Example Topology
 
-An example topology with two large regions (NYC and SJC) and one smaller region (SYD) is available at [https://github.com/Symantec/Dominator/tree/master/cmd/fleet-manager/example-topology](https://github.com/Symantec/Dominator/tree/master/cmd/fleet-manager/example-topology). Each region has 3 VLANs:
+An example topology with two large regions (NYC and SJC) and one smaller region (SYD) is available at [https://github.com/Cloud-Foundations/Dominator/tree/master/cmd/fleet-manager/example-topology](https://github.com/Cloud-Foundations/Dominator/tree/master/cmd/fleet-manager/example-topology). Each region has 3 VLANs:
 
 -   Production: for products serving customers
 
@@ -233,7 +233,7 @@ By default, VM migration is only possible between Hypervisors on the same subnet
 Boot Images
 -----------
 
-The first-class images supported are the [**Dominator**](../Dominator/README.md) ecosystem images. These images are preferred because the [**Dominator**](../Dominator/README.md) ecosystem provides services for easy, reproducible builds, fast distribution of image content and artefact generation for other platforms such as AWS, yielding a true Hybrid Cloud experience for users (developers). They also provide the fastest VM boot experience, typically 5 seconds from the VM create request to when your bootloader is running. These images are Linux only. By encouraging the use of [images built from manifests](https://github.com/Symantec/Dominator/blob/master/user-guide/image-manifest.md), it becomes trivially easy to replace or clone VMs across failure domains, whether a different rack, isle, building or geographic region. Furthermore, it is also a simple step to enable the [**Dominator**](../Dominator/README.md) for safe and reliable upgrades, patch management and self-healing.
+The first-class images supported are the [**Dominator**](../Dominator/README.md) ecosystem images. These images are preferred because the [**Dominator**](../Dominator/README.md) ecosystem provides services for easy, reproducible builds, fast distribution of image content and artefact generation for other platforms such as AWS, yielding a true Hybrid Cloud experience for users (developers). They also provide the fastest VM boot experience, typically 5 seconds from the VM create request to when your bootloader is running. These images are Linux only. By encouraging the use of [images built from manifests](https://github.com/Cloud-Foundations/Dominator/blob/master/user-guide/image-manifest.md), it becomes trivially easy to replace or clone VMs across failure domains, whether a different rack, isle, building or geographic region. Furthermore, it is also a simple step to enable the [**Dominator**](../Dominator/README.md) for safe and reliable upgrades, patch management and self-healing.
 
 If you have non-Linux images or do not want to use images from the [**Dominator**](../Dominator/README.md) ecosystem, there are two other supported options for specifying boot image content:
 
@@ -258,16 +258,16 @@ Modern DevOps Best Practices for updating services and infrastructure urge the u
 
 SmallStack provides easy to use, leading-edge options for updating systems that retain many of the benefits of the immutable infrastructure model (reproducible deployments, consistency across systems, no partial updates) without the above challenges. There are 3 update modes available:
 
--   **Live patching** VMs with the [**Dominator**](../Dominator/README.md). This requires the [subd](https://github.com/Symantec/Dominator/blob/master/cmd/subd/README.md) agent to run in the VMs. It is the fastest way to update VMs with the least service disruption (updating services are stopped for under a second while critical changes are made). This is limited to Linux VMs as the [subd](https://github.com/Symantec/Dominator/blob/master/cmd/subd/README.md) agent has not been ported to other operating systems
+-   **Live patching** VMs with the [**Dominator**](../Dominator/README.md). This requires the [subd](https://github.com/Cloud-Foundations/Dominator/blob/master/cmd/subd/README.md) agent to run in the VMs. It is the fastest way to update VMs with the least service disruption (updating services are stopped for under a second while critical changes are made). This is limited to Linux VMs as the [subd](https://github.com/Cloud-Foundations/Dominator/blob/master/cmd/subd/README.md) agent has not been ported to other operating systems
 
 -   **Zombie patching** of VMs by using the same image-based patching used by the [**Dominator**](../Dominator/README.md) for the root volume. The VM must be stopped, then the Hypervisor will perform the update on the root volume, after which the VM may be started again. As with live patching, configuration changes and data are not modified. This approach is more disruptive than live patching as the VM needs to be shutdown, upgraded and then started, but does not require running an agent in the VMs. This is limited to VMs which use the Linux ext4fs for the root volume
 
--   **Carrousel (rebirth)** of VMs by *replacing* the root volume with a new boot image. A fresh root volume is created from an image source and the root volume for the VM is replaced (while the VM is stopped). The old root volume is preserved in case a rollback (restore) is required. Secondary volumes which typically contain large data stores are unaffected. This approach is the most disruptive as any configuration changes made on the previous root volume will be lost. The image replacement method has the advantage of working for all guest OS types and does not require running an instance of [subd](https://github.com/Symantec/Dominator/blob/master/cmd/subd/README.md) in the VM or require a specific file-system format for the root volume. To help mitigate the loss of configuration changes, configuration data may be stored in the user data for the VM, which are available from the metadata service. User data are persistent for the lifetime of the VM and are independent of the root volume.
+-   **Carrousel (rebirth)** of VMs by *replacing* the root volume with a new boot image. A fresh root volume is created from an image source and the root volume for the VM is replaced (while the VM is stopped). The old root volume is preserved in case a rollback (restore) is required. Secondary volumes which typically contain large data stores are unaffected. This approach is the most disruptive as any configuration changes made on the previous root volume will be lost. The image replacement method has the advantage of working for all guest OS types and does not require running an instance of [subd](https://github.com/Cloud-Foundations/Dominator/blob/master/cmd/subd/README.md) in the VM or require a specific file-system format for the root volume. To help mitigate the loss of configuration changes, configuration data may be stored in the user data for the VM, which are available from the metadata service. User data are persistent for the lifetime of the VM and are independent of the root volume.
 
 Upgrading Hypervisors
 ---------------------
 
-The principal challenge in maintaining a Private Cloud lies with managing the system software life-cycle of the infrastructure, particularly the Hypervisors. There is a need for safe and rapid patching capability (for security, bugs or features). Hypervisors cannot be redeployed, as they contain precious data and workloads (VMs) that are costly to move. Since SmallStack evolved out of the [**Dominator**](../Dominator/README.md) ecosystem, image-based live-patching of Hypervisors is not just supported but is the recommended method for life-cycle maintenance. The [hyper-control](https://github.com/Symantec/Dominator/blob/master/cmd/hyper-control/README.md) utility allows rolling out a [**Dominator**](../Dominator/README.md) ecosystem image to a fleet of Hypervisor in minutes. This rollout uses an [arithmetic progression](https://en.wikipedia.org/wiki/Arithmetic_progression) in a sequence of steps:
+The principal challenge in maintaining a Private Cloud lies with managing the system software life-cycle of the infrastructure, particularly the Hypervisors. There is a need for safe and rapid patching capability (for security, bugs or features). Hypervisors cannot be redeployed, as they contain precious data and workloads (VMs) that are costly to move. Since SmallStack evolved out of the [**Dominator**](../Dominator/README.md) ecosystem, image-based live-patching of Hypervisors is not just supported but is the recommended method for life-cycle maintenance. The [hyper-control](https://github.com/Cloud-Foundations/Dominator/blob/master/cmd/hyper-control/README.md) utility allows rolling out a [**Dominator**](../Dominator/README.md) ecosystem image to a fleet of Hypervisor in minutes. This rollout uses an [arithmetic progression](https://en.wikipedia.org/wiki/Arithmetic_progression) in a sequence of steps:
 
 -   First one Hypervisor is upgraded and a health check performed (concurrency=1)
 
@@ -318,7 +318,7 @@ Siloed Networks
 
 In some environments, networks may be siloed from each other for security or compliance reasons. This design allows for central visibility and resource management even in the presence of separated (firewalled) networks, provided that networks do not have overlapping IP addresses. If the Fleet Manager can connect to all the Hypervisors, then the single view of all resources can be preserved. This avoids duplication of resources. Since it is only the vm-control utility which can create or mutate VMs, a user can create or mutate VMs provided their connection to the relevant Hypervisor is not blocked by firewalls.
 
-It is recommended that Hypervisors in siloed networks can be reached from a common Fleet Manager and that these Hypervisors can connect to a common [imageserver](https://github.com/Symantec/Dominator/blob/master/cmd/imageserver/README.md) from the [**Dominator**](../Dominator/README.md) ecosystem. This avoids any duplication of resources yet supports the strong network isolation that some may desire. If snapshots are required, the Hypervisors must be able to connect to the remote storage system(s).
+It is recommended that Hypervisors in siloed networks can be reached from a common Fleet Manager and that these Hypervisors can connect to a common [imageserver](https://github.com/Cloud-Foundations/Dominator/blob/master/cmd/imageserver/README.md) from the [**Dominator**](../Dominator/README.md) ecosystem. This avoids any duplication of resources yet supports the strong network isolation that some may desire. If snapshots are required, the Hypervisors must be able to connect to the remote storage system(s).
 
 Containers
 ----------
@@ -374,7 +374,7 @@ Baseline VM
 
 A typical Debian v9 (Stretch) VM with a 1 GiB root volume takes approximately 10 seconds to create, boot up and be ready to accept SSH connections. The Hypervisor CPU is an Intel Xeon E5-2650 v2 @ 2.60GHz with spinning HDD storage. The time is spent in these main activities:
 
--   5 seconds fetching the image from the [imageserver](https://github.com/Symantec/Dominator/blob/master/cmd/imageserver/README.md) and unpacking into the root volume. The larger the image, the more time will be taken. A future version of the Hypervisor will employ a local object cache to improve this by at least a factor of 2
+-   5 seconds fetching the image from the [imageserver](https://github.com/Cloud-Foundations/Dominator/blob/master/cmd/imageserver/README.md) and unpacking into the root volume. The larger the image, the more time will be taken. A future version of the Hypervisor will employ a local object cache to improve this by at least a factor of 2
 
 -   1 second installing the bootloader (GRUB). A future version of the Hypervisor will support direct booting for Linux kernels
 
@@ -414,7 +414,7 @@ The above Debian v9 (Stretch) VM configuration takes approximately 7-8 seconds t
 
 The boot time breakdown is:
 
--   2.5 seconds fetching the image from the [imageserver](https://github.com/Symantec/Dominator/blob/master/cmd/imageserver/README.md) and unpacking into the root volume
+-   2.5 seconds fetching the image from the [imageserver](https://github.com/Cloud-Foundations/Dominator/blob/master/cmd/imageserver/README.md) and unpacking into the root volume
 
 -   3 seconds between the start of the VM and when the OS requests an IP address via DHCP
 

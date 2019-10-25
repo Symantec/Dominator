@@ -5,7 +5,7 @@ import (
 	"path"
 	"syscall"
 
-	proto "github.com/Symantec/Dominator/proto/imageunpacker"
+	proto "github.com/Cloud-Foundations/Dominator/proto/imageunpacker"
 )
 
 func (u *Unpacker) prepareForCopy(streamName string) error {

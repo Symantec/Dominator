@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 func dialFleetManager(address string) (*srpc.Client, error) {

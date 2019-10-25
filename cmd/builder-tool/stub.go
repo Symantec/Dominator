@@ -5,7 +5,7 @@ package main
 import (
 	"os"
 
-	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
 func notAvailable() {

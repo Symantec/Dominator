@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Symantec/Dominator/fleetmanager/topology"
+	"github.com/Cloud-Foundations/Dominator/fleetmanager/topology"
 )
 
 func (m *Manager) listLocations(dirname string) ([]string, error) {

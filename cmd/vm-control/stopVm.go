@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net"
 
-	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
+	hyperclient "github.com/Cloud-Foundations/Dominator/hypervisor/client"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 func stopVmSubcommand(args []string, logger log.DebugLogger) error {

@@ -7,14 +7,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/filegen/client"
-	"github.com/Symantec/Dominator/lib/flags/loadflags"
-	"github.com/Symantec/Dominator/lib/log/cmdlogger"
-	"github.com/Symantec/Dominator/lib/mdb"
-	"github.com/Symantec/Dominator/lib/mdb/mdbd"
-	"github.com/Symantec/Dominator/lib/objectserver/memory"
-	"github.com/Symantec/Dominator/lib/srpc/setupclient"
-	proto "github.com/Symantec/Dominator/proto/filegenerator"
+	"github.com/Cloud-Foundations/Dominator/lib/filegen/client"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
+	"github.com/Cloud-Foundations/Dominator/lib/log/cmdlogger"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb/mdbd"
+	"github.com/Cloud-Foundations/Dominator/lib/objectserver/memory"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupclient"
+	proto "github.com/Cloud-Foundations/Dominator/proto/filegenerator"
 )
 
 var (

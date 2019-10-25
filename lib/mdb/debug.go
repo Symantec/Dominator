@@ -3,7 +3,7 @@ package mdb
 import (
 	"io"
 
-	"github.com/Symantec/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/json"
 )
 
 func (mdb *Mdb) debugWrite(w io.Writer) error {

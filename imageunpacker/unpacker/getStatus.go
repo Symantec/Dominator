@@ -3,7 +3,7 @@ package unpacker
 import (
 	"time"
 
-	proto "github.com/Symantec/Dominator/proto/imageunpacker"
+	proto "github.com/Cloud-Foundations/Dominator/proto/imageunpacker"
 )
 
 func (u *Unpacker) getStatus() proto.GetStatusResponse {

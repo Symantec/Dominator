@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	proto "github.com/Symantec/Dominator/proto/imageunpacker"
+	proto "github.com/Cloud-Foundations/Dominator/proto/imageunpacker"
 )
 
 func (u *Unpacker) associateStreamWithDevice(streamName string,

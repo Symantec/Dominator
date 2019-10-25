@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Symantec/Dominator/lib/concurrent"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/objectcache"
+	"github.com/Cloud-Foundations/Dominator/lib/concurrent"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
 )
 
 func scanTree(baseDir string, registerFunc func(hash.Hash, uint64)) error {

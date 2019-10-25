@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/log"
-	libnet "github.com/Symantec/Dominator/lib/net"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	libnet "github.com/Cloud-Foundations/Dominator/lib/net"
 )
 
 type acceptEvent struct {

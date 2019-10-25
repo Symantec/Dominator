@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/net/proxy"
-	proto "github.com/Symantec/Dominator/proto/proxy"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/net/proxy"
+	proto "github.com/Cloud-Foundations/Dominator/proto/proxy"
 )
 
 var (

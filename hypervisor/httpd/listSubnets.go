@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"net/http"
 
-	"github.com/Symantec/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/json"
 )
 
 func (s state) listSubnetsHandler(w http.ResponseWriter, req *http.Request) {

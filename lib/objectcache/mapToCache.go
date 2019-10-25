@@ -1,7 +1,7 @@
 package objectcache
 
 import (
-	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
 )
 
 func objectMapToCache(objectMap map[hash.Hash]uint64) ObjectCache {

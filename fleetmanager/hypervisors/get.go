@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net"
 
-	"github.com/Symantec/Dominator/fleetmanager/topology"
-	proto "github.com/Symantec/Dominator/proto/fleetmanager"
+	"github.com/Cloud-Foundations/Dominator/fleetmanager/topology"
+	proto "github.com/Cloud-Foundations/Dominator/proto/fleetmanager"
 )
 
 func (m *Manager) getLockedHypervisor(name string,

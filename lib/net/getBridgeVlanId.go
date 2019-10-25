@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
 )
 
 const procNetVlan = "/proc/net/vlan"

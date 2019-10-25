@@ -5,9 +5,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
+	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
 )
 
 func getFileInImageSubcommand(args []string) {

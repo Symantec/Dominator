@@ -6,10 +6,10 @@ import (
 	"path"
 	"time"
 
-	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
-	libjson "github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/log"
-	libtags "github.com/Symantec/Dominator/lib/tags"
+	"github.com/Cloud-Foundations/Dominator/imagepublishers/amipublisher"
+	libjson "github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	libtags "github.com/Cloud-Foundations/Dominator/lib/tags"
 )
 
 func launchInstancesSubcommand(args []string, logger log.DebugLogger) {

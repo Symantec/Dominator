@@ -4,8 +4,8 @@ import (
 	"flag"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/srpc"
-	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	hyper_proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 var (

@@ -9,8 +9,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/x509util"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/x509util"
 )
 
 func printUsage() {

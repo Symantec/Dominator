@@ -3,7 +3,7 @@ package image
 import (
 	"sort"
 
-	"github.com/Symantec/Dominator/lib/verstr"
+	"github.com/Cloud-Foundations/Dominator/lib/verstr"
 )
 
 type directoryList []Directory

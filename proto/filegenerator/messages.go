@@ -1,8 +1,8 @@
 package filegenerator
 
 import (
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb"
 )
 
 type GetObjectRequest struct {

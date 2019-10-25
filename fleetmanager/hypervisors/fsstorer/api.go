@@ -4,9 +4,9 @@ import (
 	"net"
 	"sync"
 
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/tags"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/tags"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 type IP [4]byte

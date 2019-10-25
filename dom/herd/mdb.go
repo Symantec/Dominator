@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"time"
 
-	filegenclient "github.com/Symantec/Dominator/lib/filegen/client"
-	"github.com/Symantec/Dominator/lib/mdb"
-	"github.com/Symantec/Dominator/lib/srpc"
+	filegenclient "github.com/Cloud-Foundations/Dominator/lib/filegen/client"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 func (herd *Herd) mdbUpdate(mdb *mdb.Mdb) {

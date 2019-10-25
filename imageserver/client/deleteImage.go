@@ -1,8 +1,8 @@
 package client
 
 import (
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/imageserver"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/proto/imageserver"
 )
 
 func deleteImage(client *srpc.Client, name string) error {

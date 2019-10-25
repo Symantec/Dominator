@@ -1,7 +1,7 @@
 package mdbserver
 
 import (
-	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb"
 )
 
 // The GetMdbUpdates() RPC is fully streamed.

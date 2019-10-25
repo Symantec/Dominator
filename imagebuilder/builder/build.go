@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	buildclient "github.com/Symantec/Dominator/imagebuilder/client"
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/imaginator"
+	buildclient "github.com/Cloud-Foundations/Dominator/imagebuilder/client"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	proto "github.com/Cloud-Foundations/Dominator/proto/imaginator"
 )
 
 const errNoSourceImage = "no source image: "

@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	proto "github.com/Symantec/Dominator/proto/fleetmanager"
+	proto "github.com/Cloud-Foundations/Dominator/proto/fleetmanager"
 )
 
 func splitPath(path string) []string {

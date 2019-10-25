@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/html"
-	libjson "github.com/Symantec/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/html"
+	libjson "github.com/Cloud-Foundations/Dominator/lib/json"
 )
 
 const codeStyle = `background-color: #eee; border: 1px solid #999; display: block; float: left;`

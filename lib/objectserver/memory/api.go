@@ -4,8 +4,8 @@ import (
 	"io"
 	"sync"
 
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/objectserver"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
 )
 
 type ObjectServer struct {

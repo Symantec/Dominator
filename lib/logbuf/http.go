@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/html"
-	"github.com/Symantec/Dominator/lib/url"
+	"github.com/Cloud-Foundations/Dominator/lib/html"
+	"github.com/Cloud-Foundations/Dominator/lib/url"
 	_ "github.com/Symantec/tricorder/go/healthserver"
 )
 

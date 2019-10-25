@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/fsbench"
+	"github.com/Cloud-Foundations/Dominator/lib/fsbench"
 )
 
 // Benchmark the read speed of the underlying block device for a given file.

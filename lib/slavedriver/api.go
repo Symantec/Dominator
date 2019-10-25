@@ -5,8 +5,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 type SlaveTrader interface {

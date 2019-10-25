@@ -1,7 +1,7 @@
 package manager
 
 import (
-	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 func (m *Manager) changeOwners(ownerGroups, ownerUsers []string) error {

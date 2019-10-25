@@ -5,7 +5,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/Symantec/Dominator/lib/html"
+	"github.com/Cloud-Foundations/Dominator/lib/html"
 )
 
 func (herd *Herd) startServer(portNum uint, daemon bool) error {

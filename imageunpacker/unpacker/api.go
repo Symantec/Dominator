@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/objectcache"
-	proto "github.com/Symantec/Dominator/proto/imageunpacker"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
+	proto "github.com/Cloud-Foundations/Dominator/proto/imageunpacker"
 )
 
 const (

@@ -7,9 +7,9 @@ import (
 	"net"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/log"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 func getVmUserDataSubcommand(args []string, logger log.DebugLogger) error {

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/objectserver"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
 )
 
 func (image *Image) verify() error {

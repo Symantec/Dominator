@@ -53,4 +53,4 @@ All components of the **Dominator** system have access control for the RPC metho
 Links
 =====
 
-**Dominator** is an Open Source project hosted on the [Symantec/Dominator](https://github.com/Symantec/Dominator) page at [GitHub](https://www.github.com/). There is a [design document](README.md), [architectural overview]ArchitecturalOverview.md() and [user guide](https://github.com/Symantec/Dominator/blob/master/user-guide/README.md) available.
+**Dominator** is an Open Source project hosted on the [Cloud-Foundations/Dominator](https://github.com/Cloud-Foundations/Dominator) page at [GitHub](https://www.github.com/). There is a [design document](README.md), [architectural overview]ArchitecturalOverview.md() and [user guide](https://github.com/Cloud-Foundations/Dominator/blob/master/user-guide/README.md) available.

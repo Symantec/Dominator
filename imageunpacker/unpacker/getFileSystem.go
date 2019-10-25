@@ -3,7 +3,7 @@ package unpacker
 import (
 	"errors"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 )
 
 func (u *Unpacker) getFileSystem(streamName string) (

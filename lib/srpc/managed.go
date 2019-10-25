@@ -3,7 +3,7 @@ package srpc
 import (
 	"crypto/tls"
 
-	"github.com/Symantec/Dominator/lib/connpool"
+	"github.com/Cloud-Foundations/Dominator/lib/connpool"
 )
 
 func newClientResource(network, address string) *ClientResource {

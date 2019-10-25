@@ -6,7 +6,7 @@ package x509util
 import (
 	"crypto/x509"
 
-	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/constants"
 )
 
 // GetGroupList decodes the list of groups in the certificate.

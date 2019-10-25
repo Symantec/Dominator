@@ -1,7 +1,7 @@
 package scan
 
 import (
-	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
 )
 
 // ScanTree will scan a directory tree for objects and will call registerFunc

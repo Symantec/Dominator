@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Symantec/Dominator/lib/wsyscall"
-	proto "github.com/Symantec/Dominator/proto/imageunpacker"
+	"github.com/Cloud-Foundations/Dominator/lib/wsyscall"
+	proto "github.com/Cloud-Foundations/Dominator/proto/imageunpacker"
 )
 
 // This must be called with the lock held.

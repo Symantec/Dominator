@@ -4,9 +4,9 @@ import (
 	"io/ioutil"
 	stdlog "log"
 
-	uclient "github.com/Symantec/Dominator/imageunpacker/client"
-	"github.com/Symantec/Dominator/lib/awsutil"
-	"github.com/Symantec/Dominator/lib/log"
+	uclient "github.com/Cloud-Foundations/Dominator/imageunpacker/client"
+	"github.com/Cloud-Foundations/Dominator/lib/awsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 

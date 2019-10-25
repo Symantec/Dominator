@@ -6,7 +6,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
 )
 
 var modePerm FileMode = syscall.S_IRWXU | syscall.S_IRWXG | syscall.S_IRWXO

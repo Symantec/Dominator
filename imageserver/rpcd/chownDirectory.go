@@ -4,8 +4,8 @@ import (
 	"errors"
 	"os/user"
 
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/imageserver"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/proto/imageserver"
 )
 
 func (t *srpcType) ChownDirectory(conn *srpc.Conn,

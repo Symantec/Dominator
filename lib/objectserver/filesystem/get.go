@@ -6,8 +6,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/objectcache"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
 )
 
 func (objSrv *ObjectServer) getObjects(hashes []hash.Hash) (

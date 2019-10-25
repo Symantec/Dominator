@@ -3,7 +3,7 @@ package imaginator
 import (
 	"time"
 
-	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
 )
 
 type BuildImageRequest struct {

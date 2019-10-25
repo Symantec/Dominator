@@ -18,7 +18,7 @@ The **Dominator** takes a radically different approach from to fleet management 
 
 Rather than package management, the **Dominator** uses an image management and deployment approach.
 
-Please see [https://github.com/Symantec/Dominator](https://github.com/Symantec/Dominator) for the source code, [design document](README.md), [fact sheet](FactSheet.md) and [user guide](https://github.com/Symantec/Dominator/blob/master/user-guide/README.md).
+Please see [https://github.com/Cloud-Foundations/Dominator](https://github.com/Cloud-Foundations/Dominator) for the source code, [design document](README.md), [fact sheet](FactSheet.md) and [user guide](https://github.com/Cloud-Foundations/Dominator/blob/master/user-guide/README.md).
 
 Dominator Components
 ====================

@@ -4,8 +4,8 @@ import (
 	"archive/tar"
 	"io"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/objectserver"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
 )
 
 func write(writer io.Writer, fileSystem *filesystem.FileSystem,

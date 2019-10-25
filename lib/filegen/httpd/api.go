@@ -6,8 +6,8 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/Symantec/Dominator/lib/filegen"
-	"github.com/Symantec/Dominator/lib/html"
+	"github.com/Cloud-Foundations/Dominator/lib/filegen"
+	"github.com/Cloud-Foundations/Dominator/lib/html"
 )
 
 type HtmlWriter interface {

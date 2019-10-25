@@ -8,13 +8,13 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/Symantec/Dominator/imageunpacker/httpd"
-	"github.com/Symantec/Dominator/imageunpacker/rpcd"
-	"github.com/Symantec/Dominator/imageunpacker/unpacker"
-	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/lib/flags/loadflags"
-	"github.com/Symantec/Dominator/lib/log/serverlogger"
-	"github.com/Symantec/Dominator/lib/srpc/setupserver"
+	"github.com/Cloud-Foundations/Dominator/imageunpacker/httpd"
+	"github.com/Cloud-Foundations/Dominator/imageunpacker/rpcd"
+	"github.com/Cloud-Foundations/Dominator/imageunpacker/unpacker"
+	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
+	"github.com/Cloud-Foundations/Dominator/lib/log/serverlogger"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/tricorder/go/tricorder"
 )
 

@@ -4,9 +4,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/Symantec/Dominator/lib/html"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/net/reverseconnection"
+	"github.com/Cloud-Foundations/Dominator/lib/html"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/net/reverseconnection"
 	"github.com/Symantec/tricorder/go/tricorder"
 )
 

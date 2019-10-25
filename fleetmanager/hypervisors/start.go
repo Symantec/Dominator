@@ -3,7 +3,7 @@ package hypervisors
 import (
 	"os"
 
-	"github.com/Symantec/Dominator/lib/html"
+	"github.com/Cloud-Foundations/Dominator/lib/html"
 )
 
 func newManager(startOptions StartOptions) (*Manager, error) {

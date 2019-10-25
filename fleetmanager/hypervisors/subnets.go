@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Symantec/Dominator/fleetmanager/topology"
+	"github.com/Cloud-Foundations/Dominator/fleetmanager/topology"
 )
 
 func copyIp(ip net.IP) net.IP {

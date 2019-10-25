@@ -9,13 +9,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Symantec/Dominator/imagebuilder/builder"
-	"github.com/Symantec/Dominator/imagebuilder/httpd"
-	"github.com/Symantec/Dominator/imagebuilder/rpcd"
-	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/lib/flags/loadflags"
-	"github.com/Symantec/Dominator/lib/log/serverlogger"
-	"github.com/Symantec/Dominator/lib/srpc/setupserver"
+	"github.com/Cloud-Foundations/Dominator/imagebuilder/builder"
+	"github.com/Cloud-Foundations/Dominator/imagebuilder/httpd"
+	"github.com/Cloud-Foundations/Dominator/imagebuilder/rpcd"
+	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
+	"github.com/Cloud-Foundations/Dominator/lib/log/serverlogger"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupserver"
 	"github.com/Symantec/tricorder/go/tricorder"
 )
 

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 type flusher interface {

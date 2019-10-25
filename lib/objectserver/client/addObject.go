@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/proto/objectserver"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/proto/objectserver"
 )
 
 func (objClient *ObjectClient) addObject(reader io.Reader, length uint64,

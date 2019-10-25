@@ -3,10 +3,10 @@ package rpcd
 import (
 	"io"
 
-	"github.com/Symantec/Dominator/fleetmanager/hypervisors"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/srpc/serverutil"
+	"github.com/Cloud-Foundations/Dominator/fleetmanager/hypervisors"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc/serverutil"
 )
 
 type srpcType struct {

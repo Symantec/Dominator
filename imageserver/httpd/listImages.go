@@ -6,9 +6,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/verstr"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/verstr"
 )
 
 func (s state) listImagesHandler(w http.ResponseWriter, req *http.Request) {

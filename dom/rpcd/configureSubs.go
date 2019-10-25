@@ -1,9 +1,9 @@
 package rpcd
 
 import (
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/dominator"
-	"github.com/Symantec/Dominator/proto/sub"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/proto/dominator"
+	"github.com/Cloud-Foundations/Dominator/proto/sub"
 )
 
 func (t *rpcType) ConfigureSubs(conn *srpc.Conn,
