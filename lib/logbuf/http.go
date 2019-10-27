@@ -14,7 +14,7 @@ import (
 
 	"github.com/Cloud-Foundations/Dominator/lib/html"
 	"github.com/Cloud-Foundations/Dominator/lib/url"
-	_ "github.com/Symantec/tricorder/go/healthserver"
+	_ "github.com/Cloud-Foundations/tricorder/go/healthserver"
 )
 
 type countingWriter struct {

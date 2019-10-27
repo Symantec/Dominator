@@ -14,8 +14,8 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/objectserver/filesystem"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupserver"
 	objectserverRpcd "github.com/Cloud-Foundations/Dominator/objectserver/rpcd"
-	"github.com/Symantec/tricorder/go/tricorder"
-	"github.com/Symantec/tricorder/go/tricorder/units"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder/units"
 )
 
 var (

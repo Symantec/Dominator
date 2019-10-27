@@ -7,7 +7,7 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/html"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/net/reverseconnection"
-	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder"
 )
 
 type HtmlWriter interface {

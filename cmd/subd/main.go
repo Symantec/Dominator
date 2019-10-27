@@ -30,8 +30,8 @@ import (
 	"github.com/Cloud-Foundations/Dominator/sub/httpd"
 	"github.com/Cloud-Foundations/Dominator/sub/rpcd"
 	"github.com/Cloud-Foundations/Dominator/sub/scanner"
-	"github.com/Symantec/tricorder/go/tricorder"
-	"github.com/Symantec/tricorder/go/tricorder/units"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder/units"
 )
 
 var (

@@ -13,7 +13,7 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupserver"
 	"github.com/Cloud-Foundations/Dominator/proto/test"
-	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder"
 )
 
 var (

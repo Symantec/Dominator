@@ -18,8 +18,8 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/objectserver/cachingreader"
 	"github.com/Cloud-Foundations/Dominator/lib/rpcclientpool"
 	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
-	"github.com/Symantec/tricorder/go/tricorder/messages"
-	trimsg "github.com/Symantec/tricorder/go/tricorder/messages"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder/messages"
+	trimsg "github.com/Cloud-Foundations/tricorder/go/tricorder/messages"
 )
 
 const (

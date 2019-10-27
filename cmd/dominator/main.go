@@ -19,7 +19,7 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/mdb/mdbd"
 	objectserver "github.com/Cloud-Foundations/Dominator/lib/objectserver/filesystem"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupserver"
-	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder"
 )
 
 const dirPerms = syscall.S_IRWXU

@@ -18,7 +18,7 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	filegenproto "github.com/Cloud-Foundations/Dominator/proto/filegenerator"
 	subproto "github.com/Cloud-Foundations/Dominator/proto/sub"
-	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder"
 )
 
 type subStatus uint

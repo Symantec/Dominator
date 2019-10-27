@@ -18,8 +18,8 @@ import (
 
 	"github.com/Cloud-Foundations/Dominator/lib/net"
 	"github.com/Cloud-Foundations/Dominator/lib/x509util"
-	"github.com/Symantec/tricorder/go/tricorder"
-	"github.com/Symantec/tricorder/go/tricorder/units"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder/units"
 )
 
 const (
