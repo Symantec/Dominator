@@ -47,7 +47,7 @@ var environmentToSet = map[string]string{
 func cleanPackages(rootDir string, buildLog io.Writer) error {
 	fmt.Fprintln(buildLog, "\nCleaning packages:")
 	startTime := time.Now()
-	err := runInTarget(nil, buildLog, rootDir, packagerPathname, "clean")
+	err := runInTarget(nil, buildLog, rootDir, nil, packagerPathname, "clean")
 	if err != nil {
 		return errors.New("error cleaning: " + err.Error())
 	}
@@ -175,14 +175,19 @@ func writeArgument(writer io.Writer, arg string) {
 }
 
 func clearResolvConf(writer io.Writer, rootDir string) error {
-	return runInTarget(nil, writer, rootDir, "cp", "/dev/null",
-		"/etc/resolv.conf")
+	return runInTarget(nil, writer, rootDir, nil,
+		"cp", "/dev/null", "/etc/resolv.conf")
 }
 
-func runInTarget(input io.Reader, output io.Writer, rootDir, prog string,
-	args ...string) error {
+func runInTarget(input io.Reader, output io.Writer, rootDir string,
+	envGetter environmentGetter, prog string, args ...string) error {
+	var environmentToInject map[string]string
+	if envGetter != nil {
+		environmentToInject = envGetter.getenv()
+	}
 	cmd := exec.Command(prog, args...)
-	cmd.Env = stripVariables(os.Environ(), environmentToCopy)
+	cmd.Env = stripVariables(os.Environ(), environmentToCopy, environmentToSet,
+		environmentToInject)
 	cmd.Dir = "/"
 	cmd.Stdin = input
 	cmd.Stdout = output
@@ -196,9 +201,10 @@ func runInTarget(input io.Reader, output io.Writer, rootDir, prog string,
 }
 
 func runInTargetWithBindMounts(input io.Reader, output io.Writer,
-	rootDir string, bindMounts []string, prog string, args ...string) error {
+	rootDir string, bindMounts []string, envGetter environmentGetter,
+	prog string, args ...string) error {
 	if len(bindMounts) < 1 {
-		return runInTarget(input, output, rootDir, prog, args...)
+		return runInTarget(input, output, rootDir, envGetter, prog, args...)
 	}
 	errChannel := make(chan error)
 	go func() {
@@ -215,14 +221,15 @@ func runInTargetWithBindMounts(input io.Reader, output io.Writer,
 						bindMount, err)
 				}
 			}
-			return runInTarget(input, output, rootDir, prog, args...)
+			return runInTarget(input, output, rootDir, envGetter, prog, args...)
 		}()
 		errChannel <- err
 	}()
 	return <-errChannel
 }
 
-func stripVariables(input []string, varsToCopy map[string]struct{}) []string {
+func stripVariables(input []string, varsToCopy map[string]struct{},
+	varsToSet ...map[string]string) []string {
 	output := make([]string, 0)
 	for _, nameValue := range os.Environ() {
 		split := strings.SplitN(nameValue, "=", 2)
@@ -232,8 +239,10 @@ func stripVariables(input []string, varsToCopy map[string]struct{}) []string {
 			}
 		}
 	}
-	for name, value := range environmentToSet {
-		output = append(output, name+"="+value)
+	for _, varTable := range varsToSet {
+		for name, value := range varTable {
+			output = append(output, name+"="+value)
+		}
 	}
 	sort.Strings(output)
 	return output

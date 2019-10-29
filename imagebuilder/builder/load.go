@@ -149,7 +149,7 @@ func (b *Builder) delayMakeRequiredDirectories(abortNotifier <-chan struct{}) {
 func (b *Builder) makeRequiredDirectories() error {
 	imageServer, err := srpc.DialHTTP("tcp", b.imageServerAddress, 0)
 	if err != nil {
-		b.logger.Println(err)
+		b.logger.Printf("%s: %s\n", b.imageServerAddress, err)
 		return nil
 	}
 	defer imageServer.Close()

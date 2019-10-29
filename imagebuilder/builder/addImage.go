@@ -94,7 +94,7 @@ func buildFileSystemWithHasher(dirname string, h *hasher,
 
 func listPackages(rootDir string) ([]image.Package, error) {
 	output := new(bytes.Buffer)
-	err := runInTarget(nil, output, rootDir, packagerPathname,
+	err := runInTarget(nil, output, rootDir, nil, packagerPathname,
 		"show-size-multiplier")
 	if err != nil {
 		return nil, fmt.Errorf("error getting size multiplier: %s", err)
@@ -110,7 +110,7 @@ func listPackages(rootDir string) ([]image.Package, error) {
 		return nil, errors.New("malformed size multiplier")
 	}
 	output.Reset()
-	err = runInTarget(nil, output, rootDir, packagerPathname, "list")
+	err = runInTarget(nil, output, rootDir, nil, packagerPathname, "list")
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +258,7 @@ func runTest(rootDir, prog string) testResultType {
 	errChannel := make(chan error, 1)
 	timer := time.NewTimer(time.Second * 10)
 	go func() {
-		errChannel <- runInTarget(nil, &result, rootDir, packagerPathname,
+		errChannel <- runInTarget(nil, &result, rootDir, nil, packagerPathname,
 			"run", prog)
 	}()
 	select {
