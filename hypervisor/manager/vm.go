@@ -1809,8 +1809,6 @@ func (m *Manager) patchVmImage(conn *srpc.Conn,
 	if err != nil {
 		return err
 	}
-	_, err = os.Stat(
-		filepath.Join(vm.VolumeLocations[0].DirectoryToCleanup, "kernel"))
 	if writeBootloaderConfig {
 		err := bootInfo.WriteBootloaderConfig(rootDir, vm.logger)
 		if err != nil {
