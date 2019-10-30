@@ -47,7 +47,7 @@ You will also need some other repositories. You can use `go get` or run the
 following commands:
 
 ```
-git clone https://github.com/Symantec/tricorder.git
+git clone https://github.com/Cloud-Foundations/tricorder.git
 git clone https://github.com/golang/exp.git
 git clone https://github.com/aws/aws-sdk-go.git
 git clone https://gopkg.in/fsnotify/fsnotify.v0

@@ -18,7 +18,7 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
 	"github.com/Cloud-Foundations/Dominator/lib/url"
 	subproto "github.com/Cloud-Foundations/Dominator/proto/sub"
-	"github.com/Symantec/tricorder/go/tricorder"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder"
 )
 
 var (

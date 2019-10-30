@@ -4,8 +4,8 @@ import (
 	"io"
 
 	"github.com/Cloud-Foundations/Dominator/lib/rateio"
-	"github.com/Symantec/tricorder/go/tricorder"
-	"github.com/Symantec/tricorder/go/tricorder/units"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder/units"
 )
 
 type ReaderContext struct {

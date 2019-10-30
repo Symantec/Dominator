@@ -30,7 +30,7 @@ import (
 	hyper_proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 	sub_proto "github.com/Cloud-Foundations/Dominator/proto/sub"
 	subclient "github.com/Cloud-Foundations/Dominator/sub/client"
-	"github.com/Symantec/tricorder/go/tricorder/messages"
+	"github.com/Cloud-Foundations/tricorder/go/tricorder/messages"
 )
 
 const (
