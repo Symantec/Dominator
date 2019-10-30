@@ -1,7 +1,7 @@
 package util
 
 import (
-	"github.com/Symantec/Dominator/lib/filegen"
+	"github.com/Cloud-Foundations/Dominator/lib/filegen"
 )
 
 func LoadConfiguration(manager *filegen.Manager, filename string) error {

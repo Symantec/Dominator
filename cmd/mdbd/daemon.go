@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 )

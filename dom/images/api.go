@@ -3,9 +3,9 @@ package images
 import (
 	"sync"
 
-	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/stringutil"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/stringutil"
 )
 
 type Manager struct {

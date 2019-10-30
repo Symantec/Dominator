@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/x509util"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/x509util"
 )
 
 func loadCertificates(directory string) ([]tls.Certificate, error) {

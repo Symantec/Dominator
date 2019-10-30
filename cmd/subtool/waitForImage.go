@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/Symantec/Dominator/proto/sub"
-	"github.com/Symantec/Dominator/sub/client"
+	"github.com/Cloud-Foundations/Dominator/proto/sub"
+	"github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
 func waitForImageSubcommand(getSubClient getSubClientFunc, args []string) {

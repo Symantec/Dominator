@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/sub/client"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
 func getConfigSubcommand(getSubClient getSubClientFunc, args []string) {

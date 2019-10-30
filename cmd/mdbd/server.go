@@ -5,10 +5,10 @@ import (
 	"io"
 	"sync"
 
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/mdb"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/mdbserver"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/proto/mdbserver"
 )
 
 type rpcType struct {

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"path"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 )
 
 func (s state) listComputedInodesHandler(w http.ResponseWriter,

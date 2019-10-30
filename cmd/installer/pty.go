@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/Symantec/Dominator/lib/wsyscall"
+	"github.com/Cloud-Foundations/Dominator/lib/wsyscall"
 )
 
 func openPty() (pty, tty *os.File, err error) {

@@ -14,15 +14,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/filesystem/util"
-	"github.com/Symantec/Dominator/lib/filter"
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/image"
-	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/triggers"
-	proto "github.com/Symantec/Dominator/proto/imaginator"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem/util"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
+	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/triggers"
+	proto "github.com/Cloud-Foundations/Dominator/proto/imaginator"
 )
 
 func (stream *imageStreamType) build(b *Builder, client *srpc.Client,

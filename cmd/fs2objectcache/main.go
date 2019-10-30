@@ -6,7 +6,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/Symantec/Dominator/lib/flags/loadflags"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
 )
 
 var (

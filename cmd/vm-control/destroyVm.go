@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net"
 
-	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
-	"github.com/Symantec/Dominator/lib/log"
+	hyperclient "github.com/Cloud-Foundations/Dominator/hypervisor/client"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
 func destroyVmSubcommand(args []string, logger log.DebugLogger) error {

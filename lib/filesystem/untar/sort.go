@@ -3,7 +3,7 @@ package untar
 import (
 	"sort"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 )
 
 type directoryEntryList []*filesystem.DirectoryEntry

@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/Symantec/Dominator/fleetmanager/topology"
-	"github.com/Symantec/Dominator/lib/html"
-	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/fleetmanager/topology"
+	"github.com/Cloud-Foundations/Dominator/lib/html"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
 type HtmlWriter interface {

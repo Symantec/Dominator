@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
 )
 
 func (s state) listDirectoriesHandler(w http.ResponseWriter,

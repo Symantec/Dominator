@@ -6,9 +6,9 @@ import (
 	"os"
 	"sort"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/triggers"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/triggers"
 )
 
 var quitEarly = errors.New("quit early")

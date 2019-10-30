@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/meminfo"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/meminfo"
 )
 
 func (m *Manager) writeHtml(writer io.Writer) {

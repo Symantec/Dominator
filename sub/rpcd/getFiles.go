@@ -6,8 +6,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/sub"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/proto/sub"
 )
 
 func (t *rpcType) GetFiles(conn *srpc.Conn) error {

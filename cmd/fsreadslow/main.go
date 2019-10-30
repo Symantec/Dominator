@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/fsbench"
-	"github.com/Symantec/Dominator/lib/fsrateio"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/fsbench"
+	"github.com/Cloud-Foundations/Dominator/lib/fsrateio"
 )
 
 // Benchmark the read speed of the underlying block device for a given file.

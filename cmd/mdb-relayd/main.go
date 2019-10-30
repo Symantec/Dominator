@@ -7,10 +7,10 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/Symantec/Dominator/lib/flags/loadflags"
-	"github.com/Symantec/Dominator/lib/mdb"
-	"github.com/Symantec/Dominator/lib/mdb/mdbd"
-	"github.com/Symantec/Dominator/lib/srpc/setupclient"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb/mdbd"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupclient"
 )
 
 var (

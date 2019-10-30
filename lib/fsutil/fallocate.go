@@ -3,7 +3,7 @@ package fsutil
 import (
 	"syscall"
 
-	"github.com/Symantec/Dominator/lib/wsyscall"
+	"github.com/Cloud-Foundations/Dominator/lib/wsyscall"
 )
 
 func fallocate(filename string, size uint64) error {

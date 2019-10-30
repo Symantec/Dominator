@@ -5,7 +5,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/Symantec/Dominator/lib/url"
+	"github.com/Cloud-Foundations/Dominator/lib/url"
 )
 
 func (s state) showBootLogHandler(w http.ResponseWriter, req *http.Request) {

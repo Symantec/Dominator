@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/mdb"
-	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 var emptyTags = make(map[string]string)

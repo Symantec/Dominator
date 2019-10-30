@@ -6,7 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
 )
 
 func (objSrv *ObjectServer) getData(hashVal hash.Hash) ([]byte, error) {

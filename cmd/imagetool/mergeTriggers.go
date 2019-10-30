@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	json "github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/triggers"
+	json "github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/triggers"
 )
 
 func mergeTriggersSubcommand(args []string) {

@@ -1,10 +1,10 @@
 package amipublisher
 
 import (
-	uclient "github.com/Symantec/Dominator/imageunpacker/client"
-	"github.com/Symantec/Dominator/lib/awsutil"
-	"github.com/Symantec/Dominator/lib/log"
-	libtags "github.com/Symantec/Dominator/lib/tags"
+	uclient "github.com/Cloud-Foundations/Dominator/imageunpacker/client"
+	"github.com/Cloud-Foundations/Dominator/lib/awsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	libtags "github.com/Cloud-Foundations/Dominator/lib/tags"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 

@@ -52,8 +52,8 @@ import (
 	"sync"
 	"time"
 
-	libnet "github.com/Symantec/Dominator/lib/net"
-	"github.com/Symantec/Dominator/lib/resourcepool"
+	libnet "github.com/Cloud-Foundations/Dominator/lib/net"
+	"github.com/Cloud-Foundations/Dominator/lib/resourcepool"
 )
 
 var (

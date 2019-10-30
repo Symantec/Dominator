@@ -1,7 +1,7 @@
 package util
 
 import (
-	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 )
 
 func copyMtimes(sourceFs, destFs *filesystem.FileSystem) {

@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/fleetmanager"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	proto "github.com/Cloud-Foundations/Dominator/proto/fleetmanager"
 )
 
 func changeTagsSubcommand(args []string, logger log.DebugLogger) error {

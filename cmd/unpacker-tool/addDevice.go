@@ -6,8 +6,8 @@ import (
 	"os"
 	"os/exec"
 
-	uclient "github.com/Symantec/Dominator/imageunpacker/client"
-	"github.com/Symantec/Dominator/lib/srpc"
+	uclient "github.com/Cloud-Foundations/Dominator/imageunpacker/client"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 func addDeviceSubcommand(client *srpc.Client, args []string) {

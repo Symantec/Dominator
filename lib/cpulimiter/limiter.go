@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/wsyscall"
+	"github.com/Cloud-Foundations/Dominator/lib/wsyscall"
 )
 
 var minCheckInterval = time.Millisecond * 10

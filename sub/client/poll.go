@@ -3,10 +3,10 @@ package client
 import (
 	"errors"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/objectcache"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/sub"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/proto/sub"
 )
 
 func callPoll(client *srpc.Client, request sub.PollRequest,

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	libnet "github.com/Symantec/Dominator/lib/net"
+	libnet "github.com/Cloud-Foundations/Dominator/lib/net"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 )

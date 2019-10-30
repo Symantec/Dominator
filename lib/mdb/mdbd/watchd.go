@@ -12,12 +12,12 @@ import (
 	"sort"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/fsutil"
-	jsonwriter "github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/mdb"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/mdbserver"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
+	jsonwriter "github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/proto/mdbserver"
 )
 
 func startMdbDaemon(mdbFileName string, logger log.Logger) <-chan *mdb.Mdb {

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/mbr"
+	"github.com/Cloud-Foundations/Dominator/lib/mbr"
 )
 
 var sysfsDirectory = "/sys/block"

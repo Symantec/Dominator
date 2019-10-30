@@ -12,13 +12,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Symantec/Dominator/imageserver/client"
-	"github.com/Symantec/Dominator/lib/configwatch"
-	libjson "github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/slavedriver"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/url/urlutil"
+	"github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/configwatch"
+	libjson "github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/slavedriver"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/url/urlutil"
 )
 
 func imageStreamsDecoder(reader io.Reader) (interface{}, error) {

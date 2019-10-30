@@ -6,7 +6,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
 )
 
 func (fs *FileSystem) getObject(hashVal hash.Hash) (

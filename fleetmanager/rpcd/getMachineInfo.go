@@ -1,10 +1,10 @@
 package rpcd
 
 import (
-	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/srpc"
-	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
-	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	fm_proto "github.com/Cloud-Foundations/Dominator/proto/fleetmanager"
+	hyper_proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 func (t *srpcType) GetMachineInfo(conn *srpc.Conn,

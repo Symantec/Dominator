@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Symantec/Dominator/imageserver/client"
-	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 func listDirectoriesSubcommand(args []string) {

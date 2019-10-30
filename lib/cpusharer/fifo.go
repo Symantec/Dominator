@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
 )
 
 func newFifoCpuSharer() *FifoCpuSharer {

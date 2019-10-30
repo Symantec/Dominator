@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
 )
 
 var timeFormat string = "02 Jan 2006 15:04:05.99 MST"

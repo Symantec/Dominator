@@ -6,7 +6,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 )

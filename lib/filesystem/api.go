@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Symantec/Dominator/lib/filter"
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
 )
 
 type NumLinksTable map[uint64]int

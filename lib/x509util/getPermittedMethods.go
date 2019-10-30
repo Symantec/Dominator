@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Symantec/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/constants"
 )
 
 func getList(cert *x509.Certificate, oid string) (map[string]struct{}, error) {

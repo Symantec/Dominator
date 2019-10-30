@@ -11,16 +11,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/concurrent"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/log/logutil"
-	"github.com/Symantec/Dominator/lib/log/prefixlogger"
-	"github.com/Symantec/Dominator/lib/objectserver"
-	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/stringutil"
+	"github.com/Cloud-Foundations/Dominator/lib/concurrent"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/log/logutil"
+	"github.com/Cloud-Foundations/Dominator/lib/log/prefixlogger"
+	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
+	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/stringutil"
 )
 
 func loadImageDataBase(baseDir string, objSrv objectserver.FullObjectServer,

@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/filesystem/util"
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/verstr"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem/util"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/verstr"
 )
 
 func deleteDirectories(directoriesToDelete []string) error {

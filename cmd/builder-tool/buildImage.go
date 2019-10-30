@@ -8,12 +8,12 @@ import (
 	"io"
 	"os"
 
-	"github.com/Symantec/Dominator/imagebuilder/client"
-	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/log"
-	proto "github.com/Symantec/Dominator/proto/imaginator"
+	"github.com/Cloud-Foundations/Dominator/imagebuilder/client"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	proto "github.com/Cloud-Foundations/Dominator/proto/imaginator"
 )
 
 func buildImageSubcommand(args []string, logger log.DebugLogger) {

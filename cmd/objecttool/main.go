@@ -6,11 +6,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/lib/flags/loadflags"
-	"github.com/Symantec/Dominator/lib/objectserver"
-	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
-	"github.com/Symantec/Dominator/lib/srpc/setupclient"
+	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
+	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
+	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupclient"
 )
 
 var (

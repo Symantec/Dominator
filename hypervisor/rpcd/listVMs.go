@@ -3,8 +3,8 @@ package rpcd
 import (
 	"net"
 
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 func (t *srpcType) ListVMs(conn *srpc.Conn,

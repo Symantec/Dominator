@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/url"
+	"github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/url"
 )
 
 func (herd *Herd) listReachableSubsHandler(w http.ResponseWriter,

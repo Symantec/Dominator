@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/mdb"
-	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/filegenerator"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	proto "github.com/Cloud-Foundations/Dominator/proto/filegenerator"
 )
 
 func (t *rpcType) Connect(conn *srpc.Conn) error {

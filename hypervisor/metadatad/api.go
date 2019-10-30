@@ -5,9 +5,9 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/Symantec/Dominator/hypervisor/manager"
-	"github.com/Symantec/Dominator/lib/log"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/hypervisor/manager"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 type rawHandlerFunc func(w http.ResponseWriter, ipAddr net.IP)

@@ -1,9 +1,9 @@
 package client
 
 import (
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/imageserver"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/proto/imageserver"
 )
 
 func listUnreferencedObjects(client *srpc.Client) (

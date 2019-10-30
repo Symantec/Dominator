@@ -8,7 +8,7 @@ Overview
 Richard Gooch
 -------------    
 
-This document describes the design of a robust, reliable and efficient architecture which can scale to the very largest fleet of machines (physical or virtual). The design target is that a single system and administrator can manage the content of *at least* 10,000 systems with negligible performance impact on the managed systems, fast response to global changes and nearly atomic changes on those systems. The software system that implements this architecture is called the **Dominator**. This software is Open Source and available on [GitHub](https://github.com/Symantec/Dominator).
+This document describes the design of a robust, reliable and efficient architecture which can scale to the very largest fleet of machines (physical or virtual). The design target is that a single system and administrator can manage the content of *at least* 10,000 systems with negligible performance impact on the managed systems, fast response to global changes and nearly atomic changes on those systems. The software system that implements this architecture is called the **Dominator**. This software is Open Source and available on [GitHub](https://github.com/Cloud-Foundations/Dominator).
 
 Background
 ==========
@@ -188,7 +188,7 @@ The **Image Server** responds to *get image*, *list images* and *get objects* RP
 
 An **Image Server** can be “slaved” to another **Image Server**. This is used for image replication between servers. Any (non-cyclic) topology can be constructed. Image replication is secured with TLS and access controls. An example Content Distribution Network is shown in Appendix 2.
 
-An operations guide for the **Image Server** is available [here](https://github.com/Symantec/Dominator/blob/master/cmd/imageserver/README.md).
+An operations guide for the **Image Server** is available [here](https://github.com/Cloud-Foundations/Dominator/blob/master/cmd/imageserver/README.md).
 
 Subd
 ----
@@ -221,7 +221,7 @@ The **subd** component bears some similarity to rsync, scp, BitTorrent and other
 
     -   malicious/exploit code (either directly writing to the block device, memory, or leveraging kernel bugs)
 
-In summary, **subd** provides safe, secure slow or fast *fetching* and fast *activation*. Some of the properties mentioned are covered in more detail below. An operations guide for **subd** is available [here](https://github.com/Symantec/Dominator/blob/master/cmd/subd/README.md).
+In summary, **subd** provides safe, secure slow or fast *fetching* and fast *activation*. Some of the properties mentioned are covered in more detail below. An operations guide for **subd** is available [here](https://github.com/Cloud-Foundations/Dominator/blob/master/cmd/subd/README.md).
 
 ### Rate-limited scanning
 
@@ -478,7 +478,7 @@ Below are some best practices guidelines:
 Implementation
 ==============
 
-The **Dominator** is written in the [Go](https://www.golang.org/) programming language. It is an Open Source project hosted on the [Symantec/Dominator](https://github.com/Symantec/Dominator) page at [GitHub](https://www.github.com/). Contributions are welcome. A short [fact sheet](FactSheet.md) and [architectural overview](ArchitecturalOverview.md) are available.
+The **Dominator** is written in the [Go](https://www.golang.org/) programming language. It is an Open Source project hosted on the [Cloud-Foundations/Dominator](https://github.com/Cloud-Foundations/Dominator) page at [GitHub](https://www.github.com/). Contributions are welcome. A short [fact sheet](FactSheet.md) and [architectural overview](ArchitecturalOverview.md) are available.
 
 Release Milestones
 ==================

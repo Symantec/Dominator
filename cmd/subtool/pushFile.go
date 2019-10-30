@@ -3,12 +3,12 @@ package main
 import (
 	"os"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
-	objclient "github.com/Symantec/Dominator/lib/objectserver/client"
-	"github.com/Symantec/Dominator/lib/triggers"
-	"github.com/Symantec/Dominator/lib/wsyscall"
-	"github.com/Symantec/Dominator/proto/sub"
-	"github.com/Symantec/Dominator/sub/client"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	objclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/triggers"
+	"github.com/Cloud-Foundations/Dominator/lib/wsyscall"
+	"github.com/Cloud-Foundations/Dominator/proto/sub"
+	"github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
 func pushFileSubcommand(getSubClient getSubClientFunc, args []string) {

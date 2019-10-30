@@ -7,12 +7,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/log"
-	libnet "github.com/Symantec/Dominator/lib/net"
-	"github.com/Symantec/Dominator/lib/net/configurator"
-	"github.com/Symantec/Dominator/lib/srpc"
-	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
+	"github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	libnet "github.com/Cloud-Foundations/Dominator/lib/net"
+	"github.com/Cloud-Foundations/Dominator/lib/net/configurator"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	fm_proto "github.com/Cloud-Foundations/Dominator/proto/fleetmanager"
 )
 
 type networkInterface struct {

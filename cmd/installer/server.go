@@ -14,11 +14,11 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/Symantec/Dominator/lib/html"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/log/debuglogger"
-	"github.com/Symantec/Dominator/lib/log/teelogger"
-	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/html"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/log/debuglogger"
+	"github.com/Cloud-Foundations/Dominator/lib/log/teelogger"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 type HtmlWriter interface {

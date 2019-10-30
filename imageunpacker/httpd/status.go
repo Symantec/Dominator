@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/html"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/html"
 )
 
 func (s state) statusHandler(w http.ResponseWriter, req *http.Request) {

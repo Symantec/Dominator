@@ -5,8 +5,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
-	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/imagepublishers/amipublisher"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
 func addVolumesSubcommand(args []string, logger log.DebugLogger) {

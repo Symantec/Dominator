@@ -5,9 +5,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 func (t *srpcType) ProbeVmPort(conn *srpc.Conn,

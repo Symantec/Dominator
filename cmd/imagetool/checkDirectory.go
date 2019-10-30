@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Symantec/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/imageserver/client"
 )
 
 func checkDirectorySubcommand(args []string) {

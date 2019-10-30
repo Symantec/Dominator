@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Symantec/Dominator/lib/log"
-	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
-	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	fm_proto "github.com/Cloud-Foundations/Dominator/proto/fleetmanager"
+	hyper_proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 func findMatchingSubnet(subnets []*hyper_proto.Subnet,

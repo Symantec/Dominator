@@ -11,15 +11,15 @@ package lib
 import (
 	"errors"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/filter"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/objectcache"
-	"github.com/Symantec/Dominator/lib/objectserver"
-	"github.com/Symantec/Dominator/lib/srpc"
-	subproto "github.com/Symantec/Dominator/proto/sub"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
+	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	subproto "github.com/Cloud-Foundations/Dominator/proto/sub"
 )
 
 var (

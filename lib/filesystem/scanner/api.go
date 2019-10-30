@@ -3,12 +3,12 @@ package scanner
 import (
 	"io"
 
-	"github.com/Symantec/Dominator/lib/cpulimiter"
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/filter"
-	"github.com/Symantec/Dominator/lib/fsrateio"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/wsyscall"
+	"github.com/Cloud-Foundations/Dominator/lib/cpulimiter"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
+	"github.com/Cloud-Foundations/Dominator/lib/fsrateio"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/wsyscall"
 )
 
 type Hasher interface {

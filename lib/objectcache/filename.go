@@ -3,7 +3,7 @@ package objectcache
 import (
 	"fmt"
 
-	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
 )
 
 func filenameToHash(fileName string) (hash.Hash, error) {

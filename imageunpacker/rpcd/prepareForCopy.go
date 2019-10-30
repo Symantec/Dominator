@@ -1,8 +1,8 @@
 package rpcd
 
 import (
-	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/imageunpacker"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	proto "github.com/Cloud-Foundations/Dominator/proto/imageunpacker"
 )
 
 func (t *srpcType) PrepareForCopy(conn *srpc.Conn,

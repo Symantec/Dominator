@@ -6,7 +6,7 @@ import (
 	"net/rpc"
 	"testing"
 
-	"github.com/Symantec/Dominator/lib/resourcepool"
+	"github.com/Cloud-Foundations/Dominator/lib/resourcepool"
 )
 
 var serverAddress string

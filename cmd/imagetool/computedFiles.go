@@ -3,8 +3,8 @@ package main
 import (
 	"errors"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/filesystem/util"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem/util"
 )
 
 type computedFileType struct {

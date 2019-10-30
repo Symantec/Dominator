@@ -10,15 +10,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/netspeed"
-	"github.com/Symantec/Dominator/lib/objectcache"
-	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
-	"github.com/Symantec/Dominator/lib/rateio"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/sub"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/netspeed"
+	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
+	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/rateio"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/proto/sub"
 )
 
 const filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP

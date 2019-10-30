@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Symantec/Dominator/imageunpacker/client"
-	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/imageunpacker/client"
+	"github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 func getStatusSubcommand(srpcClient *srpc.Client, args []string) {

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/objectcache"
-	"github.com/Symantec/Dominator/lib/objectserver"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
+	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
 )
 
 func checkObjectSubcommand(objSrv objectserver.ObjectServer, args []string) {

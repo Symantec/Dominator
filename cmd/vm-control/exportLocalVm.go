@@ -6,12 +6,12 @@ import (
 	"os"
 	"os/exec"
 
-	hyperclient "github.com/Symantec/Dominator/hypervisor/client"
-	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	hyperclient "github.com/Cloud-Foundations/Dominator/hypervisor/client"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 type vmExporter interface {

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
 )
 
 func (netconf *NetworkConfig) printDebian(writer io.Writer) error {

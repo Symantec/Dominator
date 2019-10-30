@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/filter"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
 )
 
 func mergeFiltersSubcommand(args []string) {

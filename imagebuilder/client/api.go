@@ -3,8 +3,8 @@ package client
 import (
 	"io"
 
-	"github.com/Symantec/Dominator/lib/srpc"
-	proto "github.com/Symantec/Dominator/proto/imaginator"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	proto "github.com/Cloud-Foundations/Dominator/proto/imaginator"
 )
 
 func BuildImage(client *srpc.Client, request proto.BuildImageRequest,

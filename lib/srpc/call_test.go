@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Symantec/Dominator/proto/test"
+	"github.com/Cloud-Foundations/Dominator/proto/test"
 )
 
 type serverType struct{}

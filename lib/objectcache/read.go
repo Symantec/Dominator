@@ -7,7 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
 )
 
 func readObject(reader io.Reader, length uint64, expectedHash *hash.Hash) (

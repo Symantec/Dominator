@@ -1,24 +1,24 @@
 all:
-	@cd $(GOPATH)/src; go install github.com/Symantec/Dominator/cmd/*
+	@cd $(GOPATH)/src; go install github.com/Cloud-Foundations/Dominator/cmd/*
 	@cd c; make
 
 build-darwin:
-	@cd $(GOPATH)/src; (GOOS=darwin go build github.com/Symantec/Dominator/cmd/*)
+	@cd $(GOPATH)/src; (GOOS=darwin go build github.com/Cloud-Foundations/Dominator/cmd/*)
 
 build-linux:
-	@cd $(GOPATH)/src; (GOOS=linux go build github.com/Symantec/Dominator/cmd/*)
+	@cd $(GOPATH)/src; (GOOS=linux go build github.com/Cloud-Foundations/Dominator/cmd/*)
 
 build-windows:
-	@cd $(GOPATH)/src; (GOOS=windows go build github.com/Symantec/Dominator/cmd/*)
+	@cd $(GOPATH)/src; (GOOS=windows go build github.com/Cloud-Foundations/Dominator/cmd/*)
 
 install-darwin:
-	@cd $(GOPATH)/src; (GOOS=darwin go install github.com/Symantec/Dominator/cmd/*)
+	@cd $(GOPATH)/src; (GOOS=darwin go install github.com/Cloud-Foundations/Dominator/cmd/*)
 
 install-linux:
-	@cd $(GOPATH)/src; (GOOS=linux go install github.com/Symantec/Dominator/cmd/*)
+	@cd $(GOPATH)/src; (GOOS=linux go install github.com/Cloud-Foundations/Dominator/cmd/*)
 
 install-windows:
-	@cd $(GOPATH)/src; (GOOS=windows go install github.com/Symantec/Dominator/cmd/*)
+	@cd $(GOPATH)/src; (GOOS=windows go install github.com/Cloud-Foundations/Dominator/cmd/*)
 
 dominator.tarball:
 	@./scripts/make-tarball dominator -C $(ETCDIR) ssl
@@ -64,5 +64,5 @@ format-imports:
 
 test:
 	@find * -name '*_test.go' |\
-	sed -e 's@^@github.com/Symantec/Dominator/@' -e 's@/[^/]*$$@@' |\
+	sed -e 's@^@github.com/Cloud-Foundations/Dominator/@' -e 's@/[^/]*$$@@' |\
 	sort -u | xargs go test

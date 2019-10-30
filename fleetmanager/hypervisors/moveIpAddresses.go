@@ -5,11 +5,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/net/util"
-	"github.com/Symantec/Dominator/lib/srpc"
-	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/net/util"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	hyper_proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 func (m *Manager) addIp(hypervisorIpAddress, ip net.IP) error {

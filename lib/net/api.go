@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/log/nulllogger"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/log/nulllogger"
 )
 
 const (

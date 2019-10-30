@@ -1,8 +1,8 @@
 package rpcd
 
 import (
-	"github.com/Symantec/Dominator/lib/image"
-	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 func (t *srpcType) ListDirectories(conn *srpc.Conn) error {

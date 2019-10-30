@@ -5,7 +5,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/image"
 )
 
 func imageIsExpired(image *image.Image) bool {

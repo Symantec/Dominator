@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strconv"
 
-	"github.com/Symantec/Dominator/lib/meminfo"
+	"github.com/Cloud-Foundations/Dominator/lib/meminfo"
 )
 
 var (

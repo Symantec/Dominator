@@ -5,9 +5,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/log"
-	terminalclient "github.com/Symantec/Dominator/lib/net/terminal/client"
-	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	terminalclient "github.com/Cloud-Foundations/Dominator/lib/net/terminal/client"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 func installerShellSubcommand(args []string, logger log.DebugLogger) error {

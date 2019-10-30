@@ -9,12 +9,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/url"
-	"github.com/Symantec/Dominator/lib/verstr"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/url"
+	"github.com/Cloud-Foundations/Dominator/lib/verstr"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 const commonStyleSheet string = `<style>

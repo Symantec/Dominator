@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/tags"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/tags"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 func changeVmTagsSubcommand(args []string, logger log.DebugLogger) error {

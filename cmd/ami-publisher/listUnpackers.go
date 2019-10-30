@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
-	libjson "github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/imagepublishers/amipublisher"
+	libjson "github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
 func listUnpackersSubcommand(args []string, logger log.DebugLogger) {

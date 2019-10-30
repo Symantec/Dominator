@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	mynet "github.com/Symantec/Dominator/lib/net"
+	mynet "github.com/Cloud-Foundations/Dominator/lib/net"
 )
 
 var (

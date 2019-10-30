@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Symantec/Dominator/lib/awsutil"
-	libjson "github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Cloud-Foundations/Dominator/lib/awsutil"
+	libjson "github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )

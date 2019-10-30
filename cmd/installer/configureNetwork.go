@@ -11,11 +11,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/log"
-	libnet "github.com/Symantec/Dominator/lib/net"
-	"github.com/Symantec/Dominator/lib/net/configurator"
-	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	libnet "github.com/Cloud-Foundations/Dominator/lib/net"
+	"github.com/Cloud-Foundations/Dominator/lib/net/configurator"
+	fm_proto "github.com/Cloud-Foundations/Dominator/proto/fleetmanager"
 )
 
 func addMapping(mappings map[string]string, name string) error {

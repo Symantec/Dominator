@@ -12,15 +12,15 @@ import (
 	"sort"
 	"syscall"
 
-	imageclient "github.com/Symantec/Dominator/imageserver/client"
-	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/filesystem/util"
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/log/nulllogger"
-	objectclient "github.com/Symantec/Dominator/lib/objectserver/client"
-	"github.com/Symantec/Dominator/lib/srpc"
-	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
+	imageclient "github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem/util"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/log/nulllogger"
+	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	fm_proto "github.com/Cloud-Foundations/Dominator/proto/fleetmanager"
 )
 
 const (

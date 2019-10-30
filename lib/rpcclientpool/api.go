@@ -33,8 +33,8 @@ package rpcclientpool
 import (
 	"net/rpc"
 
-	"github.com/Symantec/Dominator/lib/net"
-	"github.com/Symantec/Dominator/lib/resourcepool"
+	"github.com/Cloud-Foundations/Dominator/lib/net"
+	"github.com/Cloud-Foundations/Dominator/lib/resourcepool"
 )
 
 // Client is a managed RPC client. It implements similar methods as rpc.Client

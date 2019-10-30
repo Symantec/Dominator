@@ -3,7 +3,7 @@ package sub
 import (
 	"encoding/gob"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 )
 
 func init() {

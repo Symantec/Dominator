@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb"
 )
 
 type makeGeneratorFunc func([]string, log.DebugLogger) (generator, error)

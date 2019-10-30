@@ -5,10 +5,10 @@ import (
 	"net"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/log"
-	terminalclient "github.com/Symantec/Dominator/lib/net/terminal/client"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	terminalclient "github.com/Cloud-Foundations/Dominator/lib/net/terminal/client"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 func connectToVmSerialPortSubcommand(args []string,

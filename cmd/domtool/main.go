@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/lib/flags/loadflags"
-	"github.com/Symantec/Dominator/lib/flagutil"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/srpc/setupclient"
+	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
+	"github.com/Cloud-Foundations/Dominator/lib/flagutil"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupclient"
 )
 
 var (

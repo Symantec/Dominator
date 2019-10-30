@@ -5,8 +5,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/Symantec/Dominator/imagepublishers/amipublisher"
-	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/imagepublishers/amipublisher"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
 func prepareUnpackersSubcommand(args []string, logger log.DebugLogger) {

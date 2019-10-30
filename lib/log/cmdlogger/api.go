@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/log/debuglogger"
+	"github.com/Cloud-Foundations/Dominator/lib/log/debuglogger"
 )
 
 type Options struct {

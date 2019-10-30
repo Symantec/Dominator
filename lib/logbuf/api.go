@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/bufwriter"
-	"github.com/Symantec/Dominator/lib/flagutil"
+	"github.com/Cloud-Foundations/Dominator/lib/bufwriter"
+	"github.com/Cloud-Foundations/Dominator/lib/flagutil"
 )
 
 var (

@@ -39,7 +39,7 @@ the advanced namespace management that is unique to Linux.
 First, grab a copy of the source code, using the following command:
 
 ```
-git clone https://github.com/Symantec/Dominator.git
+git clone https://github.com/Cloud-Foundations/Dominator.git
 ```
 
 This will create a sub-directory called `Dominator` containing the source code.

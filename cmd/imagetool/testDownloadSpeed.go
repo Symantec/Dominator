@@ -8,12 +8,12 @@ import (
 	"os"
 	"time"
 
-	imgclient "github.com/Symantec/Dominator/imageserver/client"
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/hash"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/objectserver"
+	imgclient "github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
 )
 
 func testDownloadSpeedSubcommand(args []string) {

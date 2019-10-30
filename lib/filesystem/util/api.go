@@ -5,11 +5,11 @@ import (
 	"io"
 	"os"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/filter"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/mbr"
-	"github.com/Symantec/Dominator/lib/objectserver"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/mbr"
+	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
 )
 
 type BootInfoType struct {

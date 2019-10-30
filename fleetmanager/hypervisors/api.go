@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Symantec/Dominator/fleetmanager/topology"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/tags"
-	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
-	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/fleetmanager/topology"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/tags"
+	fm_proto "github.com/Cloud-Foundations/Dominator/proto/fleetmanager"
+	hyper_proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 const (

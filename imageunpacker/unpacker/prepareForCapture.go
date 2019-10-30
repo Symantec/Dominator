@@ -8,10 +8,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/filesystem/util"
-	"github.com/Symantec/Dominator/lib/format"
-	proto "github.com/Symantec/Dominator/proto/imageunpacker"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem/util"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	proto "github.com/Cloud-Foundations/Dominator/proto/imageunpacker"
 )
 
 func scanBootDirectory(rootDir string) (*filesystem.FileSystem, error) {

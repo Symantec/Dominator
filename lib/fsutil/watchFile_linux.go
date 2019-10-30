@@ -6,7 +6,7 @@ import (
 	"path"
 	"sync"
 
-	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"gopkg.in/fsnotify/fsnotify.v0"
 )
 

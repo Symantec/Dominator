@@ -3,8 +3,8 @@ package logutil
 import (
 	"runtime"
 
-	"github.com/Symantec/Dominator/lib/format"
-	"github.com/Symantec/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
 func logMemory(logger log.DebugLogger, level int16, message string) {

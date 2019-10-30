@@ -3,8 +3,8 @@ package teelogger
 import (
 	"fmt"
 
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/log/debuglogger"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/log/debuglogger"
 )
 
 type flusher interface {

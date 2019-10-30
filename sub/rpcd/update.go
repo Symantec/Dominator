@@ -10,12 +10,12 @@ import (
 	"os/exec"
 	"time"
 
-	jsonlib "github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/triggers"
-	"github.com/Symantec/Dominator/proto/sub"
-	"github.com/Symantec/Dominator/sub/lib"
+	jsonlib "github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/triggers"
+	"github.com/Cloud-Foundations/Dominator/proto/sub"
+	"github.com/Cloud-Foundations/Dominator/sub/lib"
 )
 
 var (

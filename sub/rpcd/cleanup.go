@@ -4,10 +4,10 @@ import (
 	"errors"
 	"path"
 
-	"github.com/Symantec/Dominator/lib/fsutil"
-	"github.com/Symantec/Dominator/lib/objectcache"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/proto/sub"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/proto/sub"
 )
 
 func (t *rpcType) Cleanup(conn *srpc.Conn, request sub.CleanupRequest,

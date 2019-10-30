@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/log"
-	libnet "github.com/Symantec/Dominator/lib/net"
-	"github.com/Symantec/Dominator/lib/net/util"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	libnet "github.com/Cloud-Foundations/Dominator/lib/net"
+	"github.com/Cloud-Foundations/Dominator/lib/net/util"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 	dhcp "github.com/krolaw/dhcp4"
 	"golang.org/x/net/ipv4"
 )

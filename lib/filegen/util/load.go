@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Symantec/Dominator/lib/filegen"
-	"github.com/Symantec/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/filegen"
+	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
 )
 
 type configFunc func(*filegen.Manager, string, []string) error

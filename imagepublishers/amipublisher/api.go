@@ -3,10 +3,10 @@ package amipublisher
 import (
 	"time"
 
-	"github.com/Symantec/Dominator/lib/awsutil"
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/log"
-	libtags "github.com/Symantec/Dominator/lib/tags"
+	"github.com/Cloud-Foundations/Dominator/lib/awsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	libtags "github.com/Cloud-Foundations/Dominator/lib/tags"
 )
 
 const ExpiresAtFormat = "2006-01-02 15:04:05"

@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Symantec/Dominator/dom/lib"
-	"github.com/Symantec/Dominator/lib/filesystem"
-	"github.com/Symantec/Dominator/lib/filesystem/scanner"
-	"github.com/Symantec/Dominator/lib/filter"
-	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/objectcache"
-	"github.com/Symantec/Dominator/proto/sub"
-	"github.com/Symantec/Dominator/sub/client"
+	"github.com/Cloud-Foundations/Dominator/dom/lib"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem/scanner"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
+	"github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
+	"github.com/Cloud-Foundations/Dominator/proto/sub"
+	"github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
 func showUpdateRequestSubcommand(getSubClient getSubClientFunc, args []string) {

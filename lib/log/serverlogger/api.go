@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/Symantec/Dominator/lib/logbuf"
-	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/logbuf"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 var (

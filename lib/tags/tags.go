@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/Symantec/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/json"
 )
 
 func (tag *Tag) string() string {

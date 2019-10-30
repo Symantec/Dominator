@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/wsyscall"
+	"github.com/Cloud-Foundations/Dominator/lib/wsyscall"
 )
 
 func benchmarkedHandler(handler func(io.Writer,

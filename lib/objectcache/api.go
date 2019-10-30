@@ -3,7 +3,7 @@ package objectcache
 import (
 	"io"
 
-	"github.com/Symantec/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/hash"
 )
 
 type ObjectCache []hash.Hash

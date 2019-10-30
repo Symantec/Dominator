@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/Symantec/Dominator/lib/errors"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/verstr"
-	fm_proto "github.com/Symantec/Dominator/proto/fleetmanager"
-	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/verstr"
+	fm_proto "github.com/Cloud-Foundations/Dominator/proto/fleetmanager"
+	hyper_proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 func listVMsSubcommand(args []string, logger log.DebugLogger) error {

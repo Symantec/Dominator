@@ -1,7 +1,7 @@
 package rpcd
 
 import (
-	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 func (t *srpcType) ReplaceVmImage(conn *srpc.Conn) error {

@@ -6,7 +6,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/Symantec/Dominator/lib/wsyscall"
+	"github.com/Cloud-Foundations/Dominator/lib/wsyscall"
 )
 
 const (

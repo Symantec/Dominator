@@ -7,15 +7,15 @@ import (
 	"os"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/constants"
-	"github.com/Symantec/Dominator/lib/flags/loadflags"
-	"github.com/Symantec/Dominator/lib/flagutil"
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/log/cmdlogger"
-	"github.com/Symantec/Dominator/lib/net/rrdialer"
-	"github.com/Symantec/Dominator/lib/srpc/setupclient"
-	"github.com/Symantec/Dominator/lib/tags"
-	hyper_proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
+	"github.com/Cloud-Foundations/Dominator/lib/flagutil"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/log/cmdlogger"
+	"github.com/Cloud-Foundations/Dominator/lib/net/rrdialer"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupclient"
+	"github.com/Cloud-Foundations/Dominator/lib/tags"
+	hyper_proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 var (

@@ -4,11 +4,11 @@ import (
 	"io"
 	"sync"
 
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/rateio"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/srpc/serverutil"
-	"github.com/Symantec/Dominator/sub/scanner"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/rateio"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc/serverutil"
+	"github.com/Cloud-Foundations/Dominator/sub/scanner"
 	"github.com/Symantec/tricorder/go/tricorder"
 	"github.com/Symantec/tricorder/go/tricorder/units"
 )

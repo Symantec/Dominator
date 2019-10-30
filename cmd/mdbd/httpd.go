@@ -7,9 +7,9 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/Symantec/Dominator/lib/html"
-	"github.com/Symantec/Dominator/lib/json"
-	"github.com/Symantec/Dominator/lib/mdb"
+	"github.com/Cloud-Foundations/Dominator/lib/html"
+	"github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/mdb"
 )
 
 type HtmlWriter interface {

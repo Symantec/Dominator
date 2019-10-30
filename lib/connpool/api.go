@@ -41,7 +41,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/resourcepool"
+	"github.com/Cloud-Foundations/Dominator/lib/resourcepool"
 )
 
 // Dialer implements a dialer that can be use to create connections.

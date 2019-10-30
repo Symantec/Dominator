@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Symantec/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
 func (objClient *ObjectClient) close() error {

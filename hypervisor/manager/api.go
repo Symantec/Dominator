@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Symantec/Dominator/lib/log"
-	"github.com/Symantec/Dominator/lib/objectserver/cachingreader"
-	"github.com/Symantec/Dominator/lib/srpc"
-	"github.com/Symantec/Dominator/lib/tags"
-	proto "github.com/Symantec/Dominator/proto/hypervisor"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/objectserver/cachingreader"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/tags"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 type addressPoolType struct {
