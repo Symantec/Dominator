@@ -26,9 +26,25 @@ func TestGobExplicit(t *testing.T) {
 	checkTestdata(t, testdata)
 }
 
+func TestGobImplicit(t *testing.T) {
+	var testdata testdataType
+	if err := FindAndDecodeFile("testdata/data-gob", &testdata); err != nil {
+		t.Fatal(err)
+	}
+	checkTestdata(t, testdata)
+}
+
 func TestJsonExplicit(t *testing.T) {
 	var testdata testdataType
 	if err := DecodeFile("testdata/data.json", &testdata); err != nil {
+		t.Fatal(err)
+	}
+	checkTestdata(t, testdata)
+}
+
+func TestJsonImplicit(t *testing.T) {
+	var testdata testdataType
+	if err := FindAndDecodeFile("testdata/data-json", &testdata); err != nil {
 		t.Fatal(err)
 	}
 	checkTestdata(t, testdata)

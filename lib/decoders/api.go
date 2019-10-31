@@ -15,5 +15,9 @@ func RegisterDecoder(extension string, decoderGenerator DecoderGenerator) {
 }
 
 func DecodeFile(filename string, value interface{}) error {
-	return decodeFile(filename, value)
+	return defaultDecoders.decodeFile(filename, value)
+}
+
+func FindAndDecodeFile(basename string, value interface{}) error {
+	return defaultDecoders.findAndDecodeFile(basename, value)
 }

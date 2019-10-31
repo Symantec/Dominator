@@ -16,10 +16,6 @@ var defaultDecoders = decoderMap{
 	".json": func(r io.Reader) Decoder { return json.NewDecoder(r) },
 }
 
-func decodeFile(filename string, value interface{}) error {
-	return defaultDecoders.decodeFile(filename, value)
-}
-
 func registerDecoder(extension string, decoderGenerator DecoderGenerator) {
 	defaultDecoders[extension] = decoderGenerator
 }
@@ -40,4 +36,21 @@ func (decoders decoderMap) decodeFile(filename string,
 		defer file.Close()
 		return decoderGenerator(file).Decode(value)
 	}
+}
+
+func (decoders decoderMap) findAndDecodeFile(basename string,
+	value interface{}) error {
+	for ext, decoderGenerator := range decoders {
+		filename := basename + ext
+		if file, err := os.Open(filename); err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return err
+		} else {
+			defer file.Close()
+			return decoderGenerator(file).Decode(value)
+		}
+	}
+	return fmt.Errorf("no matching extension for base file: %s", basename)
 }
