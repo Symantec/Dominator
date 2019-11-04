@@ -13,7 +13,7 @@ func watch(topologyRepository, localRepositoryDir, topologyDir string,
 	checkInterval time.Duration,
 	logger log.DebugLogger) (<-chan *Topology, error) {
 	directoryChannel, err := repowatch.Watch(topologyRepository,
-		localRepositoryDir, checkInterval, "fleet-manager/git-pull-latency",
+		localRepositoryDir, checkInterval, "fleet-manager/topology-watcher",
 		logger)
 	if err != nil {
 		return nil, err
