@@ -16,6 +16,13 @@ import (
 	"github.com/Cloud-Foundations/tricorder/go/tricorder/units"
 )
 
+type gitMetricsType struct {
+	lastAttemptedPullTime  time.Time
+	lastSuccessfulPullTime time.Time
+	lastNotificationTime   time.Time
+	latencyDistribution    *tricorder.CumulativeDistribution
+}
+
 func checkDirectory(directory string) error {
 	if fi, err := os.Stat(directory); err != nil {
 		return err
@@ -35,12 +42,14 @@ func gitCommand(repositoryDirectory string, command ...string) error {
 }
 
 func gitPull(repositoryDirectory string,
-	latencyDistribution *tricorder.CumulativeDistribution) (string, error) {
-	startTime := time.Now()
+	metrics *gitMetricsType) (string, error) {
+	metrics.lastAttemptedPullTime = time.Now()
 	if err := gitCommand(repositoryDirectory, "pull"); err != nil {
 		return "", err
 	}
-	latencyDistribution.Add(time.Since(startTime))
+	metrics.lastSuccessfulPullTime = time.Now()
+	metrics.latencyDistribution.Add(
+		metrics.lastSuccessfulPullTime.Sub(metrics.lastAttemptedPullTime))
 	return readLatestCommitId(repositoryDirectory)
 }
 
@@ -54,7 +63,7 @@ func readLatestCommitId(repositoryDirectory string) (string, error) {
 }
 
 func setupGitRepository(remoteURL, localDirectory string,
-	latencyDistribution *tricorder.CumulativeDistribution) (string, error) {
+	metrics *gitMetricsType) (string, error) {
 	if err := os.MkdirAll(localDirectory, fsutil.DirPerms); err != nil {
 		return "", err
 	}
@@ -63,77 +72,111 @@ func setupGitRepository(remoteURL, localDirectory string,
 		if !os.IsNotExist(err) {
 			return "", err
 		}
+		metrics.lastAttemptedPullTime = time.Now()
 		err := gitCommand(localDirectory, "clone", remoteURL, ".")
 		if err != nil {
 			return "", err
 		}
+		metrics.lastSuccessfulPullTime = time.Now()
 		return readLatestCommitId(localDirectory)
 	} else {
-		return gitPull(localDirectory, latencyDistribution)
+		return gitPull(localDirectory, metrics)
 	}
 }
 
 func watch(remoteURL, localDirectory string, checkInterval time.Duration,
-	metricName string, logger log.DebugLogger) (<-chan string, error) {
+	metricDirectory string, logger log.DebugLogger) (<-chan string, error) {
 	if checkInterval < time.Second {
 		checkInterval = time.Second
 	}
 	if remoteURL == "" {
-		return watchLocal(localDirectory, checkInterval, logger)
+		return watchLocal(localDirectory, checkInterval, metricDirectory,
+			logger)
 	}
-	return watchGit(remoteURL, localDirectory, checkInterval, metricName,
+	return watchGit(remoteURL, localDirectory, checkInterval, metricDirectory,
 		logger)
 }
 
 func watchGit(remoteURL, localDirectory string, checkInterval time.Duration,
-	metricName string, logger log.DebugLogger) (<-chan string, error) {
+	metricDirectory string, logger log.DebugLogger) (<-chan string, error) {
 	notificationChannel := make(chan string, 1)
-	latencyDistribution := tricorder.NewGeometricBucketer(1, 1e5).
-		NewCumulativeDistribution()
-	err := tricorder.RegisterMetric(metricName, latencyDistribution,
+	metrics := &gitMetricsType{
+		latencyDistribution: tricorder.NewGeometricBucketer(1, 1e5).
+			NewCumulativeDistribution(),
+	}
+	err := tricorder.RegisterMetric(filepath.Join(metricDirectory,
+		"git-pull-latency"), metrics.latencyDistribution,
 		units.Millisecond, "latency of git pull calls")
 	if err != nil {
 		return nil, err
 	}
-	commitId, err := setupGitRepository(remoteURL, localDirectory,
-		latencyDistribution)
+	commitId, err := setupGitRepository(remoteURL, localDirectory, metrics)
 	if err != nil {
 		return nil, err
 	}
-	go watchGitLoop(localDirectory, commitId, checkInterval,
-		latencyDistribution, notificationChannel, logger)
+	err = tricorder.RegisterMetric(filepath.Join(metricDirectory,
+		"last-attempted-git-pull-time"), &metrics.lastAttemptedPullTime,
+		units.None, "time of last attempted git pull")
+	if err != nil {
+		return nil, err
+	}
+	err = tricorder.RegisterMetric(filepath.Join(metricDirectory,
+		"last-successful-git-pull-time"), &metrics.lastSuccessfulPullTime,
+		units.None, "time of last successful git pull")
+	if err != nil {
+		return nil, err
+	}
+	err = tricorder.RegisterMetric(filepath.Join(metricDirectory,
+		"last-notification-time"), &metrics.lastNotificationTime, units.None,
+		"time of last git change notification")
+	if err != nil {
+		return nil, err
+	}
+	go watchGitLoop(localDirectory, commitId, checkInterval, metrics,
+		notificationChannel, logger)
 	return notificationChannel, nil
 }
 
 func watchGitLoop(directory, lastCommitId string, checkInterval time.Duration,
-	latencyDist *tricorder.CumulativeDistribution,
-	notificationChannel chan<- string, logger log.DebugLogger) {
+	metrics *gitMetricsType, notificationChannel chan<- string,
+	logger log.DebugLogger) {
 	for ; ; time.Sleep(checkInterval) {
-		if commitId, err := gitPull(directory, latencyDist); err != nil {
+		if commitId, err := gitPull(directory, metrics); err != nil {
 			logger.Println(err)
 		} else if commitId != lastCommitId {
 			lastCommitId = commitId
+			metrics.lastNotificationTime = time.Now()
 			notificationChannel <- directory
 		}
 	}
 }
 
 func watchLocal(directory string, checkInterval time.Duration,
-	logger log.DebugLogger) (<-chan string, error) {
+	metricDirectory string, logger log.DebugLogger) (<-chan string, error) {
 	if err := checkDirectory(directory); err != nil {
 		return nil, err
 	}
+	var lastNotificationTime time.Time
+	err := tricorder.RegisterMetric(filepath.Join(metricDirectory,
+		"last-notification-time"), &lastNotificationTime, units.None,
+		"time of last notification")
+	if err != nil {
+		return nil, err
+	}
 	notificationChannel := make(chan string, 1)
-	go watchLocalLoop(directory, checkInterval, notificationChannel, logger)
+	go watchLocalLoop(directory, checkInterval, &lastNotificationTime,
+		notificationChannel, logger)
 	return notificationChannel, nil
 }
 
 func watchLocalLoop(directory string, checkInterval time.Duration,
-	notificationChannel chan<- string, logger log.DebugLogger) {
+	lastNotificationTime *time.Time, notificationChannel chan<- string,
+	logger log.DebugLogger) {
 	for ; ; time.Sleep(checkInterval) {
 		if err := checkDirectory(directory); err != nil {
 			logger.Println(err)
 		} else {
+			*lastNotificationTime = time.Now()
 			notificationChannel <- directory
 		}
 	}
