@@ -49,8 +49,11 @@ func (decoders decoderMap) findAndDecodeFile(basename string,
 			return err
 		} else {
 			defer file.Close()
-			return decoderGenerator(file).Decode(value)
+			if err := decoderGenerator(file).Decode(value); err != nil {
+				return fmt.Errorf("%s: %s", filename, err)
+			}
+			return nil
 		}
 	}
-	return fmt.Errorf("no matching extension for base file: %s", basename)
+	return os.ErrNotExist
 }
