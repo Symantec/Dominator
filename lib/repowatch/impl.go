@@ -80,7 +80,7 @@ func setupGitRepository(remoteURL, localDirectory string,
 		metrics.lastSuccessfulPullTime = time.Now()
 		return readLatestCommitId(localDirectory)
 	} else {
-		return gitPull(localDirectory, metrics)
+		return gitPull(localDirectory, metrics) // Ensure freshness.
 	}
 }
 
@@ -132,6 +132,8 @@ func watchGit(remoteURL, localDirectory string, checkInterval time.Duration,
 	if err != nil {
 		return nil, err
 	}
+	metrics.lastNotificationTime = time.Now()
+	notificationChannel <- localDirectory
 	go watchGitLoop(localDirectory, commitId, checkInterval, metrics,
 		notificationChannel, logger)
 	return notificationChannel, nil
@@ -140,7 +142,8 @@ func watchGit(remoteURL, localDirectory string, checkInterval time.Duration,
 func watchGitLoop(directory, lastCommitId string, checkInterval time.Duration,
 	metrics *gitMetricsType, notificationChannel chan<- string,
 	logger log.DebugLogger) {
-	for ; ; time.Sleep(checkInterval) {
+	for {
+		time.Sleep(checkInterval)
 		if commitId, err := gitPull(directory, metrics); err != nil {
 			logger.Println(err)
 		} else if commitId != lastCommitId {
