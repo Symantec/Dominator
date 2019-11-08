@@ -76,6 +76,7 @@ func processControlConnection(conn net.Conn, m *manager.Manager,
 			if _, err := fmt.Fprintln(conn, "ok"); err != nil {
 				return err
 			}
+			os.Remove(m.GetRootCookiePath())
 			if shutdownVMsOnNextStop {
 				m.ShutdownVMsAndExit()
 			} else {
