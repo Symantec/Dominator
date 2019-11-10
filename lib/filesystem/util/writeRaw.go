@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/Cloud-Foundations/Dominator/lib/constants"
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 	"github.com/Cloud-Foundations/Dominator/lib/format"
 	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
@@ -271,6 +273,9 @@ func makeAndWriteRoot(fs *filesystem.FileSystem,
 	if err := Unpack(fs, objectsGetter, mountPoint, logger); err != nil {
 		return err
 	}
+	if err := writeImageName(mountPoint, options.InitialImageName); err != nil {
+		return err
+	}
 	if options.WriteFstab {
 		err := writeRootFstabEntry(mountPoint, options.RootLabel)
 		if err != nil {
@@ -477,6 +482,24 @@ func writeFstabEntry(writer io.Writer,
 	_, err := fmt.Fprintf(writer, "%-22s %-10s %-5s %-10s %d %d\n",
 		source, mountPoint, fileSystemType, flags, dumpFrequency, checkOrder)
 	return err
+}
+
+func writeImageName(mountPoint, imageName string) error {
+	pathname := filepath.Join(mountPoint, constants.InitialImageNameFile)
+	if imageName == "" {
+		if err := os.Remove(pathname); err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return err
+		}
+	}
+	if err := os.MkdirAll(filepath.Dir(pathname), fsutil.DirPerms); err != nil {
+		return err
+	}
+	buffer := &bytes.Buffer{}
+	fmt.Fprintln(buffer, imageName)
+	return fsutil.CopyToFile(pathname, fsutil.PublicFilePerms, buffer, 0)
 }
 
 func writeToBlock(fs *filesystem.FileSystem,
