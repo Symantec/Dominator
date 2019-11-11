@@ -22,6 +22,7 @@ import (
 
 	imageclient "github.com/Cloud-Foundations/Dominator/imageserver/client"
 	"github.com/Cloud-Foundations/Dominator/lib/concurrent"
+	"github.com/Cloud-Foundations/Dominator/lib/constants"
 	"github.com/Cloud-Foundations/Dominator/lib/cpusharer"
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem/util"
@@ -202,7 +203,7 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 	if err != nil {
 		return nil, err
 	}
-	img, client, err := getImage(logger)
+	imageName, img, client, err := getImage(logger)
 	if err != nil {
 		return nil, err
 	}
@@ -341,9 +342,22 @@ func configureStorage(config fm_proto.GetMachineInfoResponse,
 	if err := fsutil.CopyTree(logdir, *tftpDirectory); err != nil {
 		return nil, err
 	}
+	if err := writeImageName(*mountPoint, imageName); err != nil {
+		return nil, err
+	}
 	logger.Printf("configureStorage() took %s\n",
 		format.Duration(time.Since(startTime)))
 	return rebooter, nil
+}
+
+func writeImageName(mountPoint, imageName string) error {
+	pathname := filepath.Join(mountPoint, constants.InitialImageNameFile)
+	if err := os.MkdirAll(filepath.Dir(pathname), fsutil.DirPerms); err != nil {
+		return err
+	}
+	buffer := &bytes.Buffer{}
+	fmt.Fprintln(buffer, imageName)
+	return fsutil.CopyToFile(pathname, fsutil.PublicFilePerms, buffer, 0)
 }
 
 func eraseStart(device string, logger log.DebugLogger) error {
@@ -364,25 +378,26 @@ func eraseStart(device string, logger log.DebugLogger) error {
 	return nil
 }
 
-func getImage(logger log.DebugLogger) (*image.Image, *srpc.Client, error) {
+func getImage(logger log.DebugLogger) (
+	string, *image.Image, *srpc.Client, error) {
 	data, err := ioutil.ReadFile(filepath.Join(*tftpDirectory, "imagename"))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil, nil
+			return "", nil, nil, nil
 		}
-		return nil, nil, err
+		return "", nil, nil, err
 	}
 	imageName := strings.TrimSpace(string(data))
 	data, err = ioutil.ReadFile(filepath.Join(*tftpDirectory, "imageserver"))
 	if err != nil {
-		return nil, nil, err
+		return "", nil, nil, err
 	}
 	imageServerAddress := strings.TrimSpace(string(data))
 	logger.Printf("dialing imageserver: %s\n", imageServerAddress)
 	startTime := time.Now()
 	client, err := srpc.DialHTTP("tcp", imageServerAddress, time.Second*15)
 	if err != nil {
-		return nil, nil, err
+		return "", nil, nil, err
 	}
 	logger.Printf("dialed imageserver after: %s\n",
 		format.Duration(time.Since(startTime)))
@@ -390,44 +405,44 @@ func getImage(logger log.DebugLogger) (*image.Image, *srpc.Client, error) {
 	if img, _ := imageclient.GetImage(client, imageName); img != nil {
 		logger.Debugf(0, "got image: %s in %s\n",
 			imageName, format.Duration(time.Since(startTime)))
-		return img, client, nil
+		return imageName, img, client, nil
 	}
 	streamName := imageName
 	isDir, err := imageclient.CheckDirectory(client, streamName)
 	if err != nil {
 		client.Close()
-		return nil, nil, err
+		return "", nil, nil, err
 	}
 	if !isDir {
 		streamName = filepath.Dir(streamName)
 		isDir, err = imageclient.CheckDirectory(client, streamName)
 		if err != nil {
 			client.Close()
-			return nil, nil, err
+			return "", nil, nil, err
 		}
 	}
 	if !isDir {
 		client.Close()
-		return nil, nil, fmt.Errorf("%s is not a directory", streamName)
+		return "", nil, nil, fmt.Errorf("%s is not a directory", streamName)
 	}
 	imageName, err = imageclient.FindLatestImage(client, streamName, false)
 	if err != nil {
 		client.Close()
-		return nil, nil, err
+		return "", nil, nil, err
 	}
 	if imageName == "" {
 		client.Close()
-		return nil, nil, fmt.Errorf("no image found in: %s on: %s",
+		return "", nil, nil, fmt.Errorf("no image found in: %s on: %s",
 			streamName, imageServerAddress)
 	}
 	startTime = time.Now()
 	if img, err := imageclient.GetImage(client, imageName); err != nil {
 		client.Close()
-		return nil, nil, err
+		return "", nil, nil, err
 	} else {
 		logger.Debugf(0, "got image: %s in %s\n",
 			imageName, format.Duration(time.Since(startTime)))
-		return img, client, nil
+		return imageName, img, client, nil
 	}
 }
 
