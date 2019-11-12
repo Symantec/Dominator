@@ -689,6 +689,7 @@ func (m *Manager) createVm(conn *srpc.Conn) error {
 			return err
 		}
 		writeRawOptions := util.WriteRawOptions{
+			InitialImageName: imageName,
 			MinimumFreeBytes: request.MinimumFreeBytes,
 			RootLabel:        vm.rootLabel(),
 			RoundupPower:     request.RoundupPower,
@@ -1798,6 +1799,7 @@ func (m *Manager) patchVmImage(conn *srpc.Conn,
 		debuglogger.New(vm.logger)) {
 		return errors.New("failed building update: missing computed files")
 	}
+	subRequest.ImageName = imageName
 	subRequest.Triggers = nil
 	if err := sendVmPatchImageMessage(conn, "starting update"); err != nil {
 		return err
@@ -1959,6 +1961,7 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn,
 			return err
 		}
 		writeRawOptions := util.WriteRawOptions{
+			InitialImageName: imageName,
 			MinimumFreeBytes: request.MinimumFreeBytes,
 			RootLabel:        vm.rootLabel(),
 			RoundupPower:     request.RoundupPower,
