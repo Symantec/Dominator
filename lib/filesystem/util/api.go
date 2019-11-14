@@ -107,6 +107,7 @@ func WriteFstabEntry(writer io.Writer,
 type WriteRawOptions struct {
 	AllocateBlocks    bool
 	DoChroot          bool
+	InitialImageName  string
 	InstallBootloader bool
 	MinimumFreeBytes  uint64
 	RootLabel         string

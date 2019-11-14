@@ -21,6 +21,9 @@ const (
 	GroupListOID           = AssignedOIDBase + ".2"
 
 	DefaultMdbFile = "/var/lib/mdbd/mdb.json"
+
+	InitialImageNameFile = "/var/lib/initial-image"
+	PatchedImageNameFile = "/var/lib/patched-image"
 )
 
 var RequiredPaths = map[string]rune{

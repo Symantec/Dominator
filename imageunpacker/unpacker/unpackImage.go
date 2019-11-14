@@ -11,6 +11,7 @@ import (
 
 	domlib "github.com/Cloud-Foundations/Dominator/dom/lib"
 	imageclient "github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/constants"
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem/util"
 	"github.com/Cloud-Foundations/Dominator/lib/filter"
@@ -35,7 +36,8 @@ func (u *Unpacker) unpackImage(streamName string, imageLeafName string) error {
 	if streamInfo == nil {
 		return errors.New("unknown stream")
 	}
-	fs := u.getImage(filepath.Join(streamName, imageLeafName)).FileSystem
+	imageName := filepath.Join(streamName, imageLeafName)
+	fs := u.getImage(imageName).FileSystem
 	if err := fs.RebuildInodePointers(); err != nil {
 		return err
 	}
@@ -48,7 +50,7 @@ func (u *Unpacker) unpackImage(streamName string, imageLeafName string) error {
 	request := requestType{
 		request:      requestUnpack,
 		desiredFS:    fs,
-		imageName:    filepath.Join(streamName, imageLeafName),
+		imageName:    imageName,
 		errorChannel: errorChannel,
 	}
 	streamInfo.requestChannel <- request
@@ -139,7 +141,9 @@ func (stream *streamManagerState) unpack(imageName string,
 		stream.unpacker.logger)
 	_, _, err = sublib.Update(request, mountPoint, objectsDir, nil, nil, nil,
 		stream.unpacker.logger)
-	writeImageName(imageName, mountPoint)
+	if err == nil {
+		err = writeImageName(mountPoint, imageName)
+	}
 	streamInfo.status = unpackproto.StatusStreamMounted
 	stream.unpacker.logger.Printf("Update(%s) completed in %s\n",
 		imageName, format.Duration(time.Since(startTime)))
@@ -289,13 +293,12 @@ func readOne(objectsDir string, hashVal hash.Hash, length uint64,
 	return fsutil.CopyToFile(filename, filePerms, reader, length)
 }
 
-func writeImageName(imageName, mountPoint string) {
-	dirname := filepath.Join(mountPoint, "var", "log")
-	if err := os.MkdirAll(dirname, fsutil.DirPerms); err != nil {
-		return
+func writeImageName(mountPoint, imageName string) error {
+	pathname := filepath.Join(mountPoint, constants.InitialImageNameFile)
+	if err := os.MkdirAll(filepath.Dir(pathname), fsutil.DirPerms); err != nil {
+		return err
 	}
 	buffer := &bytes.Buffer{}
 	fmt.Fprintln(buffer, imageName)
-	fsutil.CopyToFile(filepath.Join(dirname, "unpacked-image"),
-		fsutil.PublicFilePerms, buffer, 0)
+	return fsutil.CopyToFile(pathname, fsutil.PublicFilePerms, buffer, 0)
 }
