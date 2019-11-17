@@ -10,6 +10,10 @@ package flagutil
 // flag.Value interface.
 type Size uint64
 
+// A SizeList is a slice of Size types that satisfies the standard library
+// flag.Value interface.
+type SizeList []Size
+
 // A StringList is a slice of strings that satisfies the standard library
 // flag.Value interface.
 type StringList []string
