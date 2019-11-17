@@ -181,7 +181,6 @@ func (s *DhcpServer) makeOptions(subnet *proto.Subnet,
 		leaseOptions[dhcp.OptionHostName] = []byte(lease.Hostname)
 	}
 	if lease.doNetboot {
-		leaseOptions[dhcp.OptionTFTPServerName] = s.myIP
 		leaseOptions[dhcp.OptionBootFileName] = s.networkBootImage
 	}
 	return leaseOptions
@@ -255,10 +254,12 @@ func (s *DhcpServer) ServeDHCP(req dhcp.Packet, msgType dhcp.MessageType,
 		s.logger.Debugf(0, "DHCP Offer: %s for: %s, server: %s\n",
 			lease.IpAddress, macAddr, s.myIP)
 		leaseOptions := s.makeOptions(subnet, lease)
-		return dhcp.ReplyPacket(req, dhcp.Offer, s.myIP, lease.IpAddress,
+		packet := dhcp.ReplyPacket(req, dhcp.Offer, s.myIP, lease.IpAddress,
 			leaseTime,
 			leaseOptions.SelectOrderOrAll(
 				options[dhcp.OptionParameterRequestList]))
+		packet.SetSIAddr(s.myIP)
+		return packet
 	case dhcp.Request:
 		reqIP := net.IP(options[dhcp.OptionRequestedIPAddress])
 		if reqIP == nil {
@@ -292,9 +293,11 @@ func (s *DhcpServer) ServeDHCP(req dhcp.Packet, msgType dhcp.MessageType,
 			leaseOptions := s.makeOptions(subnet, lease)
 			s.logger.Debugf(0, "DHCP ACK for: %s to: %s\n", reqIP, macAddr)
 			s.acknowledgeLease(lease.IpAddress)
-			return dhcp.ReplyPacket(req, dhcp.ACK, s.myIP, reqIP, leaseTime,
+			packet := dhcp.ReplyPacket(req, dhcp.ACK, s.myIP, reqIP, leaseTime,
 				leaseOptions.SelectOrderOrAll(
 					options[dhcp.OptionParameterRequestList]))
+			packet.SetSIAddr(s.myIP)
+			return packet
 		} else {
 			s.logger.Debugf(0, "DHCP NAK for: %s to: %s\n", reqIP, macAddr)
 			return dhcp.ReplyPacket(req, dhcp.NAK, s.myIP, nil, 0, nil)
