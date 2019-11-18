@@ -11,7 +11,6 @@ import (
 	"time"
 
 	hyperclient "github.com/Cloud-Foundations/Dominator/hypervisor/client"
-	"github.com/Cloud-Foundations/Dominator/lib/flagutil"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/lib/tags"
@@ -149,10 +148,9 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 				IpAddress: ipAddr}
 		}
 	}
-	if sizes, err := parseSizes(secondaryVolumeSizes); err != nil {
-		return err
-	} else {
-		request.SecondaryVolumes = sizes
+	for _, size := range secondaryVolumeSizes {
+		request.SecondaryVolumes = append(request.SecondaryVolumes,
+			hyper_proto.Volume{Size: uint64(size)})
 	}
 	var imageReader, userDataReader io.Reader
 	if *imageName != "" {
@@ -258,20 +256,4 @@ func getReader(filename string) (io.ReadCloser, int64, error) {
 		}
 		return file, fi.Size(), nil
 	}
-}
-
-func parseSizes(strSizes flagutil.StringList) ([]hyper_proto.Volume, error) {
-	var volumes []hyper_proto.Volume
-	for _, strSize := range strSizes {
-		var size uint64
-		if _, err := fmt.Sscanf(strSize, "%dM", &size); err == nil {
-			volumes = append(volumes, hyper_proto.Volume{Size: size << 20})
-		} else if _, err := fmt.Sscanf(strSize, "%dG", &size); err == nil {
-			volumes = append(volumes, hyper_proto.Volume{Size: size << 30})
-		} else {
-			return nil,
-				fmt.Errorf("error parsing secondary volume sizes: %s", err)
-		}
-	}
-	return volumes, nil
 }

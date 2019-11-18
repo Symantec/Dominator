@@ -63,7 +63,7 @@ var (
 	probeTimeout = flag.Duration("probeTimeout", time.Minute*5,
 		"Time to wait before timing out on probing VM port")
 	secondarySubnetIDs   flagutil.StringList
-	secondaryVolumeSizes flagutil.StringList
+	secondaryVolumeSizes flagutil.SizeList
 	serialPort           = flag.Uint("serialPort", 0,
 		"Serial port number on VM")
 	skipBootloader = flag.Bool("skipBootloader", false,
