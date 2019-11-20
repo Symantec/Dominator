@@ -68,14 +68,14 @@ func computeSize(minimumFreeBytes, roundupPower, size uint64) uint64 {
 
 func copyData(filename string, reader io.Reader, length uint64,
 	perm os.FileMode) error {
-	if length < 1 {
-		return nil
-	}
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, perm)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
+	if length < 1 {
+		return nil
+	}
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
 	_, err = io.CopyN(writer, reader, int64(length))
@@ -731,6 +731,10 @@ func (m *Manager) createVm(conn *srpc.Conn) error {
 		if err != nil {
 			return sendError(conn, err)
 		}
+	} else if request.MinimumFreeBytes > 0 { // Create empty root volume.
+		if err = vm.copyRootVolume(request, nil, 0); err != nil {
+			return sendError(conn, err)
+		}
 	} else {
 		return sendError(conn, errors.New("no image specified"))
 	}
@@ -772,7 +776,8 @@ func (m *Manager) createVm(conn *srpc.Conn) error {
 	if err := sendUpdate(conn, "starting VM"); err != nil {
 		return err
 	}
-	dhcpTimedOut, err := vm.startManaging(request.DhcpTimeout, false)
+	dhcpTimedOut, err := vm.startManaging(request.DhcpTimeout,
+		request.EnableNetboot, false)
 	if err != nil {
 		return sendError(conn, err)
 	}
@@ -1256,7 +1261,7 @@ func (m *Manager) importLocalVm(authInfo *srpc.AuthInformation,
 			dirname, destFilename})
 	}
 	m.vms[ipAddress] = vm
-	if _, err := vm.startManaging(0, true); err != nil {
+	if _, err := vm.startManaging(0, false, true); err != nil {
 		return err
 	}
 	vm = nil // Cancel cleanup.
@@ -1444,7 +1449,7 @@ func (m *Manager) migrateVm(conn *srpc.Conn) error {
 	m.mutex.Lock()
 	m.vms[ipAddress] = vm
 	m.mutex.Unlock()
-	dhcpTimedOut, err := vm.startManaging(request.DhcpTimeout, false)
+	dhcpTimedOut, err := vm.startManaging(request.DhcpTimeout, false, false)
 	if err != nil {
 		return err
 	}
@@ -2205,7 +2210,7 @@ func (m *Manager) startVm(ipAddr net.IP, authInfo *srpc.AuthInformation,
 		vm.setState(proto.StateStarting)
 		vm.mutex.Unlock()
 		doUnlock = false
-		return vm.startManaging(dhcpTimeout, false)
+		return vm.startManaging(dhcpTimeout, false, false)
 	case proto.StateDestroying:
 		return false, errors.New("VM is destroying")
 	case proto.StateMigrating:
@@ -2687,7 +2692,7 @@ func (vm *vmInfoType) setupVolumes(rootSize uint64,
 
 // This may grab the VM lock.
 func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration,
-	haveManagerLock bool) (bool, error) {
+	enableNetboot, haveManagerLock bool) (bool, error) {
 	vm.monitorSockname = filepath.Join(vm.dirname, "monitor.sock")
 	vm.logger.Debugln(1, "startManaging() starting")
 	switch vm.State {
@@ -2715,15 +2720,17 @@ func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration,
 		vm.logger.Println("unknown state: " + vm.State.String())
 		return false, nil
 	}
-	vm.manager.DhcpServer.AddLease(vm.Address, vm.Hostname)
-	for _, address := range vm.SecondaryAddresses {
-		vm.manager.DhcpServer.AddLease(address, vm.Hostname)
+	if dhcpTimeout >= 0 {
+		vm.manager.DhcpServer.AddLease(vm.Address, vm.Hostname)
+		for _, address := range vm.SecondaryAddresses {
+			vm.manager.DhcpServer.AddLease(address, vm.Hostname)
+		}
 	}
 	monitorSock, err := net.Dial("unix", vm.monitorSockname)
 	if err != nil {
 		vm.logger.Debugf(1, "error connecting to: %s: %s\n",
 			vm.monitorSockname, err)
-		if err := vm.startVm(haveManagerLock); err != nil {
+		if err := vm.startVm(enableNetboot, haveManagerLock); err != nil {
 			vm.logger.Println(err)
 			vm.setState(proto.StateFailedToStart)
 			return false, err
@@ -2808,7 +2815,7 @@ func (vm *vmInfoType) getBridgesAndOptions(haveManagerLock bool) (
 	return bridges, options, nil
 }
 
-func (vm *vmInfoType) startVm(haveManagerLock bool) error {
+func (vm *vmInfoType) startVm(enableNetboot, haveManagerLock bool) error {
 	if err := checkAvailableMemory(vm.MemoryInMiB); err != nil {
 		return err
 	}
@@ -2857,6 +2864,8 @@ func (vm *vmInfoType) startVm(haveManagerLock bool) error {
 				"-append", util.MakeKernelOptions("/dev/vda1", "net.ifnames=0"),
 			)
 		}
+	} else if enableNetboot {
+		cmd.Args = append(cmd.Args, "-boot", "order=n")
 	}
 	cmd.Args = append(cmd.Args, netOptions...)
 	if vm.manager.ShowVgaConsole {
