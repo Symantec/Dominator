@@ -116,6 +116,7 @@ func createVmInfoFromFlags() hyper_proto.VmInfo {
 func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 	request := hyper_proto.CreateVmRequest{
 		DhcpTimeout:      *dhcpTimeout,
+		EnableNetboot:    *enableNetboot,
 		MinimumFreeBytes: uint64(minFreeBytes),
 		RoundupPower:     *roundupPower,
 		VmInfo:           createVmInfoFromFlags(),

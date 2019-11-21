@@ -28,6 +28,8 @@ var (
 		"If true, disable virtio drivers, reducing I/O performance")
 	dhcpTimeout = flag.Duration("dhcpTimeout", time.Minute,
 		"Time to wait before timing out on DHCP request from VM")
+	enableNetboot = flag.Bool("enableNetboot", false,
+		"If true, enable boot from network for first boot")
 	fleetManagerHostname = flag.String("fleetManagerHostname", "",
 		"Hostname of Fleet Manager")
 	fleetManagerPortNum = flag.Uint("fleetManagerPortNum",
