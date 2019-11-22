@@ -304,6 +304,15 @@ type GetVmVolumeResponse struct {
 	Error string
 }
 
+type ListSubnetsRequest struct {
+	Sort bool
+}
+
+type ListSubnetsResponse struct {
+	Error   string
+	Subnets []Subnet `json:",omitempty"`
+}
+
 type ImportLocalVmRequest struct {
 	VerificationCookie []byte `json:",omitempty"`
 	VmInfo
