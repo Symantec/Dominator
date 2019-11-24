@@ -12,6 +12,11 @@ func AcknowledgeVm(client *srpc.Client, ipAddress net.IP) error {
 	return acknowledgeVm(client, ipAddress)
 }
 
+func ConnectToVmConsole(client *srpc.Client, ipAddr net.IP,
+	vncViewerCommand string, logger log.DebugLogger) error {
+	return connectToVmConsole(client, ipAddr, vncViewerCommand, logger)
+}
+
 func CreateVm(client *srpc.Client, request proto.CreateVmRequest,
 	reply *proto.CreateVmResponse, logger log.DebugLogger) error {
 	return createVm(client, request, reply, logger)
@@ -37,6 +42,10 @@ func GetRootCookiePath(client *srpc.Client) (string, error) {
 
 func GetVmInfo(client *srpc.Client, ipAddr net.IP) (proto.VmInfo, error) {
 	return getVmInfo(client, ipAddr)
+}
+
+func ListSubnets(client *srpc.Client, doSort bool) ([]proto.Subnet, error) {
+	return listSubnets(client, doSort)
 }
 
 func PrepareVmForMigration(client *srpc.Client, ipAddr net.IP,
