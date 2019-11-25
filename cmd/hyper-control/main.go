@@ -10,6 +10,7 @@ import (
 
 	"github.com/Cloud-Foundations/Dominator/lib/constants"
 	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
+	"github.com/Cloud-Foundations/Dominator/lib/flagutil"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/log/cmdlogger"
 	"github.com/Cloud-Foundations/Dominator/lib/net/rrdialer"
@@ -42,6 +43,7 @@ var (
 		"Location to search for hypervisors")
 	offerTimeout = flag.Duration("offerTimeout", time.Minute+time.Second,
 		"How long to offer DHCP OFFERs and ACKs")
+	memory              = flagutil.Size(4 << 30)
 	netbootFiles        tags.Tags
 	netbootFilesTimeout = flag.Duration("netbootFilesTimeout",
 		time.Minute+time.Second,
@@ -56,17 +58,25 @@ var (
 		"Number of bytes of random seed data to inject into installing machine")
 	storageLayoutFilename = flag.String("storageLayoutFilename", "",
 		"Name of file containing storage layout for installing machine")
+	subnetIDs       flagutil.StringList
+	targetImageName = flag.String("targetImageName", "",
+		"Name of image to install for netboot-vm")
 	topologyDir = flag.String("topologyDir", "",
 		"Name of local topology directory in Git repository")
 	useKexec = flag.Bool("useKexec", false,
 		"If true, use kexec to reboot into newly installed OS")
+	vncViewer   = flag.String("vncViewer", "", "Path to VNC viewer for VM")
+	volumeSizes = flagutil.SizeList{16 << 30}
 
 	rrDialer *rrdialer.Dialer
 )
 
 func init() {
 	flag.Var(&hypervisorTags, "hypervisorTags", "Tags to apply to Hypervisor")
+	flag.Var(&memory, "memory", "memory for VM")
 	flag.Var(&netbootFiles, "netbootFiles", "Extra files served by TFTP server")
+	flag.Var(&subnetIDs, "subnetIDs", "Subnet IDs for VM")
+	flag.Var(&volumeSizes, "volumeSizes", "Sizes for volumes for VM")
 }
 
 func printUsage() {
@@ -85,6 +95,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  move-ip-address IPaddr")
 	fmt.Fprintln(os.Stderr, "  netboot-host hostname")
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
+	fmt.Fprintln(os.Stderr, "  netboot-vm")
 	fmt.Fprintln(os.Stderr, "  reinstall")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
 	fmt.Fprintln(os.Stderr, "  remove-ip-address IPaddr")
@@ -115,6 +126,7 @@ var subcommands = []subcommand{
 	{"move-ip-address", 1, 1, moveIpAddressSubcommand},
 	{"netboot-host", 1, 1, netbootHostSubcommand},
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},
+	{"netboot-vm", 0, 0, netbootVmSubcommand},
 	{"reinstall", 0, 0, reinstallSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
 	{"remove-ip-address", 1, 1, removeIpAddressSubcommand},

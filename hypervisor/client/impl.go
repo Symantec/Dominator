@@ -2,8 +2,12 @@ package client
 
 import (
 	"fmt"
+	"io"
 	"net"
+	"os"
+	"os/exec"
 
+	"github.com/Cloud-Foundations/Dominator/lib/bufwriter"
 	"github.com/Cloud-Foundations/Dominator/lib/errors"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
@@ -14,6 +18,65 @@ func acknowledgeVm(client *srpc.Client, ipAddress net.IP) error {
 	request := proto.AcknowledgeVmRequest{ipAddress}
 	var reply proto.AcknowledgeVmResponse
 	return client.RequestReply("Hypervisor.AcknowledgeVm", request, &reply)
+}
+
+func connectToVmConsole(client *srpc.Client, ipAddr net.IP,
+	vncViewerCommand string, logger log.DebugLogger) error {
+	serverConn, err := client.Call("Hypervisor.ConnectToVmConsole")
+	if err != nil {
+		return err
+	}
+	defer serverConn.Close()
+	request := proto.ConnectToVmConsoleRequest{IpAddress: ipAddr}
+	if err := serverConn.Encode(request); err != nil {
+		return err
+	}
+	if err := serverConn.Flush(); err != nil {
+		return err
+	}
+	var response proto.ConnectToVmConsoleResponse
+	if err := serverConn.Decode(&response); err != nil {
+		return err
+	}
+	if err := errors.New(response.Error); err != nil {
+		return err
+	}
+	listener, err := net.Listen("tcp", "localhost:")
+	if err != nil {
+		return err
+	}
+	defer listener.Close()
+	_, port, err := net.SplitHostPort(listener.Addr().String())
+	if err != nil {
+		return err
+	}
+	if vncViewerCommand == "" {
+		logger.Printf("listening on port %s for VNC connection\n", port)
+	} else {
+		cmd := exec.Command(vncViewerCommand, "::"+port)
+		cmd.Stderr = os.Stderr
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+	}
+	clientConn, err := listener.Accept()
+	if err != nil {
+		return err
+	}
+	defer clientConn.Close()
+	listener.Close()
+	var readErr error
+	readFinished := false
+	go func() { // Copy from server to client.
+		_, readErr = io.Copy(clientConn, serverConn)
+		readFinished = true
+	}()
+	// Copy from client to server.
+	_, writeErr := io.Copy(bufwriter.NewAutoFlushWriter(serverConn), clientConn)
+	if readFinished {
+		return readErr
+	}
+	return writeErr
 }
 
 func createVm(client *srpc.Client, request proto.CreateVmRequest,
@@ -116,6 +179,19 @@ func getVmInfo(client *srpc.Client, ipAddr net.IP) (proto.VmInfo, error) {
 		return proto.VmInfo{}, err
 	}
 	return reply.VmInfo, nil
+}
+
+func listSubnets(client *srpc.Client, doSort bool) ([]proto.Subnet, error) {
+	request := proto.ListSubnetsRequest{Sort: doSort}
+	var reply proto.ListSubnetsResponse
+	err := client.RequestReply("Hypervisor.ListSubnets", request, &reply)
+	if err != nil {
+		return nil, err
+	}
+	if err := errors.New(reply.Error); err != nil {
+		return nil, err
+	}
+	return reply.Subnets, nil
 }
 
 func prepareVmForMigration(client *srpc.Client, ipAddr net.IP,

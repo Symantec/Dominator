@@ -605,13 +605,14 @@ func mount(source string, target string, fstype string,
 }
 
 func partitionName(devpath string, partitionNumber int) string {
-	leafName := filepath.Base(devpath)
-	if strings.HasPrefix(leafName, "hd") ||
-		strings.HasPrefix(leafName, "sd") {
-		return devpath + strconv.FormatInt(int64(partitionNumber), 10)
-	} else {
-		return devpath + "p" + strconv.FormatInt(int64(partitionNumber), 10)
+	devLeafName := filepath.Base(devpath)
+	partitionName := "p" + strconv.FormatInt(int64(partitionNumber), 10)
+	_, err := os.Stat(filepath.Join("/sys/class/block", devLeafName,
+		devLeafName+partitionName))
+	if err == nil {
+		return devpath + partitionName
 	}
+	return devpath + strconv.FormatInt(int64(partitionNumber), 10)
 }
 
 func readInt(filename string) (uint64, error) {

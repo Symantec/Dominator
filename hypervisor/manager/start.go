@@ -98,7 +98,7 @@ func newManager(startOptions StartOptions) (*Manager, error) {
 		vmInfo.logger = prefixlogger.New(ipAddr+": ", manager.Logger)
 		vmInfo.metadataChannels = make(map[chan<- string]struct{})
 		manager.vms[ipAddr] = &vmInfo
-		if _, err := vmInfo.startManaging(0, false); err != nil {
+		if _, err := vmInfo.startManaging(0, false, false); err != nil {
 			manager.Logger.Println(err)
 			if ipAddr == "0.0.0.0" {
 				delete(manager.vms, ipAddr)

@@ -48,6 +48,8 @@ Some of the sub-commands available are:
                     for a machine
 - **netboot-machine**: temporarily enable PXE-based network booting for a
                        machine
+- **netboot-vm**: create a temporary VM and install with PXE booting. This is
+                  for debugging physical machine installation
 - **reinstall**: reinstall the local machine. This erases all data
 - **remove-excess-addresses**: remove free addresses for a specific *Hypervisor*
                                above the specified limit
