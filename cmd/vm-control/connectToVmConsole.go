@@ -2,15 +2,10 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net"
-	"os"
-	"os/exec"
 
-	"github.com/Cloud-Foundations/Dominator/lib/bufwriter"
-	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	hyperclient "github.com/Cloud-Foundations/Dominator/hypervisor/client"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
-	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 func connectToVmConsoleSubcommand(args []string,
@@ -36,64 +31,5 @@ func connectToVmConsoleOnHypervisor(hypervisor string, ipAddr net.IP,
 		return err
 	}
 	defer client.Close()
-	serverConn, err := client.Call("Hypervisor.ConnectToVmConsole")
-	if err != nil {
-		return err
-	}
-	defer serverConn.Close()
-	request := proto.ConnectToVmConsoleRequest{
-		IpAddress: ipAddr,
-	}
-	if err := serverConn.Encode(request); err != nil {
-		return err
-	}
-	if err := serverConn.Flush(); err != nil {
-		return err
-	}
-	var response proto.ConnectToVmConsoleResponse
-	if err := serverConn.Decode(&response); err != nil {
-		return err
-	}
-	if err := errors.New(response.Error); err != nil {
-		return err
-	}
-	listener, err := net.Listen("tcp", "localhost:")
-	if err != nil {
-		return err
-	}
-	defer listener.Close()
-	_, port, err := net.SplitHostPort(listener.Addr().String())
-	if err != nil {
-		return err
-	}
-	if *vncViewer == "" {
-		fmt.Fprintf(os.Stderr, "Listening on port %s for VNC connection\n",
-			port)
-	} else {
-		cmd := exec.Command(*vncViewer, "::"+port)
-		cmd.Stderr = os.Stderr
-		if err := cmd.Start(); err != nil {
-			logger.Println(err)
-		} else {
-			fmt.Fprintf(os.Stderr, "Listening on port %s for VNC connection\n",
-				port)
-		}
-	}
-	clientConn, err := listener.Accept()
-	if err != nil {
-		return err
-	}
-	listener.Close()
-	closed := false
-	go func() { // Copy from server to client.
-		_, err := io.Copy(clientConn, serverConn)
-		if err != nil && !closed {
-			logger.Fatalln(err)
-		}
-		os.Exit(0)
-	}()
-	// Copy from client to server.
-	_, err = io.Copy(bufwriter.NewAutoFlushWriter(serverConn), clientConn)
-	closed = true
-	return err
+	return hyperclient.ConnectToVmConsole(client, ipAddr, *vncViewer, logger)
 }
