@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	hyperclient "github.com/Cloud-Foundations/Dominator/hypervisor/client"
 	"github.com/Cloud-Foundations/Dominator/lib/errors"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
@@ -58,6 +59,12 @@ func migrateVmFromHypervisor(sourceHypervisorAddress string, vmIP net.IP,
 		return err
 	}
 	defer sourceHypervisor.Close()
+	vmInfo, err := hyperclient.GetVmInfo(sourceHypervisor, vmIP)
+	if err != nil {
+		return err
+	} else if vmInfo.State == hyper_proto.StateMigrating {
+		return errors.New("VM is migrating")
+	}
 	accessToken, err := getVmAccessTokenClient(sourceHypervisor, vmIP)
 	if err != nil {
 		return err
