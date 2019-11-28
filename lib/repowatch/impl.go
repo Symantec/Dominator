@@ -18,6 +18,7 @@ import (
 
 type gitMetricsType struct {
 	lastAttemptedPullTime  time.Time
+	lastCommitId           string
 	lastSuccessfulPullTime time.Time
 	lastNotificationTime   time.Time
 	latencyDistribution    *tricorder.CumulativeDistribution
@@ -110,13 +111,20 @@ func watchGit(remoteURL, localDirectory string, checkInterval time.Duration,
 	if err != nil {
 		return nil, err
 	}
-	commitId, err := setupGitRepository(remoteURL, localDirectory, metrics)
+	metrics.lastCommitId, err = setupGitRepository(remoteURL, localDirectory,
+		metrics)
 	if err != nil {
 		return nil, err
 	}
 	err = tricorder.RegisterMetric(filepath.Join(metricDirectory,
 		"last-attempted-git-pull-time"), &metrics.lastAttemptedPullTime,
 		units.None, "time of last attempted git pull")
+	if err != nil {
+		return nil, err
+	}
+	err = tricorder.RegisterMetric(filepath.Join(metricDirectory,
+		"last-commit-id"), &metrics.lastCommitId,
+		units.None, "commit ID in master branch in  last successful git pull")
 	if err != nil {
 		return nil, err
 	}
@@ -134,20 +142,20 @@ func watchGit(remoteURL, localDirectory string, checkInterval time.Duration,
 	}
 	metrics.lastNotificationTime = time.Now()
 	notificationChannel <- localDirectory
-	go watchGitLoop(localDirectory, commitId, checkInterval, metrics,
-		notificationChannel, logger)
+	go watchGitLoop(localDirectory, checkInterval, metrics, notificationChannel,
+		logger)
 	return notificationChannel, nil
 }
 
-func watchGitLoop(directory, lastCommitId string, checkInterval time.Duration,
+func watchGitLoop(directory string, checkInterval time.Duration,
 	metrics *gitMetricsType, notificationChannel chan<- string,
 	logger log.DebugLogger) {
 	for {
 		time.Sleep(checkInterval)
 		if commitId, err := gitPull(directory, metrics); err != nil {
 			logger.Println(err)
-		} else if commitId != lastCommitId {
-			lastCommitId = commitId
+		} else if commitId != metrics.lastCommitId {
+			metrics.lastCommitId = commitId
 			metrics.lastNotificationTime = time.Now()
 			notificationChannel <- directory
 		}
