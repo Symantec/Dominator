@@ -92,6 +92,16 @@ type ChangeVmOwnerUsersResponse struct {
 	Error string
 }
 
+type ChangeVmSizeRequest struct {
+	IpAddress   net.IP
+	MemoryInMiB uint64
+	MilliCPUs   uint
+}
+
+type ChangeVmSizeResponse struct {
+	Error string
+}
+
 type ChangeVmTagsRequest struct {
 	IpAddress net.IP
 	Tags      tags.Tags
