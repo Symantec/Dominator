@@ -384,6 +384,57 @@ func (m *Manager) changeVmOwnerUsers(ipAddr net.IP,
 	return nil
 }
 
+func (m *Manager) changeVmSize(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	memoryInMiB uint64, milliCPUs uint) error {
+	vm, err := m.getVmLockAndAuth(ipAddr, true, authInfo, nil)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if vm.State != proto.StateStopped {
+		return errors.New("VM is not stopped")
+	}
+	changed := false
+	if memoryInMiB > 0 {
+		if memoryInMiB < vm.MemoryInMiB {
+			vm.MemoryInMiB = memoryInMiB
+			changed = true
+		} else if memoryInMiB > vm.MemoryInMiB {
+			m.mutex.Lock()
+			err := m.checkSufficientMemoryWithLock(memoryInMiB - vm.MemoryInMiB)
+			if err == nil {
+				vm.MemoryInMiB = memoryInMiB
+				changed = true
+			}
+			m.mutex.Unlock()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if milliCPUs > 0 {
+		if milliCPUs < vm.MilliCPUs {
+			vm.MilliCPUs = milliCPUs
+			changed = true
+		} else if milliCPUs > vm.MilliCPUs {
+			m.mutex.Lock()
+			err := m.checkSufficientCPUWithLock(milliCPUs - vm.MilliCPUs)
+			if err == nil {
+				vm.MilliCPUs = milliCPUs
+				changed = true
+			}
+			m.mutex.Unlock()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if changed {
+		vm.writeAndSendInfo()
+	}
+	return nil
+}
+
 func (m *Manager) changeVmTags(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	tgs tags.Tags) error {
 	vm, err := m.getVmLockAndAuth(ipAddr, true, authInfo, nil)

@@ -118,6 +118,11 @@ func (m *Manager) ChangeVmOwnerUsers(ipAddr net.IP,
 	return m.changeVmOwnerUsers(ipAddr, authInfo, extraUsers)
 }
 
+func (m *Manager) ChangeVmSize(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	memoryInMiB uint64, milliCPUs uint) error {
+	return m.changeVmSize(ipAddr, authInfo, memoryInMiB, milliCPUs)
+}
+
 func (m *Manager) ChangeVmTags(ipAddr net.IP, authInfo *srpc.AuthInformation,
 	tgs tags.Tags) error {
 	return m.changeVmTags(ipAddr, authInfo, tgs)
