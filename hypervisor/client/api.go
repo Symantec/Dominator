@@ -12,6 +12,11 @@ func AcknowledgeVm(client *srpc.Client, ipAddress net.IP) error {
 	return acknowledgeVm(client, ipAddress)
 }
 
+func ChangeVmSize(client *srpc.Client,
+	request proto.ChangeVmSizeRequest) error {
+	return changeVmSize(client, request)
+}
+
 func ConnectToVmConsole(client *srpc.Client, ipAddr net.IP,
 	vncViewerCommand string, logger log.DebugLogger) error {
 	return connectToVmConsole(client, ipAddr, vncViewerCommand, logger)

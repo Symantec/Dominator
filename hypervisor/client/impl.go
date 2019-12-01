@@ -20,6 +20,16 @@ func acknowledgeVm(client *srpc.Client, ipAddress net.IP) error {
 	return client.RequestReply("Hypervisor.AcknowledgeVm", request, &reply)
 }
 
+func changeVmSize(client *srpc.Client,
+	request proto.ChangeVmSizeRequest) error {
+	var reply proto.ChangeVmSizeResponse
+	err := client.RequestReply("Hypervisor.ChangeVmSize", request, &reply)
+	if err != nil {
+		return err
+	}
+	return errors.New(reply.Error)
+}
+
 func connectToVmConsole(client *srpc.Client, ipAddr net.IP,
 	vncViewerCommand string, logger log.DebugLogger) error {
 	serverConn, err := client.Call("Hypervisor.ConnectToVmConsole")
