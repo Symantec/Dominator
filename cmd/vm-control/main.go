@@ -117,7 +117,9 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "  become-primary-vm-owner IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-console-type IPaddr")
+	fmt.Fprintln(os.Stderr, "  change-vm-cpus IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-destroy-protection IPaddr")
+	fmt.Fprintln(os.Stderr, "  change-vm-memory IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-owner-users IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-tags IPaddr")
 	fmt.Fprintln(os.Stderr, "  connect-to-vm-console IPaddr")
@@ -167,7 +169,9 @@ type subcommand struct {
 var subcommands = []subcommand{
 	{"become-primary-vm-owner", 1, 1, becomePrimaryVmOwnerSubcommand},
 	{"change-vm-console-type", 1, 1, changeVmConsoleTypeSubcommand},
+	{"change-vm-cpus", 1, 1, changeVmCPUsSubcommand},
 	{"change-vm-destroy-protection", 1, 1, changeVmDestroyProtectionSubcommand},
+	{"change-vm-memory", 1, 1, changeVmMemorySubcommand},
 	{"change-vm-owner-users", 1, 1, changeVmOwnerUsersSubcommand},
 	{"change-vm-tags", 1, 1, changeVmTagsSubcommand},
 	{"connect-to-vm-console", 1, 1, connectToVmConsoleSubcommand},
