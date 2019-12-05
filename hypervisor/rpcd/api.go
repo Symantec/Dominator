@@ -51,6 +51,7 @@ func Setup(manager *manager.Manager, dhcpServer DhcpServer,
 	srpc.RegisterNameWithOptions("Hypervisor", srpcObj, srpc.ReceiverOptions{
 		PublicMethods: []string{
 			"AcknowledgeVm",
+			"AddVmVolumes",
 			"BecomePrimaryVmOwner",
 			"ChangeVmConsoleType",
 			"ChangeVmDestroyProtection",
