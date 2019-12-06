@@ -20,6 +20,19 @@ func acknowledgeVm(client *srpc.Client, ipAddress net.IP) error {
 	return client.RequestReply("Hypervisor.AcknowledgeVm", request, &reply)
 }
 
+func addVmVolumes(client *srpc.Client, ipAddress net.IP, sizes []uint64) error {
+	request := proto.AddVmVolumesRequest{
+		IpAddress:   ipAddress,
+		VolumeSizes: sizes,
+	}
+	var reply proto.AddVmVolumesResponse
+	err := client.RequestReply("Hypervisor.AddVmVolumes", request, &reply)
+	if err != nil {
+		return err
+	}
+	return errors.New(reply.Error)
+}
+
 func changeVmSize(client *srpc.Client,
 	request proto.ChangeVmSizeRequest) error {
 	var reply proto.ChangeVmSizeResponse

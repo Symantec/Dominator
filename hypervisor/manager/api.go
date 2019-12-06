@@ -94,6 +94,11 @@ func (m *Manager) AddAddressesToPool(addresses []proto.Address) error {
 	return m.addAddressesToPool(addresses)
 }
 
+func (m *Manager) AddVmVolumes(ipAddr net.IP,
+	authInfo *srpc.AuthInformation, volumeSizes []uint64) error {
+	return m.addVmVolumes(ipAddr, authInfo, volumeSizes)
+}
+
 func (m *Manager) BecomePrimaryVmOwner(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
 	return m.becomePrimaryVmOwner(ipAddr, authInfo)

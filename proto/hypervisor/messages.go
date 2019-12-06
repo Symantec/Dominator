@@ -38,6 +38,15 @@ type Address struct {
 	MacAddress string
 }
 
+type AddVmVolumesRequest struct {
+	IpAddress   net.IP
+	VolumeSizes []uint64
+}
+
+type AddVmVolumesResponse struct {
+	Error string
+}
+
 type BecomePrimaryVmOwnerRequest struct {
 	IpAddress net.IP
 }

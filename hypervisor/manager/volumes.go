@@ -182,11 +182,15 @@ func (m *Manager) findFreeSpace(size uint64, freeSpaceTable map[string]uint64,
 
 func (m *Manager) getVolumeDirectories(rootSize uint64,
 	volumes []proto.Volume, spreadVolumes bool) ([]string, error) {
-	sizes := make([]uint64, 1, len(volumes)+1)
-	sizes[0] = rootSize
+	sizes := make([]uint64, 0, len(volumes)+1)
+	if rootSize > 0 {
+		sizes = append(sizes, rootSize)
+	}
 	for _, volume := range volumes {
 		if volume.Size > 0 {
 			sizes = append(sizes, volume.Size)
+		} else {
+			return nil, errors.New("secondary volumes cannot be zero sized")
 		}
 	}
 	freeSpaceTable := make(map[string]uint64, len(m.volumeDirectories))

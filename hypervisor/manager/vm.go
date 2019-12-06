@@ -210,6 +210,62 @@ func (m *Manager) acknowledgeVm(ipAddr net.IP,
 	return nil
 }
 
+func (m *Manager) addVmVolumes(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	volumeSizes []uint64) error {
+	vm, err := m.getVmLockAndAuth(ipAddr, true, authInfo, nil)
+	if err != nil {
+		return err
+	}
+	defer vm.mutex.Unlock()
+	if vm.State != proto.StateStopped {
+		return errors.New("VM is not stopped")
+	}
+	volumes := make([]proto.Volume, 0, len(volumeSizes))
+	for _, size := range volumeSizes {
+		volumes = append(volumes, proto.Volume{Size: size})
+	}
+	volumeDirectories, err := vm.manager.getVolumeDirectories(0, volumes,
+		vm.SpreadVolumes)
+	if err != nil {
+		return err
+	}
+	volumeLocations := make([]proto.LocalVolume, 0, len(volumes))
+	defer func() {
+		for _, volumeLocation := range volumeLocations {
+			os.Remove(volumeLocation.Filename)
+			os.Remove(volumeLocation.DirectoryToCleanup)
+		}
+	}()
+	for index, volumeDirectory := range volumeDirectories {
+		dirname := filepath.Join(volumeDirectory, vm.ipAddress)
+		filename := filepath.Join(dirname,
+			fmt.Sprintf("secondary-volume.%d", len(vm.Volumes)-1+index))
+		volumeLocation := proto.LocalVolume{
+			DirectoryToCleanup: dirname,
+			Filename:           filename,
+		}
+		if err := os.MkdirAll(dirname, dirPerms); err != nil {
+			return err
+		}
+		cFlags := os.O_CREATE | os.O_EXCL | os.O_RDWR
+		file, err := os.OpenFile(filename, cFlags, privateFilePerms)
+		if err != nil {
+			return err
+		} else {
+			file.Close()
+		}
+		if err := setVolumeSize(filename, volumeSizes[index]); err != nil {
+			return err
+		}
+		volumeLocations = append(volumeLocations, volumeLocation)
+	}
+	vm.VolumeLocations = append(vm.VolumeLocations, volumeLocations...)
+	volumeLocations = nil // Prevent cleanup. Thunderbirds are Go!
+	vm.Volumes = append(vm.Volumes, volumes...)
+	vm.writeAndSendInfo()
+	return nil
+}
+
 func (m *Manager) allocateVm(req proto.CreateVmRequest,
 	authInfo *srpc.AuthInformation) (*vmInfoType, error) {
 	if err := req.ConsoleType.CheckValid(); err != nil {
