@@ -12,6 +12,10 @@ func AcknowledgeVm(client *srpc.Client, ipAddress net.IP) error {
 	return acknowledgeVm(client, ipAddress)
 }
 
+func AddVmVolumes(client *srpc.Client, ipAddress net.IP, sizes []uint64) error {
+	return addVmVolumes(client, ipAddress, sizes)
+}
+
 func ChangeVmSize(client *srpc.Client,
 	request proto.ChangeVmSizeRequest) error {
 	return changeVmSize(client, request)
