@@ -23,6 +23,7 @@ vm-control -h
 
 Some of the sub-commands available are:
 
+- **add-vm-volumes**: add volumes to a VM
 - **become-primary-vm-owner**: become the primary owner of a VM
 - **change-vm-console-type**: change the console type for a VM
 - **change-vm-cpus**: change the number of CPUs for a VM

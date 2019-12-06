@@ -115,6 +115,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
+	fmt.Fprintln(os.Stderr, "  add-vm-volumes IPaddr")
 	fmt.Fprintln(os.Stderr, "  become-primary-vm-owner IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-console-type IPaddr")
 	fmt.Fprintln(os.Stderr, "  change-vm-cpus IPaddr")
@@ -167,6 +168,7 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
+	{"add-vm-volumes", 1, 1, addVmVolumesSubcommand},
 	{"become-primary-vm-owner", 1, 1, becomePrimaryVmOwnerSubcommand},
 	{"change-vm-console-type", 1, 1, changeVmConsoleTypeSubcommand},
 	{"change-vm-cpus", 1, 1, changeVmCPUsSubcommand},
