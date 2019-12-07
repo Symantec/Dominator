@@ -9,8 +9,39 @@ import (
 
 	"github.com/Cloud-Foundations/Dominator/lib/errors"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
+
+func callGetVmUserData(client *srpc.Client,
+	ipAddr net.IP) (io.ReadCloser, uint64, error) {
+	conn, err := client.Call("Hypervisor.GetVmUserData")
+	if err != nil {
+		return nil, 0, err
+	}
+	doClose := true
+	defer func() {
+		if doClose {
+			conn.Close()
+		}
+	}()
+	request := proto.GetVmUserDataRequest{IpAddress: ipAddr}
+	if err := conn.Encode(request); err != nil {
+		return nil, 0, err
+	}
+	if err := conn.Flush(); err != nil {
+		return nil, 0, err
+	}
+	var response proto.GetVmUserDataResponse
+	if err := conn.Decode(&response); err != nil {
+		return nil, 0, err
+	}
+	if err := errors.New(response.Error); err != nil {
+		return nil, 0, err
+	}
+	doClose = false
+	return conn, response.Length, nil
+}
 
 func getVmUserDataSubcommand(args []string, logger log.DebugLogger) error {
 	if err := getVmUserData(args[0], logger); err != nil {
@@ -37,38 +68,21 @@ func getVmUserDataOnHypervisor(hypervisor string, ipAddr net.IP,
 		return err
 	}
 	defer client.Close()
-	conn, err := client.Call("Hypervisor.GetVmUserData")
+	conn, length, err := callGetVmUserData(client, ipAddr)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
-	request := proto.GetVmUserDataRequest{IpAddress: ipAddr}
-	if err := conn.Encode(request); err != nil {
-		return err
-	}
-	if err := conn.Flush(); err != nil {
-		return err
-	}
-	var response proto.GetVmUserDataResponse
-	if err := conn.Decode(&response); err != nil {
-		return err
-	}
-	if err := errors.New(response.Error); err != nil {
-		return err
-	}
-	if response.Length < 1 {
-		return errors.New("no user data")
-	}
 	file, err := os.OpenFile(*userDataFile, os.O_WRONLY|os.O_CREATE,
 		privateFilePerms)
 	if err != nil {
-		io.CopyN(ioutil.Discard, conn, int64(response.Length))
+		io.CopyN(ioutil.Discard, conn, int64(length))
 		return err
 	}
 	defer file.Close()
 	logger.Debugln(0, "downloading user data")
-	if _, err := io.CopyN(file, conn, int64(response.Length)); err != nil {
+	if _, err := io.CopyN(file, conn, int64(length)); err != nil {
 		return err
 	}
-	return errors.New(response.Error)
+	return nil
 }

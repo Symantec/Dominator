@@ -34,7 +34,7 @@ Some of the sub-commands available are:
 - **connect-to-vm-console**: connect to the Virtual Network Console for the
                              specified VM
 - **connect-to-vm-serial-port**: connect to the specified VM serial port
-- **copy-vm**: make a copy of a VM
+- **copy-vm**: make a copy of a VM. The new VM will have a different IP address
 - **create-vm**: create a VM
 - **delete-vm-volume**: delete a specified volume from a VM
 - **destroy-vm**: destroy a VM (all ephemeral data and metadata are lost)
@@ -73,6 +73,8 @@ Some of the sub-commands available are:
 - **restore-vm-user-data**: restore the previously saved user data for a VM
 - **set-vm-migrating**: change the VM state to migrating. For debugging only
 - **snapshot-vm**: create a snapshot of the VM volumes, discarding previous one
+- **save-vm**: save (backup) all VM data (volumes) and metadata to a storage
+               destination
 - **start-vm**: start a stopped VM
 - **stop-vm**: stop a running VM. All data and metadata are preserved
 - **trace-vm-metadata**: trace the requests a VM makes to the metadata service
