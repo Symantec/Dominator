@@ -1,13 +1,16 @@
 package main
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"net"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Cloud-Foundations/Dominator/lib/errors"
@@ -25,15 +28,37 @@ type directorySaver struct {
 	filename string // If != "", lock all files to this filename.
 }
 
+type gzipCompressor struct{}
+
+type tarSaver struct {
+	closer io.Closer
+	header tar.Header
+	writer *tar.Writer
+}
+
+type tarWriter struct {
+	writer *tar.Writer
+}
+
+type wrappedWriteCloser struct {
+	real io.Closer
+	wrap io.WriteCloser
+}
+
+type writerMaker interface {
+	MakeWriter(w io.WriteCloser) io.WriteCloser
+}
+
 type writeSeekCloser interface {
 	io.Closer
 	io.WriteSeeker
 }
 
 type vmSaver interface {
+	Close() error
 	CopyToFile(filename string, reader io.Reader, length uint64) error
 	OpenReader(filename string) (io.ReadCloser, uint64, error)
-	OpenWriter(filename string) (writeSeekCloser, error)
+	OpenWriter(filename string, length uint64) (writeSeekCloser, error)
 }
 
 func copyVolumeToVmSaver(saver vmSaver, client *srpc.Client, ipAddr net.IP,
@@ -54,7 +79,7 @@ func copyVolumeToVmSaver(saver vmSaver, client *srpc.Client, ipAddr net.IP,
 				return errors.New("file larger than volume")
 			}
 		}
-		if writer, err := saver.OpenWriter(filename); err != nil {
+		if writer, err := saver.OpenWriter(filename, size); err != nil {
 			return err
 		} else {
 			err := copyVmVolumeToWriter(writer, reader, initialFileSize,
@@ -155,6 +180,19 @@ func saveVmOnHypervisor(hypervisor string, ipAddr net.IP, destination string,
 		} else {
 			saver = realSaver
 		}
+	} else if u.Scheme == "file" {
+		if strings.HasSuffix(u.Path, ".tar") {
+			if saver, err = newTarSaver(u.Path, nil); err != nil {
+				return err
+			}
+		} else if strings.HasSuffix(u.Path, ".tar.gz") ||
+			strings.HasSuffix(u.Path, ".tgz") {
+			if saver, err = newTarSaver(u.Path, gzipCompressor{}); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("unknown extension: %s", u.Path)
+		}
 	} else {
 		return fmt.Errorf("unknown scheme: %s", u.Scheme)
 	}
@@ -181,7 +219,7 @@ func saveVmOnHypervisor(hypervisor string, ipAddr net.IP, destination string,
 			return err
 		}
 	}
-	return nil
+	return saver.Close()
 }
 
 func newDirectorySaver(dirname string) (*directorySaver, error) {
@@ -191,6 +229,10 @@ func newDirectorySaver(dirname string) (*directorySaver, error) {
 		}
 	}
 	return &directorySaver{dirname: dirname}, nil
+}
+
+func (saver *directorySaver) Close() error {
+	return nil
 }
 
 func (saver *directorySaver) CopyToFile(filename string, reader io.Reader,
@@ -230,8 +272,104 @@ func (saver *directorySaver) OpenReader(filename string) (
 	}
 }
 
-func (saver *directorySaver) OpenWriter(filename string) (
+func (saver *directorySaver) OpenWriter(filename string, length uint64) (
 	writeSeekCloser, error) {
 	return os.OpenFile(saver.Filename(filename),
 		os.O_WRONLY|os.O_CREATE, fsutil.PrivateFilePerms)
+}
+
+func (gzipCompressor) MakeWriter(w io.WriteCloser) io.WriteCloser {
+	return &wrappedWriteCloser{real: w, wrap: gzip.NewWriter(w)}
+}
+
+func newTarSaver(filename string, compressor writerMaker) (*tarSaver, error) {
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE,
+		fsutil.PrivateFilePerms)
+	if err != nil {
+		return nil, err
+	}
+	writeCloser := io.WriteCloser(file)
+	if compressor != nil {
+		writeCloser = compressor.MakeWriter(writeCloser)
+	}
+	return &tarSaver{
+		closer: writeCloser,
+		header: tar.Header{
+			Uid:    os.Getuid(),
+			Gid:    os.Getgid(),
+			Format: tar.FormatPAX,
+		},
+		writer: tar.NewWriter(writeCloser),
+	}, nil
+}
+
+func (saver *tarSaver) Close() error {
+	if err := saver.writer.Close(); err != nil {
+		saver.closer.Close()
+		return err
+	}
+	return saver.closer.Close()
+}
+
+func (saver *tarSaver) CopyToFile(filename string, reader io.Reader,
+	length uint64) error {
+	if writer, err := saver.OpenWriter(filename, length); err != nil {
+		return err
+	} else if _, err := io.CopyN(writer, reader, int64(length)); err != nil {
+		writer.Close()
+		return err
+	} else {
+		return writer.Close()
+	}
+}
+
+func (saver *tarSaver) OpenReader(filename string) (
+	io.ReadCloser, uint64, error) {
+	return nil, 0, nil
+}
+
+func (saver *tarSaver) OpenWriter(filename string, length uint64) (
+	writeSeekCloser, error) {
+	header := saver.header
+	header.Typeflag = tar.TypeReg
+	header.Name = filename
+	header.Size = int64(length)
+	header.Mode = 0400
+	header.ModTime = time.Now()
+	header.AccessTime = header.ModTime
+	header.ChangeTime = header.ModTime
+	if err := saver.writer.WriteHeader(&header); err != nil {
+		return nil, err
+	}
+	return &tarWriter{saver.writer}, nil
+}
+
+func (w tarWriter) Close() error {
+	return w.writer.Flush()
+}
+
+func (w tarWriter) Seek(offset int64, whence int) (int64, error) {
+	if offset == 0 && whence == io.SeekStart {
+		return 0, nil
+	}
+	if offset == 0 && whence == io.SeekCurrent {
+		return 0, nil
+	}
+	return 0, errors.New("cannot seek")
+}
+
+func (w tarWriter) Write(p []byte) (n int, err error) {
+	return w.writer.Write(p)
+}
+
+func (w *wrappedWriteCloser) Close() error {
+	if err := w.wrap.Close(); err != nil {
+		w.real.Close()
+		return err
+	}
+	return w.real.Close()
+}
+
+func (w *wrappedWriteCloser) Write(p []byte) (n int, err error) {
+	return w.wrap.Write(p)
 }
