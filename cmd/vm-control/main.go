@@ -152,6 +152,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  restore-vm-user-data IPaddr")
 	fmt.Fprintln(os.Stderr, "  set-vm-migrating IPaddr")
 	fmt.Fprintln(os.Stderr, "  snapshot-vm IPaddr")
+	fmt.Fprintln(os.Stderr, "  save-vm IPaddr destination")
 	fmt.Fprintln(os.Stderr, "  start-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  stop-vm IPaddr")
 	fmt.Fprintln(os.Stderr, "  trace-vm-metadata IPaddr")
@@ -205,6 +206,7 @@ var subcommands = []subcommand{
 	{"restore-vm-user-data", 1, 1, restoreVmUserDataSubcommand},
 	{"set-vm-migrating", 1, 1, setVmMigratingSubcommand},
 	{"snapshot-vm", 1, 1, snapshotVmSubcommand},
+	{"save-vm", 2, 2, saveVmSubcommand},
 	{"start-vm", 1, 1, startVmSubcommand},
 	{"stop-vm", 1, 1, stopVmSubcommand},
 	{"trace-vm-metadata", 1, 1, traceVmMetadataSubcommand},
