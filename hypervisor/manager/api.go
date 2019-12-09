@@ -259,6 +259,10 @@ func (m *Manager) ListAvailableAddresses() []proto.Address {
 	return m.listAvailableAddresses()
 }
 
+func (m *Manager) ListRegisteredAddresses() []proto.Address {
+	return m.listRegisteredAddresses()
+}
+
 func (m *Manager) ListSubnets(doSort bool) []proto.Subnet {
 	return m.listSubnets(doSort)
 }
