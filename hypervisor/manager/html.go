@@ -22,7 +22,8 @@ func (m *Manager) writeHtml(writer io.Writer) {
 	m.mutex.RLock()
 	memUnallocated := m.getUnallocatedMemoryInMiBWithLock()
 	numSubnets := len(m.subnets)
-	numAddresses := len(m.addressPool.Free)
+	numFreeAddresses := len(m.addressPool.Free)
+	numRegisteredAddresses := len(m.addressPool.Registered)
 	ownerGroups := make([]string, 0, len(m.ownerGroups))
 	for group := range m.ownerGroups {
 		ownerGroups = append(ownerGroups, group)
@@ -34,7 +35,10 @@ func (m *Manager) writeHtml(writer io.Writer) {
 	m.mutex.RUnlock()
 	fmt.Fprintf(writer,
 		"Available addresses: <a href=\"listAvailableAddresses\">%d</a><br>\n",
-		numAddresses)
+		numFreeAddresses)
+	fmt.Fprintf(writer,
+		"Registered addresses: <a href=\"listRegisteredAddresses\">%d</a><br>\n",
+		numRegisteredAddresses)
 	fmt.Fprintf(writer, "Available CPU: %g<br>\n",
 		float64(m.getAvailableMilliCPU())*1e-3)
 	if memInfo, err := meminfo.GetMemInfo(); err != nil {

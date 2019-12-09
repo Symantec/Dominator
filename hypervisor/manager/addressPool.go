@@ -188,6 +188,16 @@ func (m *Manager) listAvailableAddresses() []proto.Address {
 	return addresses
 }
 
+func (m *Manager) listRegisteredAddresses() []proto.Address {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	addresses := make([]proto.Address, 0, len(m.addressPool.Registered))
+	for _, address := range m.addressPool.Registered {
+		addresses = append(addresses, address)
+	}
+	return addresses
+}
+
 func (m *Manager) registerAddress(address proto.Address) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()

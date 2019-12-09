@@ -29,6 +29,8 @@ func StartServer(portNum uint, managerObj *manager.Manager, daemon bool) error {
 	html.HandleFunc("/", myState.statusHandler)
 	html.HandleFunc("/listAvailableAddresses",
 		myState.listAvailableAddressesHandler)
+	html.HandleFunc("/listRegisteredAddresses",
+		myState.listRegisteredAddressesHandler)
 	html.HandleFunc("/listSubnets", myState.listSubnetsHandler)
 	html.HandleFunc("/listVMs", myState.listVMsHandler)
 	html.HandleFunc("/showVmBootLog", myState.showBootLogHandler)
