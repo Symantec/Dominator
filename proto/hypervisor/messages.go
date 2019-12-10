@@ -168,18 +168,21 @@ type CopyVmResponse struct { // Multiple responses are sent.
 }
 
 type CreateVmRequest struct {
-	DhcpTimeout      time.Duration // <0: no DHCP; 0: no wait; >0 DHPC wait.
-	EnableNetboot    bool
-	ImageDataSize    uint64
-	ImageTimeout     time.Duration
-	MinimumFreeBytes uint64
-	RoundupPower     uint64
-	SecondaryVolumes []Volume
-	SkipBootloader   bool
-	UserDataSize     uint64
+	DhcpTimeout          time.Duration // <0: no DHCP; 0: no wait; >0 DHPC wait.
+	EnableNetboot        bool
+	ImageDataSize        uint64
+	ImageTimeout         time.Duration
+	MinimumFreeBytes     uint64
+	RoundupPower         uint64
+	SecondaryVolumes     []Volume
+	SecondaryVolumesData bool
+	SkipBootloader       bool
+	UserDataSize         uint64
 	VmInfo
-} // RAW image data (length=ImageDataSize) and user data (length=UserDataSize)
-// are streamed afterwards.
+} // The following data are streamed afterwards in the following order:
+//     RAW image data (length=ImageDataSize)
+//     user data (length=UserDataSize)
+//     secondary volumes (if SecondaryVolumesData is true)
 
 type CreateVmResponse struct { // Multiple responses are sent.
 	DhcpTimedOut    bool
