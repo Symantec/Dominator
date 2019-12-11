@@ -66,6 +66,10 @@ Some of the sub-commands available are:
                         saved. The VM must not be running
 - **replace-vm-user-data**: replace the user data for a VM. The old user data is
                         saved
+- **restore-vm**: restore all VM data (volumes) and metadata from a storage
+                  source. If the target *Hypervisor* has the original IP
+                  available it will be re-allocated for the new (restored) VM,
+                  otherwise a new IP address will be allocated
 - **restore-vm-from-snapshot**: restore VM volumes from the previous snapshot,
                                 discarding current volumes
 - **restore-vm-image**: restore the previously saved root image for a VM. The VM

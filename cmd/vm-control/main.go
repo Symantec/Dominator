@@ -147,6 +147,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  probe-vm-port IPaddr")
 	fmt.Fprintln(os.Stderr, "  replace-vm-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  replace-vm-user-data IPaddr")
+	fmt.Fprintln(os.Stderr, "  restore-vm source")
 	fmt.Fprintln(os.Stderr, "  restore-vm-from-snapshot IPaddr")
 	fmt.Fprintln(os.Stderr, "  restore-vm-image IPaddr")
 	fmt.Fprintln(os.Stderr, "  restore-vm-user-data IPaddr")
@@ -201,6 +202,7 @@ var subcommands = []subcommand{
 	{"probe-vm-port", 1, 1, probeVmPortSubcommand},
 	{"replace-vm-image", 1, 1, replaceVmImageSubcommand},
 	{"replace-vm-user-data", 1, 1, replaceVmUserDataSubcommand},
+	{"restore-vm", 1, 1, restoreVmSubcommand},
 	{"restore-vm-from-snapshot", 1, 1, restoreVmFromSnapshotSubcommand},
 	{"restore-vm-image", 1, 1, restoreVmImageSubcommand},
 	{"restore-vm-user-data", 1, 1, restoreVmUserDataSubcommand},
