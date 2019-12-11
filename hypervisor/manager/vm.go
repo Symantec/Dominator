@@ -1,7 +1,6 @@
 package manager
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/rand"
 	"fmt"
@@ -66,19 +65,20 @@ func computeSize(minimumFreeBytes, roundupPower, size uint64) uint64 {
 	return imageUnits << roundupPower
 }
 
-func copyData(filename string, reader io.Reader, length uint64,
-	perm os.FileMode) error {
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, perm)
+func copyData(filename string, reader io.Reader, length uint64) error {
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY,
+		fsutil.PrivateFilePerms)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-	if length < 1 {
+	if err := setVolumeSize(filename, length); err != nil {
+		return err
+	}
+	if reader == nil {
 		return nil
 	}
-	writer := bufio.NewWriter(file)
-	defer writer.Flush()
-	_, err = io.CopyN(writer, reader, int64(length))
+	_, err = io.CopyN(file, reader, int64(length))
 	return err
 }
 
@@ -839,7 +839,8 @@ func (m *Manager) createVm(conn *srpc.Conn) error {
 			return sendError(conn, err)
 		}
 	} else if request.MinimumFreeBytes > 0 { // Create empty root volume.
-		if err = vm.copyRootVolume(request, nil, 0); err != nil {
+		err = vm.copyRootVolume(request, nil, request.MinimumFreeBytes)
+		if err != nil {
 			return sendError(conn, err)
 		}
 	} else {
@@ -847,8 +848,7 @@ func (m *Manager) createVm(conn *srpc.Conn) error {
 	}
 	if request.UserDataSize > 0 {
 		filename := filepath.Join(vm.dirname, "user-data.raw")
-		err := copyData(filename, conn, request.UserDataSize, privateFilePerms)
-		if err != nil {
+		if err := copyData(filename, conn, request.UserDataSize); err != nil {
 			return sendError(conn, err)
 		}
 	}
@@ -859,14 +859,11 @@ func (m *Manager) createVm(conn *srpc.Conn) error {
 		}
 		for index, volume := range request.SecondaryVolumes {
 			fname := vm.VolumeLocations[index+1].Filename
-			cFlags := os.O_CREATE | os.O_TRUNC | os.O_RDWR
-			file, err := os.OpenFile(fname, cFlags, privateFilePerms)
-			if err != nil {
-				return sendError(conn, err)
-			} else {
-				file.Close()
+			var dataReader io.Reader
+			if request.SecondaryVolumesData {
+				dataReader = conn
 			}
-			if err := setVolumeSize(fname, volume.Size); err != nil {
+			if err := copyData(fname, dataReader, volume.Size); err != nil {
 				return sendError(conn, err)
 			}
 			vm.Volumes = append(vm.Volumes, volume)
@@ -2089,8 +2086,7 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn,
 			newSize = uint64(fi.Size())
 		}
 	} else if request.ImageDataSize > 0 {
-		err := copyData(tmpRootFilename, conn, request.ImageDataSize,
-			privateFilePerms)
+		err := copyData(tmpRootFilename, conn, request.ImageDataSize)
 		if err != nil {
 			return err
 		}
@@ -2116,7 +2112,7 @@ func (m *Manager) replaceVmImage(conn *srpc.Conn,
 				errors.New("ContentLength from: "+request.ImageURL))
 		}
 		err = copyData(tmpRootFilename, httpResponse.Body,
-			uint64(httpResponse.ContentLength), privateFilePerms)
+			uint64(httpResponse.ContentLength))
 		if err != nil {
 			return sendError(conn, err)
 		}
@@ -2507,20 +2503,17 @@ func (vm *vmInfoType) cleanup() {
 
 func (vm *vmInfoType) copyRootVolume(request proto.CreateVmRequest,
 	reader io.Reader, dataSize uint64) error {
-	size := computeSize(request.MinimumFreeBytes, request.RoundupPower,
-		dataSize)
-	err := vm.setupVolumes(size, request.SecondaryVolumes,
+	err := vm.setupVolumes(dataSize, request.SecondaryVolumes,
 		request.SpreadVolumes)
 	if err != nil {
 		return err
 	}
-	err = copyData(vm.VolumeLocations[0].Filename, reader, dataSize,
-		privateFilePerms)
+	err = copyData(vm.VolumeLocations[0].Filename, reader, dataSize)
 	if err != nil {
 		return err
 	}
-	vm.Volumes = []proto.Volume{{Size: size}}
-	return setVolumeSize(vm.VolumeLocations[0].Filename, size)
+	vm.Volumes = []proto.Volume{{Size: dataSize}}
+	return nil
 }
 
 func (vm *vmInfoType) delete() {

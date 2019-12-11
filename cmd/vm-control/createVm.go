@@ -53,25 +53,9 @@ func callCreateVm(client *srpc.Client, request hyper_proto.CreateVmRequest,
 			return fmt.Errorf("error uploading user data: %s", err)
 		}
 	}
-	if err := conn.Flush(); err != nil {
-		return fmt.Errorf("error flushing: %s", err)
-	}
-	for {
-		var response hyper_proto.CreateVmResponse
-		if err := conn.Decode(&response); err != nil {
-			return fmt.Errorf("error decoding: %s", err)
-		}
-		if response.Error != "" {
-			return errors.New(response.Error)
-		}
-		if response.ProgressMessage != "" {
-			logger.Debugln(0, response.ProgressMessage)
-		}
-		if response.Final {
-			*reply = response
-			return nil
-		}
-	}
+	response, err := processCreateVmResponses(conn, logger)
+	*reply = response
+	return err
 }
 
 func createVm(logger log.DebugLogger) error {
@@ -256,5 +240,28 @@ func getReader(filename string) (io.ReadCloser, int64, error) {
 			return nil, -1, err
 		}
 		return file, fi.Size(), nil
+	}
+}
+
+func processCreateVmResponses(conn *srpc.Conn,
+	logger log.DebugLogger) (hyper_proto.CreateVmResponse, error) {
+	var zeroResponse hyper_proto.CreateVmResponse
+	if err := conn.Flush(); err != nil {
+		return zeroResponse, fmt.Errorf("error flushing: %s", err)
+	}
+	for {
+		var response hyper_proto.CreateVmResponse
+		if err := conn.Decode(&response); err != nil {
+			return zeroResponse, fmt.Errorf("error decoding: %s", err)
+		}
+		if response.Error != "" {
+			return zeroResponse, errors.New(response.Error)
+		}
+		if response.ProgressMessage != "" {
+			logger.Debugln(0, response.ProgressMessage)
+		}
+		if response.Final {
+			return response, nil
+		}
 	}
 }
