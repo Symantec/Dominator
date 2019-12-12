@@ -728,8 +728,12 @@ func (m *Manager) createVm(conn *srpc.Conn) error {
 		return conn.Encode(proto.CreateVmResponse{Error: err.Error()})
 	}
 
+	var ipAddressToSend net.IP
 	sendUpdate := func(conn *srpc.Conn, message string) error {
-		response := proto.CreateVmResponse{ProgressMessage: message}
+		response := proto.CreateVmResponse{
+			IpAddress:       ipAddressToSend,
+			ProgressMessage: message,
+		}
 		if err := conn.Encode(response); err != nil {
 			return err
 		}
@@ -877,8 +881,16 @@ func (m *Manager) createVm(conn *srpc.Conn) error {
 	if err := <-memoryError; err != nil {
 		return sendError(conn, err)
 	}
-	if err := sendUpdate(conn, "starting VM"); err != nil {
-		return err
+	if vm.ipAddress == "" {
+		ipAddressToSend = net.ParseIP(vm.ipAddress)
+		if err := sendUpdate(conn, "starting VM"); err != nil {
+			return err
+		}
+	} else {
+		ipAddressToSend = net.ParseIP(vm.ipAddress)
+		if err := sendUpdate(conn, "starting VM "+vm.ipAddress); err != nil {
+			return err
+		}
 	}
 	dhcpTimedOut, err := vm.startManaging(request.DhcpTimeout,
 		request.EnableNetboot, false)
