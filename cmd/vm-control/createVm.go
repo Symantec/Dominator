@@ -1,22 +1,29 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
 	"math/rand"
 	"net"
 	"os"
+	"path/filepath"
 	"time"
 
 	hyperclient "github.com/Cloud-Foundations/Dominator/hypervisor/client"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/images/virtualbox"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/lib/tags"
 	fm_proto "github.com/Cloud-Foundations/Dominator/proto/fleetmanager"
 	hyper_proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
+
+type wrappedReadCloser struct {
+	real io.Closer
+	wrap io.Reader
+}
 
 func init() {
 	rand.Seed(time.Now().Unix() + time.Now().UnixNano())
@@ -31,7 +38,7 @@ func createVmSubcommand(args []string, logger log.DebugLogger) error {
 
 func callCreateVm(client *srpc.Client, request hyper_proto.CreateVmRequest,
 	reply *hyper_proto.CreateVmResponse, imageReader, userDataReader io.Reader,
-	logger log.DebugLogger) error {
+	imageSize, userDataSize int64, logger log.DebugLogger) error {
 	conn, err := client.Call("Hypervisor.CreateVm")
 	if err != nil {
 		return fmt.Errorf("error calling Hypervisor.CreateVm: %s", err)
@@ -43,14 +50,24 @@ func callCreateVm(client *srpc.Client, request hyper_proto.CreateVmRequest,
 	// Stream any required data.
 	if imageReader != nil {
 		logger.Debugln(0, "uploading image")
-		if _, err := io.Copy(conn, imageReader); err != nil {
-			return fmt.Errorf("error uploading image: %s", err)
+		startTime := time.Now()
+		if nCopied, err := io.CopyN(conn, imageReader, imageSize); err != nil {
+			return fmt.Errorf("error uploading image: %s got %d of %d bytes",
+				err, nCopied, imageSize)
+		} else {
+			duration := time.Since(startTime)
+			speed := uint64(float64(nCopied) / duration.Seconds())
+			logger.Debugf(0, "uploaded image in %s (%s/s)\n",
+				format.Duration(duration), format.FormatBytes(speed))
 		}
 	}
 	if userDataReader != nil {
 		logger.Debugln(0, "uploading user data")
-		if _, err := io.Copy(conn, userDataReader); err != nil {
-			return fmt.Errorf("error uploading user data: %s", err)
+		nCopied, err := io.CopyN(conn, userDataReader, userDataSize)
+		if err != nil {
+			return fmt.Errorf(
+				"error uploading user data: %s got %d of %d bytes",
+				err, nCopied, userDataSize)
 		}
 	}
 	response, err := processCreateVmResponses(conn, logger)
@@ -151,7 +168,7 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 		} else {
 			defer file.Close()
 			request.ImageDataSize = uint64(size)
-			imageReader = bufio.NewReader(io.LimitReader(file, size))
+			imageReader = file
 		}
 	} else {
 		return errors.New("no image specified")
@@ -163,7 +180,7 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 		} else {
 			defer file.Close()
 			request.UserDataSize = uint64(size)
-			userDataReader = bufio.NewReader(io.LimitReader(file, size))
+			userDataReader = file
 		}
 	}
 	client, err := dialHypervisor(hypervisor)
@@ -173,7 +190,7 @@ func createVmOnHypervisor(hypervisor string, logger log.DebugLogger) error {
 	defer client.Close()
 	var reply hyper_proto.CreateVmResponse
 	err = callCreateVm(client, request, &reply, imageReader, userDataReader,
-		logger)
+		int64(request.ImageDataSize), int64(request.UserDataSize), logger)
 	if err != nil {
 		return err
 	}
@@ -233,6 +250,13 @@ func getHypervisorAddress() (string, error) {
 func getReader(filename string) (io.ReadCloser, int64, error) {
 	if file, err := os.Open(filename); err != nil {
 		return nil, -1, err
+	} else if filepath.Ext(filename) == ".vdi" {
+		vdi, err := virtualbox.NewReader(file)
+		if err != nil {
+			file.Close()
+			return nil, -1, err
+		}
+		return &wrappedReadCloser{real: file, wrap: vdi}, int64(vdi.Size), nil
 	} else {
 		fi, err := file.Stat()
 		if err != nil {
@@ -264,4 +288,12 @@ func processCreateVmResponses(conn *srpc.Conn,
 			return response, nil
 		}
 	}
+}
+
+func (r *wrappedReadCloser) Close() error {
+	return r.real.Close()
+}
+
+func (r *wrappedReadCloser) Read(p []byte) (n int, err error) {
+	return r.wrap.Read(p)
 }
