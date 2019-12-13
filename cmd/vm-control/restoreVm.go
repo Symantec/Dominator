@@ -36,11 +36,6 @@ type tarReader struct {
 	reader *tar.Reader
 }
 
-type wrappedReadCloser struct {
-	real io.Closer
-	wrap io.Reader
-}
-
 type readerMaker interface {
 	MakeReader(w io.ReadCloser) io.ReadCloser
 }
@@ -304,12 +299,4 @@ func (restorer *tarRestorer) OpenReader(filename string) (
 
 func (r tarReader) Read(p []byte) (n int, err error) {
 	return r.reader.Read(p)
-}
-
-func (r *wrappedReadCloser) Close() error {
-	return r.real.Close()
-}
-
-func (r *wrappedReadCloser) Read(p []byte) (n int, err error) {
-	return r.wrap.Read(p)
 }
