@@ -3,6 +3,7 @@ package rpcd
 import (
 	"io"
 	"net"
+	"sync"
 
 	"github.com/Cloud-Foundations/Dominator/hypervisor/manager"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
@@ -11,17 +12,22 @@ import (
 )
 
 type DhcpServer interface {
+	AddLease(address proto.Address, hostname string) error
 	AddNetbootLease(address proto.Address, hostname string,
 		subnet *proto.Subnet) error
 	MakeAcknowledgmentChannel(ipAddr net.IP) <-chan struct{}
 	RemoveLease(ipAddr net.IP)
 }
 
+type ipv4Address [4]byte
+
 type srpcType struct {
 	dhcpServer     DhcpServer
 	logger         log.DebugLogger
 	manager        *manager.Manager
 	tftpbootServer TftpbootServer
+	mutex          sync.Mutex             // Protect everything below.
+	externalLeases map[ipv4Address]string // Value: MAC address.
 }
 
 type TftpbootServer interface {
@@ -43,6 +49,7 @@ func Setup(manager *manager.Manager, dhcpServer DhcpServer,
 		logger:         logger,
 		manager:        manager,
 		tftpbootServer: tftpbootServer,
+		externalLeases: make(map[ipv4Address]string),
 	}
 	srpc.SetDefaultGrantMethod(
 		func(_ string, authInfo *srpc.AuthInformation) bool {
