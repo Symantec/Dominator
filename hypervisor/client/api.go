@@ -62,6 +62,11 @@ func PrepareVmForMigration(client *srpc.Client, ipAddr net.IP,
 	return prepareVmForMigration(client, ipAddr, accessToken, enable)
 }
 
+func RegisterExternalLeases(client *srpc.Client, addressList proto.AddressList,
+	hostnames []string) error {
+	return registerExternalLeases(client, addressList, hostnames)
+}
+
 func StartVm(client *srpc.Client, ipAddr net.IP, accessToken []byte) error {
 	return startVm(client, ipAddr, accessToken)
 }

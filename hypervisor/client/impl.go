@@ -233,6 +233,21 @@ func prepareVmForMigration(client *srpc.Client, ipAddr net.IP,
 	return errors.New(reply.Error)
 }
 
+func registerExternalLeases(client *srpc.Client, addressList proto.AddressList,
+	hostnames []string) error {
+	request := proto.RegisterExternalLeasesRequest{
+		Addresses: addressList,
+		Hostnames: hostnames,
+	}
+	var reply proto.RegisterExternalLeasesResponse
+	err := client.RequestReply("Hypervisor.RegisterExternalLeases",
+		request, &reply)
+	if err != nil {
+		return err
+	}
+	return errors.New(reply.Error)
+}
+
 func startVm(client *srpc.Client, ipAddr net.IP, accessToken []byte) error {
 	request := proto.StartVmRequest{
 		AccessToken: accessToken,
