@@ -17,10 +17,13 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupclient"
 	"github.com/Cloud-Foundations/Dominator/lib/tags"
+	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
 var (
-	fleetManagerHostname = flag.String("fleetManagerHostname", "",
+	externalLeaseHostnames flagutil.StringList
+	externalLeaseAddresses proto.AddressList
+	fleetManagerHostname   = flag.String("fleetManagerHostname", "",
 		"Hostname of Fleet Manager")
 	fleetManagerPortNum = flag.Uint("fleetManagerPortNum",
 		constants.FleetManagerPortNumber,
@@ -72,6 +75,10 @@ var (
 )
 
 func init() {
+	flag.Var(&externalLeaseAddresses, "externalLeaseAddresses",
+		"List of addresses for register-external-leases")
+	flag.Var(&externalLeaseHostnames, "externalLeaseHostnames",
+		"Optional list of hostnames for register-external-leases")
 	flag.Var(&hypervisorTags, "hypervisorTags", "Tags to apply to Hypervisor")
 	flag.Var(&memory, "memory", "memory for VM")
 	flag.Var(&netbootFiles, "netbootFiles", "Extra files served by TFTP server")
@@ -96,6 +103,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  netboot-host hostname")
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
 	fmt.Fprintln(os.Stderr, "  netboot-vm")
+	fmt.Fprintln(os.Stderr, "  register-external-leases")
 	fmt.Fprintln(os.Stderr, "  reinstall")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
 	fmt.Fprintln(os.Stderr, "  remove-ip-address IPaddr")
@@ -127,6 +135,7 @@ var subcommands = []subcommand{
 	{"netboot-host", 1, 1, netbootHostSubcommand},
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},
 	{"netboot-vm", 0, 0, netbootVmSubcommand},
+	{"register-external-leases", 0, 0, registerExternalLeasesSubcommand},
 	{"reinstall", 0, 0, reinstallSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
 	{"remove-ip-address", 1, 1, removeIpAddressSubcommand},
