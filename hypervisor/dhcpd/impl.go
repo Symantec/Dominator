@@ -198,9 +198,9 @@ func (s *DhcpServer) makeRequestChannel(macAddr string) <-chan net.IP {
 }
 
 func (s *DhcpServer) notifyRequest(address proto.Address) {
-	s.mutex.Lock()
+	s.mutex.RLock()
 	requestChan, ok := s.requestChannels[address.MacAddress]
-	s.mutex.Unlock()
+	s.mutex.RUnlock()
 	if ok {
 		select {
 		case requestChan <- address.IpAddress:

@@ -1,8 +1,10 @@
 package hypervisor
 
 import (
+	"bytes"
 	"errors"
 	"net"
+	"strings"
 )
 
 const consoleTypeUnknown = "UNKNOWN ConsoleType"
@@ -76,8 +78,54 @@ func (left *Address) Equal(right *Address) bool {
 	return true
 }
 
+func (address *Address) Set(value string) error {
+	if split := strings.Split(value, ";"); len(split) != 2 {
+		return errors.New("malformed address pair: " + value)
+	} else if ip := net.ParseIP(split[1]); ip == nil {
+		return errors.New("unable to parse IP: " + split[1])
+	} else if ip4 := ip.To4(); ip4 == nil {
+		return errors.New("address is not IPv4: " + split[1])
+	} else {
+		*address = Address{IpAddress: ip4, MacAddress: split[0]}
+		return nil
+	}
+}
+
 func (address *Address) Shrink() {
 	address.IpAddress = ShrinkIP(address.IpAddress)
+}
+
+func (address *Address) String() string {
+	return address.IpAddress.String() + ";" + address.MacAddress
+}
+
+func (al *AddressList) String() string {
+	buffer := &bytes.Buffer{}
+	buffer.WriteString(`"`)
+	for index, address := range *al {
+		buffer.WriteString(address.String())
+		if index < len(*al)-1 {
+			buffer.WriteString(",")
+		}
+	}
+	buffer.WriteString(`"`)
+	return buffer.String()
+}
+
+func (al *AddressList) Set(value string) error {
+	newList := make(AddressList, 0)
+	if value != "" {
+		addressStrings := strings.Split(value, ",")
+		for _, addressString := range addressStrings {
+			var address Address
+			if err := address.Set(addressString); err != nil {
+				return err
+			}
+			newList = append(newList, address)
+		}
+	}
+	*al = newList
+	return nil
 }
 
 func stringSlicesEqual(left, right []string) bool {

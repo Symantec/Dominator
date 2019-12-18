@@ -38,6 +38,8 @@ type Address struct {
 	MacAddress string
 }
 
+type AddressList []Address
+
 type AddVmVolumesRequest struct {
 	IpAddress   net.IP
 	VolumeSizes []uint64
@@ -435,6 +437,15 @@ type ProbeVmPortRequest struct {
 type ProbeVmPortResponse struct {
 	PortIsOpen bool
 	Error      string
+}
+
+type RegisterExternalLeasesRequest struct {
+	Addresses AddressList
+	Hostnames []string `json:",omitempty"`
+}
+
+type RegisterExternalLeasesResponse struct {
+	Error string
 }
 
 type ReplaceVmImageRequest struct {

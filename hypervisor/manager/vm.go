@@ -2833,9 +2833,15 @@ func (vm *vmInfoType) startManaging(dhcpTimeout time.Duration,
 		return false, nil
 	}
 	if dhcpTimeout >= 0 {
-		vm.manager.DhcpServer.AddLease(vm.Address, vm.Hostname)
+		err := vm.manager.DhcpServer.AddLease(vm.Address, vm.Hostname)
+		if err != nil {
+			return false, err
+		}
 		for _, address := range vm.SecondaryAddresses {
-			vm.manager.DhcpServer.AddLease(address, vm.Hostname)
+			err := vm.manager.DhcpServer.AddLease(address, vm.Hostname)
+			if err != nil {
+				vm.logger.Println(err)
+			}
 		}
 	}
 	monitorSock, err := net.Dial("unix", vm.monitorSockname)

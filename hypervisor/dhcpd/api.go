@@ -31,10 +31,8 @@ func New(interfaceNames []string, logger log.DebugLogger) (*DhcpServer, error) {
 	return newServer(interfaceNames, logger)
 }
 
-func (s *DhcpServer) AddLease(address proto.Address, hostname string) {
-	if err := s.addLease(address, false, hostname, nil); err != nil {
-		s.logger.Println(err)
-	}
+func (s *DhcpServer) AddLease(address proto.Address, hostname string) error {
+	return s.addLease(address, false, hostname, nil)
 }
 
 func (s *DhcpServer) AddNetbootLease(address proto.Address,
