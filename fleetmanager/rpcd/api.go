@@ -42,6 +42,7 @@ func Setup(hypervisorsManager *hypervisors.Manager, logger log.DebugLogger) (
 				"ListHypervisorLocations",
 				"ListHypervisorsInLocation",
 				"ListVMsInLocation",
+				"PowerOnMachine",
 			}})
 	return (*htmlWriter)(srpcObj), nil
 }
