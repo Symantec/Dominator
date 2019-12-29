@@ -418,6 +418,14 @@ type PatchVmImageResponse struct { // Multiple responses are sent.
 	Error           string
 }
 
+type PowerOffRequest struct {
+	StopVMs bool // true: attempt to stop VMs; false: running VMs block poweroff
+}
+
+type PowerOffResponse struct {
+	Error string
+}
+
 type PrepareVmForMigrationRequest struct {
 	AccessToken []byte
 	Enable      bool

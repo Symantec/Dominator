@@ -166,6 +166,11 @@ func (m *Manager) MoveIpAddresses(hostname string, ipAddresses []net.IP) error {
 	return m.moveIpAddresses(hostname, ipAddresses)
 }
 
+func (m *Manager) PowerOnMachine(hostname string,
+	authInfo *srpc.AuthInformation) error {
+	return m.powerOnMachine(hostname, authInfo)
+}
+
 func (m *Manager) WriteHtml(writer io.Writer) {
 	m.writeHtml(writer)
 }

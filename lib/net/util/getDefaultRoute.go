@@ -10,20 +10,24 @@ import (
 
 const procNetRoute = "/proc/net/route"
 
-type routeInfo struct {
-	interfaceName string
-	destAddr      net.IP
-	mask          net.IPMask
+func getDefaultRoute() (*DefaultRouteInfo, error) {
+	if routeTable, err := GetRouteTable(); err != nil {
+		return nil, err
+	} else if routeTable.DefaultRoute == nil {
+		return nil, errors.New("could not find default route")
+	} else {
+		return routeTable.DefaultRoute, nil
+	}
 }
 
-func getDefaultRoute() (*DefaultRouteInfo, error) {
+func getRouteTable() (*RouteTable, error) {
 	file, err := os.Open(procNetRoute)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
-	routes := make([]routeInfo, 0)
+	var allRoutes, routes []*RouteEntry
 	var defaultRouteAddr net.IP
 	var defaultRouteInterface string
 	for scanner.Scan() {
@@ -37,37 +41,46 @@ func getDefaultRoute() (*DefaultRouteInfo, error) {
 		if err != nil || nCopied < 11 {
 			continue
 		}
-		if destAddr == 0 && flags&0x2 == 0x2 && flags&0x1 == 0x1 {
+		routeEntry := &RouteEntry{
+			BaseAddr:      intToIP(destAddr),
+			BroadcastAddr: intToIP(destAddr | (0xffffffff ^ mask)),
+			Flags:         flags,
+			InterfaceName: interfaceName,
+			Mask:          net.IPMask(intToIP(mask)),
+		}
+		if flags&RouteFlagGateway != 0 {
+			routeEntry.GatewayAddr = intToIP(gatewayAddr)
+		}
+		allRoutes = append(allRoutes, routeEntry)
+		if destAddr == 0 &&
+			flags&RouteFlagGateway != 0 &&
+			flags&RouteFlagUp != 0 {
 			defaultRouteAddr = intToIP(gatewayAddr)
 			defaultRouteInterface = interfaceName
 			continue
 		}
-		if destAddr != 0 && flags == 0x1 && gatewayAddr == 0 {
-			routes = append(routes, routeInfo{
-				interfaceName: interfaceName,
-				destAddr:      intToIP(destAddr),
-				mask:          net.IPMask(intToIP(mask)),
-			})
+		if destAddr != 0 && flags == RouteFlagUp && gatewayAddr == 0 {
+			routes = append(routes, routeEntry)
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
 	if len(defaultRouteAddr) == 0 {
-		return nil, errors.New("could not find default route")
+		return &RouteTable{RouteEntries: allRoutes}, nil
 	}
 	defaultRoute := &DefaultRouteInfo{
 		Address:   defaultRouteAddr,
 		Interface: defaultRouteInterface,
 	}
 	for _, route := range routes {
-		if route.interfaceName == defaultRouteInterface &&
-			defaultRouteAddr.Mask(route.mask).Equal(route.destAddr) {
-			defaultRoute.Mask = route.mask
+		if route.InterfaceName == defaultRouteInterface &&
+			defaultRouteAddr.Mask(route.Mask).Equal(route.BaseAddr) {
+			defaultRoute.Mask = route.Mask
 			break
 		}
 	}
-	return defaultRoute, nil
+	return &RouteTable{DefaultRoute: defaultRoute, RouteEntries: allRoutes}, nil
 }
 
 func intToIP(ip uint32) net.IP {

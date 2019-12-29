@@ -217,6 +217,16 @@ func listSubnets(client *srpc.Client, doSort bool) ([]proto.Subnet, error) {
 	return reply.Subnets, nil
 }
 
+func powerOff(client *srpc.Client, stopVMs bool) error {
+	request := proto.PowerOffRequest{StopVMs: stopVMs}
+	var reply proto.PowerOffResponse
+	err := client.RequestReply("Hypervisor.PowerOff", request, &reply)
+	if err != nil {
+		return err
+	}
+	return errors.New(reply.Error)
+}
+
 func prepareVmForMigration(client *srpc.Client, ipAddr net.IP,
 	accessToken []byte, enable bool) error {
 	request := proto.PrepareVmForMigrationRequest{

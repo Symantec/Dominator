@@ -110,3 +110,11 @@ type NetworkEntry struct {
 	HostMacAddress HardwareAddr `json:",omitempty"`
 	SubnetId       string       `json:",omitempty"`
 }
+
+type PowerOnMachineRequest struct {
+	Hostname string
+}
+
+type PowerOnMachineResponse struct {
+	Error string
+}

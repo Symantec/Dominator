@@ -1,7 +1,9 @@
 package manager
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"sync"
 	"time"
 
@@ -12,9 +14,26 @@ type flusher interface {
 	Flush() error
 }
 
-func (m *Manager) shutdownVMsAndExit() {
-	var waitGroup sync.WaitGroup
+func (m *Manager) powerOff(stopVMs bool) error {
 	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	if stopVMs {
+		m.shutdownVMs()
+	}
+	for _, vm := range m.vms {
+		if vm.State != proto.StateStopped {
+			return fmt.Errorf("%s is not shut down", vm.Address.IpAddress)
+		}
+	}
+	cmd := exec.Command("poweroff")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("%s: %s", err, string(output))
+	}
+	return nil
+}
+
+func (m *Manager) shutdownVMs() {
+	var waitGroup sync.WaitGroup
 	for _, vm := range m.vms {
 		waitGroup.Add(1)
 		go func(vm *vmInfoType) {
@@ -27,6 +46,12 @@ func (m *Manager) shutdownVMsAndExit() {
 	if flusher, ok := m.Logger.(flusher); ok {
 		flusher.Flush()
 	}
+}
+
+func (m *Manager) shutdownVMsAndExit() {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	m.shutdownVMs()
 	os.Exit(0)
 }
 

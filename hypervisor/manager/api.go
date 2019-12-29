@@ -296,6 +296,10 @@ func (m *Manager) PatchVmImage(conn *srpc.Conn,
 	return m.patchVmImage(conn, request)
 }
 
+func (m *Manager) PowerOff(stopVMs bool) error {
+	return m.powerOff(stopVMs)
+}
+
 func (m *Manager) PrepareVmForMigration(ipAddr net.IP,
 	authInfo *srpc.AuthInformation, accessToken []byte, enable bool) error {
 	return m.prepareVmForMigration(ipAddr, authInfo, accessToken, enable)
