@@ -50,10 +50,14 @@ Some of the sub-commands available are:
                        machine
 - **netboot-vm**: create a temporary VM and install with PXE booting. This is
                   for debugging physical machine installation
-- **reinstall**: reinstall the local machine. This erases all data
+- **power-off**: shut down and power off the specified *Hypervisor*. All VMs
+                 must be stopped beforehand
+- **power-on**: power on the specified *Hypervisor*. This uses remote IPMI or
+                Wake On LAN, where available.
 - **register-external-leases**: register external DHCP leases with a specific
                                 *Hyervisor*. These are lost after a *Hypervisor*
                                 restart
+- **reinstall**: reinstall the local machine. This erases all data
 - **remove-excess-addresses**: remove free addresses for a specific *Hypervisor*
                                above the specified limit
 - **remove-ip-address**: remove a (free) IP address from a specific *Hypervisor*

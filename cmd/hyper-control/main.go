@@ -103,6 +103,8 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  netboot-host hostname")
 	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
 	fmt.Fprintln(os.Stderr, "  netboot-vm")
+	fmt.Fprintln(os.Stderr, "  power-off")
+	fmt.Fprintln(os.Stderr, "  power-on")
 	fmt.Fprintln(os.Stderr, "  register-external-leases")
 	fmt.Fprintln(os.Stderr, "  reinstall")
 	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
@@ -135,6 +137,8 @@ var subcommands = []subcommand{
 	{"netboot-host", 1, 1, netbootHostSubcommand},
 	{"netboot-machine", 2, 3, netbootMachineSubcommand},
 	{"netboot-vm", 0, 0, netbootVmSubcommand},
+	{"power-off", 0, 0, powerOffSubcommand},
+	{"power-on", 0, 0, powerOnSubcommand},
 	{"register-external-leases", 0, 0, registerExternalLeasesSubcommand},
 	{"reinstall", 0, 0, reinstallSubcommand},
 	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
