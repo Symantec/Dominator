@@ -17,6 +17,7 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/filter"
 	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
 	"github.com/Cloud-Foundations/Dominator/lib/flagutil"
+	"github.com/Cloud-Foundations/Dominator/lib/format"
 	"github.com/Cloud-Foundations/Dominator/lib/fsbench"
 	"github.com/Cloud-Foundations/Dominator/lib/fsrateio"
 	"github.com/Cloud-Foundations/Dominator/lib/html"
@@ -51,7 +52,8 @@ var (
 		"Name of file to write my PID to")
 	portNum = flag.Uint("portNum", constants.SubPortNumber,
 		"Port number to allocate and listen on for HTTP/RPC")
-	rootDir = flag.String("rootDir", "/",
+	rootDeviceBytesPerSecond flagutil.Size
+	rootDir                  = flag.String("rootDir", "/",
 		"Name of root of directory tree to manage")
 	scanExcludeList flagutil.StringList
 	showStats       = flag.Bool("showStats", false,
@@ -63,6 +65,8 @@ var (
 
 func init() {
 	runtime.LockOSThread()
+	flag.Var(&rootDeviceBytesPerSecond, "rootDeviceBytesPerSecond",
+		"Fallback root device speed (default 0)")
 	flag.Var(&scanExcludeList, "scanExcludeList",
 		`Comma separated list of patterns to exclude from scanning (default `+strings.Join(constants.ScanExcludeList, ",")+`")`)
 }
@@ -161,8 +165,9 @@ func unshareAndBind(workingRootDir string) bool {
 	return true
 }
 
-func getCachedFsSpeed(workingRootDir string, cacheDirname string) (bytesPerSecond,
-	blocksPerSecond uint64, computed, ok bool) {
+func getCachedFsSpeed(workingRootDir string,
+	cacheDirname string) (bytesPerSecond, blocksPerSecond uint64,
+	computed, ok bool) {
 	bytesPerSecond = 0
 	blocksPerSecond = 0
 	devnum, err := fsbench.GetDevnumForFile(workingRootDir)
@@ -296,7 +301,13 @@ func main() {
 	bytesPerSecond, blocksPerSecond, firstScan, ok := getCachedFsSpeed(
 		workingRootDir, tmpDir)
 	if !ok {
-		os.Exit(1)
+		if rootDeviceBytesPerSecond < 1<<20 {
+			os.Exit(1)
+		}
+		bytesPerSecond = uint64(rootDeviceBytesPerSecond)
+		blocksPerSecond = bytesPerSecond >> 9
+		logger.Printf("Falling back to -rootDeviceBytesPerSecond option: %s\n",
+			format.FormatBytes(bytesPerSecond))
 	}
 	publishFsSpeed(bytesPerSecond, blocksPerSecond)
 	configParams := sub.Configuration{}
