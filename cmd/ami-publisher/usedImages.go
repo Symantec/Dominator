@@ -9,14 +9,12 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func listUsedImagesSubcommand(args []string, logger log.DebugLogger) {
-	err := listUsedImages(logger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing used images: %s\n", err)
-		os.Exit(1)
+func listUsedImagesSubcommand(args []string, logger log.DebugLogger) error {
+	if err := listUsedImages(logger); err != nil {
+		return fmt.Errorf("Error listing used images: %s\n", err)
 	}
 	logMemoryUsage(logger)
-	os.Exit(0)
+	return nil
 }
 
 func listUsedImages(logger log.DebugLogger) error {

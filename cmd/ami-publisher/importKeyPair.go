@@ -3,19 +3,16 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imagepublishers/amipublisher"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func importKeyPairSubcommand(args []string, logger log.DebugLogger) {
-	err := importKeyPair(args[0], args[1], logger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error importing key pair: %s\n", err)
-		os.Exit(1)
+func importKeyPairSubcommand(args []string, logger log.DebugLogger) error {
+	if err := importKeyPair(args[0], args[1], logger); err != nil {
+		return fmt.Errorf("Error importing key pair: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func importKeyPair(keyName string, pubKeyFilename string,

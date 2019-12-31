@@ -2,20 +2,17 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imagepublishers/amipublisher"
 	libjson "github.com/Cloud-Foundations/Dominator/lib/json"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func deleteSubcommand(args []string, logger log.DebugLogger) {
-	err := deleteResources(args, logger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error deleting resources: %s\n", err)
-		os.Exit(1)
+func deleteSubcommand(args []string, logger log.DebugLogger) error {
+	if err := deleteResources(args, logger); err != nil {
+		return fmt.Errorf("Error deleting resources: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func deleteResources(resultsFiles []string, logger log.DebugLogger) error {

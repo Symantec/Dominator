@@ -12,15 +12,13 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func publishSubcommand(args []string, logger log.DebugLogger) {
+func publishSubcommand(args []string, logger log.DebugLogger) error {
 	imageServerAddr := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)
-	err := publish(imageServerAddr, args[0], args[1], logger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error publishing image: %s\n", err)
-		os.Exit(1)
+	if err := publish(imageServerAddr, args[0], args[1], logger); err != nil {
+		return fmt.Errorf("Error publishing image: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func publish(imageServerAddress string, streamName string, imageLeafName string,

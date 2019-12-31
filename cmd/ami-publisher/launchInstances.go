@@ -12,12 +12,11 @@ import (
 	libtags "github.com/Cloud-Foundations/Dominator/lib/tags"
 )
 
-func launchInstancesSubcommand(args []string, logger log.DebugLogger) {
+func launchInstancesSubcommand(args []string, logger log.DebugLogger) error {
 	if err := launchInstances(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error launching instances: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error launching instances: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func launchInstances(bootImage string, logger log.DebugLogger) error {
@@ -42,12 +41,12 @@ func launchInstances(bootImage string, logger log.DebugLogger) error {
 	return nil
 }
 
-func launchInstancesForImagesSubcommand(args []string, logger log.DebugLogger) {
+func launchInstancesForImagesSubcommand(args []string,
+	logger log.DebugLogger) error {
 	if err := launchInstancesForImages(args, logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error launching instances: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error launching instances: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func launchInstancesForImages(resourcesFiles []string,

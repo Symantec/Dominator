@@ -9,13 +9,11 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func listUnpackersSubcommand(args []string, logger log.DebugLogger) {
-	err := listUnpackers(logger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing unpackers: %s\n", err)
-		os.Exit(1)
+func listUnpackersSubcommand(args []string, logger log.DebugLogger) error {
+	if err := listUnpackers(logger); err != nil {
+		return fmt.Errorf("Error listing unpackers: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func listUnpackers(logger log.DebugLogger) error {

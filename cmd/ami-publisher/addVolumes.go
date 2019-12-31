@@ -2,19 +2,17 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/Cloud-Foundations/Dominator/imagepublishers/amipublisher"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func addVolumesSubcommand(args []string, logger log.DebugLogger) {
+func addVolumesSubcommand(args []string, logger log.DebugLogger) error {
 	if err := addVolumes(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error adding volumes: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error adding volumes: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func addVolumes(sizeStr string, logger log.DebugLogger) error {
