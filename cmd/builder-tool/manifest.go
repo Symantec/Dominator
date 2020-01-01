@@ -19,7 +19,7 @@ type logWriterType struct {
 	buffer bytes.Buffer
 }
 
-func buildFromManifestSubcommand(args []string, logger log.DebugLogger) {
+func buildFromManifestSubcommand(args []string, logger log.DebugLogger) error {
 	srpcClient := getImageServerClient()
 	logWriter := &logWriterType{}
 	if *alwaysShowBuildLog {
@@ -34,8 +34,7 @@ func buildFromManifestSubcommand(args []string, logger log.DebugLogger) {
 			os.Stderr.Write(logWriter.Bytes())
 		}
 		fmt.Fprintln(os.Stderr, "End of build log ============================")
-		fmt.Fprintf(os.Stderr, "Error processing manifest: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error processing manifest: %s\n", err)
 	}
 	if *alwaysShowBuildLog {
 		fmt.Fprintln(os.Stderr, "End of build log ============================")
@@ -43,15 +42,15 @@ func buildFromManifestSubcommand(args []string, logger log.DebugLogger) {
 		err := fsutil.CopyToFile("build.log", filePerms, &logWriter.buffer,
 			uint64(logWriter.buffer.Len()))
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error writing build log: %s\n", err)
-			os.Exit(1)
+			return fmt.Errorf("Error writing build log: %s\n", err)
 		}
 	}
 	fmt.Println(name)
-	os.Exit(0)
+	return nil
 }
 
-func buildTreeFromManifestSubcommand(args []string, logger log.DebugLogger) {
+func buildTreeFromManifestSubcommand(args []string,
+	logger log.DebugLogger) error {
 	srpcClient := getImageServerClient()
 	logWriter := &logWriterType{}
 	if *alwaysShowBuildLog {
@@ -66,8 +65,7 @@ func buildTreeFromManifestSubcommand(args []string, logger log.DebugLogger) {
 			os.Stderr.Write(logWriter.Bytes())
 		}
 		fmt.Fprintln(os.Stderr, "End of build log ============================")
-		fmt.Fprintf(os.Stderr, "Error processing manifest: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error processing manifest: %s\n", err)
 	}
 	if *alwaysShowBuildLog {
 		fmt.Fprintln(os.Stderr, "End of build log ============================")
@@ -75,15 +73,14 @@ func buildTreeFromManifestSubcommand(args []string, logger log.DebugLogger) {
 		err := fsutil.CopyToFile("build.log", filePerms, &logWriter.buffer,
 			uint64(logWriter.buffer.Len()))
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error writing build log: %s\n", err)
-			os.Exit(1)
+			return fmt.Errorf("Error writing build log: %s\n", err)
 		}
 	}
 	fmt.Println(rootDir)
-	os.Exit(0)
+	return nil
 }
 
-func processManifestSubcommand(args []string, logger log.DebugLogger) {
+func processManifestSubcommand(args []string, logger log.DebugLogger) error {
 	logWriter := &logWriterType{}
 	if *alwaysShowBuildLog {
 		fmt.Fprintln(os.Stderr, "Start of build log ==========================")
@@ -96,8 +93,7 @@ func processManifestSubcommand(args []string, logger log.DebugLogger) {
 			os.Stderr.Write(logWriter.Bytes())
 		}
 		fmt.Fprintln(os.Stderr, "End of build log ============================")
-		fmt.Fprintf(os.Stderr, "Error processing manifest: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error processing manifest: %s\n", err)
 	}
 	if *alwaysShowBuildLog {
 		fmt.Fprintln(os.Stderr, "End of build log ============================")
@@ -105,11 +101,10 @@ func processManifestSubcommand(args []string, logger log.DebugLogger) {
 		err := fsutil.CopyToFile("build.log", filePerms, &logWriter.buffer,
 			uint64(logWriter.buffer.Len()))
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error writing build log: %s\n", err)
-			os.Exit(1)
+			return fmt.Errorf("Error writing build log: %s\n", err)
 		}
 	}
-	os.Exit(0)
+	return nil
 }
 
 func (w *logWriterType) Bytes() []byte {

@@ -24,13 +24,12 @@ const createFlags = os.O_CREATE | os.O_TRUNC | os.O_RDWR
 
 type dummyHasher struct{}
 
-func buildRawFromManifestSubcommand(args []string, logger log.DebugLogger) {
+func buildRawFromManifestSubcommand(args []string,
+	logger log.DebugLogger) error {
 	if err := buildRawFromManifest(args[0], args[1], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error building RAW image from manifest: %s\n",
-			err)
-		os.Exit(1)
+		return fmt.Errorf("Error building RAW image from manifest: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func buildRawFromManifest(manifestDir, rawFilename string,

@@ -3,28 +3,27 @@
 package main
 
 import (
-	"os"
+	"errors"
 
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func notAvailable() {
-	os.Stderr.Write([]byte("Not available on this OS\n"))
-	os.Exit(1)
+var errorNotAvailable = errors.New("Not available on this OS")
+
+func buildFromManifestSubcommand(args []string, logger log.DebugLogger) error {
+	return errorNotAvailable
 }
 
-func buildFromManifestSubcommand(args []string, logger log.DebugLogger) {
-	notAvailable()
+func buildRawFromManifestSubcommand(args []string,
+	logger log.DebugLogger) error {
+	return errorNotAvailable
 }
 
-func buildRawFromManifestSubcommand(args []string, logger log.DebugLogger) {
-	notAvailable()
+func buildTreeFromManifestSubcommand(args []string,
+	logger log.DebugLogger) error {
+	return errorNotAvailable
 }
 
-func buildTreeFromManifestSubcommand(args []string, logger log.DebugLogger) {
-	notAvailable()
-}
-
-func processManifestSubcommand(args []string, logger log.DebugLogger) {
-	notAvailable()
+func processManifestSubcommand(args []string, logger log.DebugLogger) error {
+	return errorNotAvailable
 }
