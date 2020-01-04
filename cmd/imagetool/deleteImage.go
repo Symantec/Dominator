@@ -2,16 +2,15 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func deleteImageSubcommand(args []string) {
+func deleteImageSubcommand(args []string, logger log.DebugLogger) error {
 	imageSClient, _ := getClients()
 	if err := client.DeleteImage(imageSClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error deleting image\t%s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error deleting image\t%s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }

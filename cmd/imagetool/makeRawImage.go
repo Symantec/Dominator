@@ -2,24 +2,22 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"syscall"
 
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem/util"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
 )
 
 const filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP |
 	syscall.S_IROTH
 
-func makeRawImageSubcommand(args []string) {
+func makeRawImageSubcommand(args []string, logger log.DebugLogger) error {
 	_, objectClient := getClients()
-	err := makeRawImage(objectClient, args[0], args[1])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error making raw image: %s\n", err)
-		os.Exit(1)
+	if err := makeRawImage(objectClient, args[0], args[1]); err != nil {
+		return fmt.Errorf("Error making raw image: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func makeRawImage(objectClient *objectclient.ObjectClient, name,

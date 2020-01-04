@@ -13,40 +13,36 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/constants"
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 	"github.com/Cloud-Foundations/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/sub"
 	subclient "github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
-func diffSubcommand(args []string) {
-	diffTypedImages(args[0], args[1], args[2])
+func diffSubcommand(args []string, logger log.DebugLogger) error {
+	return diffTypedImages(args[0], args[1], args[2])
 }
 
-func diffTypedImages(tool string, lName string, rName string) {
+func diffTypedImages(tool string, lName string, rName string) error {
 	lfs, err := getTypedImage(lName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting left image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error getting left image: %s\n", err)
 	}
 	if lfs, err = applyDeleteFilter(lfs); err != nil {
-		fmt.Fprintf(os.Stderr, "Error filtering left image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error filtering left image: %s\n", err)
 	}
 	rfs, err := getTypedImage(rName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting right image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error getting right image: %s\n", err)
 	}
 	if rfs, err = applyDeleteFilter(rfs); err != nil {
-		fmt.Fprintf(os.Stderr, "Error filtering right image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error filtering right image: %s\n", err)
 	}
 	err = diffImages(tool, lfs, rfs)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error diffing images: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error diffing images: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getTypedImage(typedName string) (*filesystem.FileSystem, error) {

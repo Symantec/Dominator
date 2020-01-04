@@ -9,18 +9,19 @@ import (
 	"path/filepath"
 
 	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/imageserver"
 )
 
-func getImageArchiveDataSubcommand(args []string) {
+func getImageArchiveDataSubcommand(args []string,
+	logger log.DebugLogger) error {
 	imageClient, _ := getClients()
 	err := getImageArchiveDataAndWrite(imageClient, args[0], args[1])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error getting image: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getImageArchiveDataAndWrite(imageClient *srpc.Client, name,

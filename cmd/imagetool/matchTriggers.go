@@ -8,17 +8,17 @@ import (
 
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 	"github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/triggers"
 )
 
 var quitEarly = errors.New("quit early")
 
-func matchTriggersSubcommand(args []string) {
+func matchTriggersSubcommand(args []string, logger log.DebugLogger) error {
 	if err := matchTriggers(args[0], args[1]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error matching triggers: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error matching triggers: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func matchTriggers(image string, triggersFile string) error {

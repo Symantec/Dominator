@@ -3,19 +3,18 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func copyImageSubcommand(args []string) {
+func copyImageSubcommand(args []string, logger log.DebugLogger) error {
 	imageSClient, _ := getClients()
 	if err := copyImage(imageSClient, args[0], args[1]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error copying image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error copying image: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func copyImage(imageSClient *srpc.Client, name, oldImageName string) error {

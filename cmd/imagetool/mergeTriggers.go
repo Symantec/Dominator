@@ -5,16 +5,15 @@ import (
 	"os"
 
 	json "github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/triggers"
 )
 
-func mergeTriggersSubcommand(args []string) {
-	err := mergeTriggers(args)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error merging triggers: %s\n", err)
-		os.Exit(1)
+func mergeTriggersSubcommand(args []string, logger log.DebugLogger) error {
+	if err := mergeTriggers(args); err != nil {
+		return fmt.Errorf("Error merging triggers: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func mergeTriggers(triggerFiles []string) error {

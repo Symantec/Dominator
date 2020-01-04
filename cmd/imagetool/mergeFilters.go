@@ -2,18 +2,16 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/lib/filter"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func mergeFiltersSubcommand(args []string) {
-	err := mergeFilters(args)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error merging filter: %s\n", err)
-		os.Exit(1)
+func mergeFiltersSubcommand(args []string, logger log.DebugLogger) error {
+	if err := mergeFilters(args); err != nil {
+		return fmt.Errorf("Error merging filter: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func mergeFilters(filterFiles []string) error {

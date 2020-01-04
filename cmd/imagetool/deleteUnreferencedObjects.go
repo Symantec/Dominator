@@ -2,28 +2,26 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func deleteUnreferencedObjectsSubcommand(args []string) {
+func deleteUnreferencedObjectsSubcommand(args []string,
+	logger log.DebugLogger) error {
 	imageSClient, _ := getClients()
 	percentage, err := strconv.ParseUint(args[0], 10, 8)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing percentage: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error parsing percentage: %s\n", err)
 	}
 	bytes, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing bytes: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error parsing bytes: %s\n", err)
 	}
 	if err := client.DeleteUnreferencedObjects(imageSClient, uint8(percentage),
 		bytes); err != nil {
-		fmt.Fprintf(os.Stderr, "Error deleting unreferenced objects: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error deleting unreferenced objects: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }

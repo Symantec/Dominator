@@ -2,16 +2,15 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func makeDirectorySubcommand(args []string) {
+func makeDirectorySubcommand(args []string, logger log.DebugLogger) error {
 	imageSClient, _ := getClients()
 	if err := client.MakeDirectory(imageSClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating directory: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error creating directory: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }

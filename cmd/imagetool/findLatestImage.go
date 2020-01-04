@@ -3,17 +3,16 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func findLatestImageSubcommand(args []string) {
+func findLatestImageSubcommand(args []string, logger log.DebugLogger) error {
 	if err := findLatestImage(args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error finding latest image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error finding latest image: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func findLatestImage(dirname string) error {

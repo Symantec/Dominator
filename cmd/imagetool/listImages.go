@@ -2,20 +2,19 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/lib/verstr"
 )
 
-func listImagesSubcommand(args []string) {
+func listImagesSubcommand(args []string, logger log.DebugLogger) error {
 	imageClient, _ := getClients()
 	if err := listImages(imageClient); err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing images\t%s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error listing images\t%s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func listImages(imageSClient *srpc.Client) error {

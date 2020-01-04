@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"time"
 
 	imgclient "github.com/Cloud-Foundations/Dominator/imageserver/client"
@@ -16,12 +15,11 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
 )
 
-func testDownloadSpeedSubcommand(args []string) {
+func testDownloadSpeedSubcommand(args []string, logger log.DebugLogger) error {
 	if err := testDownloadSpeed(args[0], logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error testing download speed: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error testing download speed: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func testDownloadSpeed(imageName string, logger log.Logger) error {

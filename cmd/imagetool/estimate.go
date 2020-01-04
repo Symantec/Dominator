@@ -2,19 +2,18 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func estimateImageUsageSubcommand(args []string) {
+func estimateImageUsageSubcommand(args []string, logger log.DebugLogger) error {
 	imageSClient, _ := getClients()
 	if err := estimateImageUsage(imageSClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error estimating image size: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error estimating image size: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func estimateImageUsage(client *srpc.Client, image string) error {

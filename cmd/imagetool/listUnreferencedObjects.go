@@ -2,28 +2,28 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func listUnreferencedObjectsSubcommand(args []string) {
+func listUnreferencedObjectsSubcommand(args []string,
+	logger log.DebugLogger) error {
 	imageClient, _ := getClients()
 	if err := listUnreferencedObjects(imageClient, false); err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing unreferenced objects: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error listing unreferenced objects: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
-func showUnreferencedObjectsSubcommand(args []string) {
+func showUnreferencedObjectsSubcommand(args []string,
+	logger log.DebugLogger) error {
 	imageClient, _ := getClients()
 	if err := listUnreferencedObjects(imageClient, true); err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing unreferenced objects: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error listing unreferenced objects: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func listUnreferencedObjects(imageSClient *srpc.Client, showSize bool) error {
