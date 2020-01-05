@@ -24,16 +24,23 @@ var (
 	loggerPortNum = flag.Uint("loggerPortNum", 0, "Port number of log server")
 )
 
+func printSubcommands(subcommands []subcommand) {
+	for _, subcommand := range subcommands {
+		if subcommand.args == "" {
+			fmt.Fprintln(os.Stderr, " ", subcommand.command)
+		} else {
+			fmt.Fprintln(os.Stderr, " ", subcommand.command, subcommand.args)
+		}
+	}
+}
+
 func printUsage() {
 	fmt.Fprintln(os.Stderr,
 		"Usage: logtool [flags...] debug|print|set-debug-level [args...]")
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  debug           level args...")
-	fmt.Fprintln(os.Stderr, "  print                 args...")
-	fmt.Fprintln(os.Stderr, "  set-debug-level level")
-	fmt.Fprintln(os.Stderr, "  watch           level")
+	printSubcommands(subcommands)
 }
 
 type commandFunc func(clients []*srpc.Client, addrs, args []string,
@@ -41,6 +48,7 @@ type commandFunc func(clients []*srpc.Client, addrs, args []string,
 
 type subcommand struct {
 	command          string
+	args             string
 	minArgs          int
 	maxArgs          int
 	allowMultiClient bool
@@ -48,10 +56,10 @@ type subcommand struct {
 }
 
 var subcommands = []subcommand{
-	{"debug", 2, -1, false, debugSubcommand},
-	{"print", 1, -1, false, printSubcommand},
-	{"set-debug-level", 1, 1, false, setDebugLevelSubcommand},
-	{"watch", 1, 1, true, watchSubcommand},
+	{"debug", "          level args...", 2, -1, false, debugSubcommand},
+	{"print", "                args...", 1, -1, false, printSubcommand},
+	{"set-debug-level", "level", 1, 1, false, setDebugLevelSubcommand},
+	{"watch", "          level", 1, 1, true, watchSubcommand},
 }
 
 func dialAll(addrs []string) ([]*srpc.Client, error) {
