@@ -26,36 +26,42 @@ var (
 		"Duration of bandwidth test")
 )
 
+func printSubcommands(subcommands []subcommand) {
+	for _, subcommand := range subcommands {
+		if subcommand.args == "" {
+			fmt.Fprintln(os.Stderr, " ", subcommand.command)
+		} else {
+			fmt.Fprintln(os.Stderr, " ", subcommand.command, subcommand.args)
+		}
+	}
+}
+
 func printUsage() {
 	fmt.Fprintln(os.Stderr,
 		"Usage: objecttool [flags...] check|delete|list [args...]")
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  add    files...")
-	fmt.Fprintln(os.Stderr, "  check  hash")
-	fmt.Fprintln(os.Stderr, "  get    hash baseOutputFilename")
-	fmt.Fprintln(os.Stderr, "  mget   hashesFile directory")
-	fmt.Fprintln(os.Stderr, "  test-bandwidth-from-server")
-	fmt.Fprintln(os.Stderr, "  test-bandwidth-to-server")
+	printSubcommands(subcommands)
 }
 
 type commandFunc func(objectserver.ObjectServer, []string)
 
 type subcommand struct {
 	command string
+	args    string
 	minArgs int
 	maxArgs int
 	cmdFunc commandFunc
 }
 
 var subcommands = []subcommand{
-	{"add", 1, -1, addObjectsSubcommand},
-	{"check", 1, 1, checkObjectSubcommand},
-	{"get", 2, 2, getObjectSubcommand},
-	{"mget", 2, 2, getObjectsSubcommand},
-	{"test-bandwidth-from-server", 0, 0, testBandwidthFromServerSubcommand},
-	{"test-bandwidth-to-server", 0, 0, testBandwidthToServerSubcommand},
+	{"add", "   files...", 1, -1, addObjectsSubcommand},
+	{"check", " hash", 1, 1, checkObjectSubcommand},
+	{"get", "   hash baseOutputFilename", 2, 2, getObjectSubcommand},
+	{"mget", "  hashesFile directory", 2, 2, getObjectsSubcommand},
+	{"test-bandwidth-from-server", "", 0, 0, testBandwidthFromServerSubcommand},
+	{"test-bandwidth-to-server", "", 0, 0, testBandwidthToServerSubcommand},
 }
 
 func main() {
