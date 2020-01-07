@@ -76,27 +76,23 @@ func init() {
 		"Comma separated list of patterns to exclude from scanning")
 }
 
+func printSubcommands(subcommands []subcommand) {
+	for _, subcommand := range subcommands {
+		if subcommand.args == "" {
+			fmt.Fprintln(os.Stderr, " ", subcommand.command)
+		} else {
+			fmt.Fprintln(os.Stderr, " ", subcommand.command, subcommand.args)
+		}
+	}
+}
+
 func printUsage() {
 	fmt.Fprintln(os.Stderr,
 		"Usage: subtool [flags...] fetch|get-config|poll|set-config")
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  boost-cpu-limit")
-	fmt.Fprintln(os.Stderr, "  cleanup")
-	fmt.Fprintln(os.Stderr, "  delete pathname...")
-	fmt.Fprintln(os.Stderr, "  fetch hashesFile")
-	fmt.Fprintln(os.Stderr, "  get-config")
-	fmt.Fprintln(os.Stderr, "  get-file remoteFile localFile")
-	fmt.Fprintln(os.Stderr, "  list-missing-objects image")
-	fmt.Fprintln(os.Stderr, "  poll")
-	fmt.Fprintln(os.Stderr, "  push-file source dest")
-	fmt.Fprintln(os.Stderr, "  push-image image")
-	fmt.Fprintln(os.Stderr, "  push-missing-objects image")
-	fmt.Fprintln(os.Stderr, "  restart-service name")
-	fmt.Fprintln(os.Stderr, "  set-config")
-	fmt.Fprintln(os.Stderr, "  show-update-request image")
-	fmt.Fprintln(os.Stderr, "  wait-for-image image")
+	printSubcommands(subcommands)
 }
 
 func getSubClient() *srpc.Client {
@@ -133,29 +129,31 @@ type commandFunc func(getSubClientFunc, []string)
 
 type subcommand struct {
 	command      string
+	args         string
 	numArgs      int
 	getSubClient getSubClientFunc
 	cmdFunc      commandFunc
 }
 
 var subcommands = []subcommand{
-	{"boost-cpu-limit", 0, getSubClient, boostCpuLimitSubcommand},
-	{"cleanup", 0, getSubClient, cleanupSubcommand},
-	{"delete", 1, getSubClient, deleteSubcommand},
-	{"fetch", 1, getSubClient, fetchSubcommand},
-	{"get-config", 0, getSubClient, getConfigSubcommand},
-	{"get-file", 2, getSubClient, getFileSubcommand},
-	{"list-missing-objects", 1, getSubClientRetry,
+	{"boost-cpu-limit", "", 0, getSubClient, boostCpuLimitSubcommand},
+	{"cleanup", "", 0, getSubClient, cleanupSubcommand},
+	{"delete", "pathname...", 1, getSubClient, deleteSubcommand},
+	{"fetch", "hashesFile", 1, getSubClient, fetchSubcommand},
+	{"get-config", "", 0, getSubClient, getConfigSubcommand},
+	{"get-file", "remoteFile localFile", 2, getSubClient, getFileSubcommand},
+	{"list-missing-objects", "image", 1, getSubClientRetry,
 		listMissingObjectsSubcommand},
-	{"poll", 0, getSubClient, pollSubcommand},
-	{"push-file", 2, getSubClient, pushFileSubcommand},
-	{"push-image", 1, getSubClientRetry, pushImageSubcommand},
-	{"push-missing-objects", 1, getSubClientRetry,
+	{"poll", "", 0, getSubClient, pollSubcommand},
+	{"push-file", "source dest", 2, getSubClient, pushFileSubcommand},
+	{"push-image", "image", 1, getSubClientRetry, pushImageSubcommand},
+	{"push-missing-objects", "image", 1, getSubClientRetry,
 		pushMissingObjectsSubcommand},
-	{"restart-service", 1, getSubClient, restartServiceSubcommand},
-	{"set-config", 0, getSubClient, setConfigSubcommand},
-	{"show-update-request", 1, getSubClientRetry, showUpdateRequestSubcommand},
-	{"wait-for-image", 1, getSubClientRetry, waitForImageSubcommand},
+	{"restart-service", "name", 1, getSubClient, restartServiceSubcommand},
+	{"set-config", "", 0, getSubClient, setConfigSubcommand},
+	{"show-update-request", "image", 1, getSubClientRetry,
+		showUpdateRequestSubcommand},
+	{"wait-for-image", "image", 1, getSubClientRetry, waitForImageSubcommand},
 }
 
 func main() {
