@@ -19,44 +19,49 @@ var (
 		"Port number of image-unpacker server")
 )
 
+func printSubcommands(subcommands []subcommand) {
+	for _, subcommand := range subcommands {
+		if subcommand.args == "" {
+			fmt.Fprintln(os.Stderr, " ", subcommand.command)
+		} else {
+			fmt.Fprintln(os.Stderr, " ", subcommand.command, subcommand.args)
+		}
+	}
+}
+
 func printUsage() {
 	fmt.Fprintln(os.Stderr,
 		"Usage: unpacker-tool [flags...] add-device [args...]")
 	fmt.Fprintln(os.Stderr, "Common flags:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  add-device DeviceId command ...")
-	fmt.Fprintln(os.Stderr, "  associate stream-name DeviceId")
-	fmt.Fprintln(os.Stderr, "  export-image stream-name type destination")
-	fmt.Fprintln(os.Stderr, "  get-status")
-	fmt.Fprintln(os.Stderr, "  get-device-for-stream stream-name")
-	fmt.Fprintln(os.Stderr, "  prepare-for-capture stream-name")
-	fmt.Fprintln(os.Stderr, "  prepare-for-copy stream-name")
-	fmt.Fprintln(os.Stderr, "  prepare-for-unpack stream-name")
-	fmt.Fprintln(os.Stderr, "  remove-device DeviceId")
-	fmt.Fprintln(os.Stderr, "  unpack-image stream-name image-leaf-name")
+	printSubcommands(subcommands)
 }
 
 type commandFunc func(*srpc.Client, []string)
 
 type subcommand struct {
 	command string
+	args    string
 	minArgs int
 	maxArgs int
 	cmdFunc commandFunc
 }
 
 var subcommands = []subcommand{
-	{"add-device", 2, -1, addDeviceSubcommand},
-	{"associate", 2, 2, associateSubcommand},
-	{"export-image", 3, 3, exportImageSubcommand},
-	{"get-status", 0, 0, getStatusSubcommand},
-	{"get-device-for-stream", 1, 1, getDeviceForStreamSubcommand},
-	{"prepare-for-capture", 1, 1, prepareForCaptureSubcommand},
-	{"prepare-for-copy", 1, 1, prepareForCopySubcommand},
-	{"prepare-for-unpack", 1, 1, prepareForUnpackSubcommand},
-	{"remove-device", 1, 1, removeDeviceSubcommand},
-	{"unpack-image", 2, 2, unpackImageSubcommand},
+	{"add-device", "DeviceId command ...", 2, -1, addDeviceSubcommand},
+	{"associate", "stream-name DeviceId", 2, 2, associateSubcommand},
+	{"export-image", "stream-name type destination", 3, 3,
+		exportImageSubcommand},
+	{"get-status", "", 0, 0, getStatusSubcommand},
+	{"get-device-for-stream", "stream-name", 1, 1,
+		getDeviceForStreamSubcommand},
+	{"prepare-for-capture", "stream-name", 1, 1, prepareForCaptureSubcommand},
+	{"prepare-for-copy", "stream-name", 1, 1, prepareForCopySubcommand},
+	{"prepare-for-unpack", "stream-name", 1, 1, prepareForUnpackSubcommand},
+	{"remove-device", "DeviceId", 1, 1, removeDeviceSubcommand},
+	{"unpack-image", "stream-name image-leaf-name", 2, 2,
+		unpackImageSubcommand},
 }
 
 func main() {
