@@ -2,18 +2,16 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageunpacker/client"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func prepareForUnpackSubcommand(srpcClient *srpc.Client, args []string) {
+func prepareForUnpackSubcommand(srpcClient *srpc.Client, args []string) error {
 	if err := prepareForUnpack(srpcClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error preparing for unpack: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error preparing for unpack: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func prepareForUnpack(srpcClient *srpc.Client, streamName string) error {

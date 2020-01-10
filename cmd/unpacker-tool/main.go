@@ -38,7 +38,7 @@ func printUsage() {
 	printSubcommands(subcommands)
 }
 
-type commandFunc func(*srpc.Client, []string)
+type commandFunc func(*srpc.Client, []string) error
 
 type subcommand struct {
 	command string
@@ -64,29 +64,28 @@ var subcommands = []subcommand{
 		unpackImageSubcommand},
 }
 
-func main() {
+func doMain() int {
 	if err := loadflags.LoadForCli("unpacker-tool"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {
 		printUsage()
-		os.Exit(2)
+		return 2
 	}
 	if err := setupclient.SetupTls(true); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	clientName := fmt.Sprintf("%s:%d",
 		*imageUnpackerHostname, *imageUnpackerPortNum)
 	client, err := srpc.DialHTTP("tcp", clientName, 0)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
-		os.Exit(1)
+		return 1
 	}
-
 	numSubcommandArgs := flag.NArg() - 1
 	for _, subcommand := range subcommands {
 		if flag.Arg(0) == subcommand.command {
@@ -94,12 +93,19 @@ func main() {
 				(subcommand.maxArgs >= 0 &&
 					numSubcommandArgs > subcommand.maxArgs) {
 				printUsage()
-				os.Exit(2)
+				return 2
 			}
-			subcommand.cmdFunc(client, flag.Args()[1:])
-			os.Exit(3)
+			if err := subcommand.cmdFunc(client, flag.Args()[1:]); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return 1
+			}
+			return 0
 		}
 	}
 	printUsage()
-	os.Exit(2)
+	return 2
+}
+
+func main() {
+	os.Exit(doMain())
 }

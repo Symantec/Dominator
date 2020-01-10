@@ -2,17 +2,15 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageunpacker/client"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func associateSubcommand(srpcClient *srpc.Client, args []string) {
+func associateSubcommand(srpcClient *srpc.Client, args []string) error {
 	err := client.AssociateStreamWithDevice(srpcClient, args[0], args[1])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error associating: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error associating: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }

@@ -10,12 +10,11 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func addDeviceSubcommand(client *srpc.Client, args []string) {
+func addDeviceSubcommand(client *srpc.Client, args []string) error {
 	if err := addDevice(client, args[0], args[1], args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error adding device: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error adding device: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func addDevice(client *srpc.Client, deviceId, command string,

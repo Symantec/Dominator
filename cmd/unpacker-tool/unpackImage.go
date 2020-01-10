@@ -2,16 +2,14 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageunpacker/client"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func unpackImageSubcommand(srpcClient *srpc.Client, args []string) {
+func unpackImageSubcommand(srpcClient *srpc.Client, args []string) error {
 	if err := client.UnpackImage(srpcClient, args[0], args[1]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error unpacking image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error unpacking image: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }

@@ -2,16 +2,14 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageunpacker/client"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func removeDeviceSubcommand(srpcClient *srpc.Client, args []string) {
+func removeDeviceSubcommand(srpcClient *srpc.Client, args []string) error {
 	if err := client.RemoveDevice(srpcClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error removing device: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error removing device: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }

@@ -2,16 +2,14 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageunpacker/client"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func prepareForCaptureSubcommand(srpcClient *srpc.Client, args []string) {
+func prepareForCaptureSubcommand(srpcClient *srpc.Client, args []string) error {
 	if err := client.PrepareForCapture(srpcClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error preparing for capture: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error preparing for capture: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }

@@ -10,12 +10,11 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func getStatusSubcommand(srpcClient *srpc.Client, args []string) {
+func getStatusSubcommand(srpcClient *srpc.Client, args []string) error {
 	if err := getStatus(srpcClient); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting status: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error getting status: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getStatus(srpcClient *srpc.Client) error {
@@ -26,12 +25,12 @@ func getStatus(srpcClient *srpc.Client) error {
 	return json.WriteWithIndent(os.Stdout, "    ", status)
 }
 
-func getDeviceForStreamSubcommand(srpcClient *srpc.Client, args []string) {
+func getDeviceForStreamSubcommand(srpcClient *srpc.Client,
+	args []string) error {
 	if err := getDeviceForStream(srpcClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting device for stream: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error getting device for stream: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getDeviceForStream(srpcClient *srpc.Client, streamName string) error {
