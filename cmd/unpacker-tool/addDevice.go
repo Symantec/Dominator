@@ -7,11 +7,12 @@ import (
 	"os/exec"
 
 	uclient "github.com/Cloud-Foundations/Dominator/imageunpacker/client"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func addDeviceSubcommand(client *srpc.Client, args []string) error {
-	if err := addDevice(client, args[0], args[1], args[2:]); err != nil {
+func addDeviceSubcommand(args []string, logger log.DebugLogger) error {
+	if err := addDevice(getClient(), args[0], args[1], args[2:]); err != nil {
 		return fmt.Errorf("Error adding device: %s", err)
 	}
 	return nil

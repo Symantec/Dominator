@@ -6,7 +6,9 @@ import (
 	"os"
 
 	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/commands"
 	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
+	"github.com/Cloud-Foundations/Dominator/lib/log/cmdlogger"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupclient"
 )
@@ -17,38 +19,20 @@ var (
 	imageUnpackerPortNum = flag.Uint("imageUnpackerPortNum",
 		constants.ImageUnpackerPortNumber,
 		"Port number of image-unpacker server")
+
+	unpackerSrpcClient *srpc.Client
 )
 
-func printSubcommands(subcommands []subcommand) {
-	for _, subcommand := range subcommands {
-		if subcommand.args == "" {
-			fmt.Fprintln(os.Stderr, " ", subcommand.command)
-		} else {
-			fmt.Fprintln(os.Stderr, " ", subcommand.command, subcommand.args)
-		}
-	}
-}
-
 func printUsage() {
-	fmt.Fprintln(os.Stderr,
-		"Usage: unpacker-tool [flags...] add-device [args...]")
-	fmt.Fprintln(os.Stderr, "Common flags:")
+	w := flag.CommandLine.Output()
+	fmt.Fprintln(w, "Usage: unpacker-tool [flags...] add-device [args...]")
+	fmt.Fprintln(w, "Common flags:")
 	flag.PrintDefaults()
-	fmt.Fprintln(os.Stderr, "Commands:")
-	printSubcommands(subcommands)
+	fmt.Fprintln(w, "Commands:")
+	commands.PrintCommands(w, subcommands)
 }
 
-type commandFunc func(*srpc.Client, []string) error
-
-type subcommand struct {
-	command string
-	args    string
-	minArgs int
-	maxArgs int
-	cmdFunc commandFunc
-}
-
-var subcommands = []subcommand{
+var subcommands = []commands.Command{
 	{"add-device", "DeviceId command ...", 2, -1, addDeviceSubcommand},
 	{"associate", "stream-name DeviceId", 2, 2, associateSubcommand},
 	{"export-image", "stream-name type destination", 3, 3,
@@ -64,6 +48,10 @@ var subcommands = []subcommand{
 		unpackImageSubcommand},
 }
 
+func getClient() *srpc.Client {
+	return unpackerSrpcClient
+}
+
 func doMain() int {
 	if err := loadflags.LoadForCli("unpacker-tool"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -75,6 +63,7 @@ func doMain() int {
 		printUsage()
 		return 2
 	}
+	logger := cmdlogger.New()
 	if err := setupclient.SetupTls(true); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
@@ -86,24 +75,8 @@ func doMain() int {
 		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
 		return 1
 	}
-	numSubcommandArgs := flag.NArg() - 1
-	for _, subcommand := range subcommands {
-		if flag.Arg(0) == subcommand.command {
-			if numSubcommandArgs < subcommand.minArgs ||
-				(subcommand.maxArgs >= 0 &&
-					numSubcommandArgs > subcommand.maxArgs) {
-				printUsage()
-				return 2
-			}
-			if err := subcommand.cmdFunc(client, flag.Args()[1:]); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				return 1
-			}
-			return 0
-		}
-	}
-	printUsage()
-	return 2
+	unpackerSrpcClient = client
+	return commands.RunCommands(subcommands, printUsage, logger)
 }
 
 func main() {

@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"github.com/Cloud-Foundations/Dominator/imageunpacker/client"
-	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func prepareForCaptureSubcommand(srpcClient *srpc.Client, args []string) error {
-	if err := client.PrepareForCapture(srpcClient, args[0]); err != nil {
+func prepareForCaptureSubcommand(args []string, logger log.DebugLogger) error {
+	if err := client.PrepareForCapture(getClient(), args[0]); err != nil {
 		return fmt.Errorf("Error preparing for capture: %s", err)
 	}
 	return nil
