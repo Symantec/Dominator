@@ -2,18 +2,17 @@ package main
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/dominator"
 )
 
-func getDefaultImageSubcommand(client *srpc.Client, args []string) {
-	if err := getDefaultImage(client); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting default image: %s\n", err)
-		os.Exit(1)
+func getDefaultImageSubcommand(args []string, logger log.DebugLogger) error {
+	if err := getDefaultImage(getClient()); err != nil {
+		return fmt.Errorf("Error getting default image: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getDefaultImage(client *srpc.Client) error {
