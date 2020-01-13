@@ -8,23 +8,22 @@ import (
 
 	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
 	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
 	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
 )
 
 const filePerms = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP
 
-func getObjectSubcommand(objSrv objectserver.ObjectServer, args []string) {
+func getObjectSubcommand(args []string, logger log.DebugLogger) error {
 	hash, err := objectcache.FilenameToHash(args[0])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing hash\t%s\n", err)
-		os.Exit(2)
+		return fmt.Errorf("Error parsing hash: %s", err)
 	}
-	if err = getObject(objSrv, hash, args[1]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting object\t%s\n", err)
-		os.Exit(2)
+	if err = getObject(getObjectServer(), hash, args[1]); err != nil {
+		return fmt.Errorf("Error getting object: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getObject(objSrv objectserver.ObjectServer, hashVal hash.Hash,

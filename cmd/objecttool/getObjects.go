@@ -9,16 +9,16 @@ import (
 
 	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
 	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
 	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
 )
 
-func getObjectsSubcommand(objSrv objectserver.ObjectServer, args []string) {
-	if err := getObjects(objSrv, args[0], args[1]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting objects: %s\n", err)
-		os.Exit(2)
+func getObjectsSubcommand(args []string, logger log.DebugLogger) error {
+	if err := getObjects(getObjectServer(), args[0], args[1]); err != nil {
+		return fmt.Errorf("Error getting objects: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getObjects(objSrv objectserver.ObjectServer,

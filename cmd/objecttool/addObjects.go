@@ -5,18 +5,17 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func addObjectsSubcommand(objSrv objectserver.ObjectServer, args []string) {
+func addObjectsSubcommand(args []string, logger log.DebugLogger) error {
 	if err := addObjects(fmt.Sprintf("%s:%d",
 		*objectServerHostname, *objectServerPortNum), args); err != nil {
-		fmt.Fprintf(os.Stderr, "Error adding objects hash: %s\n", err)
-		os.Exit(2)
+		return fmt.Errorf("Error adding objects hash: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func addObjects(address string, filenames []string) error {

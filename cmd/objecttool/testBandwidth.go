@@ -8,27 +8,25 @@ import (
 	"time"
 
 	"github.com/Cloud-Foundations/Dominator/lib/format"
-	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	proto "github.com/Cloud-Foundations/Dominator/proto/objectserver"
 )
 
-func testBandwidthFromServerSubcommand(objSrv objectserver.ObjectServer,
-	args []string) {
+func testBandwidthFromServerSubcommand(args []string,
+	logger log.DebugLogger) error {
 	if err := testBandwidthFromServer(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error testing bandwidth: %s\n", err)
-		os.Exit(2)
+		return fmt.Errorf("Error testing bandwidth: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
-func testBandwidthToServerSubcommand(objSrv objectserver.ObjectServer,
-	args []string) {
+func testBandwidthToServerSubcommand(args []string,
+	logger log.DebugLogger) error {
 	if err := testBandwidthToServer(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error testing bandwidth: %s\n", err)
-		os.Exit(2)
+		return fmt.Errorf("Error testing bandwidth: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func testBandwidthFromServer() error {
