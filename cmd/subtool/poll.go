@@ -7,12 +7,13 @@ import (
 	"time"
 
 	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/sub"
 	"github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
-func pollSubcommand(getSubClient getSubClientFunc, args []string) {
+func pollSubcommand(args []string, logger log.DebugLogger) error {
 	var err error
 	var srpcClient *srpc.Client
 	for iter := 0; *numPolls < 0 || iter < *numPolls; iter++ {
@@ -20,7 +21,7 @@ func pollSubcommand(getSubClient getSubClientFunc, args []string) {
 			time.Sleep(time.Duration(*interval) * time.Second)
 		}
 		if srpcClient == nil {
-			srpcClient = getSubClient()
+			srpcClient = getSubClient(logger)
 		}
 		var request sub.PollRequest
 		var reply sub.PollResponse
@@ -67,4 +68,5 @@ func pollSubcommand(getSubClient getSubClientFunc, args []string) {
 		}
 	}
 	time.Sleep(time.Duration(*wait) * time.Second)
+	return nil
 }

@@ -5,17 +5,20 @@ import (
 	"os"
 
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/lib/triggers"
 	"github.com/Cloud-Foundations/Dominator/proto/sub"
 	"github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
-func restartServiceSubcommand(getSubClient getSubClientFunc, args []string) {
-	if err := restartService(getSubClient(), args[0]); err != nil {
-		logger.Fatalf("Error deleting: %s\n", err)
+func restartServiceSubcommand(args []string, logger log.DebugLogger) error {
+	srpcClient := getSubClient(logger)
+	defer srpcClient.Close()
+	if err := restartService(srpcClient, args[0]); err != nil {
+		return fmt.Errorf("Error deleting: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func restartService(srpcClient *srpc.Client, serviceName string) error {

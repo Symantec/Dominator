@@ -1,24 +1,29 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	objclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/lib/triggers"
 	"github.com/Cloud-Foundations/Dominator/lib/wsyscall"
 	"github.com/Cloud-Foundations/Dominator/proto/sub"
 	"github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
-func pushFileSubcommand(getSubClient getSubClientFunc, args []string) {
-	if err := pushFile(getSubClient, args[0], args[1]); err != nil {
-		logger.Fatalf("Error pushing file: %s\n", err)
+func pushFileSubcommand(args []string, logger log.DebugLogger) error {
+	srpcClient := getSubClient(logger)
+	defer srpcClient.Close()
+	if err := pushFile(srpcClient, args[0], args[1]); err != nil {
+		return fmt.Errorf("Error pushing file: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
-func pushFile(getSubClient getSubClientFunc, source, dest string) error {
+func pushFile(srpcClient *srpc.Client, source, dest string) error {
 	var sourceStat wsyscall.Stat_t
 	if err := wsyscall.Stat(source, &sourceStat); err != nil {
 		return err
@@ -28,7 +33,6 @@ func pushFile(getSubClient getSubClientFunc, source, dest string) error {
 		return err
 	}
 	defer sourceFile.Close()
-	srpcClient := getSubClient()
 	objClient := objclient.AttachObjectClient(srpcClient)
 	defer objClient.Close()
 	hashVal, _, err := objClient.AddObject(sourceFile, uint64(sourceStat.Size),

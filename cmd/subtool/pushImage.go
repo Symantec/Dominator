@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"time"
 
 	"github.com/Cloud-Foundations/Dominator/dom/lib"
@@ -35,22 +34,23 @@ func (getter nullObjectGetterType) GetObject(hashVal hash.Hash) (
 	return 0, nil, errors.New("no computed files")
 }
 
-func pushImageSubcommand(getSubClient getSubClientFunc, args []string) {
-	if err := pushImage(getSubClient, args[0]); err != nil {
-		logger.Fatalf("Error pushing image: %s: %s\n", args[0], err)
+func pushImageSubcommand(args []string, logger log.DebugLogger) error {
+	startTime := showStart("getSubClient()")
+	srpcClient := getSubClientRetry(logger)
+	defer srpcClient.Close()
+	showTimeTaken(startTime)
+	if err := pushImage(srpcClient, args[0]); err != nil {
+		return fmt.Errorf("Error pushing image: %s: %s", args[0], err)
 	}
-	os.Exit(0)
+	return nil
 }
 
-func pushImage(getSubClient getSubClientFunc, imageName string) error {
+func pushImage(srpcClient *srpc.Client, imageName string) error {
 	computedInodes := make(map[string]*filesystem.RegularInode)
 	// Start querying the imageserver for the image.
 	imageServerAddress := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)
 	imgChannel := getImageChannel(imageServerAddress, imageName, timeoutTime)
-	startTime := showStart("getSubClient()")
-	srpcClient := getSubClient()
-	showTimeTaken(startTime)
 	subObj := lib.Sub{
 		Hostname:       *subHostname,
 		Client:         srpcClient,
@@ -74,7 +74,7 @@ func pushImage(getSubClient getSubClientFunc, imageName string) error {
 			}
 		}
 	}
-	startTime = showStart("<-imgChannel")
+	startTime := showStart("<-imgChannel")
 	imageResult := <-imgChannel
 	showTimeTaken(startTime)
 	logger.Printf("Background image fetch took %s\n",
