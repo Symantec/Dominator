@@ -2,17 +2,15 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imagepublishers/amipublisher"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func expireSubcommand(args []string, logger log.DebugLogger) {
+func expireSubcommand(args []string, logger log.DebugLogger) error {
 	err := amipublisher.ExpireResources(targets, skipTargets, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error expiring resources: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error expiring resources: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }

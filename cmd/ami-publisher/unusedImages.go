@@ -20,14 +20,12 @@ const (
 		syscall.S_IROTH
 )
 
-func listUnusedImagesSubcommand(args []string, logger log.DebugLogger) {
-	err := listUnusedImages(logger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing unused images: %s\n", err)
-		os.Exit(1)
+func listUnusedImagesSubcommand(args []string, logger log.DebugLogger) error {
+	if err := listUnusedImages(logger); err != nil {
+		return fmt.Errorf("Error listing unused images: %s\n", err)
 	}
 	logMemoryUsage(logger)
-	os.Exit(0)
+	return nil
 }
 
 func listUnusedImages(logger log.DebugLogger) error {
@@ -160,14 +158,12 @@ func appendRecordAndWrite(writer *csv.Writer, record []string,
 	return writer.Write(record)
 }
 
-func deleteUnusedImagesSubcommand(args []string, logger log.DebugLogger) {
-	err := deleteUnusedImages(logger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error deleting unused images: %s\n", err)
-		os.Exit(1)
+func deleteUnusedImagesSubcommand(args []string, logger log.DebugLogger) error {
+	if err := deleteUnusedImages(logger); err != nil {
+		return fmt.Errorf("Error deleting unused images: %s\n", err)
 	}
 	logMemoryUsage(logger)
-	os.Exit(0)
+	return nil
 }
 
 func deleteUnusedImages(logger log.DebugLogger) error {

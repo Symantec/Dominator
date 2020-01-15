@@ -2,20 +2,17 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imagepublishers/amipublisher"
 	libjson "github.com/Cloud-Foundations/Dominator/lib/json"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func deleteTagsSubcommand(args []string, logger log.DebugLogger) {
-	err := deleteTags(args[0], args[1:], logger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error deleting tags for resources: %s\n", err)
-		os.Exit(1)
+func deleteTagsSubcommand(args []string, logger log.DebugLogger) error {
+	if err := deleteTags(args[0], args[1:], logger); err != nil {
+		return fmt.Errorf("Error deleting tags for resources: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func deleteTags(tagKey string, resultsFiles []string,
@@ -33,13 +30,12 @@ func deleteTags(tagKey string, resultsFiles []string,
 	return amipublisher.DeleteTags(results, tagKeys, logger)
 }
 
-func deleteTagsOnUnpackersSubcommand(args []string, logger log.DebugLogger) {
-	err := deleteTagsOnUnpackers(args[0], logger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error deleting tags on unpackers: %s\n", err)
-		os.Exit(1)
+func deleteTagsOnUnpackersSubcommand(args []string,
+	logger log.DebugLogger) error {
+	if err := deleteTagsOnUnpackers(args[0], logger); err != nil {
+		return fmt.Errorf("Error deleting tags on unpackers: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func deleteTagsOnUnpackers(tagKey string, logger log.DebugLogger) error {

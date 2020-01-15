@@ -6,8 +6,10 @@ import (
 	"os"
 
 	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/commands"
 	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
 	"github.com/Cloud-Foundations/Dominator/lib/flagutil"
+	"github.com/Cloud-Foundations/Dominator/lib/log/cmdlogger"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupclient"
 )
@@ -26,6 +28,8 @@ var (
 		"Hostname of dominator")
 	domPortNum = flag.Uint("domPortNum", constants.DominatorPortNumber,
 		"Port number of dominator")
+
+	dominatorSrpcClient *srpc.Client
 )
 
 func init() {
@@ -34,52 +38,43 @@ func init() {
 }
 
 func printUsage() {
-	fmt.Fprintln(os.Stderr,
-		"Usage: domtool [flags...] command")
-	fmt.Fprintln(os.Stderr, "Common flags:")
+	w := flag.CommandLine.Output()
+	fmt.Fprintln(w, "Usage: domtool [flags...] command")
+	fmt.Fprintln(w, "Common flags:")
 	flag.PrintDefaults()
-	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  clear-safety-shutoff sub")
-	fmt.Fprintln(os.Stderr, "  configure-subs")
-	fmt.Fprintln(os.Stderr, "  disable-updates reason")
-	fmt.Fprintln(os.Stderr, "  enable-updates reason")
-	fmt.Fprintln(os.Stderr, "  get-default-image")
-	fmt.Fprintln(os.Stderr, "  get-subs-configuration")
-	fmt.Fprintln(os.Stderr, "  set-default-image image")
+	fmt.Fprintln(w, "Commands:")
+	commands.PrintCommands(w, subcommands)
 }
 
-type commandFunc func(*srpc.Client, []string)
-
-type subcommand struct {
-	command string
-	numArgs int
-	cmdFunc commandFunc
+var subcommands = []commands.Command{
+	{"clear-safety-shutoff", "sub", 1, 1, clearSafetyShutoffSubcommand},
+	{"configure-subs", "", 0, 0, configureSubsSubcommand},
+	{"disable-updates", "reason", 1, 1, disableUpdatesSubcommand},
+	{"enable-updates", "reason", 1, 1, enableUpdatesSubcommand},
+	{"get-default-image", "", 0, 0, getDefaultImageSubcommand},
+	{"get-subs-configuration", "", 0, 0, getSubsConfigurationSubcommand},
+	{"set-default-image", "", 1, 1, setDefaultImageSubcommand},
 }
 
-var subcommands = []subcommand{
-	{"clear-safety-shutoff", 1, clearSafetyShutoffSubcommand},
-	{"configure-subs", 0, configureSubsSubcommand},
-	{"disable-updates", 1, disableUpdatesSubcommand},
-	{"enable-updates", 1, enableUpdatesSubcommand},
-	{"get-default-image", 0, getDefaultImageSubcommand},
-	{"get-subs-configuration", 0, getSubsConfigurationSubcommand},
-	{"set-default-image", 1, setDefaultImageSubcommand},
+func getClient() *srpc.Client {
+	return dominatorSrpcClient
 }
 
-func main() {
+func doMain() int {
 	if err := loadflags.LoadForCli("domtool"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {
 		printUsage()
-		os.Exit(2)
+		return 2
 	}
+	logger := cmdlogger.New()
 	if err := setupclient.SetupTls(true); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	clientName := fmt.Sprintf("%s:%d", *domHostname, *domPortNum)
 	client, err := srpc.DialHTTP("tcp", clientName, 0)
@@ -87,16 +82,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error dialing\t%s\n", err)
 		os.Exit(1)
 	}
-	for _, subcommand := range subcommands {
-		if flag.Arg(0) == subcommand.command {
-			if flag.NArg()-1 != subcommand.numArgs {
-				printUsage()
-				os.Exit(2)
-			}
-			subcommand.cmdFunc(client, flag.Args()[1:])
-			os.Exit(3)
-		}
-	}
-	printUsage()
-	os.Exit(2)
+	dominatorSrpcClient = client
+	return commands.RunCommands(subcommands, printUsage, logger)
+}
+
+func main() {
+	os.Exit(doMain())
 }

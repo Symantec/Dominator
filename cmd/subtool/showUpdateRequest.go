@@ -10,24 +10,27 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem/scanner"
 	"github.com/Cloud-Foundations/Dominator/lib/filter"
 	"github.com/Cloud-Foundations/Dominator/lib/json"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/sub"
 	"github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
-func showUpdateRequestSubcommand(getSubClient getSubClientFunc, args []string) {
-	if err := showUpdateRequest(getSubClient, args[0]); err != nil {
-		logger.Fatalf("Error showing update: %s: %s\n", args[0], err)
+func showUpdateRequestSubcommand(args []string, logger log.DebugLogger) error {
+	srpcClient := getSubClientRetry(logger)
+	defer srpcClient.Close()
+	if err := showUpdateRequest(srpcClient, args[0]); err != nil {
+		return fmt.Errorf("Error showing update: %s: %s", args[0], err)
 	}
-	os.Exit(0)
+	return nil
 }
 
-func showUpdateRequest(getSubClient getSubClientFunc, imageName string) error {
+func showUpdateRequest(srpcClient *srpc.Client, imageName string) error {
 	// Start querying the imageserver for the image.
 	imageServerAddress := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)
 	imgChannel := getImageChannel(imageServerAddress, imageName, timeoutTime)
-	srpcClient := getSubClient()
 	subObj := lib.Sub{
 		Hostname: *subHostname,
 		Client:   srpcClient,

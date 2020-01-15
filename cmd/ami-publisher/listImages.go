@@ -9,13 +9,11 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func listImagesSubcommand(args []string, logger log.DebugLogger) {
-	err := listImages(logger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing images: %s\n", err)
-		os.Exit(1)
+func listImagesSubcommand(args []string, logger log.DebugLogger) error {
+	if err := listImages(logger); err != nil {
+		return fmt.Errorf("Error listing images: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func listImages(logger log.DebugLogger) error {

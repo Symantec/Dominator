@@ -8,8 +8,8 @@ import (
 
 	"github.com/Cloud-Foundations/Dominator/lib/awsutil"
 	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/commands"
 	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
-	liblog "github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/log/cmdlogger"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupclient"
 	libtags "github.com/Cloud-Foundations/Dominator/lib/tags"
@@ -87,101 +87,63 @@ func init() {
 }
 
 func printUsage() {
-	fmt.Fprintln(os.Stderr,
-		"Usage: ami-publisher [flags...] publish [args...]")
-	fmt.Fprintln(os.Stderr, "Common flags:")
+	w := flag.CommandLine.Output()
+	fmt.Fprintln(w, "Usage: ami-publisher [flags...] publish [args...]")
+	fmt.Fprintln(w, "Common flags:")
 	flag.PrintDefaults()
-	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  add-volumes sizeInGiB")
-	fmt.Fprintln(os.Stderr, "  copy-bootstrap-image stream-name")
-	fmt.Fprintln(os.Stderr, "  delete results-file...")
-	fmt.Fprintln(os.Stderr, "  delete-tags tag-key results-file...")
-	fmt.Fprintln(os.Stderr, "  delete-tag-on-unpackers tag-key")
-	fmt.Fprintln(os.Stderr, "  delete-unused-images")
-	fmt.Fprintln(os.Stderr, "  expire")
-	fmt.Fprintln(os.Stderr, "  import-key-pair name pub-key-file")
-	fmt.Fprintln(os.Stderr, "  launch-instances boot-image")
-	fmt.Fprintln(os.Stderr, "  launch-instances-for-images results-file...")
-	fmt.Fprintln(os.Stderr, "  list-images")
-	fmt.Fprintln(os.Stderr, "  list-streams")
-	fmt.Fprintln(os.Stderr, "  list-unpackers")
-	fmt.Fprintln(os.Stderr, "  list-unused-images")
-	fmt.Fprintln(os.Stderr, "  list-used-images")
-	fmt.Fprintln(os.Stderr, "  prepare-unpackers [stream-name]")
-	fmt.Fprintln(os.Stderr, "  publish stream-name image-leaf-name")
-	fmt.Fprintln(os.Stderr, "  remove-unused-volumes")
-	fmt.Fprintln(os.Stderr, "  set-exclusive-tags key value results-file...")
-	fmt.Fprintln(os.Stderr, "  set-tags-on-unpackers")
-	fmt.Fprintln(os.Stderr, "  start-instances")
-	fmt.Fprintln(os.Stderr, "  stop-idle-unpackers")
-	fmt.Fprintln(os.Stderr, "  terminate-instances")
+	fmt.Fprintln(w, "Commands:")
+	commands.PrintCommands(w, subcommands)
 }
 
-type commandFunc func([]string, liblog.DebugLogger)
-
-type subcommand struct {
-	command string
-	minArgs int
-	maxArgs int
-	cmdFunc commandFunc
+var subcommands = []commands.Command{
+	{"add-volumes", "sizeInGiB", 1, 1, addVolumesSubcommand},
+	{"copy-bootstrap-image", "stream-name", 1, 1, copyBootstrapImageSubcommand},
+	{"delete", "results-file...", 1, -1, deleteSubcommand},
+	{"delete-tags", "tag-key results-file...", 2, -1, deleteTagsSubcommand},
+	{"delete-tags-on-unpackers", "tag-key", 1, 1,
+		deleteTagsOnUnpackersSubcommand},
+	{"delete-unused-images", "", 0, 0, deleteUnusedImagesSubcommand},
+	{"expire", "", 0, 0, expireSubcommand},
+	{"import-key-pair", "name pub-key-file", 2, 2, importKeyPairSubcommand},
+	{"launch-instances", "boot-image", 1, 1, launchInstancesSubcommand},
+	{"launch-instances-for-images", "results-file...", 0, -1,
+		launchInstancesForImagesSubcommand},
+	{"list-images", "", 0, 0, listImagesSubcommand},
+	{"list-streams", "", 0, 0, listStreamsSubcommand},
+	{"list-unpackers", "", 0, 0, listUnpackersSubcommand},
+	{"list-unused-images", "", 0, 0, listUnusedImagesSubcommand},
+	{"list-used-images", "", 0, 0, listUsedImagesSubcommand},
+	{"prepare-unpackers", "[stream-name]", 0, 1, prepareUnpackersSubcommand},
+	{"publish", "image-leaf-name", 2, 2, publishSubcommand},
+	{"remove-unused-volumes", "", 0, 0, removeUnusedVolumesSubcommand},
+	{"set-exclusive-tags", "key value results-file...", 2, -1,
+		setExclusiveTagsSubcommand},
+	{"set-tags-on-unpackers", "", 0, 0, setTagsSubcommand},
+	{"start-instances", "", 0, 0, startInstancesSubcommand},
+	{"stop-idle-unpackers", "", 0, 0, stopIdleUnpackersSubcommand},
+	{"terminate-instances", "", 0, 0, terminateInstancesSubcommand},
 }
 
-var subcommands = []subcommand{
-	{"add-volumes", 1, 1, addVolumesSubcommand},
-	{"copy-bootstrap-image", 1, 1, copyBootstrapImageSubcommand},
-	{"delete", 1, -1, deleteSubcommand},
-	{"delete-tags", 2, -1, deleteTagsSubcommand},
-	{"delete-tags-on-unpackers", 1, 1, deleteTagsOnUnpackersSubcommand},
-	{"delete-unused-images", 0, 0, deleteUnusedImagesSubcommand},
-	{"expire", 0, 0, expireSubcommand},
-	{"import-key-pair", 2, 2, importKeyPairSubcommand},
-	{"launch-instances", 1, 1, launchInstancesSubcommand},
-	{"launch-instances-for-images", 0, -1, launchInstancesForImagesSubcommand},
-	{"list-images", 0, 0, listImagesSubcommand},
-	{"list-streams", 0, 0, listStreamsSubcommand},
-	{"list-unpackers", 0, 0, listUnpackersSubcommand},
-	{"list-unused-images", 0, 0, listUnusedImagesSubcommand},
-	{"list-used-images", 0, 0, listUsedImagesSubcommand},
-	{"prepare-unpackers", 0, 1, prepareUnpackersSubcommand},
-	{"publish", 2, 2, publishSubcommand},
-	{"remove-unused-volumes", 0, 0, removeUnusedVolumesSubcommand},
-	{"set-exclusive-tags", 2, -1, setExclusiveTagsSubcommand},
-	{"set-tags-on-unpackers", 0, 0, setTagsSubcommand},
-	{"start-instances", 0, 0, startInstancesSubcommand},
-	{"stop-idle-unpackers", 0, 0, stopIdleUnpackersSubcommand},
-	{"terminate-instances", 0, 0, terminateInstancesSubcommand},
-}
-
-func main() {
+func doMain() int {
 	if err := loadflags.LoadForCli("ami-publisher"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	cmdlogger.SetDatestampsDefault(true)
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {
 		printUsage()
-		os.Exit(2)
+		return 2
 	}
 	logger := cmdlogger.New()
 	if err := setupclient.SetupTls(true); err != nil {
 		logger.Println(err)
-		os.Exit(1)
+		return 1
 	}
-	numSubcommandArgs := flag.NArg() - 1
-	for _, subcommand := range subcommands {
-		if flag.Arg(0) == subcommand.command {
-			if numSubcommandArgs < subcommand.minArgs ||
-				(subcommand.maxArgs >= 0 &&
-					numSubcommandArgs > subcommand.maxArgs) {
-				printUsage()
-				os.Exit(2)
-			}
-			subcommand.cmdFunc(flag.Args()[1:], logger)
-			os.Exit(3)
-		}
-	}
-	printUsage()
-	os.Exit(2)
+	return commands.RunCommands(subcommands, printUsage, logger)
+}
+
+func main() {
+	os.Exit(doMain())
 }

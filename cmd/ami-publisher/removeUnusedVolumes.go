@@ -2,18 +2,17 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imagepublishers/amipublisher"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func removeUnusedVolumesSubcommand(args []string, logger log.DebugLogger) {
+func removeUnusedVolumesSubcommand(args []string,
+	logger log.DebugLogger) error {
 	if err := removeUnusedVolumes(logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error removing unused volumes: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error removing unused volumes: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func removeUnusedVolumes(logger log.DebugLogger) error {

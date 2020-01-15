@@ -2,14 +2,13 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path"
 
 	"github.com/Cloud-Foundations/Dominator/imagepublishers/amipublisher"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func prepareUnpackersSubcommand(args []string, logger log.DebugLogger) {
+func prepareUnpackersSubcommand(args []string, logger log.DebugLogger) error {
 	streamName := ""
 	if len(args) > 0 {
 		streamName = path.Clean(args[0])
@@ -17,8 +16,7 @@ func prepareUnpackersSubcommand(args []string, logger log.DebugLogger) {
 	err := amipublisher.PrepareUnpackers(streamName, targets, skipTargets,
 		*instanceName, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error preparing unpackers: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error preparing unpackers: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }

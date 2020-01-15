@@ -3,28 +3,29 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/dom/lib"
 	"github.com/Cloud-Foundations/Dominator/lib/filter"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/sub"
 	"github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
-func listMissingObjectsSubcommand(getSubClient getSubClientFunc,
-	args []string) {
-	if err := listMissingObjects(getSubClient, args[0]); err != nil {
-		logger.Fatalf("Error listing missing objects: %s: %s\n", args[0], err)
+func listMissingObjectsSubcommand(args []string, logger log.DebugLogger) error {
+	srpcClient := getSubClientRetry(logger)
+	defer srpcClient.Close()
+	if err := listMissingObjects(srpcClient, args[0]); err != nil {
+		return fmt.Errorf("Error listing missing objects: %s: %s", args[0], err)
 	}
-	os.Exit(0)
+	return nil
 }
 
-func listMissingObjects(getSubClient getSubClientFunc, imageName string) error {
+func listMissingObjects(srpcClient *srpc.Client, imageName string) error {
 	// Start querying the imageserver for the image.
 	imageServerAddress := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)
 	imgChannel := getImageChannel(imageServerAddress, imageName, timeoutTime)
-	srpcClient := getSubClient()
 	subObj := lib.Sub{
 		Hostname: *subHostname,
 		Client:   srpcClient,

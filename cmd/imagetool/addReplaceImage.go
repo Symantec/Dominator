@@ -9,29 +9,29 @@ import (
 
 	"github.com/Cloud-Foundations/Dominator/imageserver/client"
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func addReplaceImageSubcommand(args []string) {
+func addReplaceImageSubcommand(args []string, logger log.DebugLogger) error {
 	imageSClient, objectClient := getClients()
 	err := addReplaceImage(imageSClient, objectClient, args[0], args[1],
 		args[2:])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error adding image: \"%s\"\t%s\n", args[0], err)
-		os.Exit(1)
+		return fmt.Errorf("Error adding image: \"%s\"\t%s\n", args[0], err)
 	}
-	os.Exit(0)
+	return nil
 }
 
-func bulkAddReplaceImagesSubcommand(args []string) {
+func bulkAddReplaceImagesSubcommand(args []string,
+	logger log.DebugLogger) error {
 	imageSClient, objectClient := getClients()
 	err := bulkAddReplaceImages(imageSClient, objectClient, args)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error adding image: \"%s\"\t%s\n", args[0], err)
-		os.Exit(1)
+		return fmt.Errorf("Error adding image: \"%s\"\t%s\n", args[0], err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func addReplaceImage(imageSClient *srpc.Client,

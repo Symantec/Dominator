@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/commands"
 	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
+	"github.com/Cloud-Foundations/Dominator/lib/log/cmdlogger"
 	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
 	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupclient"
@@ -24,70 +26,53 @@ var (
 		"Port number of image server")
 	testDuration = flag.Duration("testDuration", time.Second*10,
 		"Duration of bandwidth test")
+
+	objectServer objectserver.ObjectServer
 )
 
 func printUsage() {
-	fmt.Fprintln(os.Stderr,
-		"Usage: objecttool [flags...] check|delete|list [args...]")
-	fmt.Fprintln(os.Stderr, "Common flags:")
+	w := flag.CommandLine.Output()
+	fmt.Fprintln(w, "Usage: objecttool [flags...] check|delete|list [args...]")
+	fmt.Fprintln(w, "Common flags:")
 	flag.PrintDefaults()
-	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  add    files...")
-	fmt.Fprintln(os.Stderr, "  check  hash")
-	fmt.Fprintln(os.Stderr, "  get    hash baseOutputFilename")
-	fmt.Fprintln(os.Stderr, "  mget   hashesFile directory")
-	fmt.Fprintln(os.Stderr, "  test-bandwidth-from-server")
-	fmt.Fprintln(os.Stderr, "  test-bandwidth-to-server")
+	fmt.Fprintln(w, "Commands:")
+	commands.PrintCommands(w, subcommands)
 }
 
-type commandFunc func(objectserver.ObjectServer, []string)
-
-type subcommand struct {
-	command string
-	minArgs int
-	maxArgs int
-	cmdFunc commandFunc
+var subcommands = []commands.Command{
+	{"add", "   files...", 1, -1, addObjectsSubcommand},
+	{"check", " hash", 1, 1, checkObjectSubcommand},
+	{"get", "   hash baseOutputFilename", 2, 2, getObjectSubcommand},
+	{"mget", "  hashesFile directory", 2, 2, getObjectsSubcommand},
+	{"test-bandwidth-from-server", "", 0, 0, testBandwidthFromServerSubcommand},
+	{"test-bandwidth-to-server", "", 0, 0, testBandwidthToServerSubcommand},
 }
 
-var subcommands = []subcommand{
-	{"add", 1, -1, addObjectsSubcommand},
-	{"check", 1, 1, checkObjectSubcommand},
-	{"get", 2, 2, getObjectSubcommand},
-	{"mget", 2, 2, getObjectsSubcommand},
-	{"test-bandwidth-from-server", 0, 0, testBandwidthFromServerSubcommand},
-	{"test-bandwidth-to-server", 0, 0, testBandwidthToServerSubcommand},
+func getObjectServer() objectserver.ObjectServer {
+	return objectServer
 }
 
-func main() {
+func doMain() int {
 	if err := loadflags.LoadForCli("objecttool"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {
 		printUsage()
-		os.Exit(2)
+		return 2
 	}
+	logger := cmdlogger.New()
 	if err := setupclient.SetupTls(true); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
-	objectServer := objectclient.NewObjectClient(fmt.Sprintf("%s:%d",
+	objectServer = objectclient.NewObjectClient(fmt.Sprintf("%s:%d",
 		*objectServerHostname, *objectServerPortNum))
-	numSubcommandArgs := flag.NArg() - 1
-	for _, subcommand := range subcommands {
-		if flag.Arg(0) == subcommand.command {
-			if numSubcommandArgs < subcommand.minArgs ||
-				(subcommand.maxArgs >= 0 &&
-					numSubcommandArgs > subcommand.maxArgs) {
-				printUsage()
-				os.Exit(2)
-			}
-			subcommand.cmdFunc(objectServer, flag.Args()[1:])
-			os.Exit(3)
-		}
-	}
-	printUsage()
-	os.Exit(2)
+	return commands.RunCommands(subcommands, printUsage, logger)
+}
+
+func main() {
+	os.Exit(doMain())
 }

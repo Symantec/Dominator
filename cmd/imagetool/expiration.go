@@ -2,22 +2,22 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/Cloud-Foundations/Dominator/imageserver/client"
 	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func changeImageExpirationSubcommand(args []string) {
+func changeImageExpirationSubcommand(args []string,
+	logger log.DebugLogger) error {
 	imageSClient, _ := getClients()
 	err := changeImageExpiration(imageSClient, args[0])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error changing image expiration: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error changing image expiration: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func changeImageExpiration(imageSClient *srpc.Client, name string) error {
@@ -28,13 +28,12 @@ func changeImageExpiration(imageSClient *srpc.Client, name string) error {
 	return client.ChangeImageExpiration(imageSClient, name, expiresAt)
 }
 
-func getImageExpirationSubcommand(args []string) {
+func getImageExpirationSubcommand(args []string, logger log.DebugLogger) error {
 	imageSClient, _ := getClients()
 	if err := getImageExpiration(imageSClient, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting image expiration: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error getting image expiration: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getImageExpiration(imageSClient *srpc.Client, name string) error {

@@ -3,30 +3,31 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/dom/lib"
 	"github.com/Cloud-Foundations/Dominator/lib/filter"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
 	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/sub"
 	"github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
-func pushMissingObjectsSubcommand(getSubClient getSubClientFunc,
-	args []string) {
-	if err := pushMissingObjects(getSubClient, args[0]); err != nil {
-		logger.Fatalf("Error pushing missing objects: %s: %s\n", args[0], err)
+func pushMissingObjectsSubcommand(args []string, logger log.DebugLogger) error {
+	srpcClient := getSubClientRetry(logger)
+	defer srpcClient.Close()
+	if err := pushMissingObjects(srpcClient, args[0]); err != nil {
+		return fmt.Errorf("Error pushing missing objects: %s: %s", args[0], err)
 	}
-	os.Exit(0)
+	return nil
 }
 
-func pushMissingObjects(getSubClient getSubClientFunc, imageName string) error {
+func pushMissingObjects(srpcClient *srpc.Client, imageName string) error {
 	// Start querying the imageserver for the image.
 	imageServerAddress := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)
 	imgChannel := getImageChannel(imageServerAddress, imageName, timeoutTime)
-	srpcClient := getSubClient()
 	subObj := lib.Sub{
 		Hostname: *subHostname,
 		Client:   srpcClient,

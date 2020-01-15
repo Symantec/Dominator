@@ -9,12 +9,11 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func startInstancesSubcommand(args []string, logger log.DebugLogger) {
+func startInstancesSubcommand(args []string, logger log.DebugLogger) error {
 	if err := startInstances(*instanceName, logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error starting instances: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error starting instances: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func startInstances(name string, logger log.DebugLogger) error {

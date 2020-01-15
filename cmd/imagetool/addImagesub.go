@@ -12,20 +12,20 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/filter"
 	"github.com/Cloud-Foundations/Dominator/lib/hash"
 	"github.com/Cloud-Foundations/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	subclient "github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
-func addImagesubSubcommand(args []string) {
+func addImagesubSubcommand(args []string, logger log.DebugLogger) error {
 	imageSClient, objectClient := getClients()
 	err := addImagesub(imageSClient, objectClient, args[0], args[1], args[2],
 		args[3])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error adding image: \"%s\"\t%s\n", args[0], err)
-		os.Exit(1)
+		return fmt.Errorf("Error adding image: \"%s\"\t%s\n", args[0], err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func addImagesub(imageSClient *srpc.Client,

@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/commands"
 	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
 	"github.com/Cloud-Foundations/Dominator/lib/flagutil"
-	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/log/cmdlogger"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupclient"
@@ -47,33 +47,23 @@ func init() {
 }
 
 func printUsage() {
-	fmt.Fprintln(os.Stderr,
-		"Usage: builder-tool [flags...] command [args...]")
-	fmt.Fprintln(os.Stderr, "Common flags:")
+	w := flag.CommandLine.Output()
+	fmt.Fprintln(w, "Usage: builder-tool [flags...] command [args...]")
+	fmt.Fprintln(w, "Common flags:")
 	flag.PrintDefaults()
-	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  build-from-manifest manifestDir stream-name")
-	fmt.Fprintln(os.Stderr, "  build-image stream-name [git-branch]")
-	fmt.Fprintln(os.Stderr, "  build-raw-from-manifest manifestDir rawFile")
-	fmt.Fprintln(os.Stderr, "  build-tree-from-manifest manifestDir")
-	fmt.Fprintln(os.Stderr, "  process-manifest manifestDir rootDir")
+	fmt.Fprintln(w, "Commands:")
+	commands.PrintCommands(w, subcommands)
 }
 
-type commandFunc func([]string, log.DebugLogger)
-
-type subcommand struct {
-	command string
-	minArgs int
-	maxArgs int
-	cmdFunc commandFunc
-}
-
-var subcommands = []subcommand{
-	{"build-from-manifest", 2, 2, buildFromManifestSubcommand},
-	{"build-image", 1, 2, buildImageSubcommand},
-	{"build-raw-from-manifest", 2, 2, buildRawFromManifestSubcommand},
-	{"build-tree-from-manifest", 1, 1, buildTreeFromManifestSubcommand},
-	{"process-manifest", 2, 2, processManifestSubcommand},
+var subcommands = []commands.Command{
+	{"build-from-manifest", "manifestDir stream-name", 2, 2,
+		buildFromManifestSubcommand},
+	{"build-image", "stream-name [git-branch]", 1, 2, buildImageSubcommand},
+	{"build-raw-from-manifest", "manifestDir rawFile", 2, 2,
+		buildRawFromManifestSubcommand},
+	{"build-tree-from-manifest", "manifestDir", 1, 1,
+		buildTreeFromManifestSubcommand},
+	{"process-manifest", "rootDir", 2, 2, processManifestSubcommand},
 }
 
 var imaginatorSrpcClient *srpc.Client
@@ -107,40 +97,30 @@ func getImageServerClient() *srpc.Client {
 	return imageServerSrpcClient
 }
 
-func main() {
+func doMain() int {
 	if err := loadflags.LoadForCli("builder-tool"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {
 		printUsage()
-		os.Exit(2)
+		return 3
 	}
 	if *expiresIn > 0 && *expiresIn < minimumExpiration {
 		fmt.Fprintf(os.Stderr, "Minimum expiration: %s\n", minimumExpiration)
-		os.Exit(2)
+		return 2
 	}
 	logger := cmdlogger.New()
 	if err := setupclient.SetupTls(true); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	os.Unsetenv("LANG")
-	numSubcommandArgs := flag.NArg() - 1
-	for _, subcommand := range subcommands {
-		if flag.Arg(0) == subcommand.command {
-			if numSubcommandArgs < subcommand.minArgs ||
-				(subcommand.maxArgs >= 0 &&
-					numSubcommandArgs > subcommand.maxArgs) {
-				printUsage()
-				os.Exit(2)
-			}
-			subcommand.cmdFunc(flag.Args()[1:], logger)
-			os.Exit(3)
-		}
-	}
-	printUsage()
-	os.Exit(2)
+	return commands.RunCommands(subcommands, printUsage, logger)
+}
+
+func main() {
+	os.Exit(doMain())
 }

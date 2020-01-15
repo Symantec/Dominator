@@ -2,18 +2,17 @@ package main
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/dominator"
 )
 
-func clearSafetyShutoffSubcommand(client *srpc.Client, args []string) {
-	if err := clearSafetyShutoff(client, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error clearing safety shutoff: %s\n", err)
-		os.Exit(1)
+func clearSafetyShutoffSubcommand(args []string, logger log.DebugLogger) error {
+	if err := clearSafetyShutoff(getClient(), args[0]); err != nil {
+		return fmt.Errorf("Error clearing safety shutoff: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func clearSafetyShutoff(client *srpc.Client, subHostname string) error {

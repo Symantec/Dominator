@@ -2,23 +2,21 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem/util"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/log/nulllogger"
 	"github.com/Cloud-Foundations/Dominator/lib/objectserver"
 	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
 )
 
-func getImageSubcommand(args []string) {
+func getImageSubcommand(args []string, logger log.DebugLogger) error {
 	_, objectClient := getClients()
-	err := getImageAndWrite(objectClient, args[0], args[1])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting image: %s\n", err)
-		os.Exit(1)
+	if err := getImageAndWrite(objectClient, args[0], args[1]); err != nil {
+		return fmt.Errorf("Error getting image: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getImageAndWrite(objectClient *objectclient.ObjectClient, name,

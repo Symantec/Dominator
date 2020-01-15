@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/commands"
 	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
 	"github.com/Cloud-Foundations/Dominator/lib/flagutil"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/log/cmdlogger"
 	"github.com/Cloud-Foundations/Dominator/lib/log/debuglogger"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
@@ -77,29 +79,16 @@ func init() {
 }
 
 func printUsage() {
-	fmt.Fprintln(os.Stderr,
+	w := flag.CommandLine.Output()
+	fmt.Fprintln(w,
 		"Usage: subtool [flags...] fetch|get-config|poll|set-config")
-	fmt.Fprintln(os.Stderr, "Common flags:")
+	fmt.Fprintln(w, "Common flags:")
 	flag.PrintDefaults()
-	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  boost-cpu-limit")
-	fmt.Fprintln(os.Stderr, "  cleanup")
-	fmt.Fprintln(os.Stderr, "  delete pathname...")
-	fmt.Fprintln(os.Stderr, "  fetch hashesFile")
-	fmt.Fprintln(os.Stderr, "  get-config")
-	fmt.Fprintln(os.Stderr, "  get-file remoteFile localFile")
-	fmt.Fprintln(os.Stderr, "  list-missing-objects image")
-	fmt.Fprintln(os.Stderr, "  poll")
-	fmt.Fprintln(os.Stderr, "  push-file source dest")
-	fmt.Fprintln(os.Stderr, "  push-image image")
-	fmt.Fprintln(os.Stderr, "  push-missing-objects image")
-	fmt.Fprintln(os.Stderr, "  restart-service name")
-	fmt.Fprintln(os.Stderr, "  set-config")
-	fmt.Fprintln(os.Stderr, "  show-update-request image")
-	fmt.Fprintln(os.Stderr, "  wait-for-image image")
+	fmt.Fprintln(w, "Commands:")
+	commands.PrintCommands(w, subcommands)
 }
 
-func getSubClient() *srpc.Client {
+func getSubClient(logger log.DebugLogger) *srpc.Client {
 	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
 	client, err := srpc.DialHTTP("tcp", clientName, *connectTimeout)
 	if err != nil {
@@ -108,7 +97,7 @@ func getSubClient() *srpc.Client {
 	return client
 }
 
-func getSubClientRetry() *srpc.Client {
+func getSubClientRetry(logger log.DebugLogger) *srpc.Client {
 	clientName := fmt.Sprintf("%s:%d", *subHostname, *subPortNum)
 	var client *srpc.Client
 	var err error
@@ -128,46 +117,34 @@ func getSubClientRetry() *srpc.Client {
 	return nil
 }
 
-type getSubClientFunc func() *srpc.Client
-type commandFunc func(getSubClientFunc, []string)
-
-type subcommand struct {
-	command      string
-	numArgs      int
-	getSubClient getSubClientFunc
-	cmdFunc      commandFunc
+var subcommands = []commands.Command{
+	{"boost-cpu-limit", "", 0, 0, boostCpuLimitSubcommand},
+	{"cleanup", "", 0, 0, cleanupSubcommand},
+	{"delete", "pathname...", 1, 1, deleteSubcommand},
+	{"fetch", "hashesFile", 1, 1, fetchSubcommand},
+	{"get-config", "", 0, 0, getConfigSubcommand},
+	{"get-file", "remoteFile localFile", 2, 2, getFileSubcommand},
+	{"list-missing-objects", "image", 1, 1, listMissingObjectsSubcommand},
+	{"poll", "", 0, 0, pollSubcommand},
+	{"push-file", "source dest", 2, 2, pushFileSubcommand},
+	{"push-image", "image", 1, 1, pushImageSubcommand},
+	{"push-missing-objects", "image", 1, 1, pushMissingObjectsSubcommand},
+	{"restart-service", "name", 1, 1, restartServiceSubcommand},
+	{"set-config", "", 0, 0, setConfigSubcommand},
+	{"show-update-request", "image", 1, 1, showUpdateRequestSubcommand},
+	{"wait-for-image", "image", 1, 1, waitForImageSubcommand},
 }
 
-var subcommands = []subcommand{
-	{"boost-cpu-limit", 0, getSubClient, boostCpuLimitSubcommand},
-	{"cleanup", 0, getSubClient, cleanupSubcommand},
-	{"delete", 1, getSubClient, deleteSubcommand},
-	{"fetch", 1, getSubClient, fetchSubcommand},
-	{"get-config", 0, getSubClient, getConfigSubcommand},
-	{"get-file", 2, getSubClient, getFileSubcommand},
-	{"list-missing-objects", 1, getSubClientRetry,
-		listMissingObjectsSubcommand},
-	{"poll", 0, getSubClient, pollSubcommand},
-	{"push-file", 2, getSubClient, pushFileSubcommand},
-	{"push-image", 1, getSubClientRetry, pushImageSubcommand},
-	{"push-missing-objects", 1, getSubClientRetry,
-		pushMissingObjectsSubcommand},
-	{"restart-service", 1, getSubClient, restartServiceSubcommand},
-	{"set-config", 0, getSubClient, setConfigSubcommand},
-	{"show-update-request", 1, getSubClientRetry, showUpdateRequestSubcommand},
-	{"wait-for-image", 1, getSubClientRetry, waitForImageSubcommand},
-}
-
-func main() {
+func doMain() int {
 	if err := loadflags.LoadForCli("subtool"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {
 		printUsage()
-		os.Exit(2)
+		return 2
 	}
 	logger = cmdlogger.New()
 	if *triggersFile != "" && *triggersString != "" {
@@ -178,16 +155,9 @@ func main() {
 		logger.Fatalln(os.Stderr, err)
 	}
 	timeoutTime = time.Now().Add(*timeout)
-	for _, subcommand := range subcommands {
-		if flag.Arg(0) == subcommand.command {
-			if flag.NArg()-1 != subcommand.numArgs {
-				printUsage()
-				os.Exit(2)
-			}
-			subcommand.cmdFunc(subcommand.getSubClient, flag.Args()[1:])
-			os.Exit(3)
-		}
-	}
-	printUsage()
-	os.Exit(2)
+	return commands.RunCommands(subcommands, printUsage, logger)
+}
+
+func main() {
+	os.Exit(doMain())
 }

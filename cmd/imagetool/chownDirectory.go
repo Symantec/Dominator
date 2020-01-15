@@ -2,17 +2,16 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func chownDirectorySubcommand(args []string) {
+func chownDirectorySubcommand(args []string, logger log.DebugLogger) error {
 	imageSClient, _ := getClients()
 	if err := client.ChownDirectory(imageSClient, args[0],
 		args[1]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error changing directory ownership: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error changing directory ownership: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }

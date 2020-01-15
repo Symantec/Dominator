@@ -1,18 +1,21 @@
 package main
 
 import (
-	"os"
+	"fmt"
 
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/sub"
 	"github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
-func cleanupSubcommand(getSubClient getSubClientFunc, args []string) {
-	if err := cleanup(getSubClient()); err != nil {
-		logger.Fatalf("Error cleaning up: %s\n", err)
+func cleanupSubcommand(args []string, logger log.DebugLogger) error {
+	srpcClient := getSubClient(logger)
+	defer srpcClient.Close()
+	if err := cleanup(srpcClient); err != nil {
+		return fmt.Errorf("Error cleaning up: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func cleanup(srpcClient *srpc.Client) error {

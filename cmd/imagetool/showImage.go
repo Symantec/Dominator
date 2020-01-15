@@ -3,14 +3,15 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func showImageSubcommand(args []string) {
+func showImageSubcommand(args []string, logger log.DebugLogger) error {
 	if err := showImage(args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error showing image\t%s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error showing image\t%s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func showImage(image string) error {

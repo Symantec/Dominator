@@ -2,17 +2,15 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageunpacker/client"
-	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func exportImageSubcommand(srpcClient *srpc.Client, args []string) {
-	err := client.ExportImage(srpcClient, args[0], args[1], args[2])
+func exportImageSubcommand(args []string, logger log.DebugLogger) error {
+	err := client.ExportImage(getClient(), args[0], args[1], args[2])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error exporting image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error exporting image: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }

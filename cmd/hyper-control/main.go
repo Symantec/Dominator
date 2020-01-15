@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/commands"
 	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
 	"github.com/Cloud-Foundations/Dominator/lib/flagutil"
-	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/log/cmdlogger"
 	"github.com/Cloud-Foundations/Dominator/lib/net/rrdialer"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
@@ -87,68 +87,44 @@ func init() {
 }
 
 func printUsage() {
-	fmt.Fprintln(os.Stderr,
-		"Usage: hyper-control [flags...] command [args...]")
-	fmt.Fprintln(os.Stderr, "Common flags:")
+	w := flag.CommandLine.Output()
+	fmt.Fprintln(w, "Usage: hyper-control [flags...] command [args...]")
+	fmt.Fprintln(w, "Common flags:")
 	flag.PrintDefaults()
-	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  add-address MACaddr [IPaddr]")
-	fmt.Fprintln(os.Stderr, "  add-subnet ID IPgateway IPmask DNSserver...")
-	fmt.Fprintln(os.Stderr, "  change-tags")
-	fmt.Fprintln(os.Stderr, "  get-machine-info hostname")
-	fmt.Fprintln(os.Stderr, "  get-updates")
-	fmt.Fprintln(os.Stderr, "  installer-shell hostname")
-	fmt.Fprintln(os.Stderr, "  make-installer-iso hostname dirname")
-	fmt.Fprintln(os.Stderr, "  move-ip-address IPaddr")
-	fmt.Fprintln(os.Stderr, "  netboot-host hostname")
-	fmt.Fprintln(os.Stderr, "  netboot-machine MACaddr IPaddr [hostname]")
-	fmt.Fprintln(os.Stderr, "  netboot-vm")
-	fmt.Fprintln(os.Stderr, "  power-off")
-	fmt.Fprintln(os.Stderr, "  power-on")
-	fmt.Fprintln(os.Stderr, "  register-external-leases")
-	fmt.Fprintln(os.Stderr, "  reinstall")
-	fmt.Fprintln(os.Stderr, "  remove-excess-addresses MaxFreeAddr")
-	fmt.Fprintln(os.Stderr, "  remove-ip-address IPaddr")
-	fmt.Fprintln(os.Stderr, "  remove-mac-address MACaddr")
-	fmt.Fprintln(os.Stderr, "  rollout-image name")
-	fmt.Fprintln(os.Stderr, "  show-network-configuration")
-	fmt.Fprintln(os.Stderr, "  update-network-configuration")
-	fmt.Fprintln(os.Stderr, "  write-netboot-files hostname dirname")
+	fmt.Fprintln(w, "Commands:")
+	commands.PrintCommands(w, subcommands)
 }
 
-type commandFunc func([]string, log.DebugLogger) error
-
-type subcommand struct {
-	command string
-	minArgs int
-	maxArgs int
-	cmdFunc commandFunc
-}
-
-var subcommands = []subcommand{
-	{"add-address", 1, 2, addAddressSubcommand},
-	{"add-subnet", 4, -1, addSubnetSubcommand},
-	{"change-tags", 0, 0, changeTagsSubcommand},
-	{"get-machine-info", 1, 1, getMachineInfoSubcommand},
-	{"get-updates", 0, 0, getUpdatesSubcommand},
-	{"installer-shell", 1, 1, installerShellSubcommand},
-	{"make-installer-iso", 2, 2, makeInstallerIsoSubcommand},
-	{"move-ip-address", 1, 1, moveIpAddressSubcommand},
-	{"netboot-host", 1, 1, netbootHostSubcommand},
-	{"netboot-machine", 2, 3, netbootMachineSubcommand},
-	{"netboot-vm", 0, 0, netbootVmSubcommand},
-	{"power-off", 0, 0, powerOffSubcommand},
-	{"power-on", 0, 0, powerOnSubcommand},
-	{"register-external-leases", 0, 0, registerExternalLeasesSubcommand},
-	{"reinstall", 0, 0, reinstallSubcommand},
-	{"remove-excess-addresses", 1, 1, removeExcessAddressesSubcommand},
-	{"remove-ip-address", 1, 1, removeIpAddressSubcommand},
-	{"remove-mac-address", 1, 1, removeMacAddressSubcommand},
-	{"rollout-image", 1, 1, rolloutImageSubcommand},
-	{"show-network-configuration", 0, 0, showNetworkConfigurationSubcommand},
-	{"update-network-configuration", 0, 0,
+var subcommands = []commands.Command{
+	{"add-address", "MACaddr [IPaddr]", 1, 2, addAddressSubcommand},
+	{"add-subnet", "ID IPgateway IPmask DNSserver...", 4, -1,
+		addSubnetSubcommand},
+	{"change-tags", "", 0, 0, changeTagsSubcommand},
+	{"get-machine-info", "hostname", 1, 1, getMachineInfoSubcommand},
+	{"get-updates", "", 0, 0, getUpdatesSubcommand},
+	{"installer-shell", "hostname", 1, 1, installerShellSubcommand},
+	{"make-installer-iso", "hostname dirname", 2, 2,
+		makeInstallerIsoSubcommand},
+	{"move-ip-address", "IPaddr", 1, 1, moveIpAddressSubcommand},
+	{"netboot-host", "hostname", 1, 1, netbootHostSubcommand},
+	{"netboot-machine", "MACaddr IPaddr [hostname]", 2, 3,
+		netbootMachineSubcommand},
+	{"netboot-vm", "", 0, 0, netbootVmSubcommand},
+	{"power-off", "", 0, 0, powerOffSubcommand},
+	{"power-on", "", 0, 0, powerOnSubcommand},
+	{"register-external-leases", "", 0, 0, registerExternalLeasesSubcommand},
+	{"reinstall", "", 0, 0, reinstallSubcommand},
+	{"remove-excess-addresses", "MaxFreeAddr", 1, 1,
+		removeExcessAddressesSubcommand},
+	{"remove-ip-address", "IPaddr", 1, 1, removeIpAddressSubcommand},
+	{"remove-mac-address", "MACaddr", 1, 1, removeMacAddressSubcommand},
+	{"rollout-image", "name", 1, 1, rolloutImageSubcommand},
+	{"show-network-configuration", "", 0, 0,
+		showNetworkConfigurationSubcommand},
+	{"update-network-configuration", "", 0, 0,
 		updateNetworkConfigurationSubcommand},
-	{"write-netboot-files", 2, 2, writeNetbootFilesSubcommand},
+	{"write-netboot-files", "hostname dirname", 2, 2,
+		writeNetbootFilesSubcommand},
 }
 
 func loadCerts() error {
@@ -199,24 +175,7 @@ func doMain() int {
 		return 1
 	}
 	defer rrDialer.WaitForBackgroundResults(time.Second)
-	numSubcommandArgs := flag.NArg() - 1
-	for _, subcommand := range subcommands {
-		if flag.Arg(0) == subcommand.command {
-			if numSubcommandArgs < subcommand.minArgs ||
-				(subcommand.maxArgs >= 0 &&
-					numSubcommandArgs > subcommand.maxArgs) {
-				printUsage()
-				return 2
-			}
-			if err := subcommand.cmdFunc(flag.Args()[1:], logger); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				return 1
-			}
-			return 0
-		}
-	}
-	printUsage()
-	return 2
+	return commands.RunCommands(subcommands, printUsage, logger)
 }
 
 func main() {

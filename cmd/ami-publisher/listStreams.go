@@ -10,13 +10,11 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/verstr"
 )
 
-func listStreamsSubcommand(args []string, logger log.DebugLogger) {
-	err := listStreams(logger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing streams: %s\n", err)
-		os.Exit(1)
+func listStreamsSubcommand(args []string, logger log.DebugLogger) error {
+	if err := listStreams(logger); err != nil {
+		return fmt.Errorf("Error listing streams: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func listStreams(logger log.DebugLogger) error {

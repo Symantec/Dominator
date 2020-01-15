@@ -7,10 +7,11 @@ import (
 
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	objectclient "github.com/Cloud-Foundations/Dominator/lib/objectserver/client"
 )
 
-func getFileInImageSubcommand(args []string) {
+func getFileInImageSubcommand(args []string, logger log.DebugLogger) error {
 	_, objectClient := getClients()
 	var outFileName string
 	if len(args) > 2 {
@@ -18,10 +19,9 @@ func getFileInImageSubcommand(args []string) {
 	}
 	err := getFileInImage(objectClient, args[0], args[1], outFileName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting file in image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error getting file in image: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func getFileInImage(objectClient *objectclient.ObjectClient, imageName,

@@ -5,17 +5,18 @@ import (
 	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageserver/client"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func checkImageSubcommand(args []string) {
+func checkImageSubcommand(args []string, logger log.DebugLogger) error {
 	imageSClient, _ := getClients()
 	imageExists, err := client.CheckImage(imageSClient, args[0])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error checking image\t%s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error checking image\t%s\n", err)
 	}
 	if imageExists {
-		os.Exit(0)
+		return nil
 	}
 	os.Exit(1)
+	panic("impossible")
 }

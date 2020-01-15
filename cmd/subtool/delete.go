@@ -1,18 +1,21 @@
 package main
 
 import (
-	"os"
+	"fmt"
 
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/sub"
 	"github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
-func deleteSubcommand(getSubClient getSubClientFunc, args []string) {
-	if err := deletePaths(getSubClient(), args); err != nil {
-		logger.Fatalf("Error deleting: %s\n", err)
+func deleteSubcommand(args []string, logger log.DebugLogger) error {
+	srpcClient := getSubClient(logger)
+	defer srpcClient.Close()
+	if err := deletePaths(srpcClient, args); err != nil {
+		return fmt.Errorf("Error deleting: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func deletePaths(srpcClient *srpc.Client, pathnames []string) error {

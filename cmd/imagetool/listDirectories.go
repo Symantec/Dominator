@@ -2,20 +2,19 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Cloud-Foundations/Dominator/imageserver/client"
 	"github.com/Cloud-Foundations/Dominator/lib/image"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 )
 
-func listDirectoriesSubcommand(args []string) {
+func listDirectoriesSubcommand(args []string, logger log.DebugLogger) error {
 	imageClient, _ := getClients()
 	if err := listDirectories(imageClient); err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing directories: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error listing directories: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func listDirectories(imageSClient *srpc.Client) error {

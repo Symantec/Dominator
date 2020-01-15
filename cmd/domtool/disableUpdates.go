@@ -3,18 +3,17 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
 
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/dominator"
 )
 
-func disableUpdatesSubcommand(client *srpc.Client, args []string) {
-	if err := disableUpdates(client, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error disabling updates: %s\n", err)
-		os.Exit(1)
+func disableUpdatesSubcommand(args []string, logger log.DebugLogger) error {
+	if err := disableUpdates(getClient(), args[0]); err != nil {
+		return fmt.Errorf("Error disabling updates: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func disableUpdates(client *srpc.Client, reason string) error {

@@ -16,12 +16,11 @@ import (
 	proto "github.com/Cloud-Foundations/Dominator/proto/imaginator"
 )
 
-func buildImageSubcommand(args []string, logger log.DebugLogger) {
+func buildImageSubcommand(args []string, logger log.DebugLogger) error {
 	if err := buildImage(args, logger); err != nil {
-		fmt.Fprintf(os.Stderr, "Error building image: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error building image: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func buildImage(args []string, logger log.Logger) error {

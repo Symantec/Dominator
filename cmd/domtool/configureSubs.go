@@ -2,18 +2,17 @@ package main
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/dominator"
 )
 
-func configureSubsSubcommand(client *srpc.Client, args []string) {
-	if err := configureSubs(client); err != nil {
-		fmt.Fprintf(os.Stderr, "Error setting config for subs: %s\n", err)
-		os.Exit(1)
+func configureSubsSubcommand(args []string, logger log.DebugLogger) error {
+	if err := configureSubs(getClient()); err != nil {
+		return fmt.Errorf("Error setting config for subs: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func configureSubs(client *srpc.Client) error {

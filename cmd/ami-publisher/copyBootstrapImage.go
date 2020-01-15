@@ -2,20 +2,17 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path"
 
 	"github.com/Cloud-Foundations/Dominator/imagepublishers/amipublisher"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func copyBootstrapImageSubcommand(args []string, logger log.DebugLogger) {
-	err := copyBootstrapImage(args[0], logger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error copying bootstrap image: %s\n", err)
-		os.Exit(1)
+func copyBootstrapImageSubcommand(args []string, logger log.DebugLogger) error {
+	if err := copyBootstrapImage(args[0], logger); err != nil {
+		return fmt.Errorf("Error copying bootstrap image: %s\n", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func copyBootstrapImage(streamName string, logger log.DebugLogger) error {

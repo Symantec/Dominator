@@ -2,18 +2,17 @@ package main
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/dominator"
 )
 
-func setDefaultImageSubcommand(client *srpc.Client, args []string) {
-	if err := setDefaultImage(client, args[0]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error setting default image: %s\n", err)
-		os.Exit(1)
+func setDefaultImageSubcommand(args []string, logger log.DebugLogger) error {
+	if err := setDefaultImage(getClient(), args[0]); err != nil {
+		return fmt.Errorf("Error setting default image: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func setDefaultImage(client *srpc.Client, imageName string) error {

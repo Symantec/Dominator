@@ -6,16 +6,19 @@ import (
 	"os"
 
 	"github.com/Cloud-Foundations/Dominator/lib/hash"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/objectcache"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/sub"
 )
 
-func fetchSubcommand(getSubClient getSubClientFunc, args []string) {
-	if err := fetch(getSubClient(), args[0]); err != nil {
-		logger.Fatalf("Error fetching: %s\n", err)
+func fetchSubcommand(args []string, logger log.DebugLogger) error {
+	srpcClient := getSubClient(logger)
+	defer srpcClient.Close()
+	if err := fetch(srpcClient, args[0]); err != nil {
+		return fmt.Errorf("Error fetching: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func fetch(srpcClient *srpc.Client, hashesFilename string) error {

@@ -1,18 +1,21 @@
 package main
 
 import (
-	"os"
+	"fmt"
 
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/proto/sub"
 	"github.com/Cloud-Foundations/Dominator/sub/client"
 )
 
-func setConfigSubcommand(getSubClient getSubClientFunc, args []string) {
-	if err := setConfig(getSubClient()); err != nil {
-		logger.Fatalf("Error setting config: %s\n", err)
+func setConfigSubcommand(args []string, logger log.DebugLogger) error {
+	srpcClient := getSubClient(logger)
+	defer srpcClient.Close()
+	if err := setConfig(srpcClient); err != nil {
+		return fmt.Errorf("Error setting config: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func setConfig(srpcClient *srpc.Client) error {

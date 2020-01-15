@@ -9,6 +9,7 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/constants"
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 	"github.com/Cloud-Foundations/Dominator/lib/filter"
+	"github.com/Cloud-Foundations/Dominator/lib/flags/commands"
 	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
 	"github.com/Cloud-Foundations/Dominator/lib/flagutil"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
@@ -63,6 +64,15 @@ var (
 
 	logger            log.DebugLogger
 	minimumExpiration = 15 * time.Minute
+
+	diffArgs = `  tool left right
+         left & right are image sources. Format:
+         type:name where type is one of:
+           d: name of directory tree to scan
+           f: name of file containing a FileSystem
+           i: name of an image on the imageserver
+           l: name of file containing an Image
+           s: name of sub to poll`
 )
 
 func init() {
@@ -72,101 +82,64 @@ func init() {
 }
 
 func printUsage() {
-	fmt.Fprintln(os.Stderr,
+	w := flag.CommandLine.Output()
+	fmt.Fprintln(w,
 		"Usage: imagetool [flags...] add|check|delete|list [args...]")
-	fmt.Fprintln(os.Stderr, "Common flags:")
+	fmt.Fprintln(w, "Common flags:")
 	flag.PrintDefaults()
-	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  add    name imagefile filterfile triggerfile")
-	fmt.Fprintln(os.Stderr, "  addi   name imagename filterfile triggerfile")
-	fmt.Fprintln(os.Stderr, "  addrep name baseimage layerimage...")
-	fmt.Fprintln(os.Stderr, "  adds   name subname filterfile triggerfile")
-	fmt.Fprintln(os.Stderr, "  bulk-addrep layerimage...")
-	fmt.Fprintln(os.Stderr, "  change-image-expiration name")
-	fmt.Fprintln(os.Stderr, "  check  name")
-	fmt.Fprintln(os.Stderr, "  check-directory dirname")
-	fmt.Fprintln(os.Stderr, "  chown  dirname ownerGroup")
-	fmt.Fprintln(os.Stderr, "  copy   name oldimagename")
-	fmt.Fprintln(os.Stderr, "  delete name")
-	fmt.Fprintln(os.Stderr, "  delunrefobj percentage bytes")
-	fmt.Fprintln(os.Stderr, "  diff   tool left right")
-	fmt.Fprintln(os.Stderr, "         left & right are image sources. Format:")
-	fmt.Fprintln(os.Stderr, "         type:name where type is one of:")
-	fmt.Fprintln(os.Stderr, "           d: name of directory tree to scan")
-	fmt.Fprintln(os.Stderr, "           f: name of file containing a FileSystem")
-	fmt.Fprintln(os.Stderr, "           i: name of an image on the imageserver")
-	fmt.Fprintln(os.Stderr, "           l: name of file containing an Image")
-	fmt.Fprintln(os.Stderr, "           s: name of sub to poll")
-	fmt.Fprintln(os.Stderr, "  estimate-usage      name")
-	fmt.Fprintln(os.Stderr, "  find-latest-image   directory")
-	fmt.Fprintln(os.Stderr, "  get                 name directory")
-	fmt.Fprintln(os.Stderr, "  get-archive-data    name outfile")
-	fmt.Fprintln(os.Stderr, "  get-file-in-image   name imageFile [outfile]")
-	fmt.Fprintln(os.Stderr, "  get-image-expiration name")
-	fmt.Fprintln(os.Stderr, "  list")
-	fmt.Fprintln(os.Stderr, "  listdirs")
-	fmt.Fprintln(os.Stderr, "  listunrefobj")
-	fmt.Fprintln(os.Stderr, "  make-raw-image      name rawfile")
-	fmt.Fprintln(os.Stderr, "  match-triggers      name triggers-file")
-	fmt.Fprintln(os.Stderr, "  merge-filters       filter-file...")
-	fmt.Fprintln(os.Stderr, "  merge-triggers      triggers-file...")
-	fmt.Fprintln(os.Stderr, "  mkdir               name")
-	fmt.Fprintln(os.Stderr, "  show                name")
-	fmt.Fprintln(os.Stderr, "  showunrefobj")
-	fmt.Fprintln(os.Stderr, "  tar                 name [file]")
-	fmt.Fprintln(os.Stderr, "  test-download-speed name")
-	fmt.Fprintln(os.Stderr, "Fields:")
-	fmt.Fprintln(os.Stderr, "  m: mode")
-	fmt.Fprintln(os.Stderr, "  l: number of hardlinks")
-	fmt.Fprintln(os.Stderr, "  u: UID")
-	fmt.Fprintln(os.Stderr, "  g: GID")
-	fmt.Fprintln(os.Stderr, "  s: size/Rdev")
-	fmt.Fprintln(os.Stderr, "  t: time of last modification")
-	fmt.Fprintln(os.Stderr, "  n: name")
-	fmt.Fprintln(os.Stderr, "  d: data (hash or symlink target)")
+	fmt.Fprintln(w, "Commands:")
+	commands.PrintCommands(w, subcommands)
+	fmt.Fprintln(w, "Fields:")
+	fmt.Fprintln(w, "  m: mode")
+	fmt.Fprintln(w, "  l: number of hardlinks")
+	fmt.Fprintln(w, "  u: UID")
+	fmt.Fprintln(w, "  g: GID")
+	fmt.Fprintln(w, "  s: size/Rdev")
+	fmt.Fprintln(w, "  t: time of last modification")
+	fmt.Fprintln(w, "  n: name")
+	fmt.Fprintln(w, "  d: data (hash or symlink target)")
 }
 
-type commandFunc func([]string)
-
-type subcommand struct {
-	command string
-	minArgs int
-	maxArgs int
-	cmdFunc commandFunc
-}
-
-var subcommands = []subcommand{
-	{"add", 4, 4, addImagefileSubcommand},
-	{"addi", 4, 4, addImageimageSubcommand},
-	{"addrep", 3, -1, addReplaceImageSubcommand},
-	{"adds", 4, 4, addImagesubSubcommand},
-	{"bulk-addrep", 1, -1, bulkAddReplaceImagesSubcommand},
-	{"change-image-expiration", 1, 1, changeImageExpirationSubcommand},
-	{"check", 1, 1, checkImageSubcommand},
-	{"check-directory", 1, 1, checkDirectorySubcommand},
-	{"chown", 2, 2, chownDirectorySubcommand},
-	{"copy", 2, 2, copyImageSubcommand},
-	{"delete", 1, 1, deleteImageSubcommand},
-	{"delunrefobj", 2, 2, deleteUnreferencedObjectsSubcommand},
-	{"diff", 3, 3, diffSubcommand},
-	{"estimate-usage", 1, 1, estimateImageUsageSubcommand},
-	{"find-latest-image", 1, 1, findLatestImageSubcommand},
-	{"get", 2, 2, getImageSubcommand},
-	{"get-archive-data", 2, 2, getImageArchiveDataSubcommand},
-	{"get-file-in-image", 2, 3, getFileInImageSubcommand},
-	{"get-image-expiration", 1, 1, getImageExpirationSubcommand},
-	{"list", 0, 0, listImagesSubcommand},
-	{"listdirs", 0, 0, listDirectoriesSubcommand},
-	{"listunrefobj", 0, 0, listUnreferencedObjectsSubcommand},
-	{"make-raw-image", 2, 2, makeRawImageSubcommand},
-	{"match-triggers", 2, 2, matchTriggersSubcommand},
-	{"merge-filters", 1, -1, mergeFiltersSubcommand},
-	{"merge-triggers", 1, -1, mergeTriggersSubcommand},
-	{"mkdir", 1, 1, makeDirectorySubcommand},
-	{"show", 1, 1, showImageSubcommand},
-	{"showunrefobj", 0, 0, showUnreferencedObjectsSubcommand},
-	{"tar", 1, 2, tarImageSubcommand},
-	{"test-download-speed", 1, 1, testDownloadSpeedSubcommand},
+var subcommands = []commands.Command{
+	{"add", "   name imagefile filterfile triggerfile", 4, 4,
+		addImagefileSubcommand},
+	{"addi", "  name imagename filterfile triggerfile", 4, 4,
+		addImageimageSubcommand},
+	{"addrep", "name baseimage layerimage...", 3, -1,
+		addReplaceImageSubcommand},
+	{"adds", "  name subname filterfile triggerfile", 4, 4,
+		addImagesubSubcommand},
+	{"bulk-addrep", "layerimage...", 1, -1, bulkAddReplaceImagesSubcommand},
+	{"change-image-expiration", "name", 1, 1, changeImageExpirationSubcommand},
+	{"check", " name", 1, 1, checkImageSubcommand},
+	{"check-directory", "dirname", 1, 1, checkDirectorySubcommand},
+	{"chown", " dirname ownerGroup", 2, 2, chownDirectorySubcommand},
+	{"copy", "  name oldimagename", 2, 2, copyImageSubcommand},
+	{"delete", "name", 1, 1, deleteImageSubcommand},
+	{"delunrefobj", "percentage bytes", 2, 2,
+		deleteUnreferencedObjectsSubcommand},
+	{"diff", diffArgs, 3, 3, diffSubcommand},
+	{"estimate-usage", "     name", 1, 1, estimateImageUsageSubcommand},
+	{"find-latest-image", "  directory", 1, 1, findLatestImageSubcommand},
+	{"get", "                name directory", 2, 2, getImageSubcommand},
+	{"get-archive-data", "   name outfile", 2, 2,
+		getImageArchiveDataSubcommand},
+	{"get-file-in-image", "  name imageFile [outfile]", 2, 3,
+		getFileInImageSubcommand},
+	{"get-image-expiration", "name", 1, 1, getImageExpirationSubcommand},
+	{"list", "", 0, 0, listImagesSubcommand},
+	{"listdirs", "", 0, 0, listDirectoriesSubcommand},
+	{"listunrefobj", "", 0, 0, listUnreferencedObjectsSubcommand},
+	{"make-raw-image", "     name rawfile", 2, 2, makeRawImageSubcommand},
+	{"match-triggers", "     name triggers-file", 2, 2,
+		matchTriggersSubcommand},
+	{"merge-filters", "      filter-file...", 1, -1, mergeFiltersSubcommand},
+	{"merge-triggers", "     triggers-file...", 1, -1, mergeTriggersSubcommand},
+	{"mkdir", "              name", 1, 1, makeDirectorySubcommand},
+	{"show", "               name", 1, 1, showImageSubcommand},
+	{"showunrefobj", "", 0, 0, showUnreferencedObjectsSubcommand},
+	{"tar", "                name [file]", 1, 2, tarImageSubcommand},
+	{"test-download-speed", "name", 1, 1, testDownloadSpeedSubcommand},
 }
 
 var imageSrpcClient *srpc.Client
@@ -216,21 +189,21 @@ func makeListSelector(arg string) filesystem.ListSelector {
 
 var listFilter *filter.Filter
 
-func main() {
+func doMain() int {
 	if err := loadflags.LoadForCli("imagetool"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {
 		printUsage()
-		os.Exit(2)
+		return 2
 	}
 	logger = cmdlogger.New()
 	if *expiresIn > 0 && *expiresIn < minimumExpiration {
 		fmt.Fprintf(os.Stderr, "Minimum expiration: %s\n", minimumExpiration)
-		os.Exit(2)
+		return 2
 	}
 	listSelector = makeListSelector(*skipFields)
 	var err error
@@ -238,26 +211,16 @@ func main() {
 		listFilter, err = filter.Load(*filterFile)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
-			os.Exit(2)
+			return 2
 		}
 	}
 	if err := setupclient.SetupTls(true); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
-	numSubcommandArgs := flag.NArg() - 1
-	for _, subcommand := range subcommands {
-		if flag.Arg(0) == subcommand.command {
-			if numSubcommandArgs < subcommand.minArgs ||
-				(subcommand.maxArgs >= 0 &&
-					numSubcommandArgs > subcommand.maxArgs) {
-				printUsage()
-				os.Exit(2)
-			}
-			subcommand.cmdFunc(flag.Args()[1:])
-			os.Exit(3)
-		}
-	}
-	printUsage()
-	os.Exit(2)
+	return commands.RunCommands(subcommands, printUsage, logger)
+}
+
+func main() {
+	os.Exit(doMain())
 }
