@@ -6,8 +6,8 @@ import (
 	"net"
 	"os"
 
+	"github.com/Cloud-Foundations/Dominator/lib/flags/commands"
 	"github.com/Cloud-Foundations/Dominator/lib/flags/loadflags"
-	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/log/cmdlogger"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc/setupclient"
@@ -24,42 +24,34 @@ var (
 	loggerPortNum = flag.Uint("loggerPortNum", 0, "Port number of log server")
 )
 
-func printSubcommands(subcommands []subcommand) {
-	for _, subcommand := range subcommands {
-		if subcommand.args == "" {
-			fmt.Fprintln(os.Stderr, " ", subcommand.command)
-		} else {
-			fmt.Fprintln(os.Stderr, " ", subcommand.command, subcommand.args)
-		}
-	}
-}
-
 func printUsage() {
-	fmt.Fprintln(os.Stderr,
+	w := flag.CommandLine.Output()
+	fmt.Fprintln(w,
 		"Usage: logtool [flags...] debug|print|set-debug-level [args...]")
-	fmt.Fprintln(os.Stderr, "Common flags:")
+	fmt.Fprintln(w, "Common flags:")
 	flag.PrintDefaults()
-	fmt.Fprintln(os.Stderr, "Commands:")
-	printSubcommands(subcommands)
+	fmt.Fprintln(w, "Commands:")
+	commands.PrintCommands(w, subcommands)
 }
 
-type commandFunc func(clients []*srpc.Client, addrs, args []string,
-	logger log.Logger)
-
-type subcommand struct {
-	command          string
-	args             string
-	minArgs          int
-	maxArgs          int
-	allowMultiClient bool
-	cmdFunc          commandFunc
+var subcommands = []commands.Command{
+	{"debug", "          level args...", 2, -1, debugSubcommand},
+	{"print", "                args...", 1, -1, printSubcommand},
+	{"set-debug-level", "level", 1, 1, setDebugLevelSubcommand},
+	{"watch", "          level", 1, 1, watchSubcommand},
 }
 
-var subcommands = []subcommand{
-	{"debug", "          level args...", 2, -1, false, debugSubcommand},
-	{"print", "                args...", 1, -1, false, printSubcommand},
-	{"set-debug-level", "level", 1, 1, false, setDebugLevelSubcommand},
-	{"watch", "          level", 1, 1, true, watchSubcommand},
+func dial(allowMultiClient bool) ([]*srpc.Client, []string, error) {
+	if addrs, err := net.LookupHost(*loggerHostname); err != nil {
+		return nil, nil, err
+	} else if len(addrs) < 1 {
+		return nil, nil, fmt.Errorf("no addresses for: %s", *loggerHostname)
+	} else if !allowMultiClient && len(addrs) > 1 {
+		return nil, nil, fmt.Errorf("multiple endpoints not supported")
+	} else {
+		clients, err := dialAll(addrs)
+		return clients, addrs, err
+	}
 }
 
 func dialAll(addrs []string) ([]*srpc.Client, error) {
@@ -75,49 +67,24 @@ func dialAll(addrs []string) ([]*srpc.Client, error) {
 	return clients, nil
 }
 
-func main() {
+func doMain() int {
 	if err := loadflags.LoadForCli("logtool"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	flag.Usage = printUsage
 	flag.Parse()
 	if flag.NArg() < 1 {
 		printUsage()
-		os.Exit(2)
+		return 2
 	}
 	logger := cmdlogger.New()
 	if err := setupclient.SetupTls(true); err != nil {
 		logger.Fatalln(err)
 	}
-	addrs, err := net.LookupHost(*loggerHostname)
-	if err != nil {
-		logger.Fatalln(err)
-	}
-	if len(addrs) < 1 {
-		logger.Fatalf("no addresses for: %s\n", *loggerHostname)
-	}
-	numSubcommandArgs := flag.NArg() - 1
-	for _, subcommand := range subcommands {
-		if flag.Arg(0) == subcommand.command {
-			if numSubcommandArgs < subcommand.minArgs ||
-				(subcommand.maxArgs >= 0 &&
-					numSubcommandArgs > subcommand.maxArgs) {
-				printUsage()
-				os.Exit(2)
-			}
-			if len(addrs) > 1 && !subcommand.allowMultiClient {
-				logger.Fatalf("%s does not support multiple endpoints\n",
-					flag.Arg(0))
-			}
-			clients, err := dialAll(addrs)
-			if err != nil {
-				logger.Fatalln(err)
-			}
-			subcommand.cmdFunc(clients, addrs, flag.Args()[1:], logger)
-			os.Exit(3)
-		}
-	}
-	printUsage()
-	os.Exit(2)
+	return commands.RunCommands(subcommands, printUsage, logger)
+}
+
+func main() {
+	os.Exit(doMain())
 }

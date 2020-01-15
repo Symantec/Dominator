@@ -13,19 +13,19 @@ import (
 	proto "github.com/Cloud-Foundations/Dominator/proto/logger"
 )
 
-func watchSubcommand(clients []*srpc.Client, addrs, args []string,
-	logger log.Logger) {
+func watchSubcommand(args []string, logger log.DebugLogger) error {
 	level, err := strconv.ParseInt(args[0], 10, 16)
 	if err != nil {
-		logger.Fatalf("Error parsing level: %s\n", err)
+		return fmt.Errorf("Error parsing level: %s", err)
 	}
+	clients, addrs, err := dial(true)
 	if err != nil {
-		logger.Fatalf("Error dialing: %s\n", err)
+		return err
 	}
 	if err := watchAll(clients, addrs, int16(level)); err != nil {
-		logger.Fatalf("Error watching: %s\n", err)
+		return fmt.Errorf("Error watching: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func watchAll(clients []*srpc.Client, addrs []string, level int16) error {

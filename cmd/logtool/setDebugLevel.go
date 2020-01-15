@@ -1,7 +1,7 @@
 package main
 
 import (
-	"os"
+	"fmt"
 	"strconv"
 
 	"github.com/Cloud-Foundations/Dominator/lib/log"
@@ -9,16 +9,19 @@ import (
 	proto "github.com/Cloud-Foundations/Dominator/proto/logger"
 )
 
-func setDebugLevelSubcommand(clients []*srpc.Client, addrs, args []string,
-	logger log.Logger) {
+func setDebugLevelSubcommand(args []string, logger log.DebugLogger) error {
 	level, err := strconv.ParseInt(args[0], 10, 16)
 	if err != nil {
-		logger.Fatalf("Error parsing level: %s\n", err)
+		return fmt.Errorf("Error parsing level: %s", err)
+	}
+	clients, _, err := dial(false)
+	if err != nil {
+		return err
 	}
 	if err := setDebugLevel(clients[0], int16(level)); err != nil {
-		logger.Fatalf("Error setting debug level: %s\n", err)
+		return fmt.Errorf("Error setting debug level: %s", err)
 	}
-	os.Exit(0)
+	return nil
 }
 
 func setDebugLevel(client *srpc.Client, level int16) error {
