@@ -13,12 +13,12 @@ func (t *srpcType) RegisterExternalLeases(conn *srpc.Conn,
 	request hypervisor.RegisterExternalLeasesRequest,
 	reply *hypervisor.RegisterExternalLeasesResponse) error {
 	*reply = hypervisor.RegisterExternalLeasesResponse{
-		errors.ErrorToString(t.registerExternalLeases(request))}
+		errors.ErrorToString(t.registerExternalLeases(request, false))}
 	return nil
 }
 
 func (t *srpcType) registerExternalLeases(
-	request hypervisor.RegisterExternalLeasesRequest) error {
+	request hypervisor.RegisterExternalLeasesRequest, manage bool) error {
 	hostnames := make(map[ipv4Address]string)
 	leasesToRegister := make(map[ipv4Address]string)
 	for index, address := range request.Addresses {
@@ -69,5 +69,34 @@ func (t *srpcType) registerExternalLeases(
 		}
 		t.externalLeases[ipAddr] = macAddr
 	}
+	t.manageExternalLeases = manage
 	return nil
+}
+
+func (t *srpcType) registerManagedExternalLeases(
+	request hypervisor.RegisterExternalLeasesRequest) {
+	if err := t.registerExternalLeases(request, true); err != nil {
+		t.logger.Println(err)
+		return
+	}
+}
+
+func (t *srpcType) unregisterManagedExternalLeases() {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	if !t.manageExternalLeases {
+		return
+	}
+	t.manageExternalLeases = false
+	if len(t.externalLeases) < 1 {
+		return
+	}
+	t.logger.Printf("deleting %d managed external leases\n",
+		len(t.externalLeases))
+	for ipAddr := range t.externalLeases {
+		ip := net.IP(ipAddr[:])
+		t.logger.Debugf(1, "deleting: %s\n", ip)
+		t.dhcpServer.RemoveLease(ip)
+		delete(t.externalLeases, ipAddr)
+	}
 }

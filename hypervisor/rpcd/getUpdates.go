@@ -9,14 +9,19 @@ import (
 	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
 )
 
-const flushDelay = time.Millisecond * 10
+const (
+	flushDelay     = time.Millisecond * 10
+	heartbeatDelay = time.Minute * 15
+)
 
 func (t *srpcType) GetUpdates(conn *srpc.Conn) error {
-	closeChannel, responseChannel := t.getUpdatesReader(conn)
+	heartbeatTimer := time.NewTimer(heartbeatDelay)
+	closeChannel, responseChannel := t.getUpdatesReader(conn, heartbeatTimer)
 	updateChannel := t.manager.MakeUpdateChannel()
 	defer t.manager.CloseUpdateChannel(updateChannel)
 	flushTimer := time.NewTimer(flushDelay)
 	var numToFlush uint
+	defer t.unregisterManagedExternalLeases()
 	for {
 		select {
 		case update, ok := <-updateChannel:
@@ -52,6 +57,20 @@ func (t *srpcType) GetUpdates(conn *srpc.Conn) error {
 				t.logger.Printf("error flushing update(s): %s\n", err)
 				return err
 			}
+			heartbeatTimer.Reset(heartbeatDelay)
+		case <-heartbeatTimer.C:
+			err := conn.Encode(proto.Update{
+				HealthStatus: t.manager.GetHealthStatus()})
+			if err != nil {
+				t.logger.Printf("error writing heartbeat: %s\n", err)
+				return err
+			}
+			numToFlush = 0
+			if err := conn.Flush(); err != nil {
+				t.logger.Printf("error flushing heartbeat: %s\n", err)
+				return err
+			}
+			heartbeatTimer.Reset(heartbeatDelay)
 		case err := <-closeChannel:
 			if err == nil {
 				t.logger.Debugf(0, "update client disconnected: %s\n",
@@ -64,19 +83,24 @@ func (t *srpcType) GetUpdates(conn *srpc.Conn) error {
 	}
 }
 
-func (t *srpcType) getUpdatesReader(decoder srpc.Decoder) (
+func (t *srpcType) getUpdatesReader(decoder srpc.Decoder,
+	heartbeatTimer *time.Timer) (
 	<-chan error, <-chan proto.Update) {
 	closeChannel := make(chan error)
 	responseChannel := make(chan proto.Update, 16)
 	go func() {
 		for {
-			var request proto.GetUpdateRequest
+			var request proto.GetUpdatesRequest
 			if err := decoder.Decode(&request); err != nil {
 				if err == io.EOF {
 					err = nil
 				}
 				closeChannel <- err
 				return
+			}
+			heartbeatTimer.Reset(heartbeatDelay)
+			if req := request.RegisterExternalLeasesRequest; req != nil {
+				go t.registerManagedExternalLeases(*req)
 			}
 			update := proto.Update{HealthStatus: t.manager.GetHealthStatus()}
 			select {
