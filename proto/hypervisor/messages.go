@@ -272,7 +272,6 @@ type GetRootCookiePathResponse struct {
 // The client may or may not send GetUpdatesRequest messages to the server.
 // The server sends a stream of Update messages.
 
-type GetUpdateRequest struct{} // Deprecated.
 type GetUpdatesRequest struct {
 	RegisterExternalLeasesRequest *RegisterExternalLeasesRequest
 }
