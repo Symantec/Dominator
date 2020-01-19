@@ -9,7 +9,7 @@ import (
 
 func showImageSubcommand(args []string, logger log.DebugLogger) error {
 	if err := showImage(args[0]); err != nil {
-		return fmt.Errorf("Error showing image\t%s\n", err)
+		return fmt.Errorf("Error showing image\t%s", err)
 	}
 	return nil
 }

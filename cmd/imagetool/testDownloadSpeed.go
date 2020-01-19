@@ -17,7 +17,7 @@ import (
 
 func testDownloadSpeedSubcommand(args []string, logger log.DebugLogger) error {
 	if err := testDownloadSpeed(args[0], logger); err != nil {
-		return fmt.Errorf("Error testing download speed: %s\n", err)
+		return fmt.Errorf("Error testing download speed: %s", err)
 	}
 	return nil
 }

@@ -10,7 +10,7 @@ import (
 func makeDirectorySubcommand(args []string, logger log.DebugLogger) error {
 	imageSClient, _ := getClients()
 	if err := client.MakeDirectory(imageSClient, args[0]); err != nil {
-		return fmt.Errorf("Error creating directory: %s\n", err)
+		return fmt.Errorf("Error creating directory: %s", err)
 	}
 	return nil
 }

@@ -12,7 +12,7 @@ func listUnreferencedObjectsSubcommand(args []string,
 	logger log.DebugLogger) error {
 	imageClient, _ := getClients()
 	if err := listUnreferencedObjects(imageClient, false); err != nil {
-		return fmt.Errorf("Error listing unreferenced objects: %s\n", err)
+		return fmt.Errorf("Error listing unreferenced objects: %s", err)
 	}
 	return nil
 }
@@ -21,7 +21,7 @@ func showUnreferencedObjectsSubcommand(args []string,
 	logger log.DebugLogger) error {
 	imageClient, _ := getClients()
 	if err := listUnreferencedObjects(imageClient, true); err != nil {
-		return fmt.Errorf("Error listing unreferenced objects: %s\n", err)
+		return fmt.Errorf("Error listing unreferenced objects: %s", err)
 	}
 	return nil
 }

@@ -11,7 +11,7 @@ import (
 func estimateImageUsageSubcommand(args []string, logger log.DebugLogger) error {
 	imageSClient, _ := getClients()
 	if err := estimateImageUsage(imageSClient, args[0]); err != nil {
-		return fmt.Errorf("Error estimating image size: %s\n", err)
+		return fmt.Errorf("Error estimating image size: %s", err)
 	}
 	return nil
 }

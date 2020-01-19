@@ -19,7 +19,7 @@ func addReplaceImageSubcommand(args []string, logger log.DebugLogger) error {
 	err := addReplaceImage(imageSClient, objectClient, args[0], args[1],
 		args[2:])
 	if err != nil {
-		return fmt.Errorf("Error adding image: \"%s\"\t%s\n", args[0], err)
+		return fmt.Errorf("Error adding image: \"%s\": %s", args[0], err)
 	}
 	return nil
 }
@@ -29,7 +29,7 @@ func bulkAddReplaceImagesSubcommand(args []string,
 	imageSClient, objectClient := getClients()
 	err := bulkAddReplaceImages(imageSClient, objectClient, args)
 	if err != nil {
-		return fmt.Errorf("Error adding image: \"%s\"\t%s\n", args[0], err)
+		return fmt.Errorf("Error adding image: \"%s\": %s", args[0], err)
 	}
 	return nil
 }

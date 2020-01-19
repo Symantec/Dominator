@@ -20,7 +20,7 @@ func tarImageSubcommand(args []string, logger log.DebugLogger) error {
 	}
 	err := tarImageAndWrite(objectClient, args[0], outputFilename)
 	if err != nil {
-		return fmt.Errorf("Error taring image: %s\n", err)
+		return fmt.Errorf("Error taring image: %s", err)
 	}
 	return nil
 }

@@ -19,7 +19,7 @@ func getFileInImageSubcommand(args []string, logger log.DebugLogger) error {
 	}
 	err := getFileInImage(objectClient, args[0], args[1], outFileName)
 	if err != nil {
-		return fmt.Errorf("Error getting file in image: %s\n", err)
+		return fmt.Errorf("Error getting file in image: %s", err)
 	}
 	return nil
 }
