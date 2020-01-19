@@ -81,7 +81,7 @@ func (h *hypervisorType) pingLoop(conn *srpc.Conn,
 			} else {
 				h.logger.Debugln(1, "sending first ping since last activity")
 			}
-			err := conn.Encode(hyper_proto.GetUpdateRequest{})
+			err := conn.Encode(hyper_proto.GetUpdatesRequest{})
 			if err != nil {
 				h.logger.Printf("error sending ping: %s\n", err)
 			} else {

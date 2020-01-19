@@ -22,12 +22,13 @@ type DhcpServer interface {
 type ipv4Address [4]byte
 
 type srpcType struct {
-	dhcpServer     DhcpServer
-	logger         log.DebugLogger
-	manager        *manager.Manager
-	tftpbootServer TftpbootServer
-	mutex          sync.Mutex             // Protect everything below.
-	externalLeases map[ipv4Address]string // Value: MAC address.
+	dhcpServer           DhcpServer
+	logger               log.DebugLogger
+	manager              *manager.Manager
+	tftpbootServer       TftpbootServer
+	mutex                sync.Mutex             // Protect everything below.
+	externalLeases       map[ipv4Address]string // Value: MAC address.
+	manageExternalLeases bool
 }
 
 type TftpbootServer interface {
