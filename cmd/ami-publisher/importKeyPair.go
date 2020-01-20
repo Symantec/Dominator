@@ -10,7 +10,7 @@ import (
 
 func importKeyPairSubcommand(args []string, logger log.DebugLogger) error {
 	if err := importKeyPair(args[0], args[1], logger); err != nil {
-		return fmt.Errorf("Error importing key pair: %s\n", err)
+		return fmt.Errorf("Error importing key pair: %s", err)
 	}
 	return nil
 }

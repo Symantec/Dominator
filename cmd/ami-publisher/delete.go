@@ -10,7 +10,7 @@ import (
 
 func deleteSubcommand(args []string, logger log.DebugLogger) error {
 	if err := deleteResources(args, logger); err != nil {
-		return fmt.Errorf("Error deleting resources: %s\n", err)
+		return fmt.Errorf("Error deleting resources: %s", err)
 	}
 	return nil
 }

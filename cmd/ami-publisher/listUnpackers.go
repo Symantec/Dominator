@@ -11,7 +11,7 @@ import (
 
 func listUnpackersSubcommand(args []string, logger log.DebugLogger) error {
 	if err := listUnpackers(logger); err != nil {
-		return fmt.Errorf("Error listing unpackers: %s\n", err)
+		return fmt.Errorf("Error listing unpackers: %s", err)
 	}
 	return nil
 }

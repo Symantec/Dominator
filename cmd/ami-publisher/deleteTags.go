@@ -10,7 +10,7 @@ import (
 
 func deleteTagsSubcommand(args []string, logger log.DebugLogger) error {
 	if err := deleteTags(args[0], args[1:], logger); err != nil {
-		return fmt.Errorf("Error deleting tags for resources: %s\n", err)
+		return fmt.Errorf("Error deleting tags for resources: %s", err)
 	}
 	return nil
 }
@@ -33,7 +33,7 @@ func deleteTags(tagKey string, resultsFiles []string,
 func deleteTagsOnUnpackersSubcommand(args []string,
 	logger log.DebugLogger) error {
 	if err := deleteTagsOnUnpackers(args[0], logger); err != nil {
-		return fmt.Errorf("Error deleting tags on unpackers: %s\n", err)
+		return fmt.Errorf("Error deleting tags on unpackers: %s", err)
 	}
 	return nil
 }

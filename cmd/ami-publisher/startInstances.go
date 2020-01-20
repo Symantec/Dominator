@@ -11,7 +11,7 @@ import (
 
 func startInstancesSubcommand(args []string, logger log.DebugLogger) error {
 	if err := startInstances(*instanceName, logger); err != nil {
-		return fmt.Errorf("Error starting instances: %s\n", err)
+		return fmt.Errorf("Error starting instances: %s", err)
 	}
 	return nil
 }

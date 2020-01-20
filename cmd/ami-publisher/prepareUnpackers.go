@@ -16,7 +16,7 @@ func prepareUnpackersSubcommand(args []string, logger log.DebugLogger) error {
 	err := amipublisher.PrepareUnpackers(streamName, targets, skipTargets,
 		*instanceName, logger)
 	if err != nil {
-		return fmt.Errorf("Error preparing unpackers: %s\n", err)
+		return fmt.Errorf("Error preparing unpackers: %s", err)
 	}
 	return nil
 }

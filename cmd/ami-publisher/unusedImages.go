@@ -22,7 +22,7 @@ const (
 
 func listUnusedImagesSubcommand(args []string, logger log.DebugLogger) error {
 	if err := listUnusedImages(logger); err != nil {
-		return fmt.Errorf("Error listing unused images: %s\n", err)
+		return fmt.Errorf("Error listing unused images: %s", err)
 	}
 	logMemoryUsage(logger)
 	return nil
@@ -160,7 +160,7 @@ func appendRecordAndWrite(writer *csv.Writer, record []string,
 
 func deleteUnusedImagesSubcommand(args []string, logger log.DebugLogger) error {
 	if err := deleteUnusedImages(logger); err != nil {
-		return fmt.Errorf("Error deleting unused images: %s\n", err)
+		return fmt.Errorf("Error deleting unused images: %s", err)
 	}
 	logMemoryUsage(logger)
 	return nil
