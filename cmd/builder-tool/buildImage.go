@@ -18,7 +18,7 @@ import (
 
 func buildImageSubcommand(args []string, logger log.DebugLogger) error {
 	if err := buildImage(args, logger); err != nil {
-		return fmt.Errorf("Error building image: %s\n", err)
+		return fmt.Errorf("Error building image: %s", err)
 	}
 	return nil
 }
