@@ -62,13 +62,13 @@ func processControlConnection(conn net.Conn, m *manager.Manager,
 	defer conn.Close()
 	buffer := make([]byte, 256)
 	if nRead, err := conn.Read(buffer); err != nil {
-		return fmt.Errorf("error reading request: %s\n", err)
+		return fmt.Errorf("error reading request: %s", err)
 	} else if nRead < 1 {
-		return fmt.Errorf("read short request: %s\n", err)
+		return fmt.Errorf("read short request: %s", err)
 	} else {
 		request := string(buffer[:nRead])
 		if request[nRead-1] != '\n' {
-			return fmt.Errorf("request not null-terminated: %s\n", request)
+			return fmt.Errorf("request not null-terminated: %s", request)
 		}
 		request = request[:nRead-1]
 		switch request {
