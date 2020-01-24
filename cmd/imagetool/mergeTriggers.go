@@ -11,7 +11,7 @@ import (
 
 func mergeTriggersSubcommand(args []string, logger log.DebugLogger) error {
 	if err := mergeTriggers(args); err != nil {
-		return fmt.Errorf("Error merging triggers: %s\n", err)
+		return fmt.Errorf("Error merging triggers: %s", err)
 	}
 	return nil
 }

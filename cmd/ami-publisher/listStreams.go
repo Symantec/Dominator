@@ -12,7 +12,7 @@ import (
 
 func listStreamsSubcommand(args []string, logger log.DebugLogger) error {
 	if err := listStreams(logger); err != nil {
-		return fmt.Errorf("Error listing streams: %s\n", err)
+		return fmt.Errorf("Error listing streams: %s", err)
 	}
 	return nil
 }

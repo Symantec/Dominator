@@ -10,7 +10,7 @@ import (
 
 func findLatestImageSubcommand(args []string, logger log.DebugLogger) error {
 	if err := findLatestImage(args[0]); err != nil {
-		return fmt.Errorf("Error finding latest image: %s\n", err)
+		return fmt.Errorf("Error finding latest image: %s", err)
 	}
 	return nil
 }

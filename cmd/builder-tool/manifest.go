@@ -34,7 +34,7 @@ func buildFromManifestSubcommand(args []string, logger log.DebugLogger) error {
 			os.Stderr.Write(logWriter.Bytes())
 		}
 		fmt.Fprintln(os.Stderr, "End of build log ============================")
-		return fmt.Errorf("Error processing manifest: %s\n", err)
+		return fmt.Errorf("Error processing manifest: %s", err)
 	}
 	if *alwaysShowBuildLog {
 		fmt.Fprintln(os.Stderr, "End of build log ============================")
@@ -42,7 +42,7 @@ func buildFromManifestSubcommand(args []string, logger log.DebugLogger) error {
 		err := fsutil.CopyToFile("build.log", filePerms, &logWriter.buffer,
 			uint64(logWriter.buffer.Len()))
 		if err != nil {
-			return fmt.Errorf("Error writing build log: %s\n", err)
+			return fmt.Errorf("Error writing build log: %s", err)
 		}
 	}
 	fmt.Println(name)
@@ -65,7 +65,7 @@ func buildTreeFromManifestSubcommand(args []string,
 			os.Stderr.Write(logWriter.Bytes())
 		}
 		fmt.Fprintln(os.Stderr, "End of build log ============================")
-		return fmt.Errorf("Error processing manifest: %s\n", err)
+		return fmt.Errorf("Error processing manifest: %s", err)
 	}
 	if *alwaysShowBuildLog {
 		fmt.Fprintln(os.Stderr, "End of build log ============================")
@@ -73,7 +73,7 @@ func buildTreeFromManifestSubcommand(args []string,
 		err := fsutil.CopyToFile("build.log", filePerms, &logWriter.buffer,
 			uint64(logWriter.buffer.Len()))
 		if err != nil {
-			return fmt.Errorf("Error writing build log: %s\n", err)
+			return fmt.Errorf("Error writing build log: %s", err)
 		}
 	}
 	fmt.Println(rootDir)
@@ -93,7 +93,7 @@ func processManifestSubcommand(args []string, logger log.DebugLogger) error {
 			os.Stderr.Write(logWriter.Bytes())
 		}
 		fmt.Fprintln(os.Stderr, "End of build log ============================")
-		return fmt.Errorf("Error processing manifest: %s\n", err)
+		return fmt.Errorf("Error processing manifest: %s", err)
 	}
 	if *alwaysShowBuildLog {
 		fmt.Fprintln(os.Stderr, "End of build log ============================")
@@ -101,7 +101,7 @@ func processManifestSubcommand(args []string, logger log.DebugLogger) error {
 		err := fsutil.CopyToFile("build.log", filePerms, &logWriter.buffer,
 			uint64(logWriter.buffer.Len()))
 		if err != nil {
-			return fmt.Errorf("Error writing build log: %s\n", err)
+			return fmt.Errorf("Error writing build log: %s", err)
 		}
 	}
 	return nil

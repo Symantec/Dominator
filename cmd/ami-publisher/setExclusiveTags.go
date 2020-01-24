@@ -11,8 +11,7 @@ import (
 
 func setExclusiveTagsSubcommand(args []string, logger log.DebugLogger) error {
 	if err := setExclusiveTags(args[0], args[1], args[2:], logger); err != nil {
-		return fmt.Errorf("Error setting exclusive tag for resources: %s\n",
-			err)
+		return fmt.Errorf("Error setting exclusive tag for resources: %s", err)
 	}
 	return nil
 }

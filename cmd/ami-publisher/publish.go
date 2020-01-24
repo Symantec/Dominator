@@ -16,7 +16,7 @@ func publishSubcommand(args []string, logger log.DebugLogger) error {
 	imageServerAddr := fmt.Sprintf("%s:%d",
 		*imageServerHostname, *imageServerPortNum)
 	if err := publish(imageServerAddr, args[0], args[1], logger); err != nil {
-		return fmt.Errorf("Error publishing image: %s\n", err)
+		return fmt.Errorf("Error publishing image: %s", err)
 	}
 	return nil
 }

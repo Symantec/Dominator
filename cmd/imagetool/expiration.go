@@ -15,7 +15,7 @@ func changeImageExpirationSubcommand(args []string,
 	imageSClient, _ := getClients()
 	err := changeImageExpiration(imageSClient, args[0])
 	if err != nil {
-		return fmt.Errorf("Error changing image expiration: %s\n", err)
+		return fmt.Errorf("Error changing image expiration: %s", err)
 	}
 	return nil
 }
@@ -31,7 +31,7 @@ func changeImageExpiration(imageSClient *srpc.Client, name string) error {
 func getImageExpirationSubcommand(args []string, logger log.DebugLogger) error {
 	imageSClient, _ := getClients()
 	if err := getImageExpiration(imageSClient, args[0]); err != nil {
-		return fmt.Errorf("Error getting image expiration: %s\n", err)
+		return fmt.Errorf("Error getting image expiration: %s", err)
 	}
 	return nil
 }

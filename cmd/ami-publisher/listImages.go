@@ -11,7 +11,7 @@ import (
 
 func listImagesSubcommand(args []string, logger log.DebugLogger) error {
 	if err := listImages(logger); err != nil {
-		return fmt.Errorf("Error listing images: %s\n", err)
+		return fmt.Errorf("Error listing images: %s", err)
 	}
 	return nil
 }

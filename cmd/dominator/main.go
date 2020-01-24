@@ -77,7 +77,7 @@ func newObjectServer(objectsDir string, logger log.DebugLogger) (
 			return nil, err
 		}
 	} else if !fi.IsDir() {
-		return nil, fmt.Errorf("%s is not a directory\n", objectsDir)
+		return nil, fmt.Errorf("%s is not a directory", objectsDir)
 	}
 	return objectserver.NewObjectServer(objectsDir, logger)
 }
@@ -103,12 +103,12 @@ func main() {
 	}
 	rlim := syscall.Rlimit{Cur: *fdLimit, Max: *fdLimit}
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot set FD limit\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Cannot set FD limit: %s\n", err)
 		os.Exit(1)
 	}
 	fi, err := os.Lstat(*stateDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot stat: %s\t%s\n", *stateDir, err)
+		fmt.Fprintf(os.Stderr, "Cannot stat: %s: %s\n", *stateDir, err)
 		os.Exit(1)
 	}
 	if !fi.IsDir() {
@@ -133,7 +133,7 @@ func main() {
 	herd.AddHtmlWriter(logger)
 	rpcd.Setup(herd, logger)
 	if err = herd.StartServer(*portNum, true); err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to create http server\t%s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to create http server: %s\n", err)
 		os.Exit(1)
 	}
 	scanTokenChannel := make(chan bool, 1)

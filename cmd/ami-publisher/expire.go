@@ -10,7 +10,7 @@ import (
 func expireSubcommand(args []string, logger log.DebugLogger) error {
 	err := amipublisher.ExpireResources(targets, skipTargets, logger)
 	if err != nil {
-		return fmt.Errorf("Error expiring resources: %s\n", err)
+		return fmt.Errorf("Error expiring resources: %s", err)
 	}
 	return nil
 }

@@ -12,7 +12,7 @@ import (
 func listDirectoriesSubcommand(args []string, logger log.DebugLogger) error {
 	imageClient, _ := getClients()
 	if err := listDirectories(imageClient); err != nil {
-		return fmt.Errorf("Error listing directories: %s\n", err)
+		return fmt.Errorf("Error listing directories: %s", err)
 	}
 	return nil
 }

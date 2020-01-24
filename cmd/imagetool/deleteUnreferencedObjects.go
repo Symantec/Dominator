@@ -13,15 +13,15 @@ func deleteUnreferencedObjectsSubcommand(args []string,
 	imageSClient, _ := getClients()
 	percentage, err := strconv.ParseUint(args[0], 10, 8)
 	if err != nil {
-		return fmt.Errorf("Error parsing percentage: %s\n", err)
+		return fmt.Errorf("Error parsing percentage: %s", err)
 	}
 	bytes, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
-		return fmt.Errorf("Error parsing bytes: %s\n", err)
+		return fmt.Errorf("Error parsing bytes: %s", err)
 	}
 	if err := client.DeleteUnreferencedObjects(imageSClient, uint8(percentage),
 		bytes); err != nil {
-		return fmt.Errorf("Error deleting unreferenced objects: %s\n", err)
+		return fmt.Errorf("Error deleting unreferenced objects: %s", err)
 	}
 	return nil
 }

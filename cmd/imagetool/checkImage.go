@@ -12,7 +12,7 @@ func checkImageSubcommand(args []string, logger log.DebugLogger) error {
 	imageSClient, _ := getClients()
 	imageExists, err := client.CheckImage(imageSClient, args[0])
 	if err != nil {
-		return fmt.Errorf("Error checking image\t%s\n", err)
+		return fmt.Errorf("Error checking image: %s", err)
 	}
 	if imageExists {
 		return nil

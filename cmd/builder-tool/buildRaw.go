@@ -27,7 +27,7 @@ type dummyHasher struct{}
 func buildRawFromManifestSubcommand(args []string,
 	logger log.DebugLogger) error {
 	if err := buildRawFromManifest(args[0], args[1], logger); err != nil {
-		return fmt.Errorf("Error building RAW image from manifest: %s\n", err)
+		return fmt.Errorf("Error building RAW image from manifest: %s", err)
 	}
 	return nil
 }
@@ -35,7 +35,7 @@ func buildRawFromManifestSubcommand(args []string,
 func buildRawFromManifest(manifestDir, rawFilename string,
 	logger log.DebugLogger) error {
 	if rawSize < 1<<20 {
-		return fmt.Errorf("rawSize: %d too small\n", rawSize)
+		return fmt.Errorf("rawSize: %d too small", rawSize)
 	}
 	err := syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, "")
 	if err != nil {

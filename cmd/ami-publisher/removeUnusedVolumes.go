@@ -10,7 +10,7 @@ import (
 func removeUnusedVolumesSubcommand(args []string,
 	logger log.DebugLogger) error {
 	if err := removeUnusedVolumes(logger); err != nil {
-		return fmt.Errorf("Error removing unused volumes: %s\n", err)
+		return fmt.Errorf("Error removing unused volumes: %s", err)
 	}
 	return nil
 }

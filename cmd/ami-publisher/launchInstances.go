@@ -14,7 +14,7 @@ import (
 
 func launchInstancesSubcommand(args []string, logger log.DebugLogger) error {
 	if err := launchInstances(args[0], logger); err != nil {
-		return fmt.Errorf("Error launching instances: %s\n", err)
+		return fmt.Errorf("Error launching instances: %s", err)
 	}
 	return nil
 }
@@ -44,7 +44,7 @@ func launchInstances(bootImage string, logger log.DebugLogger) error {
 func launchInstancesForImagesSubcommand(args []string,
 	logger log.DebugLogger) error {
 	if err := launchInstancesForImages(args, logger); err != nil {
-		return fmt.Errorf("Error launching instances: %s\n", err)
+		return fmt.Errorf("Error launching instances: %s", err)
 	}
 	return nil
 }

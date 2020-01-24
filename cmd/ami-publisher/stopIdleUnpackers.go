@@ -11,7 +11,7 @@ func stopIdleUnpackersSubcommand(args []string, logger log.DebugLogger) error {
 	err := amipublisher.StopIdleUnpackers(targets, skipTargets, *instanceName,
 		*maxIdleTime, logger)
 	if err != nil {
-		return fmt.Errorf("Error stopping idle unpackers: %s\n", err)
+		return fmt.Errorf("Error stopping idle unpackers: %s", err)
 	}
 	return nil
 }
