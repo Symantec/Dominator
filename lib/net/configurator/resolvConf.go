@@ -27,7 +27,8 @@ func updateResolvConf(rootDir string,
 	subnet *hyper_proto.Subnet) (bool, error) {
 	buffer := &bytes.Buffer{}
 	fmt.Fprintln(buffer,
-		"; /etc/resolv.conf -- created by SmallStack installer\n")
+		"; /etc/resolv.conf -- created by SmallStack installer")
+	fmt.Fprintln(buffer) // Split to keep stupid linter happy.
 	if err := printResolvConf(buffer, subnet); err != nil {
 		return false, err
 	}
@@ -44,7 +45,8 @@ func writeResolvConf(rootDir string, subnet *hyper_proto.Subnet) error {
 	defer file.Close()
 	writer := bufio.NewWriter(file)
 	fmt.Fprintln(writer,
-		"; /etc/resolv.conf -- created by SmallStack installer\n")
+		"; /etc/resolv.conf -- created by SmallStack installer")
+	fmt.Fprintln(writer) // Split to keep stupid linter happy.
 	if err := printResolvConf(writer, subnet); err != nil {
 		return err
 	}
