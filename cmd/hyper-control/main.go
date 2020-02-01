@@ -63,7 +63,7 @@ var (
 		"Name of file containing storage layout for installing machine")
 	subnetIDs       flagutil.StringList
 	targetImageName = flag.String("targetImageName", "",
-		"Name of image to install for netboot-vm")
+		"Name of image to install for netboot-{host,vm}")
 	topologyDir = flag.String("topologyDir", "",
 		"Name of local topology directory in Git repository")
 	useKexec = flag.Bool("useKexec", false,
