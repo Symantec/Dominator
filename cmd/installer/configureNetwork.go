@@ -89,6 +89,8 @@ func writeMappings(mappings map[string]string) error {
 		defer file.Close()
 		writer := bufio.NewWriter(file)
 		defer writer.Flush()
+		fmt.Fprintf(writer, "# %s -- created by SmallStack installer\n\n",
+			filename)
 		for name, kernelId := range mappings {
 			fmt.Fprintf(writer,
 				`SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{type}=="1", KERNELS=="%s", NAME="%s"`,

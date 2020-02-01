@@ -148,8 +148,8 @@ func netbootVm(logger log.DebugLogger) error {
 				SubnetId:       subnetId,
 			})
 	}
-	configFiles, err := makeConfigFiles(info, *targetImageName,
-		getNetworkEntries(info), false)
+	configFiles, err := makeConfigFiles(info, "", getNetworkEntries(info),
+		false)
 	netbootRequest := hyper_proto.NetbootMachineRequest{
 		Address:                      vmInfo.Address,
 		Files:                        configFiles,

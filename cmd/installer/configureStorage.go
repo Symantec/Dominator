@@ -127,7 +127,7 @@ func configureBootDrive(cpuSharer cpusharer.CpuSharer, drive *driveType,
 		partition := partition
 		err := concurrentState.GoRun(func() error {
 			return drive.makeFileSystem(cpuSharer, device, partition.MountPoint,
-				"ext4", &mkfsMutex, false, logger)
+				"ext4", &mkfsMutex, 0, logger)
 		})
 		if err != nil {
 			return err
@@ -136,7 +136,7 @@ func configureBootDrive(cpuSharer cpusharer.CpuSharer, drive *driveType,
 	concurrentState.GoRun(func() error {
 		device := partitionName(drive.devpath, len(layout.BootDriveLayout)+1)
 		return drive.makeFileSystem(cpuSharer, device,
-			layout.ExtraMountPointsBasename+"0", "ext4", &mkfsMutex, true,
+			layout.ExtraMountPointsBasename+"0", "ext4", &mkfsMutex, 65536,
 			logger)
 	})
 	if err := concurrentState.Reap(); err != nil {
@@ -166,7 +166,7 @@ func configureDataDrive(cpuSharer cpusharer.CpuSharer, drive *driveType,
 	dataMountPoint := layout.ExtraMountPointsBasename + strconv.FormatInt(
 		int64(index), 10)
 	return drive.makeFileSystem(cpuSharer, drive.devpath, dataMountPoint,
-		"ext4", nil, true, logger)
+		"ext4", nil, 1048576, logger)
 }
 
 func configureStorage(config fm_proto.GetMachineInfoResponse,
@@ -719,7 +719,7 @@ func (drive driveType) cryptSetup(cpuSharer cpusharer.CpuSharer, device string,
 }
 
 func (drive driveType) makeFileSystem(cpuSharer cpusharer.CpuSharer,
-	device, target, fstype string, mkfsMutex *sync.Mutex, data bool,
+	device, target, fstype string, mkfsMutex *sync.Mutex, bytesPerInode uint,
 	logger log.DebugLogger) error {
 	label := target
 	erase := true
@@ -744,8 +744,9 @@ func (drive driveType) makeFileSystem(cpuSharer cpusharer.CpuSharer,
 		mkfsMutex.Lock()
 	}
 	startTime := time.Now()
-	if data {
-		err = run("mkfs.ext4", *tmpRoot, logger, "-i", "1048576", "-L", label,
+	if bytesPerInode > 0 {
+		err = run("mkfs.ext4", *tmpRoot, logger,
+			"-i", strconv.Itoa(int(bytesPerInode)), "-L", label,
 			"-E", "lazy_itable_init=0,lazy_journal_init=0", device)
 	} else {
 		err = run("mkfs.ext4", *tmpRoot, logger, "-L", label,

@@ -159,7 +159,9 @@ func makeConfigFiles(info fm_proto.GetMachineInfoResponse, imageName string,
 	} else {
 		filesMap["config.json"] = append(data, '\n')
 	}
-	if imageName != "" {
+	if *targetImageName != "" {
+		filesMap["imagename"] = []byte(*targetImageName + "\n")
+	} else if imageName != "" {
 		filesMap["imagename"] = []byte(imageName + "\n")
 	}
 	buffer := new(bytes.Buffer)

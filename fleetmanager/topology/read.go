@@ -175,6 +175,11 @@ func (state *commonStateType) addMacAddress(macAddr proto.HardwareAddr) error {
 
 func (state *commonStateType) addMachine(machine *proto.Machine,
 	subnets map[string]*Subnet) error {
+	if machine.GatewaySubnetId != "" {
+		if _, ok := subnets[machine.GatewaySubnetId]; !ok {
+			return fmt.Errorf("unknown subnetId: %s", machine.GatewaySubnetId)
+		}
+	}
 	if err := state.addNetworkEntry(machine.NetworkEntry, subnets); err != nil {
 		return err
 	}

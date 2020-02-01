@@ -87,6 +87,7 @@ type ListVMsInLocationResponse struct {
 }
 
 type Machine struct {
+	GatewaySubnetId         string `json:",omitempty"`
 	NetworkEntry            `json:",omitempty"`
 	IPMI                    NetworkEntry   `json:",omitempty"`
 	OwnerGroups             []string       `json:",omitempty"`

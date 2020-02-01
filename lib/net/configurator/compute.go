@@ -88,6 +88,10 @@ func compute(machineInfo fm_proto.GetMachineInfoResponse,
 	}
 	preferredSubnet := findMatchingSubnet(machineInfo.Subnets,
 		machineInfo.Machine.HostIpAddress)
+	if machineInfo.Machine.GatewaySubnetId != "" {
+		preferredSubnet = findSubnet(machineInfo.Subnets,
+			machineInfo.Machine.GatewaySubnetId)
+	}
 	// First process network entries with normal interfaces.
 	var bondedNetworkEntries []fm_proto.NetworkEntry
 	normalInterfaceIndex := 0
@@ -190,7 +194,7 @@ func compute(machineInfo fm_proto.GetMachineInfoResponse,
 			if _, ok := usedSubnets[subnet]; ok {
 				continue
 			}
-			if subnet.VlanId > 0 {
+			if subnet.VlanId > 0 && subnet.Manage {
 				netconf.bridges = append(netconf.bridges, subnet.VlanId)
 			}
 		}

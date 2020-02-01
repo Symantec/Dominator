@@ -66,7 +66,7 @@ func (netconf *NetworkConfig) printDebian(writer io.Writer) error {
 			fmt.Fprintln(writer)
 			fmt.Fprintf(writer, "auto %s\n", iface.name)
 			fmt.Fprintf(writer, "iface %s inet static\n", iface.name)
-			fmt.Fprintln(writer, "\tvlan-raw-device bond0")
+			fmt.Fprintf(writer, "\tvlan-raw-device %s\n", netconf.vlanRawDevice)
 			fmt.Fprintf(writer, "\taddress %s\n", iface.ipAddr)
 			fmt.Fprintf(writer, "\tnetmask %s\n", iface.subnet.IpMask)
 			if iface.subnet.IpGateway.Equal(netconf.DefaultSubnet.IpGateway) {
