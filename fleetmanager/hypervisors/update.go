@@ -84,16 +84,21 @@ func testInLocation(location, enclosingLocation string) bool {
 	return true
 }
 
+func (h *hypervisorType) address() string {
+	hostname := h.machine.Hostname
+	if len(h.machine.HostIpAddress) > 0 {
+		hostname = h.machine.HostIpAddress.String()
+	}
+	return fmt.Sprintf("%s:%d", hostname, constants.HypervisorPortNumber)
+}
+
 func (h *hypervisorType) changeOwners(client *srpc.Client) error {
 	if !*manageHypervisors {
 		return nil
 	}
 	if client == nil {
 		var err error
-		client, err = srpc.DialHTTP("tcp",
-			fmt.Sprintf("%s:%d",
-				h.machine.Hostname, constants.HypervisorPortNumber),
-			time.Second*15)
+		client, err = srpc.DialHTTP("tcp", h.address(), time.Second*15)
 		if err != nil {
 			return err
 		}
@@ -300,7 +305,7 @@ func (m *Manager) updateTopologyLocked(t *topology.Topology,
 			}
 			m.hypervisors[machine.Hostname] = hypervisor
 			hypersToChange = append(hypersToChange, hypervisor)
-			go m.manageHypervisorLoop(hypervisor, machine.Hostname)
+			go m.manageHypervisorLoop(hypervisor)
 		}
 	}
 	deleteList := make([]*hypervisorType, 0, len(hypervisorsToDelete))
@@ -356,7 +361,7 @@ func (h *hypervisorType) isDeleteScheduled() bool {
 	return h.deleteScheduled
 }
 
-func (m *Manager) manageHypervisorLoop(h *hypervisorType, hostname string) {
+func (m *Manager) manageHypervisorLoop(h *hypervisorType) {
 	vmList, err := m.storer.ListVMs(h.machine.HostIpAddress)
 	if err != nil {
 		h.logger.Printf("error reading VMs, not managing hypervisor: %s", err)
@@ -388,13 +393,12 @@ func (m *Manager) manageHypervisorLoop(h *hypervisorType, hostname string) {
 		m.mutex.Unlock()
 	}
 	for !h.isDeleteScheduled() {
-		sleepTime := m.manageHypervisor(h, hostname)
+		sleepTime := m.manageHypervisor(h)
 		time.Sleep(sleepTime)
 	}
 }
 
-func (m *Manager) manageHypervisor(h *hypervisorType,
-	hostname string) time.Duration {
+func (m *Manager) manageHypervisor(h *hypervisorType) time.Duration {
 	failureProbeStatus := probeStatusUnreachable
 	defer func() {
 		h.mutex.Lock()
@@ -405,9 +409,7 @@ func (m *Manager) manageHypervisor(h *hypervisorType,
 			h.conn = nil
 		}
 	}()
-	client, err := srpc.DialHTTP("tcp",
-		fmt.Sprintf("%s:%d", hostname, constants.HypervisorPortNumber),
-		time.Second*15)
+	client, err := srpc.DialHTTP("tcp", h.address(), time.Second*15)
 	if err != nil {
 		h.logger.Debugln(1, err)
 		switch err {
@@ -559,8 +561,7 @@ func (m *Manager) processAddressPoolUpdates(h *hypervisorType,
 	if len(addressesToAdd) < 1 && len(maxFreeAddresses) < 1 {
 		return
 	}
-	client, err := srpc.DialHTTP("tcp", fmt.Sprintf("%s:%d",
-		h.machine.Hostname, constants.HypervisorPortNumber), time.Minute)
+	client, err := srpc.DialHTTP("tcp", h.address(), time.Minute)
 	if err != nil {
 		h.logger.Println(err)
 		return
@@ -691,10 +692,7 @@ func (m *Manager) processSubnetsUpdates(h *hypervisorType,
 		len(request.Delete) < 1 {
 		return
 	}
-	client, err := srpc.DialHTTP("tcp",
-		fmt.Sprintf("%s:%d",
-			h.machine.Hostname, constants.HypervisorPortNumber),
-		time.Minute)
+	client, err := srpc.DialHTTP("tcp", h.address(), time.Minute)
 	if err != nil {
 		h.logger.Println(err)
 		return
