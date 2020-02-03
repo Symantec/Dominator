@@ -17,7 +17,7 @@ func changeVmCPUsSubcommand(args []string, logger log.DebugLogger) error {
 }
 
 func changeVmMemorySubcommand(args []string, logger log.DebugLogger) error {
-	if err := changeVmSize(args[0], uint64(memory), 0, logger); err != nil {
+	if err := changeVmSize(args[0], uint64(memory>>20), 0, logger); err != nil {
 		return fmt.Errorf("Error changing VM memory: %s", err)
 	}
 	return nil
