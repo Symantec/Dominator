@@ -181,6 +181,11 @@ func doMain() int {
 		printUsage()
 		return 2
 	}
+	if memory > 0 && memory < 1<<20 {
+		fmt.Fprintf(os.Stderr, "unreasonably small memory: %s\n",
+			memory.String())
+		return 3
+	}
 	logger = cmdlogger.New()
 	if err := setupclient.SetupTls(false); err != nil {
 		fmt.Fprintln(os.Stderr, err)
