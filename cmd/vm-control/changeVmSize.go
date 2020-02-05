@@ -17,7 +17,7 @@ func changeVmCPUsSubcommand(args []string, logger log.DebugLogger) error {
 }
 
 func changeVmMemorySubcommand(args []string, logger log.DebugLogger) error {
-	if err := changeVmSize(args[0], uint64(memory), 0, logger); err != nil {
+	if err := changeVmSize(args[0], uint64(memory>>20), 0, logger); err != nil {
 		return fmt.Errorf("Error changing VM memory: %s", err)
 	}
 	return nil
@@ -35,6 +35,12 @@ func changeVmSize(vmHostname string, memoryInMiB uint64, milliCPUs uint,
 
 func changeVmSizeOnHypervisor(hypervisor string, ipAddr net.IP,
 	memoryInMiB uint64, milliCPUs uint, logger log.DebugLogger) error {
+	if memoryInMiB < 1 {
+		memoryInMiB = 1024
+	}
+	if milliCPUs < 1 {
+		milliCPUs = 250
+	}
 	client, err := dialHypervisor(hypervisor)
 	if err != nil {
 		return err
