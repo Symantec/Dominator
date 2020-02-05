@@ -35,6 +35,12 @@ func changeVmSize(vmHostname string, memoryInMiB uint64, milliCPUs uint,
 
 func changeVmSizeOnHypervisor(hypervisor string, ipAddr net.IP,
 	memoryInMiB uint64, milliCPUs uint, logger log.DebugLogger) error {
+	if memoryInMiB < 1 {
+		memoryInMiB = 1024
+	}
+	if milliCPUs < 1 {
+		milliCPUs = 250
+	}
 	client, err := dialHypervisor(hypervisor)
 	if err != nil {
 		return err
