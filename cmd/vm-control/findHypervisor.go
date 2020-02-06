@@ -11,7 +11,10 @@ import (
 )
 
 func findHypervisor(vmIpAddr net.IP) (string, error) {
-	if *fleetManagerHostname != "" {
+	if *hypervisorHostname != "" {
+		return fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum),
+			nil
+	} else if *fleetManagerHostname != "" {
 		cm := fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum)
 		client, err := dialFleetManager(cm)
 		if err != nil {
@@ -19,9 +22,6 @@ func findHypervisor(vmIpAddr net.IP) (string, error) {
 		}
 		defer client.Close()
 		return findHypervisorClient(client, vmIpAddr)
-	} else if *hypervisorHostname != "" {
-		return fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum),
-			nil
 	} else {
 		return fmt.Sprintf("localhost:%d", *hypervisorPortNum), nil
 	}
