@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/objectserver/cachingreader"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
@@ -341,6 +343,11 @@ func (m *Manager) RestoreVmImage(ipAddr net.IP,
 func (m *Manager) RestoreVmUserData(ipAddr net.IP,
 	authInfo *srpc.AuthInformation) error {
 	return m.restoreVmUserData(ipAddr, authInfo)
+}
+
+func (m *Manager) ScanVmRoot(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	scanFilter *filter.Filter) (*filesystem.FileSystem, error) {
+	return m.scanVmRoot(ipAddr, authInfo, scanFilter)
 }
 
 func (m *Manager) ShutdownVMsAndExit() {
