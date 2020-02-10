@@ -9,6 +9,8 @@ import (
 
 	"github.com/Cloud-Foundations/Dominator/lib/bufwriter"
 	"github.com/Cloud-Foundations/Dominator/lib/errors"
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
@@ -256,6 +258,17 @@ func registerExternalLeases(client *srpc.Client, addressList proto.AddressList,
 		return err
 	}
 	return errors.New(reply.Error)
+}
+
+func scanVmRoot(client *srpc.Client, ipAddr net.IP,
+	scanFilter *filter.Filter) (*filesystem.FileSystem, error) {
+	request := proto.ScanVmRootRequest{IpAddress: ipAddr, Filter: scanFilter}
+	var reply proto.ScanVmRootResponse
+	err := client.RequestReply("Hypervisor.ScanVmRoot", request, &reply)
+	if err != nil {
+		return nil, err
+	}
+	return reply.FileSystem, errors.New(reply.Error)
 }
 
 func startVm(client *srpc.Client, ipAddr net.IP, accessToken []byte) error {
