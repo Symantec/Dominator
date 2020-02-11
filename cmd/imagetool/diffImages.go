@@ -3,18 +3,22 @@ package main
 import (
 	"bufio"
 	"encoding/gob"
-	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/exec"
+	"time"
 
+	hyperclient "github.com/Cloud-Foundations/Dominator/hypervisor/client"
 	imgclient "github.com/Cloud-Foundations/Dominator/imageserver/client"
 	"github.com/Cloud-Foundations/Dominator/lib/constants"
+	"github.com/Cloud-Foundations/Dominator/lib/errors"
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 	"github.com/Cloud-Foundations/Dominator/lib/image"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	fm_proto "github.com/Cloud-Foundations/Dominator/proto/fleetmanager"
 	"github.com/Cloud-Foundations/Dominator/proto/sub"
 	subclient "github.com/Cloud-Foundations/Dominator/sub/client"
 )
@@ -62,6 +66,8 @@ func getTypedImage(typedName string) (*filesystem.FileSystem, error) {
 		return readFsOfImage(name)
 	case 's':
 		return pollImage(name)
+	case 'v':
+		return scanVm(name)
 	default:
 		return nil, errors.New("unknown image type: " + typedName[:1])
 	}
@@ -141,6 +147,78 @@ func pollImage(name string) (*filesystem.FileSystem, error) {
 	}
 	reply.FileSystem.RebuildInodePointers()
 	return reply.FileSystem, nil
+}
+
+func scanVm(name string) (*filesystem.FileSystem, error) {
+	vmIpAddr, srpcClient, err := getVmIpAndHypervisor(name)
+	if err != nil {
+		return nil, err
+	}
+	defer srpcClient.Close()
+	fs, err := hyperclient.ScanVmRoot(srpcClient, vmIpAddr, nil)
+	if err != nil {
+		return nil, err
+	}
+	fs.RebuildInodePointers()
+	return fs, nil
+}
+
+func getVmIpAndHypervisor(vmHostname string) (net.IP, *srpc.Client, error) {
+	vmIpAddr, err := lookupIP(vmHostname)
+	if err != nil {
+		return nil, nil, err
+	}
+	hypervisorAddress, err := findHypervisor(vmIpAddr)
+	if err != nil {
+		return nil, nil, err
+	}
+	client, err := srpc.DialHTTP("tcp", hypervisorAddress, time.Second*10)
+	if err != nil {
+		return nil, nil, err
+	}
+	return vmIpAddr, client, nil
+}
+
+func findHypervisor(vmIpAddr net.IP) (string, error) {
+	if *hypervisorHostname != "" {
+		return fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum),
+			nil
+	} else if *fleetManagerHostname != "" {
+		fm := fmt.Sprintf("%s:%d", *fleetManagerHostname, *fleetManagerPortNum)
+		client, err := srpc.DialHTTP("tcp", fm, time.Second*10)
+		if err != nil {
+			return "", err
+		}
+		defer client.Close()
+		return findHypervisorClient(client, vmIpAddr)
+	} else {
+		return fmt.Sprintf("localhost:%d", *hypervisorPortNum), nil
+	}
+}
+
+func findHypervisorClient(client *srpc.Client,
+	vmIpAddr net.IP) (string, error) {
+	request := fm_proto.GetHypervisorForVMRequest{vmIpAddr}
+	var reply fm_proto.GetHypervisorForVMResponse
+	err := client.RequestReply("FleetManager.GetHypervisorForVM", request,
+		&reply)
+	if err != nil {
+		return "", err
+	}
+	if err := errors.New(reply.Error); err != nil {
+		return "", err
+	}
+	return reply.HypervisorAddress, nil
+}
+
+func lookupIP(vmHostname string) (net.IP, error) {
+	if ips, err := net.LookupIP(vmHostname); err != nil {
+		return nil, err
+	} else if len(ips) != 1 {
+		return nil, fmt.Errorf("num IPs: %d != 1", len(ips))
+	} else {
+		return ips[0], nil
+	}
 }
 
 func diffImages(tool string, lfs, rfs *filesystem.FileSystem) error {
