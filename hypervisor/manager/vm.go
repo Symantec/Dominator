@@ -21,6 +21,7 @@ import (
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem/scanner"
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem/util"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
 	"github.com/Cloud-Foundations/Dominator/lib/format"
 	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
 	"github.com/Cloud-Foundations/Dominator/lib/hash"
@@ -2249,6 +2250,45 @@ func (m *Manager) restoreVmUserData(ipAddr net.IP,
 	filename := filepath.Join(vm.dirname, "user-data.raw")
 	oldFilename := filename + ".old"
 	return os.Rename(oldFilename, filename)
+}
+
+func (m *Manager) scanVmRoot(ipAddr net.IP, authInfo *srpc.AuthInformation,
+	scanFilter *filter.Filter) (*filesystem.FileSystem, error) {
+	vm, err := m.getVmLockAndAuth(ipAddr, false, authInfo, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer vm.mutex.RUnlock()
+	return vm.scanVmRoot(scanFilter)
+}
+
+func (vm *vmInfoType) scanVmRoot(scanFilter *filter.Filter) (
+	*filesystem.FileSystem, error) {
+	if vm.State != proto.StateStopped {
+		return nil, errors.New("VM is not stopped")
+	}
+	rootDir, err := ioutil.TempDir(vm.dirname, "root")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(rootDir)
+	loopDevice, err := fsutil.LoopbackSetup(vm.VolumeLocations[0].Filename)
+	if err != nil {
+		return nil, err
+	}
+	defer fsutil.LoopbackDelete(loopDevice)
+	blockDevice := loopDevice + "p1"
+	vm.logger.Debugf(0, "mounting: %s onto: %s\n", blockDevice, rootDir)
+	err = wsyscall.Mount(blockDevice, rootDir, "ext4", 0, "")
+	if err != nil {
+		return nil, fmt.Errorf("error mounting: %s: %s", blockDevice, err)
+	}
+	defer syscall.Unmount(rootDir, 0)
+	sfs, err := scanner.ScanFileSystem(rootDir, nil, scanFilter, nil, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &sfs.FileSystem, nil
 }
 
 func (m *Manager) sendVmInfo(ipAddress string, vm *proto.VmInfo) {

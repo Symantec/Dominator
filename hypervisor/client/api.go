@@ -3,6 +3,8 @@ package client
 import (
 	"net"
 
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
 	proto "github.com/Cloud-Foundations/Dominator/proto/hypervisor"
@@ -69,6 +71,11 @@ func PrepareVmForMigration(client *srpc.Client, ipAddr net.IP,
 func RegisterExternalLeases(client *srpc.Client, addressList proto.AddressList,
 	hostnames []string) error {
 	return registerExternalLeases(client, addressList, hostnames)
+}
+
+func ScanVmRoot(client *srpc.Client, ipAddr net.IP,
+	scanFilter *filter.Filter) (*filesystem.FileSystem, error) {
+	return scanVmRoot(client, ipAddr, scanFilter)
 }
 
 func StartVm(client *srpc.Client, ipAddr net.IP, accessToken []byte) error {

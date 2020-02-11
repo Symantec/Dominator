@@ -4,6 +4,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
 	"github.com/Cloud-Foundations/Dominator/lib/tags"
 )
 
@@ -509,6 +511,16 @@ type RestoreVmUserDataRequest struct {
 
 type RestoreVmUserDataResponse struct {
 	Error string
+}
+
+type ScanVmRootRequest struct {
+	IpAddress net.IP
+	Filter    *filter.Filter
+}
+
+type ScanVmRootResponse struct {
+	Error      string
+	FileSystem *filesystem.FileSystem
 }
 
 type SnapshotVmRequest struct {

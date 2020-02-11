@@ -40,6 +40,14 @@ var (
 		"How long before the image expires (auto deletes). Default: never")
 	filterFile = flag.String("filterFile", "",
 		"Filter file to apply when adding images")
+	fleetManagerHostname = flag.String("fleetManagerHostname", "",
+		"Hostname of Fleet Manager (to find VM to scan)")
+	fleetManagerPortNum = flag.Uint("fleetManagerPortNum",
+		constants.FleetManagerPortNumber, "Port number of Fleet Manager")
+	hypervisorHostname = flag.String("hypervisorHostname", "",
+		"Hostname of hypervisor (for VM to scan)")
+	hypervisorPortNum = flag.Uint("hypervisorPortNum",
+		constants.HypervisorPortNumber, "Port number of hypervisor")
 	ignoreExpiring = flag.Bool("ignoreExpiring", false,
 		"If true, ignore expiring images when finding images")
 	imageServerHostname = flag.String("imageServerHostname", "localhost",
@@ -72,7 +80,8 @@ var (
            f: name of file containing a FileSystem
            i: name of an image on the imageserver
            l: name of file containing an Image
-           s: name of sub to poll`
+           s: name of sub to poll
+           v: hostname/IP of SmallStack VM to scan`
 )
 
 func init() {
