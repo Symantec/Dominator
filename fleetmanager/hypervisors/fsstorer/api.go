@@ -53,6 +53,10 @@ func (s *Storer) GetHypervisorForIp(addr net.IP) (net.IP, error) {
 	return s.getHypervisorForIp(addr)
 }
 
+func (s *Storer) GetIPsForHypervisor(hypervisor net.IP) ([]net.IP, error) {
+	return s.getIPsForHypervisor(hypervisor)
+}
+
 func (s *Storer) ListVMs(hypervisor net.IP) ([]string, error) {
 	return s.listVMs(hypervisor)
 }
