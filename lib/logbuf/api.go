@@ -121,7 +121,7 @@ func Get() *LogBuffer {
 // the most recently written contents are dumped first.
 func (lb *LogBuffer) Dump(writer io.Writer, prefix, postfix string,
 	recentFirst bool) error {
-	return lb.dump(writer, prefix, postfix, recentFirst)
+	return lb.dump(writer, prefix, postfix, recentFirst, false)
 }
 
 // Flush flushes the open log file (if one is open). This should only be called
