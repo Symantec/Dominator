@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html"
 	"io"
 	"os"
 	"path"
@@ -110,14 +111,18 @@ func (lb *LogBuffer) scanPreviousForPanic() {
 }
 
 func (lb *LogBuffer) dump(writer io.Writer, prefix, postfix string,
-	recentFirst bool) error {
+	recentFirst bool, escapeHtml bool) error {
 	entries := lb.getEntries()
 	if recentFirst {
 		reverseEntries(entries)
 	}
 	for _, entry := range entries {
 		writer.Write([]byte(prefix))
-		writer.Write(entry)
+		if escapeHtml {
+			writer.Write([]byte(html.EscapeString(string(entry))))
+		} else {
+			writer.Write(entry)
+		}
 		writer.Write([]byte(postfix))
 	}
 	return nil

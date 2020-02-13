@@ -345,6 +345,6 @@ func (lb *LogBuffer) writeHtml(writer io.Writer) {
 		}
 	}
 	fmt.Fprintln(writer, "<pre>")
-	lb.Dump(writer, "", "", false)
+	lb.dump(writer, "", "", false, true)
 	fmt.Fprintln(writer, "</pre>")
 }
