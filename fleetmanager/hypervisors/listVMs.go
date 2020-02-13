@@ -51,46 +51,34 @@ var (
 	}
 )
 
-func (m *Manager) getVMs(doSort bool) []vmInfoType {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-	vms := make([]vmInfoType, 0, len(m.vms))
+func getVmListFromMap(vmMap map[string]*vmInfoType, doSort bool) []*vmInfoType {
+	vms := make([]*vmInfoType, 0, len(vmMap))
 	if doSort {
-		ipAddrs := make([]string, 0, len(m.vms))
-		for ipAddr := range m.vms {
+		ipAddrs := make([]string, 0, len(vmMap))
+		for ipAddr := range vmMap {
 			ipAddrs = append(ipAddrs, ipAddr)
 		}
 		verstr.Sort(ipAddrs)
 		for _, ipAddr := range ipAddrs {
-			vms = append(vms, *m.vms[ipAddr])
+			vms = append(vms, vmMap[ipAddr])
 		}
 	} else {
-		for _, vm := range m.vms {
-			vms = append(vms, *vm)
+		for _, vm := range vmMap {
+			vms = append(vms, vm)
 		}
 	}
 	return vms
 }
 
-func (m *Manager) listVMsHandler(w http.ResponseWriter,
-	req *http.Request) {
-	writer := bufio.NewWriter(w)
-	defer writer.Flush()
+func (m *Manager) listVMs(writer *bufio.Writer, vms []*vmInfoType,
+	primaryOwnerFilter string, outputType uint) (map[string]struct{}, error) {
 	topology, err := m.getTopology()
 	if err != nil {
-		fmt.Fprintln(writer, err)
-		return
+		return nil, err
 	}
-	parsedQuery := url.ParseQuery(req.URL)
-	vms := m.getVMs(true)
-	if parsedQuery.OutputType() == url.OutputTypeJson {
-		json.WriteWithIndent(writer, "   ", vms)
-	}
-	primaryOwnerFilter := parsedQuery.Table["primaryOwner"]
-	if parsedQuery.OutputType() == url.OutputTypeHtml {
+	if outputType == url.OutputTypeHtml {
 		fmt.Fprintf(writer, "<title>List of VMs</title>\n")
 		writer.WriteString(commonStyleSheet)
-		fmt.Fprintln(writer, "<body>")
 		fmt.Fprintln(writer, `<table border="1" style="width:100%">`)
 		fmt.Fprintln(writer, "  <tr>")
 		fmt.Fprintln(writer, "    <th>IP Addr</th>")
@@ -116,7 +104,7 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 		} else {
 			primaryOwnersMap[vm.OwnerUsers[0]] = struct{}{}
 		}
-		switch parsedQuery.OutputType() {
+		switch outputType {
 		case url.OutputTypeText:
 			fmt.Fprintln(writer, vm.ipAddr)
 		case url.OutputTypeHtml:
@@ -175,9 +163,37 @@ func (m *Manager) listVMsHandler(w http.ResponseWriter,
 			fmt.Fprintf(writer, "  </tr>\n")
 		}
 	}
-	switch parsedQuery.OutputType() {
+	switch outputType {
 	case url.OutputTypeHtml:
 		fmt.Fprintln(writer, "</table>")
+	}
+	return primaryOwnersMap, nil
+}
+
+func (m *Manager) getVMs(doSort bool) []*vmInfoType {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	return getVmListFromMap(m.vms, doSort)
+}
+
+func (m *Manager) listVMsHandler(w http.ResponseWriter,
+	req *http.Request) {
+	writer := bufio.NewWriter(w)
+	defer writer.Flush()
+	parsedQuery := url.ParseQuery(req.URL)
+	vms := m.getVMs(true)
+	if parsedQuery.OutputType() == url.OutputTypeJson {
+		json.WriteWithIndent(writer, "   ", vms)
+	}
+	primaryOwnerFilter := parsedQuery.Table["primaryOwner"]
+	primaryOwnersMap, err := m.listVMs(writer, vms, primaryOwnerFilter,
+		parsedQuery.OutputType())
+	if err != nil {
+		fmt.Fprintln(writer, err)
+		return
+	}
+	switch parsedQuery.OutputType() {
+	case url.OutputTypeHtml:
 		fmt.Fprintln(writer, "</body>")
 		primaryOwners := make([]string, 0, len(primaryOwnersMap))
 		for primaryOwner := range primaryOwnersMap {
