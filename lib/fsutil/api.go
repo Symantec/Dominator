@@ -134,6 +134,12 @@ func ReadDirnames(dirname string, ignoreMissing bool) ([]string, error) {
 	return readDirnames(dirname, ignoreMissing)
 }
 
+// ReadLines will read lines from a reader. Comment lines (i.e. lines beginning
+// with '#') are skipped.
+func ReadLines(reader io.Reader) ([]string, error) {
+	return readLines(reader)
+}
+
 // UpdateFile will read and compare the contents of a file and buffer and will
 // update the file if different. It returns true if the contents were updated.
 func UpdateFile(buffer []byte, filename string) (bool, error) {
