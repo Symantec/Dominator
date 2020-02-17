@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
 	"github.com/Cloud-Foundations/Dominator/lib/format"
 	"github.com/Cloud-Foundations/Dominator/lib/html"
 	libjson "github.com/Cloud-Foundations/Dominator/lib/json"
@@ -19,17 +20,28 @@ import (
 
 const codeStyle = `background-color: #eee; border: 1px solid #999; display: block; float: left;`
 
+func writeFilter(writer io.Writer, prefix string, filt *filter.Filter) {
+	if filt != nil && len(filt.FilterLines) > 0 {
+		fmt.Fprintln(writer, prefix, "Filter lines:<br>")
+		fmt.Fprintf(writer, "<pre style=\"%s\">\n", codeStyle)
+		libjson.WriteWithIndent(writer, "    ", filt.FilterLines)
+		fmt.Fprintln(writer, "</pre><p style=\"clear: both;\">")
+	}
+}
+
 func (stream *bootstrapStream) WriteHtml(writer io.Writer) {
 	fmt.Fprintf(writer, "Bootstrap command: <code>%s</code><br>\n",
 		strings.Join(stream.BootstrapCommand, " "))
-	if len(stream.FilterLines) > 0 {
-		fmt.Fprintln(writer, "Filter lines:<br>")
-		fmt.Fprintf(writer, "<pre style=\"%s\">\n", codeStyle)
-		libjson.WriteWithIndent(writer, "    ", stream.FilterLines)
-		fmt.Fprintln(writer, "</pre><p style=\"clear: both;\">")
-	}
+	writeFilter(writer, "", stream.Filter)
 	packager := stream.builder.packagerTypes[stream.PackagerType]
 	packager.WriteHtml(writer)
+	writeFilter(writer, "Image ", stream.imageFilter)
+	if stream.imageTriggers != nil {
+		fmt.Fprintln(writer, "Image triggers:<br>")
+		fmt.Fprintf(writer, "<pre style=\"%s\">\n", codeStyle)
+		libjson.WriteWithIndent(writer, "    ", stream.imageTriggers.Triggers)
+		fmt.Fprintln(writer, "</pre><p style=\"clear: both;\">")
+	}
 }
 
 func (b *Builder) getHtmlWriter(streamName string) html.HtmlWriter {

@@ -16,7 +16,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Cloud-Foundations/Dominator/lib/filter"
 	"github.com/Cloud-Foundations/Dominator/lib/format"
 	"github.com/Cloud-Foundations/Dominator/lib/image"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
@@ -106,7 +105,8 @@ func (stream *bootstrapStream) build(b *Builder, client *srpc.Client,
 			return nil, err
 		}
 		return packImage(client, request, rootDir,
-			stream.Filter, nil, &filter.Filter{}, nil, buildLog)
+			stream.Filter, nil, stream.imageFilter, stream.imageTriggers,
+			buildLog)
 	}
 }
 
