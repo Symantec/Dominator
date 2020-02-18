@@ -1,0 +1,16 @@
+[
+    {
+        "MatchLines": [
+            "/usr/sbin/cron"
+        ],
+        "Service": "cron"
+    },
+    {
+        "MatchLines": [
+            "/etc/logrotate[.]d/rsyslog",
+            "/etc/rsyslog[.].*",
+            "/usr/sbin/rsyslogd"
+        ],
+        "Service": "rsyslog"
+    }
+]

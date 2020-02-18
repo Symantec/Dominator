@@ -2,6 +2,7 @@ package fsutil
 
 import (
 	"bufio"
+	"io"
 	"os"
 )
 
@@ -11,7 +12,11 @@ func loadLines(filename string) ([]string, error) {
 		return nil, err
 	}
 	defer file.Close()
-	scanner := bufio.NewScanner(file)
+	return readLines(file)
+}
+
+func readLines(reader io.Reader) ([]string, error) {
+	scanner := bufio.NewScanner(reader)
 	lines := make([]string, 0)
 	for scanner.Scan() {
 		line := scanner.Text()

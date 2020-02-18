@@ -34,7 +34,11 @@ type bootstrapStream struct {
 	name             string
 	BootstrapCommand []string
 	*filter.Filter
-	PackagerType string
+	imageFilter      *filter.Filter
+	ImageFilterUrl   string
+	imageTriggers    *triggers.Triggers
+	ImageTriggersUrl string
+	PackagerType     string
 }
 
 type buildResultType struct {

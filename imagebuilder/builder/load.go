@@ -14,10 +14,12 @@ import (
 
 	"github.com/Cloud-Foundations/Dominator/imageserver/client"
 	"github.com/Cloud-Foundations/Dominator/lib/configwatch"
+	"github.com/Cloud-Foundations/Dominator/lib/filter"
 	libjson "github.com/Cloud-Foundations/Dominator/lib/json"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
 	"github.com/Cloud-Foundations/Dominator/lib/slavedriver"
 	"github.com/Cloud-Foundations/Dominator/lib/srpc"
+	"github.com/Cloud-Foundations/Dominator/lib/triggers"
 	"github.com/Cloud-Foundations/Dominator/lib/url/urlutil"
 )
 
@@ -127,6 +129,28 @@ func masterConfiguration(url string) (*masterConfigurationType, error) {
 		}
 		if stream.Filter != nil {
 			if err := stream.Filter.Compile(); err != nil {
+				return nil, err
+			}
+		}
+		if stream.ImageFilterUrl != "" {
+			filterFile, err := urlutil.Open(stream.ImageFilterUrl)
+			if err != nil {
+				return nil, err
+			}
+			defer filterFile.Close()
+			stream.imageFilter, err = filter.Read(filterFile)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if stream.ImageTriggersUrl != "" {
+			triggersFile, err := urlutil.Open(stream.ImageTriggersUrl)
+			if err != nil {
+				return nil, err
+			}
+			defer triggersFile.Close()
+			stream.imageTriggers, err = triggers.Read(triggersFile)
+			if err != nil {
 				return nil, err
 			}
 		}

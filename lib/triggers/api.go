@@ -1,6 +1,7 @@
 package triggers
 
 import (
+	"io"
 	"regexp"
 )
 
@@ -39,6 +40,10 @@ func Decode(jsonData []byte) (*Triggers, error) {
 
 func Load(filename string) (*Triggers, error) {
 	return load(filename)
+}
+
+func Read(reader io.Reader) (*Triggers, error) {
+	return read(reader)
 }
 
 func New() *Triggers {

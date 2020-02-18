@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"io"
 	"regexp"
 )
 
@@ -35,6 +36,12 @@ func Load(filename string) (*Filter, error) {
 // If filterLines is of length zero the Filter is an empty Filter.
 func New(filterLines []string) (*Filter, error) {
 	return newFilter(filterLines)
+}
+
+// Read will read a Filter from a reader containing newline separated regular
+// expressions.
+func Read(reader io.Reader) (*Filter, error) {
+	return read(reader)
 }
 
 // Compile will compile the regular expression strings for later use.

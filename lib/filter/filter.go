@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"io"
 	"regexp"
 
 	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
@@ -26,6 +27,14 @@ func newFilter(filterLines []string) (*Filter, error) {
 		return nil, err
 	}
 	return &filter, nil
+}
+
+func read(reader io.Reader) (*Filter, error) {
+	lines, err := fsutil.ReadLines(reader)
+	if err != nil {
+		return nil, err
+	}
+	return New(lines)
 }
 
 func (filter *Filter) compile() error {
