@@ -39,7 +39,7 @@
 	    ],
 	    "PackagerType": "deb"
 	},
-	"bootstrap/Debian-10": {
+	"bootstrap/Debian-10/amd64": {
 	    "BootstrapCommand": [
 		"debootstrap",
 		"--arch=amd64",
@@ -52,6 +52,25 @@
 		"/etc/machine-id",
 		"/var/log/.*"
 	    ],
+	    "ImageFilterUrl": "file:///etc/imaginator/filters/Debian-10",
+	    "ImageTriggersUrl": "file:///etc/imaginator/triggers/Debian-10",
+	    "PackagerType": "deb"
+	},
+	"bootstrap/Debian-10/i386": {
+	    "BootstrapCommand": [
+		"debootstrap",
+		"--arch=i386",
+		"buster",
+		"$dir",
+		"http://mirror.company.com/debian"
+	    ],
+	    "FilterLines": [
+		"/etc/hostname",
+		"/etc/machine-id",
+		"/var/log/.*"
+	    ],
+	    "ImageFilterUrl": "file:///etc/imaginator/filters/Debian-10",
+	    "ImageTriggersUrl": "file:///etc/imaginator/triggers/Debian-10",
 	    "PackagerType": "deb"
 	},
         "bootstrap/Ubuntu-14.04": {

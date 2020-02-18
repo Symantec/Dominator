@@ -1,0 +1,25 @@
+# Even though the GRUB utility is not installed in this image, the Hypervisor
+# may install it in the MBR and create configuration files.
+/boot/grub(|/.*)$
+# This is needed because the Hypervisor may use GRUBv2 to make the image.
+/boot/grub2(|.*)$
+/data(|/.*)$
+/etc/fstab
+/etc/hostname
+/etc/mtab
+/etc/resolv[.]conf
+/etc/udev/rules[.]d/.*
+/home(|/.*)$
+/lost[+]found(|/.*)$
+/root/[.]bash_history
+/tmp/.*
+/var/lib/dhcp/.*
+/var/lib/initial-image
+/var/lib/patched-image
+/var/lib/logrotate/status
+/var/lib/systemd/random-seed
+/var/lib/urandom/.*
+/var/log/.*
+/var/mail/.*
+/var/spool/.*
+/var/tmp/.*
