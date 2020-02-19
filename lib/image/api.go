@@ -26,15 +26,17 @@ type Directory struct {
 }
 
 type Image struct {
-	CreatedBy    string // Username. Set by imageserver. Empty: unauthenticated.
-	Filter       *filter.Filter
-	FileSystem   *filesystem.FileSystem
-	Triggers     *triggers.Triggers
-	ReleaseNotes *Annotation
-	BuildLog     *Annotation
-	CreatedOn    time.Time
-	ExpiresAt    time.Time
-	Packages     []Package
+	BuildBranch   string
+	BuildCommitId string
+	CreatedBy     string // Username. Set by imageserver. Empty: unauthenticated
+	Filter        *filter.Filter
+	FileSystem    *filesystem.FileSystem
+	Triggers      *triggers.Triggers
+	ReleaseNotes  *Annotation
+	BuildLog      *Annotation
+	CreatedOn     time.Time
+	ExpiresAt     time.Time
+	Packages      []Package
 }
 
 type Package struct {
