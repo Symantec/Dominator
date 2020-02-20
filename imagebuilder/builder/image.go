@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -25,17 +24,22 @@ import (
 	proto "github.com/Cloud-Foundations/Dominator/proto/imaginator"
 )
 
+type gitInfoType struct {
+	branch   string
+	commitId string
+}
+
 func (stream *imageStreamType) build(b *Builder, client *srpc.Client,
 	request proto.BuildImageRequest, buildLog buildLogger) (
 	*image.Image, error) {
-	manifestDirectory, err := stream.getManifest(b, request.StreamName,
+	manifestDirectory, gitInfo, err := stream.getManifest(b, request.StreamName,
 		request.GitBranch, request.Variables, buildLog)
 	if err != nil {
 		return nil, err
 	}
 	defer os.RemoveAll(manifestDirectory)
 	img, err := buildImageFromManifest(client, manifestDirectory, request,
-		b.bindMounts, stream, buildLog)
+		b.bindMounts, stream, gitInfo, buildLog)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +56,7 @@ func (stream *imageStreamType) getenv() map[string]string {
 
 func (stream *imageStreamType) getManifest(b *Builder, streamName string,
 	gitBranch string, variables map[string]string,
-	buildLog io.Writer) (string, error) {
+	buildLog io.Writer) (string, *gitInfoType, error) {
 	if gitBranch == "" {
 		gitBranch = "master"
 	}
@@ -60,7 +64,7 @@ func (stream *imageStreamType) getManifest(b *Builder, streamName string,
 	manifestRoot, err := makeTempDirectory("",
 		strings.Replace(streamName, "/", "_", -1)+".manifest")
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	doCleanup := true
 	defer func() {
@@ -73,110 +77,123 @@ func (stream *imageStreamType) getManifest(b *Builder, streamName string,
 	if parsedUrl, err := url.Parse(manifestUrl); err == nil {
 		if parsedUrl.Scheme == "dir" {
 			if parsedUrl.Path[0] != '/' {
-				return "", fmt.Errorf("missing leading slash: %s",
+				return "", nil, fmt.Errorf("missing leading slash: %s",
 					parsedUrl.Path)
 			}
 			if gitBranch != "master" {
-				return "", fmt.Errorf("branch: %s is not master", gitBranch)
+				return "", nil,
+					fmt.Errorf("branch: %s is not master", gitBranch)
 			}
 			sourceTree := filepath.Join(parsedUrl.Path, manifestDirectory)
 			fmt.Fprintf(buildLog, "Copying manifest tree: %s\n", sourceTree)
 			if err := fsutil.CopyTree(manifestRoot, sourceTree); err != nil {
-				return "", fmt.Errorf("error copying manifest: %s", err)
+				return "", nil, fmt.Errorf("error copying manifest: %s", err)
 			}
 			doCleanup = false
-			return manifestRoot, nil
+			return manifestRoot, nil, nil
 		}
 	}
 	fmt.Fprintf(buildLog, "Cloning repository: %s branch: %s\n",
 		stream.ManifestUrl, gitBranch)
 	err = runCommand(buildLog, "", "git", "init", manifestRoot)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	err = runCommand(buildLog, manifestRoot, "git", "remote", "add", "origin",
 		manifestUrl)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	err = runCommand(buildLog, manifestRoot, "git", "config",
 		"core.sparsecheckout", "true")
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	directorySelector := "*\n"
 	if manifestDirectory != "" {
 		directorySelector = manifestDirectory + "/*\n"
 	}
 	err = ioutil.WriteFile(
-		path.Join(manifestRoot, ".git", "info", "sparse-checkout"),
+		filepath.Join(manifestRoot, ".git", "info", "sparse-checkout"),
 		[]byte(directorySelector), 0644)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	startTime := time.Now()
 	err = runCommand(buildLog, manifestRoot, "git", "pull", "--depth=1",
 		"origin", gitBranch)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	if gitBranch != "master" {
 		err = runCommand(buildLog, manifestRoot, "git", "checkout", gitBranch)
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
 	}
 	loadTime := time.Since(startTime)
 	repoSize, err := getTreeSize(manifestRoot)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	speed := float64(repoSize) / loadTime.Seconds()
 	fmt.Fprintf(buildLog,
 		"Downloaded partial repository in %s, size: %s (%s/s)\n",
 		format.Duration(loadTime), format.FormatBytes(repoSize),
 		format.FormatBytes(uint64(speed)))
-	gitDirectory := path.Join(manifestRoot, ".git")
+	gitDirectory := filepath.Join(manifestRoot, ".git")
+	var gitInfo *gitInfoType
+	filename := filepath.Join(gitDirectory, "refs", "heads", gitBranch)
+	if lines, err := fsutil.LoadLines(filename); err != nil {
+		return "", nil, err
+	} else if len(lines) != 1 {
+		return "", nil, fmt.Errorf("%s does not have only one line", filename)
+	} else {
+		gitInfo = &gitInfoType{
+			branch:   gitBranch,
+			commitId: strings.TrimSpace(lines[0]),
+		}
+	}
 	if err := os.RemoveAll(gitDirectory); err != nil {
-		return "", err
+		return "", nil, err
 	}
 	if manifestDirectory != "" {
 		// Move manifestDirectory into manifestRoot, remove anything else.
-		err := os.Rename(path.Join(manifestRoot, manifestDirectory),
+		err := os.Rename(filepath.Join(manifestRoot, manifestDirectory),
 			gitDirectory)
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
 		filenames, err := listDirectory(manifestRoot)
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
 		for _, filename := range filenames {
 			if filename == ".git" {
 				continue
 			}
-			err := os.RemoveAll(path.Join(manifestRoot, filename))
+			err := os.RemoveAll(filepath.Join(manifestRoot, filename))
 			if err != nil {
-				return "", err
+				return "", nil, err
 			}
 		}
 		filenames, err = listDirectory(gitDirectory)
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
 		for _, filename := range filenames {
-			err := os.Rename(path.Join(gitDirectory, filename),
-				path.Join(manifestRoot, filename))
+			err := os.Rename(filepath.Join(gitDirectory, filename),
+				filepath.Join(manifestRoot, filename))
 			if err != nil {
-				return "", err
+				return "", nil, err
 			}
 		}
 		if err := os.Remove(gitDirectory); err != nil {
-			return "", err
+			return "", nil, err
 		}
 	}
 	doCleanup = false
-	return manifestRoot, nil
+	return manifestRoot, gitInfo, nil
 }
 
 func getTreeSize(dirname string) (uint64, error) {
@@ -218,13 +235,14 @@ func runCommand(buildLog io.Writer, cwd string, args ...string) error {
 
 func buildImageFromManifest(client *srpc.Client, manifestDir string,
 	request proto.BuildImageRequest, bindMounts []string,
-	envGetter environmentGetter, buildLog buildLogger) (*image.Image, error) {
+	envGetter environmentGetter, gitInfo *gitInfoType,
+	buildLog buildLogger) (*image.Image, error) {
 	// First load all the various manifest files (fail early on error).
 	computedFilesList, err := util.LoadComputedFiles(
-		path.Join(manifestDir, "computed-files.json"))
+		filepath.Join(manifestDir, "computed-files.json"))
 	if os.IsNotExist(err) {
 		computedFilesList, err = util.LoadComputedFiles(
-			path.Join(manifestDir, "computed-files"))
+			filepath.Join(manifestDir, "computed-files"))
 	}
 	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("error loading computed files: %s", err)
@@ -273,8 +291,16 @@ func buildImageFromManifest(client *srpc.Client, manifestDir string,
 		mergeableTriggers.Merge(imageTriggers)
 		imageTriggers = mergeableTriggers.ExportTriggers()
 	}
-	return packImage(client, request, rootDir, manifest.filter,
+	img, err := packImage(client, request, rootDir, manifest.filter,
 		computedFilesList, imageFilter, imageTriggers, buildLog)
+	if err != nil {
+		return nil, err
+	}
+	if gitInfo != nil {
+		img.BuildBranch = gitInfo.branch
+		img.BuildCommitId = gitInfo.commitId
+	}
+	return img, nil
 }
 
 func buildImageFromManifestAndUpload(client *srpc.Client, manifestDir string,
@@ -282,7 +308,7 @@ func buildImageFromManifestAndUpload(client *srpc.Client, manifestDir string,
 	envGetter environmentGetter,
 	buildLog buildLogger) (*image.Image, string, error) {
 	img, err := buildImageFromManifest(client, manifestDir, request, bindMounts,
-		envGetter, buildLog)
+		envGetter, nil, buildLog)
 	if err != nil {
 		return nil, "", err
 	}
@@ -310,11 +336,11 @@ func buildTreeFromManifest(client *srpc.Client, manifestDir string,
 }
 
 func loadFilter(manifestDir string) (*filter.Filter, bool, error) {
-	imageFilter, err := filter.Load(path.Join(manifestDir, "filter"))
+	imageFilter, err := filter.Load(filepath.Join(manifestDir, "filter"))
 	if err != nil && !os.IsNotExist(err) {
 		return nil, false, err
 	}
-	addFilter, err := filter.Load(path.Join(manifestDir, "filter.add"))
+	addFilter, err := filter.Load(filepath.Join(manifestDir, "filter.add"))
 	if err != nil && !os.IsNotExist(err) {
 		return nil, false, err
 	}
@@ -331,11 +357,12 @@ func loadFilter(manifestDir string) (*filter.Filter, bool, error) {
 }
 
 func loadTriggers(manifestDir string) (*triggers.Triggers, bool, error) {
-	imageTriggers, err := triggers.Load(path.Join(manifestDir, "triggers"))
+	imageTriggers, err := triggers.Load(filepath.Join(manifestDir, "triggers"))
 	if err != nil && !os.IsNotExist(err) {
 		return nil, false, err
 	}
-	addTriggers, err := triggers.Load(path.Join(manifestDir, "triggers.add"))
+	addTriggers, err := triggers.Load(filepath.Join(manifestDir,
+		"triggers.add"))
 	if err != nil && !os.IsNotExist(err) {
 		return nil, false, err
 	}

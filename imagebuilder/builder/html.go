@@ -202,13 +202,18 @@ func (stream *imageStreamType) WriteHtml(writer io.Writer) {
 	fmt.Fprintf(writer, "Manifest Directory: <code>%s</code><br>\n",
 		stream.ManifestDirectory)
 	buildLog := new(bytes.Buffer)
-	manifestDirectory, err := stream.getManifest(stream.builder, stream.name,
-		"", nil, buildLog)
+	manifestDirectory, gitInfo, err := stream.getManifest(stream.builder,
+		stream.name, "", nil, buildLog)
 	if err != nil {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
 	}
 	defer os.RemoveAll(manifestDirectory)
+	if gitInfo != nil {
+		fmt.Fprintf(writer,
+			"Latest commit on branch: <code>%s</code>: <code>%s</code>s<br>\n",
+			gitInfo.branch, gitInfo.commitId)
+	}
 	manifestFilename := path.Join(manifestDirectory, "manifest")
 	manifestBytes, err := ioutil.ReadFile(manifestFilename)
 	if err != nil {
