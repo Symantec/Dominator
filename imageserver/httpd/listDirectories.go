@@ -3,9 +3,9 @@ package httpd
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"net/http"
 
+	"github.com/Cloud-Foundations/Dominator/lib/html"
 	"github.com/Cloud-Foundations/Dominator/lib/image"
 )
 
@@ -30,20 +30,10 @@ func (s state) listDirectoriesHandler(w http.ResponseWriter,
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<h3>")
 	fmt.Fprintln(writer, `<table border="1" style="width:100%">`)
-	fmt.Fprintln(writer, "  <tr>")
-	fmt.Fprintln(writer, "    <th>Name</th>")
-	fmt.Fprintln(writer, "    <th>Owner Group</th>")
-	fmt.Fprintln(writer, "  </tr>")
+	tw, _ := html.NewTableWriter(writer, true, "Name", "Owner Group")
 	for _, directory := range directories {
-		showDirectory(writer, directory)
+		tw.WriteRow("", "", directory.Name, directory.Metadata.OwnerGroup)
 	}
 	fmt.Fprintln(writer, "</table>")
 	fmt.Fprintln(writer, "</body>")
-}
-
-func showDirectory(writer io.Writer, directory image.Directory) {
-	fmt.Fprintf(writer, "  <tr>\n")
-	fmt.Fprintf(writer, "    <td>%s</td>\n", directory.Name)
-	fmt.Fprintf(writer, "    <td>%s</td>\n", directory.Metadata.OwnerGroup)
-	fmt.Fprintf(writer, "  </tr>\n")
 }

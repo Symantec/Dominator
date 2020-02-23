@@ -69,27 +69,19 @@ func (b *Builder) showImageStreams(writer io.Writer) {
 	streamNames := b.listAllStreamNames()
 	sort.Strings(streamNames)
 	fmt.Fprintln(writer, `<table border="1">`)
-	fmt.Fprintln(writer, "  <tr>")
-	fmt.Fprintln(writer, "    <th>Image Stream</th>")
-	fmt.Fprintln(writer, "    <th>ManifestUrl</th>")
-	fmt.Fprintln(writer, "    <th>ManifestDirectory</th>")
-	fmt.Fprintln(writer, "  </tr>")
+	tw, _ := html.NewTableWriter(writer, true,
+		"Image Stream", "ManifestUrl", "ManifestDirectory")
 	for _, streamName := range streamNames {
-		fmt.Fprintf(writer, "  <tr>\n")
-		fmt.Fprintf(writer,
-			"    <td><a href=\"showImageStream?%s\">%s</a></td>\n",
-			streamName, streamName)
-		if imageStream := b.getNormalStream(streamName); imageStream == nil {
-			fmt.Fprintln(writer, "    <td></td>")
-			fmt.Fprintln(writer, "    <td></td>")
-		} else {
-			fmt.Fprintf(writer, "    <td>%s</td>\n", imageStream.ManifestUrl)
-			fmt.Fprintf(writer, "    <td>%s</td>\n",
-				imageStream.ManifestDirectory)
+		var manifestUrl, manifestDirectory string
+		if imageStream := b.getNormalStream(streamName); imageStream != nil {
+			manifestUrl = imageStream.ManifestUrl
+			manifestDirectory = imageStream.ManifestDirectory
 		}
-		fmt.Fprintf(writer, "  </tr>\n")
+		tw.WriteRow("", "",
+			fmt.Sprintf("<a href=\"showImageStream?%s\">%s</a>",
+				streamName, streamName), manifestUrl, manifestDirectory)
 	}
-	fmt.Fprintln(writer, "</table><br>")
+	fmt.Fprintln(writer, "</table>")
 }
 
 func (b *Builder) writeHtml(writer io.Writer) {
@@ -115,17 +107,13 @@ func (b *Builder) writeHtml(writer io.Writer) {
 	if len(currentBuilds) > 0 {
 		fmt.Fprintln(writer, "Current image builds:<br>")
 		fmt.Fprintln(writer, `<table border="1">`)
-		fmt.Fprintln(writer, "  <tr>")
-		fmt.Fprintln(writer, "    <th>Image Stream</th>")
-		fmt.Fprintln(writer, "    <th>Build log</th>")
-		fmt.Fprintln(writer, "  </tr>")
+		tw, _ := html.NewTableWriter(writer, true, "Image Stream", "Build log")
 		for _, streamName := range currentBuilds {
-			fmt.Fprintf(writer, "  <tr>\n")
-			fmt.Fprintf(writer, "    <td>%s</td>\n", streamName)
-			fmt.Fprintf(writer,
-				"    <td><a href=\"showCurrentBuildLog?%s#bottom\">log</a></td>\n",
-				streamName)
-			fmt.Fprintf(writer, "  </tr>\n")
+			tw.WriteRow("", "",
+				streamName,
+				fmt.Sprintf("<a href=\"showCurrentBuildLog?%s#bottom\">log</a>",
+					streamName),
+			)
 		}
 		fmt.Fprintln(writer, "</table><br>")
 	}
@@ -137,23 +125,18 @@ func (b *Builder) writeHtml(writer io.Writer) {
 		sort.Strings(streamNames)
 		fmt.Fprintln(writer, "Failed image builds:<br>")
 		fmt.Fprintln(writer, `<table border="1">`)
-		fmt.Fprintln(writer, "  <tr>")
-		fmt.Fprintln(writer, "    <th>Image Stream</th>")
-		fmt.Fprintln(writer, "    <th>Error</th>")
-		fmt.Fprintln(writer, "    <th>Build log</th>")
-		fmt.Fprintln(writer, "    <th>Last attempt</th>")
-		fmt.Fprintln(writer, "  </tr>")
+		tw, _ := html.NewTableWriter(writer, true,
+			"Image Stream", "Error", "Build log", "Last attempt")
 		for _, streamName := range streamNames {
 			result := failedBuilds[streamName]
-			fmt.Fprintf(writer, "  <tr>\n")
-			fmt.Fprintf(writer, "    <td>%s</td>\n", streamName)
-			fmt.Fprintf(writer, "    <td>%s</td>\n", result.error)
-			fmt.Fprintf(writer,
-				"    <td><a href=\"showLastBuildLog?%s\">log</a></td>\n",
-				streamName)
-			fmt.Fprintf(writer, "    <td>%s ago</td>\n",
-				format.Duration(currentTime.Sub(result.finishTime)))
-			fmt.Fprintf(writer, "  </tr>\n")
+			tw.WriteRow("", "",
+				streamName,
+				result.error.Error(),
+				fmt.Sprintf("<a href=\"showLastBuildLog?%s\">log</a>",
+					streamName),
+				fmt.Sprintf("%s ago",
+					format.Duration(currentTime.Sub(result.finishTime))),
+			)
 		}
 		fmt.Fprintln(writer, "</table><br>")
 	}
@@ -165,28 +148,20 @@ func (b *Builder) writeHtml(writer io.Writer) {
 		sort.Strings(streamNames)
 		fmt.Fprintln(writer, "Successful image builds:<br>")
 		fmt.Fprintln(writer, `<table border="1">`)
-		fmt.Fprintln(writer, "  <tr>")
-		fmt.Fprintln(writer, "    <th>Image Stream</th>")
-		fmt.Fprintln(writer, "    <th>Name</th>")
-		fmt.Fprintln(writer, "    <th>Build log</th>")
-		fmt.Fprintln(writer, "    <th>Duration</th>")
-		fmt.Fprintln(writer, "    <th>Age</th>")
-		fmt.Fprintln(writer, "  </tr>")
+		tw, _ := html.NewTableWriter(writer, true, "Image Stream", "Name",
+			"Build log", "Duration", "Age")
 		for _, streamName := range streamNames {
 			result := goodBuilds[streamName]
-			fmt.Fprintf(writer, "  <tr>\n")
-			fmt.Fprintf(writer, "    <td>%s</td>\n", streamName)
-			fmt.Fprintf(writer,
-				"    <td><a href=\"http://%s/showImage?%s\">%s</a></td>\n",
-				b.imageServerAddress, result.imageName, result.imageName)
-			fmt.Fprintf(writer,
-				"    <td><a href=\"showLastBuildLog?%s\">log</a></td>\n",
-				streamName)
-			fmt.Fprintf(writer, "    <td>%s</td>\n",
-				format.Duration(result.finishTime.Sub(result.startTime)))
-			fmt.Fprintf(writer, "    <td>%s</td>\n",
-				format.Duration(currentTime.Sub(result.finishTime)))
-			fmt.Fprintf(writer, "  </tr>\n")
+			tw.WriteRow("", "",
+				streamName,
+				fmt.Sprintf("<a href=\"http://%s/showImage?%s\">%s</a>",
+					b.imageServerAddress, result.imageName, result.imageName),
+				fmt.Sprintf("<a href=\"showLastBuildLog?%s\">log</a>",
+					streamName),
+				format.Duration(result.finishTime.Sub(result.startTime)),
+				fmt.Sprintf("%s ago",
+					format.Duration(currentTime.Sub(result.finishTime))),
+			)
 		}
 		fmt.Fprintln(writer, "</table><br>")
 	}
@@ -202,13 +177,18 @@ func (stream *imageStreamType) WriteHtml(writer io.Writer) {
 	fmt.Fprintf(writer, "Manifest Directory: <code>%s</code><br>\n",
 		stream.ManifestDirectory)
 	buildLog := new(bytes.Buffer)
-	manifestDirectory, err := stream.getManifest(stream.builder, stream.name,
-		"", nil, buildLog)
+	manifestDirectory, gitInfo, err := stream.getManifest(stream.builder,
+		stream.name, "", nil, buildLog)
 	if err != nil {
 		fmt.Fprintf(writer, "<b>%s</b><br>\n", err)
 		return
 	}
 	defer os.RemoveAll(manifestDirectory)
+	if gitInfo != nil {
+		fmt.Fprintf(writer,
+			"Latest commit on branch: <code>%s</code>: <code>%s</code>s<br>\n",
+			gitInfo.branch, gitInfo.commitId)
+	}
 	manifestFilename := path.Join(manifestDirectory, "manifest")
 	manifestBytes, err := ioutil.ReadFile(manifestFilename)
 	if err != nil {

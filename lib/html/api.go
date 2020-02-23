@@ -9,6 +9,12 @@ type HtmlWriter interface {
 	WriteHtml(writer io.Writer)
 }
 
+type TableWriter struct {
+	doHighlighting bool
+	lastBackground string
+	writer         io.Writer
+}
+
 func BenchmarkedHandler(handler func(io.Writer,
 	*http.Request)) func(http.ResponseWriter, *http.Request) {
 	return benchmarkedHandler(handler)
@@ -31,6 +37,16 @@ func ServeMuxHandleFunc(serveMux *http.ServeMux, pattern string,
 
 func SetSecurityHeaders(w http.ResponseWriter) {
 	setSecurityHeaders(w)
+}
+
+func NewTableWriter(writer io.Writer, doHighlighting bool,
+	columns ...string) (*TableWriter, error) {
+	return newTableWriter(writer, doHighlighting, columns)
+}
+
+func (tw *TableWriter) WriteRow(foreground, background string,
+	columns ...string) error {
+	return tw.writeRow(foreground, background, columns)
 }
 
 func WriteFooter(writer io.Writer) {

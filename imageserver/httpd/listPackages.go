@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/html"
 	"github.com/Cloud-Foundations/Dominator/lib/json"
 	"github.com/Cloud-Foundations/Dominator/lib/url"
 )
@@ -63,17 +64,13 @@ func (s state) listPackagesHandler(w http.ResponseWriter, req *http.Request) {
 		imageName)
 	fmt.Fprintln(writer, "</h3>")
 	fmt.Fprintln(writer, `<table border="1" style="width:100%">`)
-	fmt.Fprintln(writer, "  <tr>")
-	fmt.Fprintln(writer, "    <th>Name</th>")
-	fmt.Fprintln(writer, "    <th>Version</th>")
-	fmt.Fprintln(writer, "    <th>Size</th>")
-	fmt.Fprintln(writer, "  </tr>")
+	tw, _ := html.NewTableWriter(writer, true, "Name", "Version", "Size")
 	for _, pkg := range image.Packages {
-		fmt.Fprintf(writer, "  <tr>\n")
-		fmt.Fprintf(writer, "    <td>%s</td>\n", pkg.Name)
-		fmt.Fprintf(writer, "    <td>%s</td>\n", pkg.Version)
-		fmt.Fprintf(writer, "    <td>%s</td>\n", format.FormatBytes(pkg.Size))
-		fmt.Fprintf(writer, "  </tr>\n")
+		tw.WriteRow("", "",
+			pkg.Name,
+			pkg.Version,
+			format.FormatBytes(pkg.Size),
+		)
 	}
 	fmt.Fprintln(writer, "</table>")
 	fmt.Fprintln(writer, "</body>")

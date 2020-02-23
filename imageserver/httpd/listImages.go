@@ -3,10 +3,10 @@ package httpd
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/Cloud-Foundations/Dominator/lib/format"
+	"github.com/Cloud-Foundations/Dominator/lib/html"
 	"github.com/Cloud-Foundations/Dominator/lib/image"
 	"github.com/Cloud-Foundations/Dominator/lib/verstr"
 )
@@ -31,49 +31,50 @@ func (s state) listImagesHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(writer, "<body>")
 	fmt.Fprintln(writer, "<h3>")
 	fmt.Fprintln(writer, `<table border="1" style="width:100%">`)
-	fmt.Fprintln(writer, "  <tr>")
-	fmt.Fprintln(writer, "    <th>Name</th>")
-	fmt.Fprintln(writer, "    <th>Data Size</th>")
-	fmt.Fprintln(writer, "    <th>Data Inodes</th>")
-	fmt.Fprintln(writer, "    <th>Computed Inodes</th>")
-	fmt.Fprintln(writer, "    <th>Filter Lines</th>")
-	fmt.Fprintln(writer, "    <th>Triggers</th>")
-	fmt.Fprintln(writer, "  </tr>")
+	tw, _ := html.NewTableWriter(writer, true,
+		"Name", "Data Size", "Data Inodes", "Computed Inodes", "Filter Lines",
+		"Triggers", "Branch", "Commit")
 	for _, name := range imageNames {
-		showImage(writer, name, s.imageDataBase.GetImage(name))
+		writeImage(tw, name, s.imageDataBase.GetImage(name))
 	}
 	fmt.Fprintln(writer, "</table>")
 	fmt.Fprintln(writer, "</body>")
 }
 
-func showImage(writer io.Writer, name string, image *image.Image) {
-	fmt.Fprintf(writer, "  <tr>\n")
-	fmt.Fprintf(writer, "    <td><a href=\"showImage?%s\">%s</a></td>\n",
-		name, name)
-	fmt.Fprintf(writer, "    <td><a href=\"listImage?%s\">%s</a></td>\n",
-		name, format.FormatBytes(image.FileSystem.TotalDataBytes))
-	fmt.Fprintf(writer, "    <td><a href=\"listImage?%s\">%d</a></td>\n",
-		name, image.FileSystem.NumRegularInodes)
-	if numInodes := image.FileSystem.NumComputedRegularInodes(); numInodes < 1 {
-		fmt.Fprintln(writer, "    <td>0</td>")
-	} else {
-		fmt.Fprintf(writer,
-			"    <td><a href=\"listComputedInodes?%s\">%d</a></td>\n",
-			name, numInodes)
-	}
-	if image.Filter == nil {
-		fmt.Fprintln(writer, "    <td>(sparse filter)</td>")
-	} else if len(image.Filter.FilterLines) < 1 {
-		fmt.Fprintln(writer, "    <td>0</td>")
-	} else {
-		fmt.Fprintf(writer, "    <td><a href=\"listFilter?%s\">%d</a></td>\n",
-			name, len(image.Filter.FilterLines))
-	}
-	if image.Triggers == nil || len(image.Triggers.Triggers) < 1 {
-		fmt.Fprintln(writer, "    <td>0</td>")
-	} else {
-		fmt.Fprintf(writer, "    <td><a href=\"listTriggers?%s\">%d</a></td>\n",
-			name, len(image.Triggers.Triggers))
-	}
-	fmt.Fprintf(writer, "  </tr>\n")
+func writeImage(tw *html.TableWriter, name string, image *image.Image) {
+	tw.WriteRow("", "",
+		fmt.Sprintf("<a href=\"showImage?%s\">%s</a>", name, name),
+		fmt.Sprintf("<a href=\"listImage?%s\">%s</a>",
+			name, format.FormatBytes(image.FileSystem.TotalDataBytes)),
+		fmt.Sprintf("<a href=\"listImage?%s\">%d</a>",
+			name, image.FileSystem.NumRegularInodes),
+		func() string {
+			if num := image.FileSystem.NumComputedRegularInodes(); num < 1 {
+				return "0"
+			} else {
+				return fmt.Sprintf("<a href=\"listComputedInodes?%s\">%d</a>",
+					name, num)
+			}
+		}(),
+		func() string {
+			if image.Filter == nil {
+				return "(sparse filter)"
+			} else if len(image.Filter.FilterLines) < 1 {
+				return "0"
+			} else {
+				return fmt.Sprintf("<a href=\"listFilter?%s\">%d</a>",
+					name, len(image.Filter.FilterLines))
+			}
+		}(),
+		func() string {
+			if image.Triggers == nil || len(image.Triggers.Triggers) < 1 {
+				return "0"
+			} else {
+				return fmt.Sprintf("<a href=\"listTriggers?%s\">%d</a>",
+					name, len(image.Triggers.Triggers))
+			}
+		}(),
+		image.BuildBranch,
+		image.BuildCommitId,
+	)
 }
