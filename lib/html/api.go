@@ -44,6 +44,18 @@ func NewTableWriter(writer io.Writer, doHighlighting bool,
 	return newTableWriter(writer, doHighlighting, columns)
 }
 
+func (tw *TableWriter) CloseRow() error {
+	return tw.closeRow()
+}
+
+func (tw *TableWriter) OpenRow(foreground, background string) error {
+	return tw.openRow(foreground, background)
+}
+
+func (tw *TableWriter) WriteData(foreground, data string) error {
+	return tw.writeData(foreground, data)
+}
+
 func (tw *TableWriter) WriteRow(foreground, background string,
 	columns ...string) error {
 	return tw.writeRow(foreground, background, columns)

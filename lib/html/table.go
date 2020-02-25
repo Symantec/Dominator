@@ -14,11 +14,13 @@ const (
 
 func newTableWriter(writer io.Writer, doHighlighting bool,
 	columns []string) (*TableWriter, error) {
-	if doHighlighting {
-		fmt.Fprintf(writer, "  <tr style=\"background-color:%s\">\n",
-			headingBackground)
-	} else {
-		fmt.Fprintln(writer, "  <tr>")
+	if len(columns) > 0 {
+		if doHighlighting {
+			fmt.Fprintf(writer, "  <tr style=\"background-color:%s\">\n",
+				headingBackground)
+		} else {
+			fmt.Fprintln(writer, "  <tr>")
+		}
 	}
 	for _, column := range columns {
 		fmt.Fprintf(writer, "    <th>%s</th>\n", column)
@@ -30,8 +32,12 @@ func newTableWriter(writer io.Writer, doHighlighting bool,
 	}, nil
 }
 
-func (tw *TableWriter) writeRow(foreground, background string,
-	columns []string) error {
+func (tw *TableWriter) closeRow() error {
+	_, err := fmt.Fprintln(tw.writer, "  </tr>")
+	return err
+}
+
+func (tw *TableWriter) openRow(foreground, background string) error {
 	if foreground == "" {
 		foreground = defaultForeground
 	}
@@ -42,26 +48,50 @@ func (tw *TableWriter) writeRow(foreground, background string,
 		tw.lastBackground == defaultBackground {
 		background = highlightBackground
 	}
+	var err error
 	if background == defaultBackground {
 		if foreground == defaultForeground {
-			fmt.Fprintln(tw.writer, "  <tr>")
+			_, err = fmt.Fprintln(tw.writer, "  <tr>")
 		} else {
-			fmt.Fprintf(tw.writer, "  <tr style=\"color:%s\">\n", foreground)
+			_, err = fmt.Fprintf(tw.writer, "  <tr style=\"color:%s\">\n",
+				foreground)
 		}
 	} else {
 		if foreground == defaultForeground {
-			fmt.Fprintf(tw.writer, "  <tr style=\"background-color:%s\">\n",
-				background)
+			_, err = fmt.Fprintf(tw.writer,
+				"  <tr style=\"background-color:%s\">\n", background)
 		} else {
-			fmt.Fprintf(tw.writer,
+			_, err = fmt.Fprintf(tw.writer,
 				"  <tr style=\"background-color:%s;color:%s\">\n",
 				background, foreground)
 		}
 	}
+	tw.lastBackground = background
+	return err
+}
+
+func (tw *TableWriter) writeData(foreground, data string) error {
+	if foreground == "" {
+		foreground = defaultForeground
+	}
+	var err error
+	if foreground == defaultForeground {
+		_, err = fmt.Fprintf(tw.writer, "    <td>%s</td>\n", data)
+	} else {
+		_, err = fmt.Fprintf(tw.writer,
+			"    <td><font color=\"%s\">%s</font></td>\n",
+			foreground, data)
+	}
+	return err
+}
+
+func (tw *TableWriter) writeRow(foreground, background string,
+	columns []string) error {
+	if err := tw.OpenRow(foreground, background); err != nil {
+		return err
+	}
 	for _, column := range columns {
 		fmt.Fprintf(tw.writer, "    <td>%s</td>\n", column)
 	}
-	fmt.Fprintln(tw.writer, "  </tr>")
-	tw.lastBackground = background
-	return nil
+	return tw.CloseRow()
 }
