@@ -128,17 +128,6 @@ func unpackImageAndProcessManifest(client *srpc.Client, manifestDir string,
 
 func processManifest(manifestDir, rootDir string, bindMounts []string,
 	envGetter environmentGetter, buildLog io.Writer) error {
-	if err := copyFiles(manifestDir, "files", rootDir, buildLog); err != nil {
-		return err
-	}
-	for index, bindMount := range bindMounts {
-		bindMounts[index] = filepath.Clean(bindMount)
-	}
-	directoriesToDelete, err := makeMountPoints(rootDir, bindMounts, buildLog)
-	if err != nil {
-		return err
-	}
-	defer deleteDirectories(directoriesToDelete)
 	// Copy in system /etc/resolv.conf
 	file, err := os.Open("/etc/resolv.conf")
 	if err != nil {
@@ -150,6 +139,17 @@ func processManifest(manifestDir, rootDir string, bindMounts []string,
 	if err != nil {
 		return fmt.Errorf("error copying in /etc/resolv.conf: %s", err)
 	}
+	if err := copyFiles(manifestDir, "files", rootDir, buildLog); err != nil {
+		return err
+	}
+	for index, bindMount := range bindMounts {
+		bindMounts[index] = filepath.Clean(bindMount)
+	}
+	directoriesToDelete, err := makeMountPoints(rootDir, bindMounts, buildLog)
+	if err != nil {
+		return err
+	}
+	defer deleteDirectories(directoriesToDelete)
 	packageList, err := fsutil.LoadLines(filepath.Join(manifestDir,
 		"package-list"))
 	if err != nil {
@@ -181,14 +181,14 @@ func processManifest(manifestDir, rootDir string, bindMounts []string,
 	if err != nil {
 		return err
 	}
-	err = copyFiles(manifestDir, "post-scripts-files", rootDir, buildLog)
-	if err != nil {
-		return err
-	}
 	if err := cleanPackages(rootDir, buildLog); err != nil {
 		return err
 	}
 	if err := clearResolvConf(buildLog, rootDir); err != nil {
+		return err
+	}
+	err = copyFiles(manifestDir, "post-scripts-files", rootDir, buildLog)
+	if err != nil {
 		return err
 	}
 	return deleteDirectories(directoriesToDelete)
