@@ -18,13 +18,18 @@ func listVMsSubcommand(args []string, logger log.DebugLogger) error {
 }
 
 func listVMs(logger log.DebugLogger) error {
+	if *hypervisorHostname != "" {
+		return listVMsOnHypervisor(
+			fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum),
+			logger)
+	}
 	if *fleetManagerHostname != "" {
 		fleetManager := fmt.Sprintf("%s:%d",
 			*fleetManagerHostname, *fleetManagerPortNum)
 		return listVMsByLocation(fleetManager, *location, logger)
 	}
-	hypervisor := fmt.Sprintf("%s:%d", *hypervisorHostname, *hypervisorPortNum)
-	return listVMsOnHypervisor(hypervisor, logger)
+	return listVMsOnHypervisor(fmt.Sprintf("localhost:%d", *hypervisorPortNum),
+		logger)
 }
 
 func listVMsByLocation(fleetManager string, location string,

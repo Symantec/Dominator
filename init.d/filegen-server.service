@@ -7,6 +7,8 @@ ExecStart=/usr/local/sbin/filegen-server
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=1
+User=filegen-server
+Group=filegen-server
 
 [Install]
 WantedBy=multi-user.target
