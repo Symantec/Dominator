@@ -7,6 +7,8 @@ ExecStart=/usr/local/sbin/imageserver
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=1
+User=imageserver
+Group=imageserver
 
 [Install]
 WantedBy=multi-user.target
