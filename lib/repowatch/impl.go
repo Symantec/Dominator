@@ -63,8 +63,8 @@ func readLatestCommitId(repositoryDirectory string) (string, error) {
 	return strings.TrimSpace(string(commitId)), nil
 }
 
-func setupGitRepository(remoteURL, localDirectory string,
-	metrics *gitMetricsType) (string, error) {
+func setupGitRepository(remoteURL, localDirectory, awsSecretId string,
+	metrics *gitMetricsType, logger log.DebugLogger) (string, error) {
 	if err := os.MkdirAll(localDirectory, fsutil.DirPerms); err != nil {
 		return "", err
 	}
@@ -74,6 +74,9 @@ func setupGitRepository(remoteURL, localDirectory string,
 			return "", err
 		}
 		metrics.lastAttemptedPullTime = time.Now()
+		if err := awsGetKey(awsSecretId, logger); err != nil {
+			return "", err
+		}
 		err := gitCommand(localDirectory, "clone", remoteURL, ".")
 		if err != nil {
 			return "", err
@@ -81,25 +84,45 @@ func setupGitRepository(remoteURL, localDirectory string,
 		metrics.lastSuccessfulPullTime = time.Now()
 		return readLatestCommitId(localDirectory)
 	} else {
-		return gitPull(localDirectory, metrics) // Ensure freshness.
+		go func() {
+			for {
+				if err := awsGetKey(awsSecretId, logger); err != nil {
+					logger.Println(err)
+					time.Sleep(time.Minute * 5)
+				} else {
+					return
+				}
+			}
+		}()
+		// Try to be as fresh as possible.
+		if commitId, err := gitPull(localDirectory, metrics); err != nil {
+			logger.Println(err)
+			return readLatestCommitId(localDirectory)
+		} else {
+			return commitId, nil
+		}
 	}
 }
 
-func watch(remoteURL, localDirectory string, checkInterval time.Duration,
-	metricDirectory string, logger log.DebugLogger) (<-chan string, error) {
-	if checkInterval < time.Second {
-		checkInterval = time.Second
+func watch(config Config, metricDirectory string,
+	logger log.DebugLogger) (<-chan string, error) {
+	if config.Branch != "" && config.Branch != "master" {
+		return nil, errors.New("non-master branch not supported")
 	}
-	if remoteURL == "" {
-		return watchLocal(localDirectory, checkInterval, metricDirectory,
-			logger)
+	if config.CheckInterval < time.Second {
+		config.CheckInterval = time.Second
 	}
-	return watchGit(remoteURL, localDirectory, checkInterval, metricDirectory,
-		logger)
+	if config.RepositoryURL == "" {
+		return watchLocal(config.LocalRepositoryDirectory, config.CheckInterval,
+			metricDirectory, logger)
+	}
+	return watchGit(config.RepositoryURL, config.LocalRepositoryDirectory,
+		config.AwsSecretId, config.CheckInterval, metricDirectory, logger)
 }
 
-func watchGit(remoteURL, localDirectory string, checkInterval time.Duration,
-	metricDirectory string, logger log.DebugLogger) (<-chan string, error) {
+func watchGit(remoteURL, localDirectory, awsSecretId string,
+	checkInterval time.Duration, metricDirectory string,
+	logger log.DebugLogger) (<-chan string, error) {
 	notificationChannel := make(chan string, 1)
 	metrics := &gitMetricsType{
 		latencyDistribution: tricorder.NewGeometricBucketer(1, 1e5).
@@ -112,7 +135,7 @@ func watchGit(remoteURL, localDirectory string, checkInterval time.Duration,
 		return nil, err
 	}
 	metrics.lastCommitId, err = setupGitRepository(remoteURL, localDirectory,
-		metrics)
+		awsSecretId, metrics, logger)
 	if err != nil {
 		return nil, err
 	}
