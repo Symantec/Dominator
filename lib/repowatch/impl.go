@@ -94,17 +94,13 @@ func setupGitRepository(remoteURL, localDirectory, awsSecretId string,
 				}
 			}
 		}()
-		// Ensure freshness.
-		return gitPull(localDirectory, metrics)
-		/*
-			// Try to be as fresh as possible.
-			if commitId, err := gitPull(localDirectory, metrics); err != nil {
-				logger.Println(err)
-				return readLatestCommitId(localDirectory)
-			} else {
-				return commitId, nil
-			}
-		*/
+		// Try to be as fresh as possible.
+		if commitId, err := gitPull(localDirectory, metrics); err != nil {
+			logger.Println(err)
+			return readLatestCommitId(localDirectory)
+		} else {
+			return commitId, nil
+		}
 	}
 }
 
