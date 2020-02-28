@@ -11,9 +11,10 @@ import (
 	"strings"
 
 	"github.com/Cloud-Foundations/Dominator/lib/fsutil"
+	"github.com/Cloud-Foundations/Dominator/lib/log"
 )
 
-func awsGetKey(secretId string) error {
+func awsGetKey(secretId string, logger log.DebugLogger) error {
 	if secretId == "" {
 		return nil
 	}
@@ -25,7 +26,12 @@ func awsGetKey(secretId string) error {
 	if err != nil {
 		return err
 	}
-	return writeSshKey(secrets)
+	if err := writeSshKey(secrets); err != nil {
+		return err
+	}
+	logger.Printf("fetched SSH key from AWS Secrets Manager, SecretId: %s\n",
+		secretId)
+	return nil
 }
 
 // keyMap is mutated.

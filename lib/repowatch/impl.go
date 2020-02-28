@@ -74,7 +74,7 @@ func setupGitRepository(remoteURL, localDirectory, awsSecretId string,
 			return "", err
 		}
 		metrics.lastAttemptedPullTime = time.Now()
-		if err := awsGetKey(awsSecretId); err != nil {
+		if err := awsGetKey(awsSecretId, logger); err != nil {
 			return "", err
 		}
 		err := gitCommand(localDirectory, "clone", remoteURL, ".")
@@ -86,7 +86,7 @@ func setupGitRepository(remoteURL, localDirectory, awsSecretId string,
 	} else {
 		go func() {
 			for {
-				if err := awsGetKey(awsSecretId); err != nil {
+				if err := awsGetKey(awsSecretId, logger); err != nil {
 					logger.Println(err)
 					time.Sleep(time.Minute * 5)
 				} else {
