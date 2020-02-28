@@ -44,7 +44,9 @@ func (m *Manager) registerHashGeneratorForPath(pathname string,
 
 func (m *Manager) processPathDataInvalidations(pathname string,
 	machineNameChannel <-chan string) {
+	m.rwMutex.RLock()
 	pathMgr := m.pathManagers[pathname]
+	m.rwMutex.RUnlock()
 	for machineName := range machineNameChannel {
 		pathMgr.rwMutex.Lock()
 		if machineName == "" {
