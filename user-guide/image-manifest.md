@@ -79,13 +79,25 @@ copied verbatim into the image (after the `scripts` are run), preserving the
 directory structure.
 
 ### `computed-files` file
-An optional JSON encoded file listing the *computed files*. This is relevant
-only for images which will be lived patched onto machines with the
-*[dominator](../cmd/dominator/README.md)*. The JSON data must contain an array
-of objects with the following fields:
+An optional file listing the *computed files*. This is relevant only for images
+which will be lived patched onto machines with the
+*[dominator](../cmd/dominator/README.md)*. Each line of the file must contain
+the following fields:
 - `Filename`: the name of the file in the image
 - `Source`: the network address of the *file generator* that will provide the
             file data
+
+An alternative format file `computed-files.json` is supported, where the format
+is JSON data which must contain an array of objects with the above fields.
+
+### `computed-files.add` file
+This is similar to the `computed-files` file, except that the list of computed
+files are *added* to the list of computed files in the *SourceImage*, thus
+inheriting and (if not empty) extending the list of computed files. This must
+not be present if the `computed-files` file is present.
+
+An alternative format file `computed-files.add.json` is supported, which must
+contain JSON data.
 
 ### `filter` file
 An optional file containing a newline-separated list of regular expressions
