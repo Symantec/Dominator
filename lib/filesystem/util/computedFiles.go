@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
@@ -92,4 +93,27 @@ func clearInodePointers(directoryInode *filesystem.DirectoryInode,
 		}
 		dirent.SetInode(nil)
 	}
+}
+
+func mergeComputedFiles(base, overlay []ComputedFile) []ComputedFile {
+	computedFilesMap := make(map[string]string)
+	for _, computedFile := range base {
+		computedFilesMap[computedFile.Filename] = computedFile.Source
+	}
+	for _, computedFile := range overlay {
+		computedFilesMap[computedFile.Filename] = computedFile.Source
+	}
+	filenames := make([]string, 0, len(computedFilesMap))
+	for filename := range computedFilesMap {
+		filenames = append(filenames, filename)
+	}
+	sort.Strings(filenames)
+	newList := make([]ComputedFile, 0, len(computedFilesMap))
+	for _, filename := range filenames {
+		newList = append(newList, ComputedFile{
+			Filename: filename,
+			Source:   computedFilesMap[filename],
+		})
+	}
+	return newList
 }

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem/util"
 	"github.com/Cloud-Foundations/Dominator/lib/filter"
 	"github.com/Cloud-Foundations/Dominator/lib/image"
 	"github.com/Cloud-Foundations/Dominator/lib/log"
@@ -98,8 +99,9 @@ type packagerType struct {
 }
 
 type sourceImageInfoType struct {
-	filter   *filter.Filter
-	triggers *triggers.Triggers
+	computedFiles []util.ComputedFile
+	filter        *filter.Filter
+	triggers      *triggers.Triggers
 }
 
 type Builder struct {

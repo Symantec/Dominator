@@ -75,6 +75,10 @@ func MakeKernelOptions(rootDevice, extraOptions string) string {
 		rootDevice, extraOptions)
 }
 
+func MergeComputedFiles(base, overlay []ComputedFile) []ComputedFile {
+	return mergeComputedFiles(base, overlay)
+}
+
 func ReplaceComputedFiles(fs *filesystem.FileSystem,
 	computedFilesData *ComputedFilesData,
 	objectsGetter objectserver.ObjectsGetter) (

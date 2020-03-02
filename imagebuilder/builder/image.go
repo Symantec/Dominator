@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Cloud-Foundations/Dominator/lib/filesystem"
 	"github.com/Cloud-Foundations/Dominator/lib/filesystem/util"
 	"github.com/Cloud-Foundations/Dominator/lib/filter"
 	"github.com/Cloud-Foundations/Dominator/lib/format"
@@ -238,14 +239,9 @@ func buildImageFromManifest(client *srpc.Client, manifestDir string,
 	envGetter environmentGetter, gitInfo *gitInfoType,
 	buildLog buildLogger) (*image.Image, error) {
 	// First load all the various manifest files (fail early on error).
-	computedFilesList, err := util.LoadComputedFiles(
-		filepath.Join(manifestDir, "computed-files.json"))
-	if os.IsNotExist(err) {
-		computedFilesList, err = util.LoadComputedFiles(
-			filepath.Join(manifestDir, "computed-files"))
-	}
-	if err != nil && !os.IsNotExist(err) {
-		return nil, fmt.Errorf("error loading computed files: %s", err)
+	computedFilesList, addComputedFiles, err := loadComputedFiles(manifestDir)
+	if err != nil {
+		return nil, err
 	}
 	imageFilter, addFilter, err := loadFilter(manifestDir)
 	if err != nil {
@@ -278,6 +274,10 @@ func buildImageFromManifest(client *srpc.Client, manifestDir string,
 				return nil, err
 			}
 		}
+	}
+	if addComputedFiles {
+		computedFilesList = util.MergeComputedFiles(
+			manifest.sourceImageInfo.computedFiles, computedFilesList)
 	}
 	if addFilter {
 		mergeableFilter := &filter.MergeableFilter{}
@@ -333,6 +333,54 @@ func buildTreeFromManifest(client *srpc.Client, manifestDir string,
 		return "", err
 	}
 	return rootDir, nil
+}
+
+func listComputedFiles(fs *filesystem.FileSystem) []util.ComputedFile {
+	var computedFiles []util.ComputedFile
+	fs.ForEachFile(
+		func(path string, _ uint64, inode filesystem.GenericInode) error {
+			if inode, ok := inode.(*filesystem.ComputedRegularInode); ok {
+				computedFiles = append(computedFiles, util.ComputedFile{
+					Filename: path,
+					Source:   inode.Source,
+				})
+			}
+			return nil
+		})
+	return computedFiles
+}
+
+func loadComputedFiles(manifestDir string) ([]util.ComputedFile, bool, error) {
+	computedFiles, err := util.LoadComputedFiles(filepath.Join(manifestDir,
+		"computed-files.json"))
+	if os.IsNotExist(err) {
+		computedFiles, err = util.LoadComputedFiles(
+			filepath.Join(manifestDir, "computed-files"))
+	}
+	if err != nil && !os.IsNotExist(err) {
+		return nil, false, err
+	}
+	haveComputedFiles := err == nil
+	addComputedFiles, err := util.LoadComputedFiles(
+		filepath.Join(manifestDir, "computed-files.add.json"))
+	if os.IsNotExist(err) {
+		addComputedFiles, err = util.LoadComputedFiles(
+			filepath.Join(manifestDir, "computed-files.add"))
+	}
+	if err != nil && !os.IsNotExist(err) {
+		return nil, false, err
+	}
+	haveAddComputedFiles := err == nil
+	if !haveComputedFiles && !haveAddComputedFiles {
+		return nil, false, nil
+	} else if haveComputedFiles && haveAddComputedFiles {
+		return nil, false, errors.New(
+			"computed-files and computed-files.add files both present")
+	} else if haveComputedFiles {
+		return computedFiles, false, nil
+	} else {
+		return addComputedFiles, true, nil
+	}
 }
 
 func loadFilter(manifestDir string) (*filter.Filter, bool, error) {
@@ -399,5 +447,9 @@ func unpackImage(client *srpc.Client, streamName string,
 		return nil, err
 	}
 	fmt.Fprintf(buildLog, "Source image: %s\n", imageName)
-	return &sourceImageInfoType{sourceImage.Filter, sourceImage.Triggers}, nil
+	return &sourceImageInfoType{
+		listComputedFiles(sourceImage.FileSystem),
+		sourceImage.Filter,
+		sourceImage.Triggers,
+	}, nil
 }
