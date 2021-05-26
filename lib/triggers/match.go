@@ -1,5 +1,9 @@
 package triggers
 
+import (
+	"sort"
+)
+
 func (triggers *Triggers) match(line string) {
 	triggers.compile()
 	if triggers.matchedTriggers == nil {
@@ -26,6 +30,9 @@ func (triggers *Triggers) getMatchedTriggers() []*Trigger {
 	for trigger := range triggers.matchedTriggers {
 		mTriggers = append(mTriggers, trigger)
 	}
+	sort.Slice(mTriggers, func(i, j int) bool {
+		return mTriggers[i].Service < mTriggers[j].Service
+	})
 	triggers.matchedTriggers = nil
 	triggers.unmatchedTriggers = nil
 	return mTriggers
