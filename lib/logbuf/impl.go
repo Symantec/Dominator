@@ -193,8 +193,8 @@ func (lb *LogBuffer) openNewFile() error {
 		return err
 	}
 	if lb.options.RedirectStderr {
-		syscall.Dup2(int(file.Fd()), int(os.Stdout.Fd()))
-		syscall.Dup2(int(file.Fd()), int(os.Stderr.Fd()))
+		syscall.Dup3(int(file.Fd()), int(os.Stdout.Fd()), 0)
+		syscall.Dup3(int(file.Fd()), int(os.Stderr.Fd()), 0)
 	}
 	lb.file = file
 	lb.writer = bufwriter.NewWriter(file, time.Second)
